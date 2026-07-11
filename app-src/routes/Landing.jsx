@@ -5,6 +5,7 @@ import BloomMark from '../components/BloomMark';
 import Marquee from '../components/Marquee';
 import Meteors from '../components/Meteors';
 import Reveal from '../components/Reveal';
+import RotatingWord from '../components/RotatingWord';
 import StepPopups from '../components/StepPopups';
 import '../landing.css';
 
@@ -14,6 +15,16 @@ import '../landing.css';
 // example kit, who it's for, pricing, FAQ, final CTA). The animated hero sky
 // is kept from the ConversionForge design system.
 // ---------------------------------------------------------------------------
+
+// The rotating half of the hero headline — each is a launch kit deliverable.
+const ROTATING = [
+  'clear offer.',
+  'landing page.',
+  'launch plan.',
+  'content plan.',
+  'email sequence.',
+  'weekly system.',
+];
 
 const PROMPTS = [
   'I can edit videos but have no idea what to sell',
@@ -142,9 +153,11 @@ export default function Landing() {
 
         <section className="lp-hero">
           <h1>
-            Turn your idea into a <span className="lp-serif">clear offer</span>
+            Turn your idea into a
             <br />
-            and launch plan.
+            <span className="lp-serif">
+              <RotatingWord words={ROTATING} />
+            </span>
           </h1>
           <p className="lp-sub">
             OfferFlow AI helps creators, freelancers and solo founders define what to sell, write
