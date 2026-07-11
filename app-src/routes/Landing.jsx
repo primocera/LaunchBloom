@@ -33,8 +33,69 @@ const PROMPTS = [
   'I have a skill, zero audience, and 5 hours a week',
 ];
 
-// TODO: replace with your real Stripe price ID (must match backend STRIPE_PRICE_PRO).
-const PRO_PRICE_ID = 'price_PRO_TODO';
+// Prompt 25 plans — checkout resolves the plan name to STRIPE_PRICE_* env
+// vars on the backend, so no price IDs live in client code.
+const PLANS = [
+  {
+    name: 'Free',
+    plan: null,
+    price: '€0',
+    note: 'Try the whole path once',
+    sub: 'No card needed',
+    features: [
+      '1 workspace',
+      '1 positioning output',
+      '1 offer generation (3 options)',
+      '1 limited launch kit — 7-day content plan',
+    ],
+    cta: 'Start free',
+  },
+  {
+    name: 'Starter',
+    plan: 'starter',
+    price: '€12',
+    note: 'Your first real launch',
+    sub: '1 full launch kit every month',
+    features: [
+      '1 workspace',
+      '3 offer generations / month',
+      '1 full launch kit / month',
+      '30-day content plan',
+      'Landing page draft + email sequence',
+    ],
+    cta: 'Choose Starter',
+  },
+  {
+    name: 'Pro',
+    plan: 'pro',
+    price: '€29',
+    badge: 'Most popular',
+    note: 'Launch again and again',
+    sub: '5 launch kits every month',
+    features: [
+      '3 workspaces',
+      'Unlimited offer drafts (fair use)',
+      '5 launch kits / month',
+      'Full content plans, emails, ads, SEO',
+      'Weekly action plans',
+    ],
+    cta: 'Choose Pro',
+  },
+  {
+    name: 'Business',
+    plan: 'business',
+    price: '€59',
+    note: 'For serious operators',
+    sub: 'Multiple brands, deeper kits',
+    features: [
+      '10 workspaces',
+      'Advanced launch kits',
+      'Multiple offers per workspace',
+      'Priority exports',
+    ],
+    cta: 'Choose Business',
+  },
+];
 
 const OUTPUTS = [
   'Positioning',
@@ -90,8 +151,8 @@ const FAQ = [
     a: 'That is exactly who it is for. The positioning step picks a niche you can realistically reach with the platforms and hours you actually have, and the weekly plan starts from zero — not from "post to your list".',
   },
   {
-    q: 'What do the free credits cover?',
-    a: 'Ten credits, no card needed. Positioning costs one, the three offer options cost one, and a full launch kit costs three — so you can go from idea to a complete kit at least once for free.',
+    q: 'What does the free plan cover?',
+    a: 'No card needed: one positioning output, one offer generation with three options, and one starter launch kit with a 7-day content plan. Enough to walk the whole path once and see if the output fits you before paying.',
   },
   {
     q: 'Will it promise me revenue?',
@@ -123,9 +184,9 @@ export default function Landing() {
   const navigate = useNavigate();
 
   // Remember which plan was clicked; checkout resumes once they are signed in.
-  function choose(priceId) {
+  function choose(plan) {
     try {
-      if (priceId) localStorage.setItem('of-pending-plan', priceId);
+      if (plan) localStorage.setItem('of-pending-plan', plan);
     } catch {
       /* private mode: they can still pick the plan again after signing in */
     }
@@ -301,59 +362,40 @@ export default function Landing() {
             <p className="lp-h2-sub">Your first launch kit is free. Cancel anytime.</p>
           </Reveal>
 
-          <div className="lp-price-grid">
-            <Reveal className="lp-price-card">
-              <div className="lp-price-top">
-                <span className="lp-price-name">Free</span>
-              </div>
-              <div className="lp-price-amount">
-                $0<span>/mo</span>
-              </div>
-              <div className="lp-price-note">
-                <div className="lp-price-note-title">Go from idea to kit once</div>
-                <div className="lp-price-note-sub">Ten credits, no card</div>
-              </div>
+          <div className="lp-price-grid is-four">
+            {PLANS.map((p, i) => (
+              <Reveal className="lp-price-card" key={p.name} delay={i * 90}>
+                <div className="lp-price-top">
+                  <span className="lp-price-name">{p.name}</span>
+                  {p.badge && <span className="lp-price-badge">{p.badge}</span>}
+                </div>
+                <div className="lp-price-amount">
+                  {p.price}<span>/mo</span>
+                </div>
+                <div className="lp-price-note">
+                  <div className="lp-price-note-title">{p.note}</div>
+                  <div className="lp-price-note-sub">{p.sub}</div>
+                </div>
 
-              <div className="lp-included">What's included</div>
-              <ul className="lp-price-features">
-                <li>Positioning + ideal customer</li>
-                <li>Three offer options</li>
-                <li>One full launch kit</li>
-                <li>All eight deliverables included</li>
-              </ul>
+                <div className="lp-included">What's included</div>
+                <ul className="lp-price-features">
+                  {p.features.map((f) => <li key={f}>{f}</li>)}
+                </ul>
 
-              <Link className="lp-price-btn" to="/app">
-                Start free
-              </Link>
-              <div className="lp-price-micro">No card needed</div>
-            </Reveal>
-
-            <Reveal className="lp-price-card" delay={120} data-price-id={PRO_PRICE_ID}>
-              <div className="lp-price-top">
-                <span className="lp-price-name">Pro</span>
-                <span className="lp-price-badge">Most popular</span>
-              </div>
-              <div className="lp-price-amount">
-                $29<span>/mo</span>
-              </div>
-              <div className="lp-price-note">
-                <div className="lp-price-note-title">Launch as many offers as you want</div>
-                <div className="lp-price-note-sub">Unlimited kits and regenerations</div>
-              </div>
-
-              <div className="lp-included">What's included</div>
-              <ul className="lp-price-features">
-                <li>Unlimited launch kits</li>
-                <li>Regenerate any section with feedback</li>
-                <li>Fresh weekly action plans</li>
-                <li>All future studios and tools</li>
-              </ul>
-
-              <button className="lp-price-btn" onClick={() => choose(PRO_PRICE_ID)}>
-                Choose
-              </button>
-              <div className="lp-price-micro">Cancel anytime · no setup fees</div>
-            </Reveal>
+                {p.plan ? (
+                  <button className="lp-price-btn" onClick={() => choose(p.plan)}>
+                    {p.cta}
+                  </button>
+                ) : (
+                  <Link className="lp-price-btn" to="/app">
+                    {p.cta}
+                  </Link>
+                )}
+                <div className="lp-price-micro">
+                  {p.plan ? 'Cancel anytime · no setup fees' : 'No card needed'}
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>

@@ -8,6 +8,6 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/", "destination": "/app/index.html" },
     { "source": "/app", "destination": "/app/index.html" },
-    { "source": "/app/:path*", "destination": "/app/index.html" }
+    { "source": "/app/((?!assets/).*)", "destination": "/app/index.html" }
   ]
 }

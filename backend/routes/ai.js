@@ -1,12 +1,14 @@
 // ---------------------------------------------------------------------------
 // OfferFlow AI generation routes — the product's brain.
 //
-// POST /api/ai/generate-positioning   { }            1 credit
-// POST /api/ai/generate-offers        { }            1 credit
-// POST /api/ai/generate-launch-kit    { offer_id }   3 credits
-// POST /api/ai/regenerate-section     { launch_kit_id, section }  1 credit
+// POST /api/ai/generate-positioning   { }            plan-limited
+// POST /api/ai/generate-offers        { }            plan-limited
+// POST /api/ai/generate-launch-kit    { offer_id }   plan-limited
+// POST /api/ai/regenerate-section     { launch_kit_id, section }
 //
-// Flow: onboarding_answers → positioning_outputs → offers (pick one) →
+// Limits come from lib/plan-limits.js (Prompt 25): free = lifetime totals
+// and a 7-day content plan; paid plans reset monthly. Flow:
+// onboarding_answers → positioning_outputs → offers (pick one) →
 // launch_kits (sections as jsonb + exploded item rows). Everything stays
 // tied to the caller's workspace; ownership is enforced here because the
 // service_role client bypasses RLS.
@@ -14,7 +16,7 @@
 
 const express = require('express');
 const supabase = require('../lib/supabase');
-const { creditGate, settleCredit } = require('../lib/gate');
+const { planGate, limitsFor, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
 const {
   positioningSchema,
@@ -22,7 +24,6 @@ const {
   launchSummarySchema,
   SECTION_SCHEMAS,
 } = require('../lib/schemas');
-const { ensureWorkspace } = require('./workspaces');
 
 const router = express.Router();
 router.use(express.json({ limit: '16kb' }));
@@ -94,9 +95,9 @@ function offerContext(offer) {
 
 // ── 1. Positioning ─────────────────────────────────────────────────────────
 
-router.post('/generate-positioning', creditGate(1), async (req, res, next) => {
+router.post('/generate-positioning', planGate('positioning'), async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = req.workspace;
     const onboarding = await latestOnboarding(ws.id);
     if (!onboarding) {
       return res.status(400).json({ error: 'Complete onboarding first.', code: 'NO_ONBOARDING' });
@@ -119,7 +120,7 @@ router.post('/generate-positioning', creditGate(1), async (req, res, next) => {
       .single();
     if (error) throw new Error('Failed to save positioning: ' + error.message);
 
-    res.json({ ok: true, positioning: saved, credits: await settleCredit(req) });
+    res.json({ ok: true, positioning: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
   } catch (err) {
     next(err);
   }
@@ -127,9 +128,9 @@ router.post('/generate-positioning', creditGate(1), async (req, res, next) => {
 
 // ── 2. Offers (3 options) ──────────────────────────────────────────────────
 
-router.post('/generate-offers', creditGate(1), async (req, res, next) => {
+router.post('/generate-offers', planGate('offer_generations'), async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = req.workspace;
     const [onboarding, positioning] = await Promise.all([
       latestOnboarding(ws.id),
       latestPositioning(ws.id),
@@ -153,7 +154,7 @@ router.post('/generate-offers', creditGate(1), async (req, res, next) => {
     const { data: saved, error } = await supabase.from('offers').insert(rows).select();
     if (error) throw new Error('Failed to save offers: ' + error.message);
 
-    res.json({ ok: true, offers: saved, credits: await settleCredit(req) });
+    res.json({ ok: true, offers: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
   } catch (err) {
     next(err);
   }
@@ -182,11 +183,28 @@ const SECTION_SYSTEMS = {
     'Concrete tasks with clear outcomes, highest-leverage first.',
 };
 
-async function generateSection(section, ctx) {
+/** Content plan length is plan-dependent (free: 7 days, paid: 30). */
+function schemaFor(section, days) {
+  const schema = SECTION_SCHEMAS[section];
+  if (section !== 'content_plan' || !days || days === 30) return schema;
+  return {
+    ...schema,
+    properties: {
+      ...schema.properties,
+      items: { ...schema.properties.items, minItems: days, maxItems: days },
+    },
+  };
+}
+
+async function generateSection(section, ctx, days) {
+  const prompt =
+    section === 'content_plan' && days && days !== 30
+      ? ctx + `\n\nCreate a ${days}-day content plan (days 1-${days}).`
+      : ctx;
   return generateJson({
     system: SECTION_SYSTEMS[section],
-    prompt: ctx,
-    schema: SECTION_SCHEMAS[section],
+    prompt,
+    schema: schemaFor(section, days),
     maxTokens: section === 'content_plan' ? 16000 : 8000,
   });
 }
@@ -213,12 +231,12 @@ async function explodeItems(section, data, launchKitId, workspaceId) {
   if (error) console.error(`explodeItems(${section}) failed:`, error.message);
 }
 
-router.post('/generate-launch-kit', creditGate(3), async (req, res, next) => {
+router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, next) => {
   try {
     const { offer_id } = req.body || {};
     if (!offer_id) return res.status(400).json({ error: 'offer_id is required' });
 
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = req.workspace;
     const { data: offer } = await supabase
       .from('offers')
       .select('*')
@@ -238,9 +256,10 @@ router.post('/generate-launch-kit', creditGate(3), async (req, res, next) => {
       (onboarding ? `About the person:\n${onboardingContext(onboarding)}` : '');
 
     // All six sections in parallel — each is an independent structured call.
+    const contentDays = req.planLimits.content_plan_days;
     const sections = Object.keys(SECTION_SYSTEMS);
     const [results, summary] = await Promise.all([
-      Promise.all(sections.map((s) => generateSection(s, ctx))),
+      Promise.all(sections.map((s) => generateSection(s, ctx, contentDays))),
       generateJson({
         system: 'Write a short launch kit title, a 2-3 sentence summary, and a practical launch checklist for this offer.',
         prompt: ctx,
@@ -280,7 +299,7 @@ router.post('/generate-launch-kit', creditGate(3), async (req, res, next) => {
       )
     );
 
-    res.json({ ok: true, launch_kit: kit, credits: await settleCredit(req) });
+    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
   } catch (err) {
     next(err);
   }
@@ -288,7 +307,7 @@ router.post('/generate-launch-kit', creditGate(3), async (req, res, next) => {
 
 // ── 4. Regenerate one section ──────────────────────────────────────────────
 
-router.post('/regenerate-section', creditGate(1), async (req, res, next) => {
+router.post('/regenerate-section', planGate(null), async (req, res, next) => {
   try {
     const { launch_kit_id, section, feedback } = req.body || {};
     if (!launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });
@@ -298,7 +317,7 @@ router.post('/regenerate-section', creditGate(1), async (req, res, next) => {
       });
     }
 
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = req.workspace;
     const { data: kit } = await supabase
       .from('launch_kits')
       .select('*')
@@ -321,7 +340,7 @@ router.post('/regenerate-section', creditGate(1), async (req, res, next) => {
       (feedback ? `The user asked for this change: ${String(feedback).slice(0, 1000)}\n\n` : '') +
       `Regenerate the ${section.replace(/_/g, ' ')} from scratch — a fresh take, not a copy of the previous version.`;
 
-    const data = await generateSection(section, ctx);
+    const data = await generateSection(section, ctx, req.planLimits.content_plan_days);
 
     const { error } = await supabase
       .from('launch_kits')
@@ -331,7 +350,7 @@ router.post('/regenerate-section', creditGate(1), async (req, res, next) => {
 
     await explodeItems(section, data, kit.id, ws.id);
 
-    res.json({ ok: true, section, data, credits: await settleCredit(req) });
+    res.json({ ok: true, section, data, plan: req.userPlan });
   } catch (err) {
     next(err);
   }

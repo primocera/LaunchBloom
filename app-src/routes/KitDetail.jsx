@@ -55,9 +55,7 @@ export default function KitDetail() {
       <header className="flow-head">
         <Link to="/app" className="flow-brand">OfferFlow AI</Link>
         <div className="flow-account">
-          {account?.plan === 'free' && account?.credits_limit != null && (
-            <span className="flow-credits">{account.credits_limit - account.credits_used} credits</span>
-          )}
+          <span className="flow-credits">{account?.plan_label || 'Free'} plan</span>
           <button className="flow-link" onClick={logout}>Sign out</button>
         </div>
       </header>
@@ -96,7 +94,7 @@ export default function KitDetail() {
                   disabled={!!busy}
                   onClick={() => regenerate(tab)}
                 >
-                  {busy === tab ? 'Regenerating…' : 'Regenerate this section (1 credit)'}
+                  {busy === tab ? 'Regenerating…' : 'Regenerate this section'}
                 </button>
               </div>
             )}

@@ -51,6 +51,6 @@ export const api = {
       body: { launch_kit_id: launchKitId, section, feedback },
     }),
 
-  checkout: (priceId, email) =>
-    request('/api/payments/create-checkout-session', { method: 'POST', body: { priceId, email } }),
+  checkout: (plan, email) =>
+    request('/api/payments/create-checkout-session', { method: 'POST', body: { plan, email } }),
 };

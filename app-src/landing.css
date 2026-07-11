@@ -1303,3 +1303,8 @@
   color: rgba(255, 255, 255, 0.85);
   margin-bottom: 22px;
 }
+
+.lp-price-grid.is-four {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  max-width: 1160px;
+}

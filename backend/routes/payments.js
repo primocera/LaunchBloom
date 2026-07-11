@@ -14,14 +14,28 @@ const { pricePlans } = require('./customers');
  * Creates a Stripe Checkout Session in subscription mode and returns the
  * hosted Checkout URL for the browser to redirect to.
  *
- * Body: { priceId, email }
+ * Body: { plan, email } or { priceId, email } — plan names (starter | pro |
+ * business) resolve to the STRIPE_PRICE_* env vars, per the playbook.
  */
+const PLAN_ENV = {
+  starter: 'STRIPE_PRICE_STARTER',
+  pro: 'STRIPE_PRICE_PRO',
+  business: 'STRIPE_PRICE_BUSINESS',
+};
+
 router.post('/create-checkout-session', async (req, res) => {
   try {
-    const { priceId, email } = req.body || {};
+    const { plan: planName, email } = req.body || {};
+    let { priceId } = req.body || {};
 
+    if (!priceId && planName) {
+      priceId = process.env[PLAN_ENV[planName]] || null;
+      if (!priceId) {
+        return res.status(400).json({ error: `Plan "${planName}" is not configured (missing ${PLAN_ENV[planName] || 'price'} env var).` });
+      }
+    }
     if (!priceId || typeof priceId !== 'string') {
-      return res.status(400).json({ error: 'priceId is required and must be a string' });
+      return res.status(400).json({ error: 'plan or priceId is required' });
     }
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ error: 'email is required and must be a string' });

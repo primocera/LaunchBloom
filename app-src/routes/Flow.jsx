@@ -92,7 +92,7 @@ export default function Flow() {
             disabled={!!busy}
             onClick={() => run('positioning', async () => { await api.generatePositioning(); await refresh(); })}
           >
-            {busy === 'positioning' ? 'Working… (30–60s)' : 'Generate my positioning (1 credit)'}
+            {busy === 'positioning' ? 'Working… (30–60s)' : 'Generate my positioning'}
           </button>
         </div>
       )}
@@ -110,7 +110,7 @@ export default function Flow() {
                 disabled={!!busy}
                 onClick={() => run('offers', async () => { await api.generateOffers(); await refresh(); })}
               >
-                {busy === 'offers' ? 'Designing… (30–60s)' : 'Design my 3 offers (1 credit)'}
+                {busy === 'offers' ? 'Designing… (30–60s)' : 'Design my 3 offers'}
               </button>
               <button
                 className="flow-btn is-ghost"
@@ -147,7 +147,7 @@ export default function Flow() {
                     navigate(`/app/kits/${r.launch_kit.id}`);
                   })}
                 >
-                  {busy === 'kit' ? 'Building your kit… (1–2 min)' : 'Build launch kit (3 credits)'}
+                  {busy === 'kit' ? 'Building your kit… (1–2 min)' : 'Build launch kit'}
                 </button>
               </div>
             ))}
@@ -193,9 +193,7 @@ function Shell({ account, logout, step, children }) {
         <Link to="/" className="flow-brand">OfferFlow AI</Link>
         {step && <Steps current={step} />}
         <div className="flow-account">
-          {account?.plan === 'free' && account?.credits_limit != null && (
-            <span className="flow-credits">{account.credits_limit - account.credits_used} credits</span>
-          )}
+          <span className="flow-credits">{account?.plan_label || 'Free'} plan</span>
           <button className="flow-link" onClick={logout}>Sign out</button>
         </div>
       </header>

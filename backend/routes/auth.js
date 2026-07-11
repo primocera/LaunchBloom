@@ -9,6 +9,8 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const auth = require('../lib/auth');
 const { planFor } = require('./customers');
+const { limitsFor, usageFor } = require('../lib/plan-limits');
+const { ensureWorkspace } = require('./workspaces');
 
 const router = express.Router();
 
@@ -21,13 +23,23 @@ const loginLimiter = rateLimit({
 });
 
 async function accountStatus(email) {
-  const plan = await planFor(email); // 'starter' | 'pro' | 'business' | null
-  const used = plan ? 0 : await auth.creditsUsed(email);
+  const plan = (await planFor(email)) || 'free'; // 'free' | 'starter' | 'pro' | 'business'
+  const limits = limitsFor(plan);
+  const ws = await ensureWorkspace(email);
+  const usage = await usageFor(ws.id, plan);
   return {
     email,
-    plan: plan || 'free',
-    credits_used: used,
-    credits_limit: plan ? null : auth.FREE_CREDITS,
+    plan,
+    plan_label: limits.label,
+    usage,
+    limits: {
+      positioning: limits.positioning === Infinity ? null : limits.positioning,
+      offer_generations: limits.offer_generations === Infinity ? null : limits.offer_generations,
+      launch_kits: limits.launch_kits === Infinity ? null : limits.launch_kits,
+      content_plan_days: limits.content_plan_days,
+      can_export: limits.can_export,
+      monthly: limits.monthly,
+    },
   };
 }
 
