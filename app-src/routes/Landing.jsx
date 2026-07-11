@@ -5,18 +5,15 @@ import BloomMark from '../components/BloomMark';
 import Marquee from '../components/Marquee';
 import Meteors from '../components/Meteors';
 import Reveal from '../components/Reveal';
-import RotatingWord from '../components/RotatingWord';
 import StepPopups from '../components/StepPopups';
 import '../landing.css';
 
-const ROLES = [
-  'Offer Builder.',
-  'Positioning Coach.',
-  'Launch Strategist.',
-  'Content Planner.',
-  'Email Writer.',
-  'Marketing Partner.',
-];
+// ---------------------------------------------------------------------------
+// Prompt 24: the public landing page. Copy and section order follow the
+// playbook spec verbatim (hero, problem, solution, how it works, features,
+// example kit, who it's for, pricing, FAQ, final CTA). The animated hero sky
+// is kept from the ConversionForge design system.
+// ---------------------------------------------------------------------------
 
 const PROMPTS = [
   'I can edit videos but have no idea what to sell',
@@ -25,11 +22,9 @@ const PROMPTS = [
   'I have a skill, zero audience, and 5 hours a week',
 ];
 
-// TODO: replace with your real Stripe price IDs (must match backend
-// STRIPE_PRICE_STARTER / STRIPE_PRICE_PRO env vars).
+// TODO: replace with your real Stripe price ID (must match backend STRIPE_PRICE_PRO).
 const PRO_PRICE_ID = 'price_PRO_TODO';
 
-// What comes out of a launch kit — the eight deliverables from the spec.
 const OUTPUTS = [
   'Positioning',
   'Offer',
@@ -41,94 +36,37 @@ const OUTPUTS = [
   'Weekly action plan',
 ];
 
+// Prompt 24 problem bullets, verbatim.
+const PROBLEM_BULLETS = [
+  'You are not sure what to sell.',
+  'You do not know how to explain your offer.',
+  'You post content, but it does not lead to sales.',
+  'You do not have a landing page or email sequence.',
+  'You feel busy, but not strategic.',
+];
+
+const HOW_IT_WORKS = [
+  { n: '1', title: 'Answer a few questions', body: 'Your skills, audience ideas, goals and the hours you actually have.' },
+  { n: '2', title: 'Get your positioning', body: 'A specific niche, an ideal customer and a clear one-line promise.' },
+  { n: '3', title: 'Pick one of 3 offers', body: 'Genuinely different options — format, depth and price point.' },
+  { n: '4', title: 'Launch with a full kit', body: 'Landing page, content plan, emails, ads, SEO and a weekly plan.' },
+];
+
+// Prompt 24 feature cards, verbatim names.
 const FEATURES = [
-  {
-    title: 'A guided path, not a blank prompt',
-    body: 'Answer a few questions about your skills, audience and time. The workflow does the rest, in order.',
-    preview: (
-      <div className="fp">
-        <div className="fp-label">Onboarding</div>
-        <div className="fp-bar">
-          <span style={{ width: '62%' }} />
-        </div>
-        <div className="fp-row">
-          <span className="fp-chip is-on">Skills</span>
-          <span className="fp-chip is-on">Audience</span>
-          <span className="fp-chip">Time: 5h/wk</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: 'Positioning before anything else',
-    body: 'A specific niche, an ideal customer, and a one-line positioning statement — grounded in what you told us.',
-    preview: (
-      <div className="fp">
-        <div className="fp-label">Positioning</div>
-        <div className="fp-input">Video editing for busy real-estate agents</div>
-        <div className="fp-input is-muted">Ideal customer: agents posting listings weekly, no time to edit.</div>
-      </div>
-    ),
-  },
-  {
-    title: 'Three offers, genuinely different',
-    body: 'Not three flavors of the same thing — different price points, formats and depth. You pick the one that fits.',
-    preview: (
-      <div className="fp">
-        <div className="fp-stat-row">
-          <div>
-            <div className="fp-k">Starter</div>
-            <div className="fp-v">$97</div>
-          </div>
-          <div>
-            <div className="fp-k">Core</div>
-            <div className="fp-v">$450</div>
-          </div>
-          <div>
-            <div className="fp-k">Premium</div>
-            <div className="fp-v">$1.2k</div>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: 'A full launch kit in one go',
-    body: 'Landing copy, 30 days of content, 7 emails, ad ideas, an SEO plan and your first weekly action plan.',
-    preview: (
-      <div className="fp">
-        <div className="fp-label">Launch kit</div>
-        <div className="fp-row">
-          <span className="fp-chip is-on">Landing</span>
-          <span className="fp-chip is-on">30-day content</span>
-          <span className="fp-chip is-on">7 emails</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: 'Everything stays tied to your offer',
-    body: 'Every caption, email and ad promotes the offer you picked — not generic content about your niche.',
-    preview: (
-      <div className="fp">
-        <div className="fp-label">Day 14 · Instagram</div>
-        <div className="fp-input">Hook: "Your listing sat for 40 days. The video was why."</div>
-        <div className="fp-input is-muted">CTA: Book the Starter edit →</div>
-      </div>
-    ),
-  },
-  {
-    title: 'Honest by design',
-    body: 'No invented testimonials, no income promises, no hype. Placeholders tell you what to replace with real proof.',
-    preview: (
-      <div className="fp">
-        <div className="fp-label">Landing page</div>
-        <div className="fp-input is-muted">
-          Add real client results here — the kit never invents them for you.
-        </div>
-      </div>
-    ),
-  },
+  { title: 'Positioning Generator', body: 'A specific niche and ideal customer, grounded in what you already know and enjoy.' },
+  { title: 'Offer Builder', body: 'Three monetizable offer options with pricing suggestions, bonuses and objection answers.' },
+  { title: 'Landing Page Writer', body: 'Benefit-led page copy with problem, transformation, FAQ and clear CTAs — ready to paste.' },
+  { title: 'Content Plan', body: '30 days of posts with hooks, angles and CTAs, all promoting the offer you picked.' },
+  { title: 'Email Sequence', body: 'A 7-email launch arc: story, problem, transformation, reveal, objections, proof, last call.' },
+  { title: 'Ads Starter Kit', body: 'Meta ad hooks, primary text and visual directions you can shoot with a phone.' },
+  { title: 'SEO Starter Kit', body: 'Realistic long-tail keywords with page-ready titles and meta descriptions.' },
+  { title: 'Weekly Action Plan', body: 'Concrete tasks sized to your available hours — highest-leverage first.' },
+];
+
+const WHO_FOR = [
+  'Freelancers', 'Creators', 'Coaches', 'Consultants',
+  'Solopreneurs', 'Service providers', 'Digital product makers', 'E-commerce beginners',
 ];
 
 const FAQ = [
@@ -185,7 +123,7 @@ export default function Landing() {
 
   return (
     <div className="lp">
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
+      {/* ── 1. Hero (animated sky kept from the CF design system) ─────── */}
       <div className="lp-sky">
         <div className="lp-clouds" aria-hidden="true" />
         <Meteors />
@@ -198,27 +136,28 @@ export default function Landing() {
             OfferFlow AI
           </div>
           <Link className="lp-header-cta" to="/app">
-            Start for free
+            Create my launch kit
           </Link>
         </header>
 
         <section className="lp-hero">
           <h1>
-            Your AI{' '}
-            <span className="lp-serif">
-              <RotatingWord words={ROLES} />
-            </span>
+            Turn your idea into a <span className="lp-serif">clear offer</span>
+            <br />
+            and launch plan.
           </h1>
           <p className="lp-sub">
-            From idea to offer to launch — a guided workflow that turns what you know into something people can buy.
+            OfferFlow AI helps creators, freelancers and solo founders define what to sell, write
+            their landing page, plan content, create emails, test ads and build a simple weekly
+            sales system.
           </p>
 
           <div className="lp-hero-actions">
             <Link className="lp-cta" to="/app">
-              Try it free
+              Create my launch kit
             </Link>
-            <a className="lp-cta-ghost" href="#pricing">
-              See pricing
+            <a className="lp-cta-ghost" href="#example">
+              See example
             </a>
           </div>
 
@@ -237,26 +176,110 @@ export default function Landing() {
 
       <StepPopups />
 
-      {/* ── What you get ──────────────────────────────────────────────── */}
+      {/* ── 2. Problem ─────────────────────────────────────────────────── */}
+      <section className="lp-problem">
+        <div className="lp-problem-inner">
+          <Reveal>
+            <div className="lp-eyebrow">The problem</div>
+            <h2 className="lp-h2">Ideas are easy. Turning them into sales is where it breaks.</h2>
+            <p className="lp-h2-sub">
+              You have ideas. Maybe even skills, content or a small audience. But turning that into
+              a clear offer, landing page, emails and weekly plan is where most people get stuck.
+            </p>
+          </Reveal>
+          <div className="lp-problem-grid">
+            {PROBLEM_BULLETS.map((b, i) => (
+              <Reveal className="lp-problem-item" key={b} delay={i * 70}>
+                <span className="lp-problem-x">✕</span> {b}
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. Solution ────────────────────────────────────────────────── */}
       <Reveal as="section" className="lp-trusted">
-        <div className="lp-trusted-label">One launch kit, eight deliverables</div>
+        <div className="lp-trusted-label">The solution: one launch kit, eight deliverables</div>
         <Marquee items={OUTPUTS} />
       </Reveal>
 
-      {/* ── Feature grid ──────────────────────────────────────────────── */}
+      {/* ── 4. How it works ────────────────────────────────────────────── */}
+      <section className="lp-how">
+        <div className="lp-how-inner">
+          <Reveal>
+            <div className="lp-eyebrow">How it works</div>
+            <h2 className="lp-h2">From idea to launch in four steps</h2>
+          </Reveal>
+          <div className="lp-how-grid">
+            {HOW_IT_WORKS.map((s, i) => (
+              <Reveal className="lp-how-step" key={s.n} delay={i * 90}>
+                <div className="lp-how-n">{s.n}</div>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5. Features (8 cards, spec names) ──────────────────────────── */}
       <section className="lp-features">
         <div className="lp-feature-grid">
           {FEATURES.map((f, i) => (
-            <Reveal as="article" className="lp-feature" key={f.title} delay={(i % 3) * 90}>
+            <Reveal as="article" className="lp-feature" key={f.title} delay={(i % 4) * 80}>
               <h3>{f.title}</h3>
               <p>{f.body}</p>
-              {f.preview}
             </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ── Pricing ───────────────────────────────────────────────────── */}
+      {/* ── 6. Example Launch Kit ──────────────────────────────────────── */}
+      <section className="lp-example" id="example">
+        <div className="lp-example-inner">
+          <Reveal>
+            <div className="lp-eyebrow">Example launch kit</div>
+            <h2 className="lp-h2">What "video editor with no plan" turns into</h2>
+          </Reveal>
+          <div className="lp-example-grid">
+            <Reveal className="lp-feature">
+              <h3>Positioning</h3>
+              <p className="lp-ex-quote">"Listing videos for busy real-estate agents — edited and posted within 24 hours."</p>
+            </Reveal>
+            <Reveal className="lp-feature" delay={90}>
+              <h3>Offer</h3>
+              <p className="lp-ex-quote">"The Listing Launch Pack — 4 edited videos + captions, monthly."</p>
+            </Reveal>
+            <Reveal className="lp-feature" delay={180}>
+              <h3>Day 14 content</h3>
+              <p className="lp-ex-quote">Hook: "Your listing sat for 40 days. The video was why." · CTA: Book the Starter edit →</p>
+            </Reveal>
+            <Reveal className="lp-feature" delay={270}>
+              <h3>Email 4 of 7</h3>
+              <p className="lp-ex-quote">Subject: "The 3 listing videos that actually get DMs" · reveal + soft CTA</p>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 7. Who it is for ───────────────────────────────────────────── */}
+      <section className="lp-who">
+        <div className="lp-who-inner">
+          <Reveal>
+            <div className="lp-eyebrow">Who it is for</div>
+            <h2 className="lp-h2">Built for people selling themselves, not a warehouse</h2>
+          </Reveal>
+          <div className="lp-who-grid">
+            {WHO_FOR.map((w, i) => (
+              <Reveal className="lp-who-chip" key={w} delay={i * 50}>
+                {w}
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 8. Pricing preview ─────────────────────────────────────────── */}
       <section className="lp-pricing" id="pricing">
         <div className="lp-pricing-inner">
           <Reveal>
@@ -322,7 +345,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── FAQ ───────────────────────────────────────────────────────── */}
+      {/* ── 9. FAQ ─────────────────────────────────────────────────────── */}
       <section className="lp-faq">
         <div className="lp-faq-inner">
           <Reveal className="lp-faq-left">
@@ -345,7 +368,18 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────────── */}
+      {/* ── 10. Final CTA ──────────────────────────────────────────────── */}
+      <section className="lp-final">
+        <Reveal className="lp-final-inner">
+          <h2>Stop planning. Start launching.</h2>
+          <p>Answer a few questions and get your first launch kit today — free.</p>
+          <Link className="lp-cta" to="/app">
+            Create my launch kit
+          </Link>
+        </Reveal>
+      </section>
+
+      {/* ── Footer ─────────────────────────────────────────────────────── */}
       <footer className="lp-footer">
         <div className="lp-footer-inner">
           <div className="lp-brand is-dark">
@@ -361,6 +395,7 @@ export default function Landing() {
           </div>
           <div className="lp-footer-col">
             <div className="lp-footer-head">Resources</div>
+            <a href="#example">Example kit</a>
             <a href="#pricing">Plans</a>
           </div>
         </div>
