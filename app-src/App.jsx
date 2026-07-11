@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import Flow from './routes/Flow';
+import KitDetail from './routes/KitDetail';
 import Landing from './routes/Landing';
 import Login from './routes/Login';
 
@@ -26,6 +27,7 @@ function AppShell() {
   return (
     <Routes>
       <Route path="/" element={<Flow />} />
+      <Route path="/kits/:id" element={<KitDetail />} />
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );

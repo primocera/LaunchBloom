@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import '../flow.css';
@@ -22,17 +22,9 @@ const ONBOARDING_FIELDS = [
   { id: 'biggest_challenge', label: 'Biggest challenge right now', placeholder: 'What is stopping you?' },
 ];
 
-const SECTIONS = [
-  ['landing_page', 'Landing page'],
-  ['content_plan', '30-day content plan'],
-  ['email_sequence', '7-email sequence'],
-  ['ads_kit', 'Meta ad ideas'],
-  ['seo_kit', 'SEO starter plan'],
-  ['weekly_plan', 'Weekly action plan'],
-];
-
 export default function Flow() {
   const { account, logout } = useAuth();
+  const navigate = useNavigate();
   const [state, setState] = useState(null); // { workspace, onboarding, positioning }
   const [offers, setOffers] = useState([]);
   const [kits, setKits] = useState([]);
@@ -152,8 +144,7 @@ export default function Flow() {
                   disabled={!!busy}
                   onClick={() => run('kit', async () => {
                     const r = await api.generateLaunchKit(o.id);
-                    setKit(r.launch_kit);
-                    await refresh();
+                    navigate(`/app/kits/${r.launch_kit.id}`);
                   })}
                 >
                   {busy === 'kit' ? 'Building your kit… (1–2 min)' : 'Build launch kit (3 credits)'}
@@ -164,18 +155,30 @@ export default function Flow() {
         </>
       )}
 
-      {/* ── Step 4: the launch kit ── */}
-      {step === 4 && kit && (
-        <LaunchKit
-          kit={kit}
-          busy={busy}
-          onRegenerate={(section) =>
-            run(section, async () => {
-              const r = await api.regenerateSection(kit.id, section);
-              setKit({ ...kit, [section]: r.data });
-            })
-          }
-        />
+      {/* ── Step 4: launch kits exist — link to their detail pages ── */}
+      {step === 4 && (
+        <>
+          <h2 className="flow-h2">Your launch kits</h2>
+          {kits.map((k) => (
+            <Link className="flow-card kit-link" to={`/app/kits/${k.id}`} key={k.id}>
+              <div>
+                <div className="kit-item-title">{k.title || 'Launch kit'}</div>
+                <div className="flow-muted">{k.summary}</div>
+              </div>
+              <span className="kit-open">Open →</span>
+            </Link>
+          ))}
+          <div className="flow-card">
+            <h3>Want to launch something else?</h3>
+            <p className="flow-muted">Pick a different offer and build another kit.</p>
+            <button
+              className="flow-btn is-ghost"
+              onClick={() => { setKit(null); setKits([]); }}
+            >
+              Back to my offers
+            </button>
+          </div>
+        </>
       )}
     </Shell>
   );
@@ -292,92 +295,3 @@ function Positioning({ p }) {
   );
 }
 
-function LaunchKit({ kit, busy, onRegenerate }) {
-  const [open, setOpen] = useState('landing_page');
-
-  return (
-    <>
-      <div className="flow-card">
-        <div className="flow-eyebrow">Your launch kit</div>
-        <h2>{kit.title}</h2>
-        <p className="flow-muted">{kit.summary}</p>
-        {Array.isArray(kit.launch_checklist) && (
-          <ul className="kit-checklist">
-            {kit.launch_checklist.map((x) => <li key={x}>{x}</li>)}
-          </ul>
-        )}
-      </div>
-
-      {SECTIONS.map(([id, label]) => (
-        <div className="flow-card" key={id}>
-          <button className="kit-section-head" onClick={() => setOpen(open === id ? null : id)}>
-            <h3>{label}</h3>
-            <span>{open === id ? '−' : '+'}</span>
-          </button>
-          {open === id && (
-            <>
-              <Section id={id} data={kit[id]} />
-              <button className="flow-btn is-ghost" disabled={!!busy} onClick={() => onRegenerate(id)}>
-                {busy === id ? 'Regenerating…' : 'Regenerate this section (1 credit)'}
-              </button>
-            </>
-          )}
-        </div>
-      ))}
-    </>
-  );
-}
-
-/** Render a kit section: landing page is structured; item sections are lists. */
-function Section({ id, data }) {
-  if (!data) return <p className="flow-muted">Nothing here yet.</p>;
-
-  if (id === 'landing_page') {
-    return (
-      <div className="kit-landing">
-        <h4>{data.headline}</h4>
-        <p className="flow-muted">{data.subheadline}</p>
-        <div className="flow-k">The problem</div>
-        <p>{data.problem_section}</p>
-        <div className="flow-k">The transformation</div>
-        <p>{data.transformation_section}</p>
-        <div className="flow-k">What you get</div>
-        <ul>{(data.offer_stack || []).map((x) => <li key={x}>{x}</li>)}</ul>
-        {data.bonuses?.length > 0 && (
-          <>
-            <div className="flow-k">Bonuses</div>
-            <ul>{data.bonuses.map((x) => <li key={x}>{x}</li>)}</ul>
-          </>
-        )}
-        <div className="flow-k">FAQ</div>
-        {(data.faq || []).map((f) => (
-          <p key={f.question}><strong>{f.question}</strong><br />{f.answer}</p>
-        ))}
-        <p className="kit-cta">{data.primary_cta}</p>
-        <p className="flow-muted">{data.testimonial_placeholder_note}</p>
-      </div>
-    );
-  }
-
-  const items = data.items || [];
-  return (
-    <div className="kit-items">
-      {items.map((item, i) => (
-        <div className="kit-item" key={i}>
-          {'day_number' in item && <span className="kit-badge">Day {item.day_number}</span>}
-          {'sequence_order' in item && <span className="kit-badge">Email {item.sequence_order}</span>}
-          {'priority' in item && <span className="kit-badge">{item.priority}</span>}
-          <div>
-            <div className="kit-item-title">
-              {item.topic || item.subject_line || item.headline || item.task_title || item.title || item.keyword}
-            </div>
-            <div className="flow-muted">
-              {item.hook || item.main_angle || item.primary_text || item.task_description || item.meta_description}
-            </div>
-            {item.cta && <div className="kit-item-cta">CTA: {item.cta}</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
