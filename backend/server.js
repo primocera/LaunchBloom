@@ -100,6 +100,7 @@ app.get('/health', (_req, res) => {
     status: 'ok',
     app: 'offerflow',
     ai: process.env.ANTHROPIC_API_KEY ? 'live' : 'mock',
+    model: process.env.ANTHROPIC_API_KEY ? (process.env.ANTHROPIC_MODEL || 'claude-opus-4-8') : null,
     timestamp: new Date().toISOString(),
   });
 });

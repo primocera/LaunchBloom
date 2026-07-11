@@ -6,7 +6,12 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 
-const MODEL = 'claude-opus-4-8';
+// Model is env-configurable so you can trade cost vs quality without a code
+// change. Structured (json_schema) output works on all three:
+//   claude-opus-4-8  — best quality, ~$0.40/launch kit ($5/$25 per Mtok)
+//   claude-sonnet-5  — strong, ~$0.17/kit ($3/$15, intro $2/$10)
+//   claude-haiku-4-5 — cheapest, ~$0.08/kit ($1/$5) — plenty for this workload
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-8';
 
 // Shared guardrails for every OfferFlow generation. The playbook rules:
 // guided business workflow, ethical marketing, no overpromising.
