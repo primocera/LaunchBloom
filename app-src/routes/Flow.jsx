@@ -159,6 +159,11 @@ export default function Flow() {
       {step === 4 && (
         <>
           <h2 className="flow-h2">Your launch kits</h2>
+          <div className="flow-row" style={{ marginBottom: 14 }}>
+            {[['/app/landing-page', 'Landing Page'], ['/app/content-plan', 'Content Plan'], ['/app/email-sequence', 'Emails'], ['/app/ads', 'Ads'], ['/app/seo', 'SEO'], ['/app/weekly-plan', 'Weekly Plan']].map(([to, label]) => (
+              <Link key={to} to={to} className="kit-tab" style={{ textDecoration: 'none' }}>{label}</Link>
+            ))}
+          </div>
           {kits.map((k) => (
             <Link className="flow-card kit-link" to={`/app/kits/${k.id}`} key={k.id}>
               <div>

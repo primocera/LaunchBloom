@@ -104,16 +104,23 @@ const offersSchema = {
 
 // ── Launch kit sections ─────────────────────────────────────────────────────
 
+// Sections per Prompt 18's Landing Page Studio: hero headline/subheadline,
+// primary CTA, problem, solution, benefits, what's included, who it's for,
+// who it's not for, how it works, pricing section, FAQ, final CTA.
 const landingPageSchema = {
   type: 'object',
   properties: {
     headline: { type: 'string' },
     subheadline: { type: 'string' },
+    primary_cta: { type: 'string' },
     problem_section: { type: 'string' },
-    transformation_section: { type: 'string' },
-    offer_stack: { type: 'array', minItems: 3, maxItems: 8, items: { type: 'string' } },
-    bonuses: { type: 'array', maxItems: 4, items: { type: 'string' } },
-    testimonial_placeholder_note: { type: 'string' },
+    solution_section: { type: 'string' },
+    benefits: { type: 'array', minItems: 3, maxItems: 6, items: { type: 'string' } },
+    whats_included: { type: 'array', minItems: 3, maxItems: 8, items: { type: 'string' } },
+    who_its_for: { type: 'array', minItems: 2, maxItems: 5, items: { type: 'string' } },
+    who_its_not_for: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'string' } },
+    how_it_works: { type: 'array', minItems: 3, maxItems: 5, items: { type: 'string' } },
+    pricing_section: { type: 'string' },
     faq: {
       type: 'array',
       minItems: 3,
@@ -125,12 +132,13 @@ const landingPageSchema = {
         additionalProperties: false,
       },
     },
-    primary_cta: { type: 'string' },
-    secondary_cta: { type: 'string' },
+    final_cta_section: { type: 'string' },
+    testimonial_placeholder_note: { type: 'string' },
   },
   required: [
-    'headline', 'subheadline', 'problem_section', 'transformation_section',
-    'offer_stack', 'bonuses', 'testimonial_placeholder_note', 'faq', 'primary_cta', 'secondary_cta',
+    'headline', 'subheadline', 'primary_cta', 'problem_section', 'solution_section',
+    'benefits', 'whats_included', 'who_its_for', 'who_its_not_for', 'how_it_works',
+    'pricing_section', 'faq', 'final_cta_section', 'testimonial_placeholder_note',
   ],
   additionalProperties: false,
 };
@@ -190,17 +198,19 @@ const emailSequenceSchema = {
   additionalProperties: false,
 };
 
+// Ad types map to Prompt 21's studio sections: hooks, static concepts,
+// video concepts, UGC brief.
 const adsKitSchema = {
   type: 'object',
   properties: {
     items: {
       type: 'array',
-      minItems: 3,
-      maxItems: 6,
+      minItems: 4,
+      maxItems: 8,
       items: {
         type: 'object',
         properties: {
-          ad_type: { type: 'string' },
+          ad_type: { type: 'string', enum: ['hook', 'static', 'video', 'ugc'] },
           hook: { type: 'string' },
           primary_text: { type: 'string' },
           headline: { type: 'string' },

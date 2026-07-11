@@ -176,6 +176,116 @@ router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next)
   }
 });
 
+// ---------------------------------------------------------------------------
+// Per-item endpoints for the Studios (Prompts 19-23). The item tables are
+// populated by the AI routes when a kit is generated; here users list them,
+// edit fields, and flip status (planned/done/skipped, ready, selected...).
+// ---------------------------------------------------------------------------
+
+const ITEM_TABLES = {
+  content_items: {
+    order: 'day_number',
+    editable: ['platform', 'content_type', 'topic', 'hook', 'caption_angle', 'cta', 'goal', 'status'],
+  },
+  email_items: {
+    order: 'sequence_order',
+    editable: ['email_type', 'subject_line', 'preheader', 'main_angle', 'body_outline', 'cta', 'status'],
+  },
+  ad_ideas: {
+    order: 'created_at',
+    editable: ['ad_type', 'hook', 'primary_text', 'headline', 'visual_direction', 'cta', 'status'],
+  },
+  seo_items: {
+    order: 'created_at',
+    editable: ['keyword', 'page_type', 'title', 'meta_description', 'content_angle', 'priority', 'status'],
+  },
+  weekly_tasks: {
+    order: 'created_at',
+    editable: ['task_type', 'task_title', 'task_description', 'priority', 'completed', 'week_start'],
+  },
+};
+
+// GET /api/workspace/items/:table?launch_kit_id=... — list a studio's items
+router.get('/api/workspace/items/:table', requireAuth, async (req, res, next) => {
+  try {
+    const cfg = ITEM_TABLES[req.params.table];
+    if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
+    const ws = await ensureWorkspace(req.userEmail);
+
+    let q = supabase.from(req.params.table).select('*').eq('workspace_id', ws.id);
+    if (req.query.launch_kit_id) q = q.eq('launch_kit_id', req.query.launch_kit_id);
+    const { data, error } = await q.order(cfg.order, { ascending: true });
+    if (error) throw new Error(error.message);
+    res.json({ items: data || [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/workspace/items/:table/:id — edit fields / status of one item
+router.patch(
+  '/api/workspace/items/:table/:id',
+  requireAuth,
+  express.json({ limit: '32kb' }),
+  async (req, res, next) => {
+    try {
+      const cfg = ITEM_TABLES[req.params.table];
+      if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
+      const ws = await ensureWorkspace(req.userEmail);
+
+      // Only allow whitelisted, present fields — never workspace_id/id/kit id.
+      const updates = {};
+      for (const k of cfg.editable) {
+        if (k in (req.body || {})) updates[k] = req.body[k];
+      }
+      if (!Object.keys(updates).length) {
+        return res.status(400).json({ error: 'No editable fields provided' });
+      }
+
+      const { data, error } = await supabase
+        .from(req.params.table)
+        .update(updates)
+        .eq('id', req.params.id)
+        .eq('workspace_id', ws.id) // ownership: service_role bypasses RLS
+        .select()
+        .single();
+      if (error || !data) return res.status(404).json({ error: 'Item not found' });
+      res.json({ ok: true, item: data });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/workspace/items/weekly_tasks — add a custom weekly task (Prompt 23)
+router.post(
+  '/api/workspace/items/weekly_tasks',
+  requireAuth,
+  express.json({ limit: '8kb' }),
+  async (req, res, next) => {
+    try {
+      const ws = await ensureWorkspace(req.userEmail);
+      const b = req.body || {};
+      if (!b.launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });
+      if (!b.task_title) return res.status(400).json({ error: 'task_title is required' });
+      const row = {
+        workspace_id: ws.id,
+        launch_kit_id: b.launch_kit_id,
+        task_type: String(b.task_type || 'custom'),
+        task_title: String(b.task_title),
+        task_description: String(b.task_description || ''),
+        priority: ['high', 'medium', 'low'].includes(b.priority) ? b.priority : 'medium',
+        completed: false,
+      };
+      const { data, error } = await supabase.from('weekly_tasks').insert(row).select().single();
+      if (error) throw new Error(error.message);
+      res.status(201).json({ ok: true, item: data });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 module.exports = router;
 module.exports.ensureWorkspace = ensureWorkspace;
 module.exports.ownedWorkspace = ownedWorkspace;

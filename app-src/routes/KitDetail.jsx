@@ -61,6 +61,11 @@ export default function KitDetail() {
       </header>
 
       <main className="flow-main">
+        <div className="flow-row" style={{ marginBottom: 14 }}>
+          {[['/app/landing-page', 'Landing Page Studio'], ['/app/content-plan', 'Content Studio'], ['/app/email-sequence', 'Email Studio'], ['/app/ads', 'Ads Studio'], ['/app/seo', 'SEO Studio'], ['/app/weekly-plan', 'Weekly Plan']].map(([to, label]) => (
+            <Link key={to} to={to} className="kit-tab" style={{ textDecoration: 'none' }}>{label}</Link>
+          ))}
+        </div>
         {error && <p className="flow-err">{error}</p>}
         {!kit && !error && <p className="flow-muted">Loading your launch kit…</p>}
 
@@ -128,24 +133,34 @@ function CopyBtn({ text, label = 'Copy' }) {
 function sectionText(id, data) {
   if (!data) return '';
   if (id === 'landing_page') {
+    const included = data.whats_included || data.offer_stack || [];
     return [
       data.headline,
       data.subheadline,
       '',
       'THE PROBLEM', data.problem_section,
       '',
-      'THE TRANSFORMATION', data.transformation_section,
+      'THE SOLUTION', data.solution_section || data.transformation_section,
       '',
-      'WHAT YOU GET',
-      ...(data.offer_stack || []).map((x) => `- ${x}`),
+      data.benefits?.length ? 'BENEFITS' : '',
+      ...(data.benefits || []).map((x) => `- ${x}`),
       '',
-      data.bonuses?.length ? 'BONUSES' : '',
-      ...(data.bonuses || []).map((x) => `- ${x}`),
+      "WHAT'S INCLUDED",
+      ...included.map((x) => `- ${x}`),
+      '',
+      data.who_its_for?.length ? "WHO IT'S FOR" : '',
+      ...(data.who_its_for || []).map((x) => `- ${x}`),
+      '',
+      data.how_it_works?.length ? 'HOW IT WORKS' : '',
+      ...(data.how_it_works || []).map((x, n) => `${n + 1}. ${x}`),
+      '',
+      data.pricing_section ? 'PRICING\n' + data.pricing_section : '',
       '',
       'FAQ',
       ...(data.faq || []).flatMap((f) => [`Q: ${f.question}`, `A: ${f.answer}`]),
       '',
       `CTA: ${data.primary_cta}`,
+      data.final_cta_section || '',
     ].filter((l) => l !== '').join('\n');
   }
   const items = data.items || [];
@@ -192,26 +207,49 @@ function SectionView({ id, data }) {
 
         <Field label="Headline" value={data.headline} />
         <Field label="Subheadline" value={data.subheadline} />
+        <Field label="Primary CTA" value={data.primary_cta} />
         <Field label="The problem" value={data.problem_section} />
-        <Field label="The transformation" value={data.transformation_section} />
+        <Field label="The solution" value={data.solution_section || data.transformation_section} />
 
-        <div className="flow-k">What you get</div>
-        <ul>{(data.offer_stack || []).map((x) => <li key={x}>{x}</li>)}</ul>
-
-        {data.bonuses?.length > 0 && (
+        {data.benefits?.length > 0 && (
           <>
-            <div className="flow-k">Bonuses</div>
-            <ul>{data.bonuses.map((x) => <li key={x}>{x}</li>)}</ul>
+            <div className="flow-k">Benefits</div>
+            <ul>{data.benefits.map((x) => <li key={x}>{x}</li>)}</ul>
           </>
         )}
+
+        <div className="flow-k">What's included</div>
+        <ul>{(data.whats_included || data.offer_stack || []).map((x) => <li key={x}>{x}</li>)}</ul>
+
+        {data.who_its_for?.length > 0 && (
+          <>
+            <div className="flow-k">Who it's for</div>
+            <ul>{data.who_its_for.map((x) => <li key={x}>{x}</li>)}</ul>
+          </>
+        )}
+
+        {data.who_its_not_for?.length > 0 && (
+          <>
+            <div className="flow-k">Who it's not for</div>
+            <ul>{data.who_its_not_for.map((x) => <li key={x}>{x}</li>)}</ul>
+          </>
+        )}
+
+        {data.how_it_works?.length > 0 && (
+          <>
+            <div className="flow-k">How it works</div>
+            <ul>{data.how_it_works.map((x) => <li key={x}>{x}</li>)}</ul>
+          </>
+        )}
+
+        <Field label="Pricing section" value={data.pricing_section} />
 
         <div className="flow-k">FAQ</div>
         {(data.faq || []).map((f) => (
           <p key={f.question}><strong>{f.question}</strong><br />{f.answer}</p>
         ))}
 
-        <Field label="Primary CTA" value={data.primary_cta} />
-        <Field label="Secondary CTA" value={data.secondary_cta} />
+        <Field label="Final CTA" value={data.final_cta_section} />
         <p className="flow-muted">{data.testimonial_placeholder_note}</p>
       </div>
     );

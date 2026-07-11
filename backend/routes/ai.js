@@ -173,8 +173,10 @@ const SECTION_SYSTEMS = {
     'Create a 7-email launch sequence for this offer. Human, warm, not spammy. Classic arc: ' +
     'welcome/story → problem → transformation → offer reveal → objections → social proof angle → last call. Number 1-7.',
   ads_kit:
-    'Create Meta ad starter ideas for this offer. Hooks stop the scroll without clickbait. ' +
-    'Primary text follows hook → empathy → mechanism → CTA. Visual directions must be shootable by one person with a phone.',
+    'Create Meta ad starter ideas for this offer. Cover all four ad types: at least one "hook" (scroll-stopping opener), ' +
+    'one "static" (image ad concept), one "video" (short video concept), and one "ugc" (creator-style brief). ' +
+    'Hooks stop the scroll without clickbait. Primary text follows hook → empathy → mechanism → CTA. ' +
+    'Visual directions must be shootable by one person with a phone.',
   seo_kit:
     'Create an SEO starter plan for this offer: realistic long-tail keywords a small new site can rank for, ' +
     'with page-ready titles and meta descriptions (under 160 chars).',
@@ -216,6 +218,7 @@ async function explodeItems(section, data, launchKitId, workspaceId) {
     email_sequence: 'email_items',
     ads_kit: 'ad_ideas',
     seo_kit: 'seo_items',
+    weekly_plan: 'weekly_tasks',
   };
   const table = tableFor[section];
   if (!table || !Array.isArray(data.items)) return;
@@ -294,7 +297,7 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
 
     // Explode editable sections into item tables (best-effort)
     await Promise.all(
-      ['content_plan', 'email_sequence', 'ads_kit', 'seo_kit'].map((s) =>
+      ['content_plan', 'email_sequence', 'ads_kit', 'seo_kit', 'weekly_plan'].map((s) =>
         explodeItems(s, bySection[s], kit.id, ws.id)
       )
     );

@@ -41,6 +41,15 @@ export const api = {
   launchKits: () => request('/api/workspace/launch-kits'),
   launchKit: (id) => request(`/api/workspace/launch-kits/${id}`),
 
+  items: (table, launchKitId) =>
+    request(`/api/workspace/items/${table}?launch_kit_id=${encodeURIComponent(launchKitId)}`),
+  updateItem: (table, id, patch) =>
+    request(`/api/workspace/items/${table}/${id}`, { method: 'PATCH', body: patch }),
+  addWeeklyTask: (task) =>
+    request('/api/workspace/items/weekly_tasks', { method: 'POST', body: task }),
+  saveSection: (launchKitId, section, data) =>
+    request(`/api/workspace/launch-kits/${launchKitId}/section`, { method: 'PATCH', body: { section, data } }),
+
   generatePositioning: () => request('/api/ai/generate-positioning', { method: 'POST', body: {} }),
   generateOffers: () => request('/api/ai/generate-offers', { method: 'POST', body: {} }),
   generateLaunchKit: (offerId) =>
