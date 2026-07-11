@@ -176,6 +176,53 @@ router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next)
   }
 });
 
+// GET /api/workspace/launch-kits/:id/quality — Prompt 27 quality scores +
+// Prompt 28 safety scan for the kit's sections and its offer.
+const {
+  scoreOfferQuality,
+  scoreLandingPageQuality,
+  scoreContentPlanQuality,
+  scoreEmailSequenceQuality,
+} = require('../lib/quality-checks');
+const { safetyCheck } = require('../lib/safety-check');
+
+router.get('/api/workspace/launch-kits/:id/quality', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await ensureWorkspace(req.userEmail);
+    const { data: kit } = await supabase
+      .from('launch_kits')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('workspace_id', ws.id)
+      .single();
+    if (!kit) return res.status(404).json({ error: 'Launch kit not found' });
+
+    const { data: offer } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('id', kit.offer_id)
+      .eq('workspace_id', ws.id)
+      .single();
+
+    res.json({
+      quality: {
+        offer: offer ? scoreOfferQuality(offer) : null,
+        landing_page: scoreLandingPageQuality(kit.landing_page || {}),
+        content_plan: scoreContentPlanQuality(kit.content_plan || {}, offer || {}),
+        email_sequence: scoreEmailSequenceQuality(kit.email_sequence || {}, offer || {}),
+      },
+      safety: {
+        landing_page: safetyCheck(kit.landing_page),
+        content_plan: safetyCheck(kit.content_plan),
+        email_sequence: safetyCheck(kit.email_sequence),
+        ads_kit: safetyCheck(kit.ads_kit),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Per-item endpoints for the Studios (Prompts 19-23). The item tables are
 // populated by the AI routes when a kit is generated; here users list them,
