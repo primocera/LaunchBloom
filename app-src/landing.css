@@ -1,0 +1,1146 @@
+/* ReelPanda's landing palette: a deep blue sky that washes to white, blue
+   body copy inside feature cards, black pill buttons. Scoped to .lp so the
+   warm-neutral app shell is untouched. */
+.lp {
+  --blue: #2563eb;
+  --blue-hi: #2469ff;
+  --blue-deep: #1e5fe0;
+  --sky-top: #2f6ceb;
+  --tint: #f2f6ff;
+  --tint-deep: #eaf1fe;
+  --ink: #111111;
+  --ink-deep: #050505;
+  --surface: #ffffff;
+  --line: #e9e9e9;
+  --text: #111111;
+  --text-muted: #6b6b6b;
+  --text-faint: #9a9a9a;
+
+  min-height: 100%;
+  overflow-x: hidden;
+  /* body { font-family: var(--font-inter) } on ReelPanda. Their scale tops out
+     at 700, so nothing here goes heavier. */
+  font-family: Inter, 'Inter Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* ── Scroll reveal ────────────────────────────────────────────────────── */
+.lp .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.12, 0.23, 0.5, 1),
+    transform 0.7s cubic-bezier(0.12, 0.23, 0.5, 1);
+  will-change: opacity, transform;
+}
+
+.lp .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Blue sky block: header + hero live inside it ─────────────────────── */
+
+.lp-sky {
+  position: relative;
+  overflow: hidden;
+  /* Saturated at the top, bleaching to white where the next section starts. */
+  background: linear-gradient(
+    180deg,
+    var(--sky-top) 0%,
+    #3d78ee 26%,
+    #7ba4f3 62%,
+    #cfdefa 85%,
+    #ffffff 100%
+  );
+}
+
+/* ── Wind streaks across the sky (ReelPanda's rp-meteor) ──────────────── */
+
+.lp-meteors {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Each streak starts off-screen left and is carried across on its own clock;
+   duration and delay come from the element, so no two travel together. */
+.lp-meteor {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  border-radius: 999px;
+  transform: translateX(-180px) rotate(-12deg);
+  animation-name: meteor;
+  animation-timing-function: cubic-bezier(0.12, 0.23, 0.5, 1);
+  animation-iteration-count: infinite;
+}
+
+@keyframes meteor {
+  0% { opacity: 0; transform: translateX(-180px) rotate(-12deg); }
+  12% { opacity: 0.9; }
+  62% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateX(720px) rotate(-12deg); }
+}
+
+/* Soft cloud banks drifting across the lower half of the sky. */
+.lp-clouds {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(48% 32% at 18% 74%, rgba(255, 255, 255, 0.5), transparent 70%),
+    radial-gradient(42% 26% at 78% 66%, rgba(255, 255, 255, 0.42), transparent 72%),
+    radial-gradient(60% 30% at 50% 88%, rgba(255, 255, 255, 0.6), transparent 70%),
+    radial-gradient(30% 20% at 32% 52%, rgba(255, 255, 255, 0.24), transparent 74%);
+  animation: clouds 34s ease-in-out infinite alternate;
+}
+
+@keyframes clouds {
+  from { transform: translateX(-2%) scale(1); }
+  to { transform: translateX(2%) scale(1.05); }
+}
+
+/* ── Header: transparent, sits on the blue ────────────────────────────── */
+
+.lp-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1240px;
+  padding: 22px 32px;
+  margin: 0 auto;
+}
+
+.lp-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.lp-brand.is-dark {
+  color: var(--ink);
+}
+
+.lp-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+  background: #fff;
+  border-radius: 8px;
+}
+
+.lp-brand.is-dark .lp-brand-mark {
+  color: #fff;
+  background: var(--ink);
+}
+
+.lp-header-cta {
+  padding: 11px 22px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  background: #fff;
+  border-radius: 10px;
+  transition: transform 0.15s;
+}
+
+.lp-header-cta:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+
+.lp-hero {
+  position: relative;
+  z-index: 2;
+  max-width: 960px;
+  padding: 56px 24px 110px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* text-[76px] font-normal leading-[0.95] tracking-[-3px], verbatim. */
+.lp-hero h1 {
+  font-size: 76px;
+  font-weight: 400;
+  line-height: 0.95;
+  color: #fff;
+  letter-spacing: -3px;
+}
+
+@media (max-width: 1023px) {
+  .lp-hero h1 {
+    font-size: 64px;
+  }
+}
+
+@media (max-width: 639px) {
+  .lp-hero h1 {
+    font-size: 34px;
+    letter-spacing: -1.5px;
+  }
+}
+
+/* font-instrument text-[1.08em] italic tracking-[-2px] */
+.lp-serif {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 1.08em;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -2px;
+}
+
+.lp-sub {
+  max-width: 640px;
+  margin: 20px auto 0;
+  font-size: clamp(15px, 1.6vw, 19px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.lp-hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.lp-cta,
+.lp-cta-ghost {
+  padding: 13px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 999px;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.lp-cta {
+  color: var(--ink);
+  background: #fff;
+}
+
+.lp-cta-ghost {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.lp-cta:hover,
+.lp-cta-ghost:hover {
+  transform: translateY(-1px);
+}
+
+.lp-cta-ghost:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Glass "Ask AI" card ──────────────────────────────────────────────── */
+
+.lp-ask {
+  max-width: 760px;
+  padding: 16px;
+  margin: 62px auto 0;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
+}
+
+.lp-ask-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 6px 14px;
+}
+
+.lp-ask-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.lp-ask-spark {
+  color: #cfe0ff;
+}
+
+.lp-ask-pill {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--blue);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+}
+
+.lp-ask-box {
+  padding: 18px 18px 12px;
+  background: #fff;
+  border-radius: 14px;
+}
+
+.lp-ask-line {
+  position: relative;
+  min-height: 26px;
+  font-size: 15.5px;
+  color: var(--text-faint);
+}
+
+/* The typewriter sits underneath as an animated placeholder; the real input is
+   transparent on top, so the box looks exactly as it did before it worked. */
+.lp-ask-ghost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lp-ask-input {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  font-size: 15.5px;
+  color: var(--text);
+  background: none;
+  border: none;
+  outline: none;
+}
+
+.typed {
+  color: var(--text-muted);
+}
+
+.type-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  font-weight: 300;
+  color: var(--blue);
+  animation: cursor-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 45% { opacity: 1; }
+  46%, 100% { opacity: 0; }
+}
+
+.lp-ask-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.lp-ask-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: #f4f4f5;
+  border-radius: 999px;
+}
+
+.lp-ask-btn {
+  padding: 9px 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  background: #f0f0f1;
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lp-ask-btn:hover {
+  color: #fff;
+  background: var(--blue);
+}
+
+/* ── Rotating headline tail ───────────────────────────────────────────── */
+
+.rotating-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.rotating-ghost {
+  visibility: hidden;
+}
+
+.rotating-word {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* ── Trusted / marquee ────────────────────────────────────────────────── */
+
+.lp-trusted {
+  padding: 34px 0 46px;
+}
+
+.lp-trusted-label {
+  margin-bottom: 26px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-faint);
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: brand-marquee 26s linear infinite;
+}
+
+.marquee-group {
+  display: flex;
+  gap: 76px;
+  padding-right: 76px;
+}
+
+.marquee-item {
+  font-size: 20px;
+  font-weight: 600;
+  color: #8f8f8f;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* Two identical groups: shifting by half the track is exactly one group. */
+@keyframes brand-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ── Feature grid: hairline cells, blue body copy ─────────────────────── */
+
+.lp-features {
+  max-width: 1240px;
+  padding: 30px 24px 90px;
+  margin: 0 auto;
+}
+
+.lp-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.lp-feature {
+  padding: 34px 32px 30px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.lp-feature h3 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.lp-feature p {
+  margin: 10px 0 22px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--blue);
+}
+
+/* ── "Live" feature previews: each mini-UI loops a subtle animation, the
+      way ReelPanda's landing cells replay their product moments. ───────── */
+
+.lp-feature .fp {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.lp-feature:hover .fp {
+  transform: translateY(-4px) rotate(-0.4deg);
+  box-shadow: 0 14px 32px rgba(20, 40, 90, 0.1);
+}
+
+/* Progress bar refills on a loop. */
+.fp-bar span {
+  transform-origin: left center;
+  animation: fp-grow 3.4s ease-in-out infinite;
+}
+
+@keyframes fp-grow {
+  0%, 12% { transform: scaleX(0.12); }
+  55%, 88% { transform: scaleX(1); }
+  100% { transform: scaleX(0.12); }
+}
+
+/* Chips pop in one after another, then rest. */
+.fp-row .fp-chip {
+  animation: fp-pop 4.2s ease infinite;
+}
+
+.fp-row .fp-chip:nth-child(2) { animation-delay: 0.35s; }
+.fp-row .fp-chip:nth-child(3) { animation-delay: 0.7s; }
+
+@keyframes fp-pop {
+  0% { opacity: 0; transform: translateY(6px); }
+  10%, 90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; }
+}
+
+/* Evidence lines "arrive" like a finding being written. */
+.fp-input {
+  animation: fp-arrive 4.6s ease infinite;
+}
+
+.fp-input.is-muted {
+  position: relative;
+  overflow: hidden;
+  animation-delay: 0.5s;
+}
+
+/* A scanner sweep across muted (measuring…) lines. */
+.fp-input.is-muted::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(100deg, transparent 30%, rgba(37, 99, 235, 0.07) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: fp-sweep 2.8s ease-in-out infinite;
+}
+
+@keyframes fp-arrive {
+  0% { opacity: 0; transform: translateY(5px); }
+  8%, 100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fp-sweep {
+  0%, 20% { transform: translateX(-100%); }
+  70%, 100% { transform: translateX(100%); }
+}
+
+/* Stat values tick in, staggered. */
+.fp-stat-row > div {
+  animation: fp-arrive 4.4s ease infinite;
+}
+
+.fp-stat-row > div:nth-child(2) { animation-delay: 0.3s; }
+.fp-stat-row > div:nth-child(3) { animation-delay: 0.6s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-bar span,
+  .fp-row .fp-chip,
+  .fp-input,
+  .fp-input.is-muted::after,
+  .fp-stat-row > div {
+    animation: none;
+  }
+
+  .lp-feature:hover .fp {
+    transform: none;
+  }
+}
+
+/* Miniature UI preview inside each cell. */
+.fp {
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.fp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fp-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fp-ask {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #f4f4f5;
+  border-radius: 999px;
+}
+
+.fp-bar {
+  height: 6px;
+  margin: 10px 0 12px;
+  overflow: hidden;
+  background: #f1f1f2;
+  border-radius: 999px;
+}
+
+.fp-bar span {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  border-radius: 999px;
+}
+
+.fp-row {
+  display: flex;
+  gap: 6px;
+}
+
+.fp-chip {
+  padding: 4px 9px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: #f6f6f7;
+  border-radius: 6px;
+}
+
+.fp-chip.is-on {
+  color: var(--blue);
+  background: var(--tint);
+}
+
+.fp-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fp-k {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.fp-v {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fp-input {
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: #f7f8fa;
+  border-radius: 8px;
+}
+
+.fp-input.is-muted {
+  color: var(--text-faint);
+}
+
+.fp-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fp-tiles span {
+  height: 54px;
+  background: linear-gradient(160deg, #e8eefb, #f6f8fd);
+  border-radius: 8px;
+}
+
+.fp-link {
+  padding: 9px 12px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--blue);
+  background: var(--tint);
+  border-radius: 8px;
+}
+
+/* ── Pricing: tinted band, black pill buttons ─────────────────────────── */
+
+.lp-pricing {
+  padding: 84px 24px;
+  background: linear-gradient(180deg, var(--tint), #fbfcff);
+}
+
+.lp-pricing-inner {
+  max-width: 1040px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.lp-eyebrow {
+  margin-bottom: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.lp-h2 {
+  font-size: clamp(27px, 3.4vw, 40px);
+  font-weight: 400;
+  letter-spacing: -1.2px;
+}
+
+.lp-h2.is-left {
+  text-align: left;
+}
+
+.lp-h2-sub {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.lp-price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 48px;
+  text-align: left;
+}
+
+.lp-price-card {
+  display: flex;
+  flex-direction: column;
+  padding: 28px 26px;
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: 0 2px 18px rgba(17, 17, 17, 0.05);
+}
+
+.lp-price-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lp-price-name {
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+.lp-price-badge {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: #f4f4f5;
+  border-radius: 999px;
+}
+
+.lp-price-amount {
+  margin: 26px 0 20px;
+  font-size: 40px;
+  font-weight: 400;
+  letter-spacing: -1.2px;
+}
+
+.lp-price-amount s {
+  margin-right: 8px;
+  font-size: 20px;
+  color: var(--text-faint);
+}
+
+.lp-price-amount span {
+  margin-left: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-faint);
+  letter-spacing: 0;
+}
+
+.lp-price-note {
+  padding: 14px 16px;
+  background: var(--tint);
+  border-radius: 12px;
+}
+
+.lp-price-note-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.lp-price-note-sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.lp-included {
+  padding-top: 20px;
+  margin: 22px 0 14px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-top: 1px solid var(--line);
+}
+
+.lp-price-features {
+  margin-bottom: 26px;
+  list-style: none;
+}
+
+.lp-price-features li {
+  position: relative;
+  padding: 10px 12px 10px 30px;
+  margin-bottom: 7px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.lp-price-features li::before {
+  position: absolute;
+  top: 15px;
+  left: 13px;
+  width: 6px;
+  height: 6px;
+  background: var(--blue);
+  border-radius: 50%;
+  content: '';
+}
+
+/* The only black on the page, exactly as on ReelPanda. */
+.lp-price-btn {
+  width: 100%;
+  padding: 15px;
+  margin-top: auto;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ink-deep);
+  border-radius: 999px;
+  transition: transform 0.15s;
+}
+
+.lp-price-btn:hover {
+  transform: translateY(-1px);
+}
+
+.lp-price-micro {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ── Coverage stats ───────────────────────────────────────────────────── */
+
+.lp-coverage {
+  max-width: 1140px;
+  padding: 86px 24px;
+  margin: 0 auto;
+}
+
+.lp-stat-card {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 40px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(17, 17, 17, 0.05);
+}
+
+.lp-stat {
+  padding: 34px 30px;
+  border-right: 1px solid var(--line);
+}
+
+.lp-stat:last-child {
+  border-right: none;
+}
+
+.lp-stat-num {
+  font-size: clamp(30px, 3.4vw, 42px);
+  font-weight: 400;
+  letter-spacing: -1.2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-stat-label {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--blue);
+}
+
+.lp-stat-sub {
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+/* ── FAQ: tinted band, two columns ────────────────────────────────────── */
+
+.lp-faq {
+  padding: 86px 24px;
+  background: var(--tint-deep);
+}
+
+.lp-faq-inner {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 60px;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.lp-faq .lp-h2 {
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -1.1px;
+}
+
+.lp-faq-blurb {
+  max-width: 340px;
+  margin-top: 20px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.faq-item {
+  border-bottom: 1px solid #d7e0f2;
+}
+
+.faq-item:first-child {
+  border-top: none;
+}
+
+.faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 20px 0;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.faq-sign {
+  flex: none;
+  font-size: 17px;
+  color: var(--text-faint);
+}
+
+/* Grid rows collapse without a hard-coded height. */
+.faq-a {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease;
+}
+
+.faq-item.is-open .faq-a {
+  grid-template-rows: 1fr;
+}
+
+.faq-a p {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.faq-item.is-open .faq-a p {
+  padding-bottom: 22px;
+}
+
+/* ── Rotating pipeline popup (ours, not ReelPanda's) ──────────────────── */
+
+.popup {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 15;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  max-width: 320px;
+  padding: 13px 16px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(17, 17, 17, 0.12);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.popup.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.popup-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  color: var(--blue);
+  background: var(--tint);
+  border-radius: 9px;
+}
+
+.popup-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.popup-body {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.popup-dots {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.popup-dots span {
+  width: 5px;
+  height: 5px;
+  background: #d8d8d8;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+
+.popup-dots span.is-on {
+  background: var(--blue);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+
+.lp-footer {
+  padding: 64px 24px 30px;
+  background: var(--surface);
+}
+
+.lp-footer-inner {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 40px;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.lp-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lp-footer-head {
+  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.lp-footer-col a {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.lp-footer-col a:hover {
+  color: var(--blue);
+}
+
+.lp-copy {
+  max-width: 1140px;
+  padding-top: 30px;
+  margin: 48px auto 0;
+  font-size: 12.5px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-clouds,
+  .lp-meteor,
+  .marquee-track,
+  .type-cursor {
+    animation: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .lp-faq-inner,
+  .lp-footer-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .lp-stat-card {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-stat {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .popup {
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}

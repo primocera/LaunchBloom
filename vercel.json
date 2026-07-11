@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.js": { "maxDuration": 300 }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/", "destination": "/app/index.html" },
+    { "source": "/app", "destination": "/app/index.html" },
+    { "source": "/app/:path*", "destination": "/app/index.html" }
+  ]
+}

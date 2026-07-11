@@ -1,0 +1,982 @@
+:root {
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --border: #e8e2da;
+  --border-strong: #d8cfc3;
+  --text: #2b2320;
+  --text-muted: #8a7f75;
+  --text-faint: #a99e93;
+  --accent: #8a6851;
+  --accent-soft: rgba(138, 104, 81, 0.08);
+  --accent-ring: rgba(138, 104, 81, 0.28);
+  --radius: 12px;
+  --sidebar-w: 264px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+/* ── Shell ────────────────────────────────────────────────────────────── */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  height: 100%;
+}
+
+.shell.is-collapsed {
+  grid-template-columns: 0 1fr;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 16px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--surface);
+  background: var(--accent);
+  border-radius: 8px;
+}
+
+.brand-name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.brand-sub {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.icon-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: 9px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.nav-item.is-active {
+  font-weight: 600;
+  color: var(--text);
+  background: #f2ede6;
+}
+
+.nav-item svg {
+  flex: none;
+}
+
+.sidebar-section {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 10px 8px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 8px;
+}
+
+.section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.thread-item {
+  padding: 8px 10px;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+.thread-item:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.thread-item.is-active {
+  color: var(--text);
+  background: #f2ede6;
+}
+
+.thread-empty {
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* ── Account block ────────────────────────────────────────────────────── */
+
+.account {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #6366f1;
+  border-radius: 50%;
+}
+
+.account-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meter {
+  height: 4px;
+  margin: 14px 0 8px;
+  overflow: hidden;
+  background: #eee8e0;
+  border-radius: 99px;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.account-usage {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.account-hint {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.account-hint a {
+  color: var(--accent);
+}
+
+.account-signin {
+  display: block;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+  background: var(--accent);
+  border-radius: 9px;
+}
+
+/* ── Main ─────────────────────────────────────────────────────────────── */
+
+.main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.rail {
+  position: absolute;
+  top: 16px;
+  left: 12px;
+}
+
+.canvas {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  padding: 0 24px 40px;
+  margin: 0 auto;
+}
+
+.canvas.is-empty {
+  justify-content: center;
+  padding-bottom: 120px;
+}
+
+.canvas-title {
+  margin-bottom: 26px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+/* ── Composer ─────────────────────────────────────────────────────────── */
+
+.composer {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.composer:focus-within {
+  border-color: var(--accent-ring);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 62px;
+  max-height: 220px;
+  padding: 16px 18px 4px;
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text);
+  resize: none;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+.composer textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 10px 14px;
+}
+
+.send-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-faint);
+  background: #f2ede6;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+
+.send-btn:enabled:hover {
+  color: #fff;
+  background: var(--accent);
+}
+
+.send-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ── Recent pages ─────────────────────────────────────────────────────── */
+
+.recent {
+  width: 100%;
+  margin-top: 44px;
+}
+
+.recent-head {
+  padding: 0 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 10px;
+  border-radius: 9px;
+}
+
+.recent-row:hover {
+  background: var(--surface);
+}
+
+.recent-title {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-time {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────── */
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+  padding: 32px 0 24px;
+}
+
+.msg-user {
+  max-width: 80%;
+  align-self: flex-end;
+  padding: 11px 15px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.msg-assistant {
+  font-size: 14.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.msg-error {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #9b2c2c;
+  background: #fdf0ef;
+  border: 1px solid #f3d3d0;
+  border-radius: 10px;
+}
+
+.composer-dock {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  padding-bottom: 20px;
+  background: linear-gradient(180deg, transparent, var(--bg) 22%);
+}
+
+.typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 20px;
+}
+
+.typing span {
+  width: 5px;
+  height: 5px;
+  background: var(--text-faint);
+  border-radius: 50%;
+  animation: blink 1.3s infinite;
+}
+
+.typing span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.typing span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes blink {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+
+/* ── Hanging mascot (sways like a sign in the wind) ───────────────────── */
+
+.mascot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  width: 200px;
+  height: 200px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mascot-branch {
+  display: block;
+  overflow: visible;
+  color: var(--accent);
+}
+
+/* Each leaf pivots where it meets the cane and runs on its own offset, so the
+   cluster ripples rather than flapping in unison. */
+.leaf {
+  transform-box: fill-box;
+  transform-origin: 100% 50%;
+  animation: leaf-flutter 4.4s ease-in-out infinite;
+  animation-delay: calc(var(--leaf) * -0.7s);
+}
+
+@keyframes leaf-flutter {
+  0%, 100% { transform: rotate(-2.6deg); }
+  50% { transform: rotate(2.6deg); }
+}
+
+/* Outer layer: the slow gust. Pivots at the branch, wide and lazy. */
+.mascot-gust {
+  position: absolute;
+  top: 46px;
+  right: 58px;
+  transform-origin: top center;
+  animation: gust 11s ease-in-out infinite;
+}
+
+/* Inner layer: the swing itself. 7s against the gust's 11s never lines up,
+   so the arc drifts instead of ticking like a metronome. */
+.mascot-hang {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  animation: sway 7s ease-in-out infinite;
+}
+
+@keyframes gust {
+  0%, 100% { transform: rotate(-3deg); }
+  40% { transform: rotate(3.6deg); }
+  70% { transform: rotate(-1.2deg); }
+}
+
+.mascot-cord {
+  width: 2px;
+  height: 22px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.55;
+}
+
+.mascot-badge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  background: var(--accent);
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(43, 35, 32, 0.2);
+}
+
+.mascot-badge-mark {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--surface);
+  letter-spacing: -0.02em;
+}
+
+/* The one animation ReelPanda's widget actually has: a pulsing badge. */
+.mascot-badge-dot {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: #ef4444;
+  border-radius: 11px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45); }
+  50% { transform: scale(1.15); box-shadow: 0 2px 14px rgba(239, 68, 68, 0.65); }
+}
+
+.mascot-tip {
+  margin-top: 10px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(43, 35, 32, 0.07);
+}
+
+.mascot-tip:hover {
+  color: var(--text);
+}
+
+/* Symmetric so the loop closes without a jump; the gust layer supplies the
+   irregularity a decaying pendulum would fake. */
+@keyframes sway {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+/* The badge hangs off the cord, so it trails the swing rather than moving
+   with it - a negative delay starts it part-way through its own cycle. */
+.mascot-badge {
+  transform-origin: top center;
+  animation: sway-lag 7s ease-in-out infinite;
+  animation-delay: -0.5s;
+}
+
+@keyframes sway-lag {
+  0%, 100% { transform: rotate(3deg); }
+  50% { transform: rotate(-3deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-gust,
+  .mascot-hang,
+  .mascot-badge,
+  .leaf {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .mascot {
+    display: none;
+  }
+}
+
+/* ── Dashboard (/app/pages) ───────────────────────────────────────────── */
+
+.dash {
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  padding: 40px 32px 60px;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.dash-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.dash-head h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.dash-count {
+  margin-left: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.dash-updated {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 26px;
+}
+
+.dash-stat {
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.dash-stat-k {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dash-stat-v {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dash-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.dash-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1.2fr 0.6fr 1.4fr 1fr 0.8fr;
+  gap: 10px;
+  align-items: center;
+  padding: 13px 16px;
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.dash-row.is-head {
+  padding: 10px 16px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-top: none;
+}
+
+.dash-store a {
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.dash-store a:hover {
+  text-decoration: underline;
+}
+
+.dash-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: #f4f4f5;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.dash-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 34px;
+  padding: 3px 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+/* Re-audit progress: where the score started, and how far it moved. */
+.dash-score-prev {
+  font-weight: 500;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.dash-score-delta {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.dash-score-delta.is-up { color: #15803d; }
+.dash-score-delta.is-down { color: #b91c1c; }
+
+.dash-score.is-good { color: #15803d; background: #ecfdf3; }
+.dash-score.is-mid { color: #b45309; background: #fef8ec; }
+.dash-score.is-bad { color: #b91c1c; background: #fef2f2; }
+.dash-score.is-na { color: var(--text-muted); background: #f4f4f5; }
+
+.dash-findings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dash-findings em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.dash-findings em.is-crit { color: #b91c1c; font-weight: 600; }
+.dash-findings em.is-warn { color: #b45309; }
+.dash-findings em.is-clean { color: #15803d; }
+
+.dash-faint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dash-empty {
+  display: grid;
+  gap: 6px;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+.dash-empty h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dash-empty p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dash-cta {
+  justify-self: center;
+  padding: 9px 18px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  background: #111;
+  border-radius: 999px;
+}
+
+@media (max-width: 760px) {
+  .dash { padding: 24px 16px 40px; }
+  .dash-stats { grid-template-columns: repeat(2, 1fr); }
+  .dash-row { grid-template-columns: 1.4fr 1fr 0.6fr; }
+  .dash-row span:nth-child(n + 4) { display: none; }
+}
+
+/* ── Placeholder views ────────────────────────────────────────────────── */
+
+.placeholder {
+  display: grid;
+  flex: 1;
+  place-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.placeholder h2 {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.placeholder p {
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+/* ── Login ────────────────────────────────────────────────────────────── */
+
+.login {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 372px;
+  padding: 30px 28px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.login-card h1 {
+  margin: 16px 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.login-card p {
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.login-card input {
+  width: 100%;
+  padding: 11px 13px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  outline: none;
+}
+
+.login-card input:focus {
+  border-color: var(--accent-ring);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 11px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 10px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+}
+
+.login-err {
+  margin-top: 12px;
+  margin-bottom: 0;
+  font-size: 12.5px;
+  color: #9b2c2c;
+}
+
+@media (max-width: 820px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+}
