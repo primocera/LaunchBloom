@@ -54,6 +54,10 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // server-to-server, curl
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Any Vercel deployment of this app (production + preview URLs) is us.
+      let host = '';
+      try { host = new URL(origin).hostname; } catch { /* malformed */ }
+      if (host.endsWith('.vercel.app')) return callback(null, true);
       callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
