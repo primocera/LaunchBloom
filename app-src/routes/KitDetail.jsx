@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { contentPlanCsv, download, emailSequenceMarkdown, kitMarkdown } from '../lib/export';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -27,12 +28,33 @@ export default function KitDetail() {
   const [tab, setTab] = useState('overview');
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
+  const [quality, setQuality] = useState(null);
+
+  const canExport = account?.limits?.can_export !== false;
 
   useEffect(() => {
     api.launchKit(id)
       .then((r) => setKit(r.launch_kit))
       .catch((e) => setError(e.message));
+    api.kitQuality(id).then(setQuality).catch(() => {});
   }, [id]);
+
+  /** Fetch every item table, then hand the bundle to an export builder. */
+  async function withItems(fn) {
+    const tables = ['content_items', 'email_items', 'ad_ideas', 'seo_items', 'weekly_tasks'];
+    const results = await Promise.all(tables.map((t) => api.items(t, id).catch(() => ({ items: [] }))));
+    fn(Object.fromEntries(tables.map((t, i) => [t, results[i].items])));
+  }
+
+  function exportKit() {
+    withItems((items) => download('launch-kit.md', kitMarkdown(kit, items), 'text/markdown'));
+  }
+  function exportCsv() {
+    withItems((items) => download('content-plan.csv', contentPlanCsv(items.content_items), 'text/csv'));
+  }
+  function exportEmails() {
+    withItems((items) => download('email-sequence.md', emailSequenceMarkdown(items.email_items), 'text/markdown'));
+  }
 
   async function regenerate(section) {
     const label = TABS.find(([s]) => s === section)?.[1] || section;
@@ -90,7 +112,22 @@ export default function KitDetail() {
             </nav>
 
             {tab === 'overview' ? (
-              <Overview kit={kit} />
+              <>
+                <div className="flow-card">
+                  <div className="kit-row-head">
+                    <h3>Export</h3>
+                    {!canExport && <span className="kit-badge">Upgrade to export</span>}
+                  </div>
+                  <p className="flow-muted">Take the kit into Notion, Google Docs, your email tool or a scheduler.</p>
+                  <div className="flow-row">
+                    <button className="kit-copy" disabled={!canExport} onClick={exportKit}>Export full kit (.md)</button>
+                    <button className="kit-copy" disabled={!canExport} onClick={exportCsv}>Content plan (.csv)</button>
+                    <button className="kit-copy" disabled={!canExport} onClick={exportEmails}>Email sequence (.md)</button>
+                  </div>
+                </div>
+                {quality && <QualityCards quality={quality.quality} safety={quality.safety} />}
+                <Overview kit={kit} />
+              </>
             ) : (
               <div className="flow-card">
                 <SectionView id={tab} data={kit[tab]} />
@@ -175,6 +212,56 @@ function sectionText(id, data) {
 }
 
 // ── views ────────────────────────────────────────────────────────────────────
+
+// Prompt 27's quality cards + Prompt 28's safety warnings.
+const QUALITY_LABELS = {
+  offer: 'Offer',
+  landing_page: 'Landing page',
+  content_plan: 'Content plan',
+  email_sequence: 'Email sequence',
+};
+
+function QualityCards({ quality, safety }) {
+  const highRisk = Object.entries(safety || {}).filter(([, s]) => s && s.risk_level === 'high');
+
+  return (
+    <>
+      {highRisk.map(([section, s]) => (
+        <div className="flow-err" key={section}>
+          <strong>Safety warning — {QUALITY_LABELS[section] || section}:</strong> {s.explanation}
+          {s.flagged_phrases.length > 0 && <div>Flagged: {s.flagged_phrases.map((p) => `"${p}"`).join(', ')}</div>}
+          {s.safer_alternatives.length > 0 && (
+            <ul className="kit-outline">{s.safer_alternatives.map((a) => <li key={a}>{a}</li>)}</ul>
+          )}
+          <div className="flow-muted">You can still edit and use this copy — but rephrase before publishing.</div>
+        </div>
+      ))}
+
+      <div className="flow-card">
+        <h3>Quality check</h3>
+        <div className="quality-grid">
+          {Object.entries(quality || {}).map(([section, q]) => q && (
+            <div className="quality-card" key={section}>
+              <div className="kit-row-head" style={{ margin: 0 }}>
+                <span className="kit-item-title">{QUALITY_LABELS[section] || section}</span>
+                <span className={`kit-badge ${q.passed ? 'is-pass' : 'is-fail'}`}>{q.score}/100</span>
+              </div>
+              {q.issues.length > 0 ? (
+                <ul className="kit-outline">
+                  {q.issues.map((iss, n) => (
+                    <li key={iss}>{iss} <span className="flow-muted">{q.suggestions[n]}</span></li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="flow-muted">All checks passed.</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
 
 function Overview({ kit }) {
   return (

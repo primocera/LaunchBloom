@@ -40,6 +40,7 @@ export const api = {
   offers: () => request('/api/workspace/offers'),
   launchKits: () => request('/api/workspace/launch-kits'),
   launchKit: (id) => request(`/api/workspace/launch-kits/${id}`),
+  kitQuality: (id) => request(`/api/workspace/launch-kits/${id}/quality`),
 
   items: (table, launchKitId) =>
     request(`/api/workspace/items/${table}?launch_kit_id=${encodeURIComponent(launchKitId)}`),
