@@ -119,6 +119,46 @@ router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => 
   }
 });
 
+// PATCH /api/workspace/launch-kits/:id/section — save a user-edited section
+// Body: { section, data }. Edits are the user's own words: we only check the
+// section name and ownership, not the AI schema.
+const EDITABLE_SECTIONS = ['landing_page', 'content_plan', 'email_sequence', 'ads_kit', 'seo_kit', 'weekly_plan'];
+
+router.patch(
+  '/api/workspace/launch-kits/:id/section',
+  requireAuth,
+  express.json({ limit: '256kb' }),
+  async (req, res, next) => {
+    try {
+      const { section, data } = req.body || {};
+      if (!EDITABLE_SECTIONS.includes(section)) {
+        return res.status(400).json({ error: 'section must be one of: ' + EDITABLE_SECTIONS.join(', ') });
+      }
+      if (!data || typeof data !== 'object') {
+        return res.status(400).json({ error: 'data object is required' });
+      }
+      const ws = await ensureWorkspace(req.userEmail);
+      const { data: kit } = await supabase
+        .from('launch_kits')
+        .select('id')
+        .eq('id', req.params.id)
+        .eq('workspace_id', ws.id)
+        .single();
+      if (!kit) return res.status(404).json({ error: 'Launch kit not found' });
+
+      const { error } = await supabase
+        .from('launch_kits')
+        .update({ [section]: data })
+        .eq('id', kit.id);
+      if (error) throw new Error('Failed to save section: ' + error.message);
+
+      res.json({ ok: true, section });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // GET /api/workspace/launch-kits/:id — one full launch kit
 router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next) => {
   try {

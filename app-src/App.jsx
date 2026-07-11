@@ -10,6 +10,8 @@ export default function App() {
     <Routes>
       {/* Public: the landing is the homepage. */}
       <Route path="/" element={<Landing />} />
+      {/* Dev alias: vite dev serves under /app/, where "/" is unreachable. */}
+      <Route path="/app/home" element={<Landing />} />
       <Route path="/app/login" element={<Login />} />
       <Route path="/app/*" element={<AppShell />} />
       <Route path="*" element={<Navigate to="/" replace />} />
