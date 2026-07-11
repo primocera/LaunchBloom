@@ -153,7 +153,7 @@ export default function Landing() {
 
         <section className="lp-hero">
           <h1>
-            Turn your idea into a
+            Your idea turned into a
             <br />
             <span className="lp-serif">
               <RotatingWord words={ROTATING} />
