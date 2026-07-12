@@ -5,6 +5,7 @@
 // ---------------------------------------------------------------------------
 
 const Anthropic = require('@anthropic-ai/sdk');
+const { reserveAiCall } = require('./spend-guard');
 
 // Model is env-configurable so you can trade cost vs quality without a code
 // change. Structured (json_schema) output works on all three:
@@ -170,6 +171,10 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000 }) {
     console.warn('[ai] no ANTHROPIC_API_KEY — returning schema-generated mock data');
     return mockFromSchema(schema);
   }
+
+  // Global daily spend ceiling — throws 503 when the whole app is over budget
+  // for the day. Only runs in live mode (real spend). See lib/spend-guard.js.
+  await reserveAiCall();
 
   const client = new Anthropic();
 
