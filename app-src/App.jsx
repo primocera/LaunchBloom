@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import { ExpandIcon } from './components/icons';
 import { useAuth } from './lib/auth';
+import Dashboard from './routes/Dashboard';
 import Flow from './routes/Flow';
 import KitDetail from './routes/KitDetail';
 import Landing from './routes/Landing';
@@ -25,25 +29,46 @@ export default function App() {
   );
 }
 
-/** Signed-in area: the guided flow. Signed-out visitors go to login. */
+/**
+ * Signed-in area: ConversionForge-style shell — collapsible left sidebar
+ * (Dashboard, Launch Flow, Studios, account) + scrollable main pane.
+ */
 function AppShell() {
   const { account, loading } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
 
   if (loading) return null;
   if (!account) return <Navigate to="/app/login" replace />;
 
   return (
-    <Routes>
-      <Route path="/" element={<Flow />} />
-      <Route path="/kits/:id" element={<KitDetail />} />
-      {/* Studios, Prompts 18-23 */}
-      <Route path="/landing-page" element={<LandingStudio />} />
-      <Route path="/content-plan" element={<ContentStudio />} />
-      <Route path="/email-sequence" element={<EmailStudio />} />
-      <Route path="/ads" element={<AdsStudio />} />
-      <Route path="/seo" element={<SeoStudio />} />
-      <Route path="/weekly-plan" element={<WeeklyPlan />} />
-      <Route path="*" element={<Navigate to="/app" replace />} />
-    </Routes>
+    <div className={collapsed ? 'shell is-collapsed' : 'shell'}>
+      {!collapsed && <Sidebar onCollapse={() => setCollapsed(true)} />}
+
+      <main className="main">
+        {collapsed && (
+          <button
+            className="icon-btn rail"
+            onClick={() => setCollapsed(false)}
+            aria-label="Expand sidebar"
+          >
+            <ExpandIcon />
+          </button>
+        )}
+
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/flow" element={<Flow />} />
+          <Route path="/kits/:id" element={<KitDetail />} />
+          {/* Studios, Prompts 18-23 */}
+          <Route path="/landing-page" element={<LandingStudio />} />
+          <Route path="/content-plan" element={<ContentStudio />} />
+          <Route path="/email-sequence" element={<EmailStudio />} />
+          <Route path="/ads" element={<AdsStudio />} />
+          <Route path="/seo" element={<SeoStudio />} />
+          <Route path="/weekly-plan" element={<WeeklyPlan />} />
+          <Route path="*" element={<Navigate to="/app" replace />} />
+        </Routes>
+      </main>
+    </div>
   );
 }

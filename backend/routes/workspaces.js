@@ -119,6 +119,84 @@ router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => 
   }
 });
 
+// GET /api/workspace/dashboard — everything the Prompt 10 dashboard needs in
+// one round trip: brand snapshot, current offer, this week's tasks, latest
+// kit, and progress counts. All real Supabase data with nulls for empty state.
+router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await ensureWorkspace(req.userEmail);
+
+    const [
+      { data: onboarding },
+      { data: positioning },
+      { data: offers },
+      { data: kit },
+    ] = await Promise.all([
+      supabase.from('onboarding_answers').select('*').eq('workspace_id', ws.id)
+        .order('created_at', { ascending: false }).limit(1).single(),
+      supabase.from('positioning_outputs').select('*').eq('workspace_id', ws.id)
+        .order('created_at', { ascending: false }).limit(1).single(),
+      supabase.from('offers').select('*').eq('workspace_id', ws.id)
+        .order('created_at', { ascending: false }).limit(3),
+      supabase.from('launch_kits').select('id, offer_id, title, summary, landing_page, created_at')
+        .eq('workspace_id', ws.id).order('created_at', { ascending: false }).limit(1).single(),
+    ]);
+
+    // Prefer the offer the user actually picked (status=active), else newest.
+    const offer = (offers || []).find((o) => o.status === 'active') || (offers || [])[0] || null;
+
+    let thisWeek = [];
+    let progress = null;
+    if (kit) {
+      const [tasks, contentCount, emailCount] = await Promise.all([
+        supabase.from('weekly_tasks').select('*').eq('launch_kit_id', kit.id)
+          .order('created_at', { ascending: true }),
+        supabase.from('content_items').select('id', { count: 'exact', head: true })
+          .eq('launch_kit_id', kit.id),
+        supabase.from('email_items').select('id', { count: 'exact', head: true })
+          .eq('launch_kit_id', kit.id),
+      ]);
+      const all = tasks.data || [];
+
+      // Prompt 10 mix: 3 content, 2 sales, 1 website, 1 review — open tasks first.
+      const open = all.filter((t) => !t.completed);
+      const pick = (re, n) => open.filter((t) => re.test(`${t.task_type} ${t.task_title}`)).slice(0, n);
+      const picked = [
+        ...pick(/content|post|video|caption|social/i, 3),
+        ...pick(/sale|outreach|dm|pitch|client|lead/i, 2),
+        ...pick(/site|landing|page|seo|web/i, 1),
+        ...pick(/review|reflect|measure|analy/i, 1),
+      ];
+      // De-dupe while keeping order, top up with any remaining open tasks.
+      const seen = new Set();
+      thisWeek = [...picked, ...open]
+        .filter((t) => !seen.has(t.id) && seen.add(t.id))
+        .slice(0, 7);
+
+      progress = {
+        posts_planned: contentCount.count || 0,
+        emails_drafted: emailCount.count || 0,
+        landing_page_ready: !!kit.landing_page,
+        tasks_completed: all.filter((t) => t.completed).length,
+        tasks_total: all.length,
+      };
+    }
+
+    res.json({
+      workspace: ws,
+      onboarding: onboarding || null,
+      positioning: positioning || null,
+      offer,
+      offers_count: (offers || []).length,
+      kit: kit ? { id: kit.id, title: kit.title, summary: kit.summary, created_at: kit.created_at } : null,
+      this_week: thisWeek,
+      progress,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // PATCH /api/workspace/launch-kits/:id/section — save a user-edited section
 // Body: { section, data }. Edits are the user's own words: we only check the
 // section name and ownership, not the AI schema.

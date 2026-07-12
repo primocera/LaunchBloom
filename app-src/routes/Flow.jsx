@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { useAuth } from '../lib/auth';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +22,6 @@ const ONBOARDING_FIELDS = [
 ];
 
 export default function Flow() {
-  const { account, logout } = useAuth();
   const navigate = useNavigate();
   const [state, setState] = useState(null); // { workspace, onboarding, positioning }
   const [offers, setOffers] = useState([]);
@@ -60,13 +58,13 @@ export default function Flow() {
     }
   }
 
-  if (error && !state) return <Shell account={account} logout={logout}><p className="flow-err">{error}</p></Shell>;
-  if (!state) return <Shell account={account} logout={logout}><p className="flow-muted">Loading…</p></Shell>;
+  if (error && !state) return <Shell><p className="flow-err">{error}</p></Shell>;
+  if (!state) return <Shell><p className="flow-muted">Loading…</p></Shell>;
 
   const step = kit ? 4 : offers.length ? 3 : state.positioning ? 2 : state.onboarding ? 1.5 : 1;
 
   return (
-    <Shell account={account} logout={logout} step={step}>
+    <Shell step={step}>
       {error && <p className="flow-err">{error}</p>}
 
       {/* ── Step 1: onboarding ── */}
@@ -191,18 +189,17 @@ export default function Flow() {
 
 // ── layout ──────────────────────────────────────────────────────────────────
 
-function Shell({ account, logout, step, children }) {
+function Shell({ step, children }) {
   return (
     <div className="flow">
-      <header className="flow-head">
-        <Link to="/" className="flow-brand">OfferFlow AI</Link>
-        {step && <Steps current={step} />}
-        <div className="flow-account">
-          <span className="flow-credits">{account?.plan_label || 'Free'} plan</span>
-          <button className="flow-link" onClick={logout}>Sign out</button>
-        </div>
-      </header>
-      <main className="flow-main">{children}</main>
+      <main className="flow-main">
+        {step != null && (
+          <div className="flow-steps-bar">
+            <Steps current={step} />
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

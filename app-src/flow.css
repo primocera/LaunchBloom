@@ -531,3 +531,97 @@
 
 .kit-badge.is-pass { background: rgba(16, 185, 129, 0.12); color: #059669; }
 .kit-badge.is-fail { background: rgba(185, 28, 28, 0.1); color: #b91c1c; }
+
+/* ── App shell / sidebar (OfferFlow palette overrides) ─────────────────── */
+
+.nav-item.is-active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.sidebar-nav.is-sub {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.meter-fill {
+  background: #2563eb;
+}
+
+.account-link {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.flow-steps-bar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+/* ── Dashboard (Prompt 10) ─────────────────────────────────────────────── */
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.dash-grid .flow-card {
+  margin-bottom: 0;
+}
+
+.dash-small {
+  font-size: 14px;
+  color: #374151;
+}
+
+.dash-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash-actions .flow-btn {
+  margin-top: 0;
+  text-align: left;
+}
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.dash-num {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dash-kit-links a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.dash-kit-links a:hover {
+  text-decoration: underline;
+}
+
+.dash-skeleton {
+  min-height: 180px;
+  background: linear-gradient(100deg, #fff 40%, #f2f4f8 50%, #fff 60%);
+  background-size: 200% 100%;
+  animation: dash-shimmer 1.2s infinite linear;
+}
+
+@keyframes dash-shimmer {
+  to { background-position: -200% 0; }
+}

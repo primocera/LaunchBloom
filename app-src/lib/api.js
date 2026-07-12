@@ -36,6 +36,7 @@ export const api = {
   me: () => request('/api/auth/me'),
 
   workspace: () => request('/api/workspace'),
+  dashboard: () => request('/api/workspace/dashboard'),
   saveOnboarding: (answers) => request('/api/workspace/onboarding', { method: 'POST', body: answers }),
   offers: () => request('/api/workspace/offers'),
   launchKits: () => request('/api/workspace/launch-kits'),

@@ -23,7 +23,7 @@ const TABS = [
 
 export default function KitDetail() {
   const { id } = useParams();
-  const { account, logout } = useAuth();
+  const { account } = useAuth();
   const [kit, setKit] = useState(null);
   const [tab, setTab] = useState('overview');
   const [busy, setBusy] = useState(null);
@@ -74,14 +74,6 @@ export default function KitDetail() {
 
   return (
     <div className="flow">
-      <header className="flow-head">
-        <Link to="/app" className="flow-brand">OfferFlow AI</Link>
-        <div className="flow-account">
-          <span className="flow-credits">{account?.plan_label || 'Free'} plan</span>
-          <button className="flow-link" onClick={logout}>Sign out</button>
-        </div>
-      </header>
-
       <main className="flow-main">
         <div className="flow-row" style={{ marginBottom: 14 }}>
           {[['/app/landing-page', 'Landing Page Studio'], ['/app/content-plan', 'Content Studio'], ['/app/email-sequence', 'Email Studio'], ['/app/ads', 'Ads Studio'], ['/app/seo', 'SEO Studio'], ['/app/weekly-plan', 'Weekly Plan']].map(([to, label]) => (

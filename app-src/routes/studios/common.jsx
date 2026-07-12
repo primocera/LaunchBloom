@@ -1,44 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { useAuth } from '../../lib/auth';
 import '../../flow.css';
 
 // ---------------------------------------------------------------------------
-// Shared scaffolding for the studios (Prompts 18-23): the shell with studio
-// navigation, the launch-kit selector ("User can select a launch kit if
-// multiple exist"), and copy buttons with a success state (Prompt 29).
+// Shared scaffolding for the studios (Prompts 18-23): page frame (navigation
+// and account live in the app sidebar), the launch-kit selector ("User can
+// select a launch kit if multiple exist"), and copy buttons with a success
+// state (Prompt 29).
 // ---------------------------------------------------------------------------
 
-export const STUDIO_LINKS = [
-  ['/app/landing-page', 'Landing Page'],
-  ['/app/content-plan', 'Content Plan'],
-  ['/app/email-sequence', 'Emails'],
-  ['/app/ads', 'Ads'],
-  ['/app/seo', 'SEO'],
-  ['/app/weekly-plan', 'Weekly Plan'],
-];
-
 export function StudioShell({ title, blurb, kits, kitId, onSelectKit, children }) {
-  const { account, logout } = useAuth();
-
   return (
     <div className="flow">
-      <header className="flow-head">
-        <Link to="/app" className="flow-brand">OfferFlow AI</Link>
-        <nav className="studio-nav">
-          {STUDIO_LINKS.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'kit-tab is-on' : 'kit-tab')}>
-              {label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="flow-account">
-          <span className="flow-credits">{account?.plan_label || 'Free'} plan</span>
-          <button className="flow-link" onClick={logout}>Sign out</button>
-        </div>
-      </header>
-
       <main className="flow-main is-wide">
         <div className="studio-head">
           <div>
