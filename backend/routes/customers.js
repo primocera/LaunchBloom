@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
+const { requireAuth } = require('../lib/auth');
 
 /** Stripe price id → OfferFlow plan name, built from env at startup. */
 function pricePlans() {
@@ -23,7 +24,7 @@ function pricePlans() {
  * Creates or retrieves a customer record in Supabase and Stripe.
  * Body: { email, name, metadata }
  */
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { email, name, metadata = {} } = req.body;
 
@@ -118,7 +119,7 @@ async function verifyPlanHandler(req, res) {
 router.get('/verify-plan', verifyPlanHandler);
 
 /** GET /api/customers/:id */
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { data: customer, error } = await supabase
       .from('customers')
@@ -126,7 +127,7 @@ router.get('/:id', async (req, res) => {
       .eq('id', req.params.id)
       .single();
 
-    if (error || !customer) {
+    if (error || !customer || customer.email?.toLowerCase() !== req.userEmail.toLowerCase()) {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
@@ -138,7 +139,7 @@ router.get('/:id', async (req, res) => {
 });
 
 /** GET /api/customers/:id/portal — Stripe Billing Portal session. Query: { returnUrl } */
-router.get('/:id/portal', async (req, res) => {
+router.get('/:id/portal', requireAuth, async (req, res) => {
   try {
     const { returnUrl } = req.query;
     if (!returnUrl) {
@@ -147,10 +148,13 @@ router.get('/:id/portal', async (req, res) => {
 
     const { data: customer, error } = await supabase
       .from('customers')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, email')
       .eq('id', req.params.id)
       .single();
 
+    if (customer && customer.email?.toLowerCase() !== req.userEmail.toLowerCase()) {
+      return res.status(404).json({ error: 'Customer or Stripe account not found' });
+    }
     if (error || !customer?.stripe_customer_id) {
       return res.status(404).json({ error: 'Customer or Stripe account not found' });
     }

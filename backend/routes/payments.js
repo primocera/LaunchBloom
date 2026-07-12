@@ -8,6 +8,24 @@ const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { pricePlans } = require('./customers');
+const { requireAuth } = require('../lib/auth');
+
+/** 404s unless the subscription's customer email matches the session email. */
+async function ownsSubscription(subscriptionId, userEmail) {
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('customer_id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .single();
+  if (!sub?.customer_id) return false;
+
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('email')
+    .eq('id', sub.customer_id)
+    .single();
+  return customer?.email?.toLowerCase() === userEmail.toLowerCase();
+}
 
 /**
  * POST /api/payments/create-checkout-session
@@ -81,11 +99,14 @@ router.post('/create-checkout-session', async (req, res) => {
  * Cancels an active Stripe subscription at period end.
  * Body: { subscriptionId }
  */
-router.post('/cancel-subscription', async (req, res) => {
+router.post('/cancel-subscription', requireAuth, async (req, res) => {
   try {
     const { subscriptionId } = req.body;
     if (!subscriptionId) {
       return res.status(400).json({ error: 'subscriptionId is required' });
+    }
+    if (!(await ownsSubscription(subscriptionId, req.userEmail))) {
+      return res.status(404).json({ error: 'Subscription not found' });
     }
 
     const subscription = await stripe.subscriptions.update(subscriptionId, {
@@ -112,8 +133,11 @@ router.post('/cancel-subscription', async (req, res) => {
  * GET /api/payments/subscription/:subscriptionId
  * Returns the current status of a subscription from Stripe.
  */
-router.get('/subscription/:subscriptionId', async (req, res) => {
+router.get('/subscription/:subscriptionId', requireAuth, async (req, res) => {
   try {
+    if (!(await ownsSubscription(req.params.subscriptionId, req.userEmail))) {
+      return res.status(404).json({ error: 'Subscription not found' });
+    }
     const subscription = await stripe.subscriptions.retrieve(req.params.subscriptionId, {
       expand: ['latest_invoice', 'customer'],
     });
