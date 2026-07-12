@@ -112,11 +112,12 @@ async function planFor(email) {
 }
 
 async function verifyPlanHandler(req, res) {
-  const plan = await planFor(req.query.email);
+  // Only ever answers for the signed-in account — no probing other emails.
+  const plan = await planFor(req.userEmail);
   res.json({ active: !!plan, plan });
 }
 
-router.get('/verify-plan', verifyPlanHandler);
+router.get('/verify-plan', requireAuth, verifyPlanHandler);
 
 /** GET /api/customers/:id */
 router.get('/:id', requireAuth, async (req, res) => {
