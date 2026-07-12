@@ -625,3 +625,15 @@
 @keyframes dash-shimmer {
   to { background-position: -200% 0; }
 }
+
+/* login/signup extras (Prompt 8) */
+
+.login-alt {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.login-alt a {
+  color: #2563eb;
+}

@@ -1,51 +1,40 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { api } from '../lib/api';
+import { resumePendingCheckout } from './Login';
 
 // ---------------------------------------------------------------------------
-// Prompt 8: email/password sign-in. Friendly errors, loading state, and a
-// redirect: already-signed-in visitors go straight to the dashboard.
+// Prompt 8: email/password sign-up. Creates the account, signs the user in,
+// resumes a pending plan checkout if one was picked on the landing page.
 // ---------------------------------------------------------------------------
 
-/** Hand off to Stripe using the account we just signed in as. */
-export async function resumePendingCheckout(email) {
-  const pendingPlan = localStorage.getItem('of-pending-plan');
-  if (!pendingPlan) return false;
-  localStorage.removeItem('of-pending-plan');
-  const data = await api.checkout(pendingPlan, email);
-  if (!data.url) throw new Error('Could not start checkout.');
-  window.location.href = data.url;
-  return true; // the browser is navigating to Stripe
-}
-
-export default function Login() {
-  const { account, login } = useAuth();
+export default function Signup() {
+  const { account, signup } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  // Logged-in users don't belong on /login — straight to the dashboard.
   if (account) return <Navigate to="/app" replace />;
 
   async function submit(e) {
     e.preventDefault();
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
     setBusy(true);
     setError(null);
 
     const address = email.trim();
     try {
-      await login(address, password);
+      await signup(address, password);
       if (await resumePendingCheckout(address)) return;
       navigate('/app');
     } catch (err) {
-      if (err.code === 'NO_ACCOUNT') {
-        setError('No account with this email yet — create one below.');
-      } else {
-        setError(err.message);
-      }
+      setError(err.message);
       setBusy(false);
     }
   }
@@ -54,8 +43,8 @@ export default function Login() {
     <div className="login">
       <form className="login-card" onSubmit={submit}>
         <div className="brand-mark" style={{ margin: '0 auto' }}>OF</div>
-        <h1>Welcome back</h1>
-        <p>Sign in to continue building your launch.</p>
+        <h1>Create your account</h1>
+        <p>Free to start — your first launch kit is on us.</p>
 
         <input
           type="email"
@@ -70,20 +59,34 @@ export default function Login() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          autoComplete="current-password"
+          placeholder="Password (min 8 characters)"
+          autoComplete="new-password"
           required
           minLength={8}
           aria-label="Password"
         />
-        <button className="btn-primary" type="submit" disabled={busy || !email.trim() || !password}>
-          {busy ? 'Signing in...' : 'Sign in'}
+        <input
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Repeat password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          aria-label="Repeat password"
+        />
+        <button
+          className="btn-primary"
+          type="submit"
+          disabled={busy || !email.trim() || password.length < 8 || !confirm}
+        >
+          {busy ? 'Creating account...' : 'Create account'}
         </button>
 
         {error && <p className="login-err">{error}</p>}
 
         <p className="login-alt">
-          New here? <Link to="/app/signup">Create an account</Link>
+          Already have an account? <Link to="/app/login">Sign in</Link>
         </p>
       </form>
     </div>

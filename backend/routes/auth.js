@@ -1,13 +1,17 @@
 // ---------------------------------------------------------------------------
-// Simple email login + account status. (Inherited from ConversionForge.)
+// Prompt 8: email/password auth. Signup creates a users row (scrypt hash),
+// login verifies it; both mint the stateless HMAC session token that the
+// rest of the API authenticates with. Friendly error states per the spec.
 //
-// POST /api/auth/login { email }  → { token, email, plan, credits_used, credits_limit }
-// GET  /api/auth/me   (Bearer)    → same account status for an existing session
+// POST /api/auth/signup { email, password } → { token, ...account }
+// POST /api/auth/login  { email, password } → { token, ...account }
+// GET  /api/auth/me     (Bearer)            → account status
 // ---------------------------------------------------------------------------
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const auth = require('../lib/auth');
+const supabase = require('../lib/supabase');
 const { planFor } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { ensureWorkspace } = require('./workspaces');
@@ -19,8 +23,10 @@ const loginLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many sign-in attempts - try again in a few minutes.' },
+  message: { error: 'Too many attempts - try again in a few minutes.' },
 });
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 async function accountStatus(email) {
   const plan = (await planFor(email)) || 'free'; // 'free' | 'starter' | 'pro' | 'business'
@@ -43,14 +49,66 @@ async function accountStatus(email) {
   };
 }
 
+function readCredentials(req, res) {
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+  const password = String((req.body || {}).password || '');
+  if (!EMAIL_RE.test(email)) {
+    res.status(400).json({ error: 'Enter a valid email address.' });
+    return null;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    return null;
+  }
+  return { email, password };
+}
+
+router.post('/api/auth/signup', loginLimiter, express.json({ limit: '2kb' }), async (req, res, next) => {
+  try {
+    const creds = readCredentials(req, res);
+    if (!creds) return;
+
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', creds.email)
+      .single();
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists. Sign in instead.' });
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .insert({ email: creds.email, password_hash: auth.hashPassword(creds.password) });
+    if (error) throw new Error('Could not create the account. Please try again.');
+
+    const status = await accountStatus(creds.email);
+    res.status(201).json(Object.assign({ ok: true, token: auth.mintSession(creds.email) }, status));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/api/auth/login', loginLimiter, express.json({ limit: '2kb' }), async (req, res, next) => {
   try {
-    const email = String((req.body || {}).email || '').trim().toLowerCase();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      return res.status(400).json({ error: 'Enter a valid email address.' });
+    const creds = readCredentials(req, res);
+    if (!creds) return;
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('password_hash')
+      .eq('email', creds.email)
+      .single();
+
+    if (!user) {
+      return res.status(401).json({ error: "No account with this email yet. Create one first.", code: 'NO_ACCOUNT' });
     }
-    const status = await accountStatus(email);
-    res.json(Object.assign({ ok: true, token: auth.mintSession(email) }, status));
+    if (!auth.verifyPassword(creds.password, user.password_hash)) {
+      return res.status(401).json({ error: 'Incorrect email or password.' });
+    }
+
+    const status = await accountStatus(creds.email);
+    res.json(Object.assign({ ok: true, token: auth.mintSession(creds.email) }, status));
   } catch (err) {
     next(err);
   }

@@ -8,6 +8,7 @@ import Flow from './routes/Flow';
 import KitDetail from './routes/KitDetail';
 import Landing from './routes/Landing';
 import Login from './routes/Login';
+import Signup from './routes/Signup';
 import AdsStudio from './routes/studios/AdsStudio';
 import ContentStudio from './routes/studios/ContentStudio';
 import EmailStudio from './routes/studios/EmailStudio';
@@ -23,6 +24,7 @@ export default function App() {
       {/* Dev alias: vite dev serves under /app/, where "/" is unreachable. */}
       <Route path="/app/home" element={<Landing />} />
       <Route path="/app/login" element={<Login />} />
+      <Route path="/app/signup" element={<Signup />} />
       <Route path="/app/*" element={<AppShell />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

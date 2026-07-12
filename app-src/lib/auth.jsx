@@ -24,8 +24,14 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (email) => {
-    const data = await api.login(email);
+  const login = useCallback(async (email, password) => {
+    const data = await api.login(email, password);
+    setToken(data.token);
+    setAccount(data);
+  }, []);
+
+  const signup = useCallback(async (email, password) => {
+    const data = await api.signup(email, password);
     setToken(data.token);
     setAccount(data);
   }, []);
@@ -36,7 +42,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ account, loading, login, logout }}>
+    <AuthContext.Provider value={{ account, loading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

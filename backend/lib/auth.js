@@ -42,6 +42,25 @@ async function writeJson(key, value) {
   if (error) throw error;
 }
 
+// ── passwords (Prompt 8: email/password auth) ───────────────────────────────
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return salt + ':' + hash;
+}
+
+function verifyPassword(password, stored) {
+  try {
+    const [salt, hash] = String(stored).split(':');
+    if (!salt || !hash) return false;
+    const check = crypto.scryptSync(password, salt, 64);
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), check);
+  } catch (e) {
+    return false;
+  }
+}
+
 // ── sessions ────────────────────────────────────────────────────────────────
 
 function b64url(s) {
@@ -108,4 +127,6 @@ module.exports = {
   requireAuth,
   creditsUsed,
   chargeCredit,
+  hashPassword,
+  verifyPassword,
 };

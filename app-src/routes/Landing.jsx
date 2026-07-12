@@ -190,7 +190,7 @@ export default function Landing() {
     } catch {
       /* private mode: they can still pick the plan again after signing in */
     }
-    navigate('/app/login');
+    navigate('/app/signup');
   }
 
   return (
