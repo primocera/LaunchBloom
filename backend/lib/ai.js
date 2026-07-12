@@ -161,6 +161,39 @@ function fixCounters(obj, n) {
   return obj;
 }
 
+// ---------------------------------------------------------------------------
+// The Anthropic structured-output validator only accepts minItems of 0 or 1,
+// but our schemas use real counts (offers: exactly 3, content plan: 30 days).
+// Clamp minItems in the copy sent to the API and move the exact counts into
+// the system prompt instead. schemas.js keeps the real values — mock mode and
+// our own docs rely on them.
+// ---------------------------------------------------------------------------
+function sanitizeSchema(schema, path = '', notes = []) {
+  if (Array.isArray(schema)) return schema.map((s) => sanitizeSchema(s, path, notes));
+  if (!schema || typeof schema !== 'object') return schema;
+
+  const out = {};
+  for (const [k, v] of Object.entries(schema)) {
+    if (k === 'minItems' && v > 1) {
+      const max = schema.maxItems;
+      notes.push(
+        `${path || 'items'}: ${max === v ? `exactly ${v}` : `at least ${v}${max ? `, at most ${max}` : ''}`} items`
+      );
+      out.minItems = 1;
+    } else if (k === 'properties') {
+      out.properties = {};
+      for (const [pk, pv] of Object.entries(v)) {
+        out.properties[pk] = sanitizeSchema(pv, path ? `${path}.${pk}` : pk, notes);
+      }
+    } else if (k === 'items') {
+      out.items = sanitizeSchema(v, path, notes);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 /**
  * One structured generation call.
  * @param {object} opts { system, prompt, schema, maxTokens }
@@ -178,12 +211,18 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000 }) {
 
   const client = new Anthropic();
 
+  const lengthNotes = [];
+  const apiSchema = sanitizeSchema(schema, '', lengthNotes);
+  const lengthRules = lengthNotes.length
+    ? '\n\nArray length requirements (follow exactly): ' + lengthNotes.join('; ') + '.'
+    : '';
+
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: maxTokens,
-    system: BASE_SYSTEM + (system ? '\n\n' + system : ''),
+    system: BASE_SYSTEM + (system ? '\n\n' + system : '') + lengthRules,
     messages: [{ role: 'user', content: prompt }],
-    output_config: { format: { type: 'json_schema', schema } },
+    output_config: { format: { type: 'json_schema', schema: apiSchema } },
   });
 
   if (response.stop_reason === 'refusal') {
@@ -196,4 +235,4 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000 }) {
   return JSON.parse(textBlock.text);
 }
 
-module.exports = { generateJson, MODEL };
+module.exports = { generateJson, MODEL, sanitizeSchema };
