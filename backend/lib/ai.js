@@ -162,11 +162,11 @@ function fixCounters(obj, n) {
 }
 
 // ---------------------------------------------------------------------------
-// The Anthropic structured-output validator only accepts minItems of 0 or 1,
-// but our schemas use real counts (offers: exactly 3, content plan: 30 days).
-// Clamp minItems in the copy sent to the API and move the exact counts into
-// the system prompt instead. schemas.js keeps the real values — mock mode and
-// our own docs rely on them.
+// The Anthropic structured-output validator rejects maxItems entirely and
+// only accepts minItems of 0 or 1, but our schemas use real counts (offers:
+// exactly 3, content plan: 30 days). Strip both from the copy sent to the API
+// and move the exact counts into the system prompt instead. schemas.js keeps
+// the real values — mock mode and our own docs rely on them.
 // ---------------------------------------------------------------------------
 function sanitizeSchema(schema, path = '', notes = []) {
   if (Array.isArray(schema)) return schema.map((s) => sanitizeSchema(s, path, notes));
@@ -174,12 +174,22 @@ function sanitizeSchema(schema, path = '', notes = []) {
 
   const out = {};
   for (const [k, v] of Object.entries(schema)) {
-    if (k === 'minItems' && v > 1) {
-      const max = schema.maxItems;
-      notes.push(
-        `${path || 'items'}: ${max === v ? `exactly ${v}` : `at least ${v}${max ? `, at most ${max}` : ''}`} items`
-      );
-      out.minItems = 1;
+    if (k === 'minItems' || k === 'maxItems') {
+      if (k === 'minItems') {
+        const max = schema.maxItems;
+        if (v > 1) {
+          notes.push(
+            `${path || 'items'}: ${max === v ? `exactly ${v}` : `at least ${v}${max ? `, at most ${max}` : ''}`} items`
+          );
+          out.minItems = 1;
+        } else {
+          if (max) notes.push(`${path || 'items'}: at most ${max} items`);
+          out.minItems = v;
+        }
+      } else if (!('minItems' in schema)) {
+        notes.push(`${path || 'items'}: at most ${v} items`);
+      }
+      // maxItems itself is never forwarded — the API rejects it.
     } else if (k === 'properties') {
       out.properties = {};
       for (const [pk, pv] of Object.entries(v)) {
