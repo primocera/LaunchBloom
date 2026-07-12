@@ -1,2 +1,5 @@
 node_modules/
 .env
+
+# internal working files — local only
+OfferFlow_AI_Claude_Code_Prompts.docx
