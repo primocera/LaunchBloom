@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 
@@ -29,8 +29,15 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  // Logged-in users don't belong on /login — straight to the dashboard.
-  if (account) return <Navigate to="/app" replace />;
+  // Logged-in users don't belong on /login. If they arrived here with a plan
+  // picked on the landing page, hand off to Stripe; otherwise go to the app.
+  useEffect(() => {
+    if (!account) return;
+    resumePendingCheckout(account.email)
+      .then((going) => { if (!going) navigate('/app', { replace: true }); })
+      .catch(() => navigate('/app', { replace: true }));
+  }, [account, navigate]);
+  if (account) return null;
 
   async function submit(e) {
     e.preventDefault();

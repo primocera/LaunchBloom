@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { resumePendingCheckout } from './Login';
 
@@ -17,7 +17,15 @@ export default function Signup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  if (account) return <Navigate to="/app" replace />;
+  // Already signed in? If a plan was picked on the landing page, resume its
+  // checkout; otherwise send them to the app.
+  useEffect(() => {
+    if (!account) return;
+    resumePendingCheckout(account.email)
+      .then((going) => { if (!going) navigate('/app', { replace: true }); })
+      .catch(() => navigate('/app', { replace: true }));
+  }, [account, navigate]);
+  if (account) return null;
 
   async function submit(e) {
     e.preventDefault();

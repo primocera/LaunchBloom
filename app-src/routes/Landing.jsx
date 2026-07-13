@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
+import { resumePendingCheckout } from './Login';
 import AskBox from '../components/AskBox';
 import BloomMark from '../components/BloomMark';
 import Marquee from '../components/Marquee';
@@ -180,10 +182,11 @@ function Faq() {
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { account } = useAuth();
   const [interval, setInterval] = useState('monthly');
 
   // Remember which plan + interval was clicked; checkout resumes once signed in.
-  function choose(plan) {
+  async function choose(plan) {
     try {
       if (plan) {
         localStorage.setItem('of-pending-plan', plan);
@@ -191,6 +194,16 @@ export default function Landing() {
       }
     } catch {
       /* private mode: they can still pick the plan again after signing in */
+    }
+    // Already signed in? Go straight to Stripe instead of the signup screen.
+    if (account) {
+      try {
+        if (await resumePendingCheckout(account.email)) return;
+      } catch {
+        /* fall through to the app; they can retry from there */
+      }
+      navigate('/app');
+      return;
     }
     navigate('/app/signup');
   }
