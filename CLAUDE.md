@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-OfferFlow AI — a SaaS web app that takes solopreneurs, creators, freelancers, coaches and small service providers **from idea to offer to launch**. The user answers onboarding questions; the AI generates positioning → 3 offer options → a full "Launch Kit" (landing page copy, 30-day content plan, 7-email sequence, Meta ad ideas, SEO starter plan, weekly action plan).
+OfferFlow AI (LaunchBloom) — a SaaS **AI marketing workspace** for solopreneurs, creators, freelancers, coaches and small ecommerce/service brands. The user answers onboarding questions; the AI generates positioning → 3 offer options → a full "Launch Kit" (landing page copy, 30-day content plan, 7-email sequence, Meta ad ideas, SEO starter plan, weekly action plan), then dedicated **studios** turn that offer into the assets a brand needs to sell: website pages, email flows, campaign emails, social captions, ad/creative briefs and SEO.
+
+**Marketing studios (upgrade prompts 5-18):** `backend/routes/assets.js` mounts five `/api/ai/generate-*` routes (website-kit, email-flow, campaign-emails, social-assets, creative-assets), each plan-gated on `asset_generations`, workspace-scoped, saving into the `004_marketing_assets` tables (`website_pages`, `email_assets`, `social_assets`, `creative_assets`, `seo_assets`). Schemas live in `backend/lib/schemas.js` (exported separately from `SECTION_SCHEMAS`). The frontend generator studios share `app-src/routes/studios/generator.jsx`. Non-blocking `quality_warnings` come from `backend/lib/quality-checks.js`.
+
+**Pricing:** a **3-day paid Stripe trial** then starter/pro/studio (monthly or yearly). `payments.js` adds `trial_period_days: 3` for first-time subscribers only; `planFor()` returns `'trial'` while `trialing`. Price→plan mapping uses `STRIPE_PRICE_{STARTER,PRO,STUDIO}_{MONTHLY,YEARLY}` (legacy `_BUSINESS` → studio). Limits per plan live in `backend/lib/plan-limits.js`; `free` is a very limited public/demo plan (0 full kits until the trial starts).
 
 The build follows the prompt playbook in `OfferFlow_AI_Claude_Code_Prompts.docx`, but the stack was deliberately changed from the playbook's Next.js/OpenAI to a **ConversionForge-derived architecture** (sibling project at `c:\Users\primo\conversionForge`). When in doubt about a pattern, look at how ConversionForge does it.
 
@@ -24,9 +28,9 @@ Backend needs a `.env` (copy `backend/.env.example`): Supabase service-role, Str
 
 **Stack:** Node.js + Express (CommonJS, plain JS — no TypeScript, no Zod), Supabase Postgres via service_role client, Anthropic Claude (`claude-opus-4-8`) with structured JSON output, Stripe Checkout + webhooks, optional Resend. Frontend (planned): Vite + React + react-router, reusing ConversionForge's `app-src/` landing components with OfferFlow copy.
 
-**Identity model (no Supabase Auth):** `backend/lib/auth.js` mints stateless HMAC session tokens (`email|exp` signed with SESSION_SECRET, 30 days). The session email IS the identity; `workspaces.user_email` links data to accounts. Free accounts get 10 lifetime credits tracked in a Supabase Storage bucket (`offerflow-data/credits.json`); active subscribers are unlimited.
+**Identity model (no Supabase Auth):** `backend/lib/auth.js` mints stateless HMAC session tokens (`email|exp` signed with SESSION_SECRET, 30 days). The session email IS the identity; `workspaces.user_email` links data to accounts.
 
-**Credit gating:** every AI route is wrapped in `creditGate(cost)` from `backend/lib/gate.js` — it authenticates, checks plan (cached 10 min), and rejects free users out of credits. Credits are charged only **after** success via `settleCredit(req)`; failed generations never cost anything.
+**Plan gating:** every AI route is wrapped in `planGate(feature)` from `backend/lib/plan-limits.js` — it authenticates, resolves the plan via `planFor()` (cached), ensures the workspace, and enforces the per-feature limit by counting rows (monthly for paid plans, lifetime for `trial`/`free`). Returns 402 code `UPGRADE` when a limit is hit; failed generations never count. (`backend/lib/gate.js` `creditGate` is the inherited ConversionForge credit system and is not wired into the AI routes.)
 
 **Plan resolution:** `routes/customers.js` `planFor(email)` is the single source of plan truth — active/trialing subscription row, or a succeeded one-time payment (= lifetime). Price→plan mapping comes from env (`STRIPE_PRICE_STARTER/_PRO/_BUSINESS`), not hardcoded IDs.
 

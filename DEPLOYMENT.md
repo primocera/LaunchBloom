@@ -35,15 +35,20 @@ Documented in `backend/.env.example` (copy to `backend/.env` for local dev).
 | `MAX_AI_CALLS_PER_DAY` | recommended | global daily spend ceiling, default 300 |
 | `STRIPE_SECRET_KEY` | for payments | |
 | `STRIPE_WEBHOOK_SECRET` | for payments | from the webhook endpoint (step 3) |
-| `STRIPE_PRICE_STARTER/_PRO/_BUSINESS` | for payments | price IDs from Stripe Products |
+| `STRIPE_PRICE_{STARTER,PRO,STUDIO}_{MONTHLY,YEARLY}` | for payments | 6 recurring price IDs (starter/pro/studio × monthly/yearly) |
+| `STRIPE_PRICE_STARTER/_PRO/_BUSINESS` | optional | legacy single-price vars for old accounts (`_BUSINESS` → studio) |
 | `PUBLIC_URL` | optional | checkout redirect base; falls back to request origin |
 | `ALLOWED_ORIGINS` | optional | extra CORS origins; `*.vercel.app` auto-allowed |
 | `RESEND_API_KEY` | optional | transactional email |
 
 ## 3. Stripe setup
 
-1. Create 3 recurring Products (Starter €12, Pro €29, Business €59) →
-   copy each **price ID** into `STRIPE_PRICE_*` env vars.
+1. Create 3 recurring Products, each with a **monthly and a yearly** Price:
+   Starter (€12.99 / €99), Pro (€24.99 / €199), Studio (€59 / €499) → copy the
+   6 price IDs into `STRIPE_PRICE_{STARTER,PRO,STUDIO}_{MONTHLY,YEARLY}`.
+   Keep the Stripe prices as plain recurring prices — the **3-day free trial is
+   applied in code** (`subscription_data.trial_period_days: 3`) for first-time
+   subscribers only, so returning customers are never double-trialed.
 2. Developers → Webhooks → Add endpoint:
    - URL: `https://<your-domain>/api/webhooks/stripe`
    - Events: `checkout.session.completed`, `customer.subscription.created`,
@@ -75,8 +80,19 @@ Documented in `backend/.env.example` (copy to `backend/.env` for local dev).
 - [ ] Onboarding → Generate positioning → offers (3) → pick one → launch kit
 - [ ] Launch kit opens; each studio (landing/content/emails/ads/SEO/weekly) shows items
 - [ ] Regenerate one section works; edits save
-- [ ] Free-plan limits kick in on the 2nd kit (upgrade prompt, no crash)
-- [ ] If Stripe configured: pricing → checkout (test card `4242 4242 4242 4242`) → webhook marks plan active
+- [ ] Dashboard shows "Next best actions" after a kit exists
+- [ ] New generator studios return structured data and save assets:
+  - [ ] `POST /api/ai/generate-website-kit`
+  - [ ] `POST /api/ai/generate-email-flow`
+  - [ ] `POST /api/ai/generate-campaign-emails`
+  - [ ] `POST /api/ai/generate-social-assets`
+  - [ ] `POST /api/ai/generate-creative-assets`
+- [ ] Frontend studios load, generate, copy, export (Markdown) and flip status:
+      Website Studio · Email Studio (Lifecycle/Campaign/Saved) · Captions Studio · Creative Studio
+- [ ] Free/limit reached → studio shows an upgrade prompt (no crash)
+- [ ] If Stripe configured: pricing (monthly **and** yearly) → checkout (test card
+      `4242 4242 4242 4242`) → 3-day trial shown → webhook marks plan active;
+      a second checkout for the same customer gets **no** new trial
 - [ ] Browser devtools: no requests expose service_role key or Anthropic key
 
 ## 6. Costs & guardrails
