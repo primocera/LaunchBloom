@@ -81,6 +81,11 @@ app.use(workspacesRouter);
 const aiRouter = require('./routes/ai');
 app.use('/api/ai', apiLimiter, aiLimiter, aiRouter);
 
+// Marketing-asset studios (website/email/campaign/social/creative) — same
+// base path and limiters as the core AI routes.
+const assetsRouter = require('./routes/assets');
+app.use('/api/ai', apiLimiter, aiLimiter, assetsRouter);
+
 // ---------------------------------------------------------------------------
 // Body parsing for all remaining routes
 // ---------------------------------------------------------------------------
