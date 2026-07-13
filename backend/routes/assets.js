@@ -155,12 +155,37 @@ const WEBSITE_SYSTEM =
   '- Thank-you page: next step, expectation setting, email reminder, social follow CTA.\n' +
   'If information is missing, use a clear placeholder in brackets instead of inventing facts.';
 
+// Prompts 12-14: page-type-specific section guidance. Each requested page type
+// that needs deeper copy gets an explicit checklist of sections to produce
+// inside that page's `sections` array. Everything is expressed within
+// websiteKitSchema — no separate endpoints — and missing facts become
+// bracketed placeholders rather than invented details.
+const PAGE_GUIDANCE = {
+  product:
+    'For each product page, produce sections covering: above-the-fold product headline, product ' +
+    'subtitle, 5 benefit bullets, short product description, long product description, what makes it ' +
+    'different, how to use / how it works, trust/reassurance, upsell/cross-sell block, and image alt ' +
+    'text ideas. Use only provided product facts; if a detail is missing write a placeholder like ' +
+    '[Add material/specification here] instead of guessing. Give several CTA options.',
+  cart:
+    'For the cart page, produce sections covering: cart headline, empty cart message, free shipping ' +
+    'bar copy, discount code microcopy, trust/reassurance copy, returns/shipping reassurance, ' +
+    'checkout CTA options, cross-sell block headlines, honest (non-fake) urgency copy, support/help ' +
+    'microcopy, and a note on the abandoned-cart email connection. Reduce friction — never use fake ' +
+    'scarcity or false timers.',
+  about:
+    'For the about page, produce sections covering: brand story headline, founder/brand story body, ' +
+    'mission, values, why we started, who we serve, trust, final CTA, and image suggestions. Do not ' +
+    'invent founder facts — use only provided details and use fill-in placeholders where missing. ' +
+    'Keep it warm and human, and remind the user to add real photos and founder details before publishing.',
+};
+
 router.post('/generate-website-kit', planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
       offer_id, launch_kit_id, business_type, target_language,
-      page_types, website_goal, extra_context,
+      page_types, website_goal, products, extra_context,
     } = req.body || {};
 
     if (!Array.isArray(page_types) || page_types.length === 0) {
@@ -170,6 +195,12 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
     const ctx = await loadScopedContext(ws, { offer_id, launch_kit_id });
     if (ctx.error) return res.status(ctx.status).json({ error: ctx.error });
 
+    // Page-type-specific guidance for any requested pages that need it.
+    const guidance = page_types
+      .map((t) => (PAGE_GUIDANCE[t] ? `${t} page — ${PAGE_GUIDANCE[t]}` : null))
+      .filter(Boolean)
+      .join('\n\n');
+
     const prompt = [
       'Create website copy for this brand.',
       brandBlock(ctx),
@@ -177,6 +208,8 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       line('Target language', target_language || 'English'),
       line('Page types needed', page_types),
       line('Website goal', website_goal),
+      products ? `Product details (use only these facts; bracket anything missing):\n${JSON.stringify(products).slice(0, 3000)}` : null,
+      guidance ? `Page-specific requirements:\n${guidance}` : null,
       line('Extra context', extra_context),
       'Return structured JSON with a pages array covering the requested page types.',
     ].filter(Boolean).join('\n\n');
