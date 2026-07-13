@@ -14,11 +14,15 @@ const MAIN_NAV = [
 ];
 
 const STUDIO_NAV = [
-  { to: '/app/landing-page', label: 'Website & Landing Pages' },
-  { to: '/app/content-plan', label: 'Captions & Content' },
-  { to: '/app/email-sequence', label: 'Email Flows' },
-  { to: '/app/ads', label: 'Ads & Creative Ideas' },
+  { to: '/app/website', label: 'Website Studio' },
+  { to: '/app/email-studio', label: 'Email Studio' },
+  { to: '/app/social', label: 'Captions Studio' },
+  { to: '/app/creative', label: 'Creative Studio' },
   { to: '/app/seo', label: 'SEO Studio' },
+  { to: '/app/landing-page', label: 'Launch Kit: Landing' },
+  { to: '/app/content-plan', label: 'Launch Kit: Content' },
+  { to: '/app/email-sequence', label: 'Launch Kit: Emails' },
+  { to: '/app/ads', label: 'Launch Kit: Ads' },
   { to: '/app/weekly-plan', label: 'Action Plan' },
 ];
 

@@ -63,6 +63,15 @@ export const api = {
       body: { launch_kit_id: launchKitId, section, feedback },
     }),
 
+  // Marketing-asset studios (Upgrade prompts 7-11 / 16-18)
+  generateWebsiteKit: (body) => request('/api/ai/generate-website-kit', { method: 'POST', body }),
+  generateEmailFlow: (body) => request('/api/ai/generate-email-flow', { method: 'POST', body }),
+  generateCampaignEmails: (body) => request('/api/ai/generate-campaign-emails', { method: 'POST', body }),
+  generateSocialAssets: (body) => request('/api/ai/generate-social-assets', { method: 'POST', body }),
+  generateCreativeAssets: (body) => request('/api/ai/generate-creative-assets', { method: 'POST', body }),
+  // List saved assets for the whole workspace (no launch-kit filter).
+  assets: (table) => request(`/api/workspace/items/${table}`),
+
   checkout: (plan, email, interval = 'monthly') =>
     request('/api/payments/create-checkout-session', { method: 'POST', body: { plan, email, interval } }),
 };

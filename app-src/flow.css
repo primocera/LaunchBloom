@@ -637,3 +637,132 @@
 .login-alt a {
   color: #2563eb;
 }
+
+/* ── Generator studios (Upgrade prompts 16-18) ──────────────────────────── */
+.flow-field select {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8f7f4;
+  color: #111827;
+}
+
+.gen-form {
+  margin-bottom: 20px;
+}
+
+.gen-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gen-chip {
+  padding: 7px 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.gen-chip.is-on {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.gen-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.gen-tab {
+  padding: 9px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.gen-tab.is-on {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
+.gen-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.gen-card-head,
+.gen-card .gen-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gen-card-title {
+  font-weight: 700;
+  text-transform: capitalize;
+  margin-bottom: 6px;
+}
+
+.gen-field {
+  margin: 10px 0;
+}
+
+.gen-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gen-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+.gen-field-val {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+
+.gen-subsection {
+  border-left: 2px solid #e5e7eb;
+  padding-left: 12px;
+  margin: 10px 0;
+}
+
+.gen-status {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f8f7f4;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.gen-status.is-ready { background: #ecfdf5; color: #10b981; border-color: #a7f3d0; }
+.gen-status.is-published { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.gen-status.is-edited { background: #fffbeb; color: #b45309; border-color: #fde68a; }

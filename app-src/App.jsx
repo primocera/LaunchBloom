@@ -15,6 +15,11 @@ import EmailStudio from './routes/studios/EmailStudio';
 import LandingStudio from './routes/studios/LandingStudio';
 import SeoStudio from './routes/studios/SeoStudio';
 import WeeklyPlan from './routes/studios/WeeklyPlan';
+// Upgrade prompts 16-18: marketing-asset generator studios
+import WebsiteStudio from './routes/studios/WebsiteStudio';
+import EmailFlowStudio from './routes/studios/EmailFlowStudio';
+import SocialStudio from './routes/studios/SocialStudio';
+import CreativeStudio from './routes/studios/CreativeStudio';
 
 export default function App() {
   return (
@@ -68,6 +73,11 @@ function AppShell() {
           <Route path="/ads" element={<AdsStudio />} />
           <Route path="/seo" element={<SeoStudio />} />
           <Route path="/weekly-plan" element={<WeeklyPlan />} />
+          {/* Marketing-asset generator studios (Upgrade prompts 16-18) */}
+          <Route path="/website" element={<WebsiteStudio />} />
+          <Route path="/email-studio" element={<EmailFlowStudio />} />
+          <Route path="/social" element={<SocialStudio />} />
+          <Route path="/creative" element={<CreativeStudio />} />
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </main>

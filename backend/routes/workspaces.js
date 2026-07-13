@@ -328,6 +328,28 @@ const ITEM_TABLES = {
     order: 'created_at',
     editable: ['task_type', 'task_title', 'task_description', 'priority', 'completed', 'week_start'],
   },
+  // Upgrade 004 marketing-asset tables — power the new generator studios
+  // (list saved assets, edit fields, flip status: draft/edited/ready/published).
+  website_pages: {
+    order: 'created_at',
+    editable: ['page_type', 'title', 'seo_title', 'meta_description', 'sections', 'cta', 'status'],
+  },
+  email_assets: {
+    order: 'created_at',
+    editable: ['flow_type', 'email_order', 'subject_line', 'preheader', 'headline', 'body_copy', 'cta', 'send_timing', 'segment', 'design_notes', 'status'],
+  },
+  social_assets: {
+    order: 'created_at',
+    editable: ['platform', 'content_type', 'hook', 'caption', 'cta', 'visual_direction', 'hashtags', 'status'],
+  },
+  creative_assets: {
+    order: 'created_at',
+    editable: ['platform', 'creative_type', 'hook', 'headline', 'primary_text', 'visual_direction', 'shot_list', 'text_overlays', 'cta', 'testing_angle', 'status'],
+  },
+  seo_assets: {
+    order: 'created_at',
+    editable: ['page_type', 'keyword', 'keyword_intent', 'seo_title', 'meta_description', 'h1', 'h2s', 'faq', 'internal_links', 'priority'],
+  },
 };
 
 // GET /api/workspace/items/:table?launch_kit_id=... — list a studio's items

@@ -18,6 +18,16 @@ const STUDIOS = [
   ['/app/weekly-plan', 'Weekly action plan'],
 ];
 
+// Prompt 15: after a launch kit exists, point the user at the highest-value
+// next generations in the new studios.
+const NEXT_ACTIONS = [
+  ['/app/website', 'Generate website pages'],
+  ['/app/email-studio', 'Generate welcome flow'],
+  ['/app/social', 'Generate 10 social captions'],
+  ['/app/creative', 'Generate ad creative ideas'],
+  ['/app/seo', 'Generate SEO plan'],
+];
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -173,6 +183,19 @@ export default function Dashboard() {
               </>
             )}
           </div>
+
+          {/* ── 4b. Next best actions (Prompt 15) ── */}
+          {kit && (
+            <div className="flow-card">
+              <div className="flow-eyebrow">Next best actions</div>
+              <p className="flow-muted dash-small">Turn your launch kit into the assets you need to sell.</p>
+              <ul className="kit-outline dash-kit-links">
+                {NEXT_ACTIONS.map(([to, label]) => (
+                  <li key={label}><Link to={to}>{label} →</Link></li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* ── 5. Quick Generate ── */}
           <div className="flow-card">
