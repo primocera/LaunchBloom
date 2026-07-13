@@ -7,9 +7,10 @@ Live: https://launch-bloom.vercel.app · Repo: https://github.com/primocera/Laun
 
 1. Create a Supabase project (separate from any other app).
 2. In the SQL Editor, run the migrations **in order**:
-   - `backend/migrations/001_init.sql`
-   - `backend/migrations/002_items.sql`
+   - `backend/migrations/001_initial_schema.sql`
+   - `backend/migrations/002_studio_status.sql`
    - `backend/migrations/003_users.sql`
+   - `backend/migrations/004_marketing_assets.sql` — website/email/social/creative/SEO asset tables for the new studios
 3. Storage: the app auto-creates the `offerflow-data` bucket on first use
    (credits + daily AI usage). No manual step needed.
 4. Grab from **Project Settings → API**:
