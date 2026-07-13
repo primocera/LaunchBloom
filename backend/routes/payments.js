@@ -28,28 +28,77 @@ async function ownsSubscription(subscriptionId, userEmail) {
 }
 
 /**
+ * Resolves a Stripe price id from { plan, interval }.
+ *
+ * Preferred env vars (create these in Stripe → Products, one price per cell):
+ *   STRIPE_PRICE_STARTER_MONTHLY   STRIPE_PRICE_STARTER_YEARLY
+ *   STRIPE_PRICE_PRO_MONTHLY       STRIPE_PRICE_PRO_YEARLY
+ *   STRIPE_PRICE_STUDIO_MONTHLY    STRIPE_PRICE_STUDIO_YEARLY
+ *
+ * Backward compatibility: if the interval-specific var is missing, fall back to
+ * the old single-price vars (STRIPE_PRICE_STARTER / _PRO / _BUSINESS). "business"
+ * is treated as an alias of "studio".
+ */
+const PLAN_ALIASES = { business: 'studio' };
+const LEGACY_PLAN_ENV = {
+  starter: 'STRIPE_PRICE_STARTER',
+  pro: 'STRIPE_PRICE_PRO',
+  studio: 'STRIPE_PRICE_BUSINESS',
+};
+
+function resolvePriceId(planName, interval) {
+  const plan = PLAN_ALIASES[planName] || planName;
+  const intv = interval === 'yearly' ? 'YEARLY' : 'MONTHLY';
+  const key = `STRIPE_PRICE_${plan.toUpperCase()}_${intv}`;
+  return process.env[key] || process.env[LEGACY_PLAN_ENV[plan]] || null;
+}
+
+/**
+ * True if this email already had a Stripe trial or an active subscription, so a
+ * fresh checkout must NOT grant another 3-day free trial. Fails open to "no
+ * prior trial" only when the customer has never existed in Supabase.
+ */
+async function hadTrialOrActiveSubscription(email) {
+  email = (email || '').trim().toLowerCase();
+  if (!email) return false;
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('email', email)
+    .single();
+  if (!customer) return false;
+
+  const { data: subs } = await supabase
+    .from('subscriptions')
+    .select('status, trial_end')
+    .eq('customer_id', customer.id);
+  if (!subs || subs.length === 0) return false;
+
+  return subs.some(
+    (s) => s.trial_end || ['active', 'trialing', 'past_due'].includes(s.status)
+  );
+}
+
+/**
  * POST /api/payments/create-checkout-session
  * Creates a Stripe Checkout Session in subscription mode and returns the
  * hosted Checkout URL for the browser to redirect to.
  *
- * Body: { plan, email } or { priceId, email } — plan names (starter | pro |
- * business) resolve to the STRIPE_PRICE_* env vars, per the playbook.
+ * Body: { plan, interval, email } or { priceId, email } — plan names
+ * (starter | pro | studio) + interval (monthly | yearly) resolve to the
+ * STRIPE_PRICE_<PLAN>_<INTERVAL> env vars, per the upgrade playbook. New
+ * customers get a 3-day free trial; returning customers do not.
  */
-const PLAN_ENV = {
-  starter: 'STRIPE_PRICE_STARTER',
-  pro: 'STRIPE_PRICE_PRO',
-  business: 'STRIPE_PRICE_BUSINESS',
-};
-
 router.post('/create-checkout-session', async (req, res) => {
   try {
     const { plan: planName, email } = req.body || {};
+    const interval = (req.body && req.body.interval) === 'yearly' ? 'yearly' : 'monthly';
     let { priceId } = req.body || {};
 
     if (!priceId && planName) {
-      priceId = process.env[PLAN_ENV[planName]] || null;
+      priceId = resolvePriceId(planName, interval);
       if (!priceId) {
-        return res.status(400).json({ error: `Plan "${planName}" is not configured (missing ${PLAN_ENV[planName] || 'price'} env var).` });
+        return res.status(400).json({ error: `Plan "${planName}" (${interval}) is not configured (missing STRIPE_PRICE_* env var).` });
       }
     }
     if (!priceId || typeof priceId !== 'string') {
@@ -64,13 +113,20 @@ router.post('/create-checkout-session', async (req, res) => {
       req.headers.origin ||
       `${req.protocol}://${req.get('host')}`;
 
-    const plan = pricePlans()[priceId] || 'pro';
+    const plan = pricePlans()[priceId] || PLAN_ALIASES[planName] || planName || 'pro';
+
+    // 3-day free trial for first-time subscribers only (no double-trialing).
+    const subscriptionData = {};
+    if (!(await hadTrialOrActiveSubscription(email))) {
+      subscriptionData.trial_period_days = 3;
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: email,
-      success_url: `${baseUrl}/?payment=success&plan=${plan}`,
+      ...(subscriptionData.trial_period_days ? { subscription_data: subscriptionData } : {}),
+      success_url: `${baseUrl}/?payment=success&plan=${plan}&interval=${interval}`,
       cancel_url: `${baseUrl}/?payment=cancelled`,
     });
 

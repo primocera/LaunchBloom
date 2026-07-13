@@ -10,12 +10,27 @@ const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
 
-/** Stripe price id → OfferFlow plan name, built from env at startup. */
+/**
+ * Stripe price id → OfferFlow plan name, built from env at startup.
+ * Maps the new monthly/yearly price vars (starter | pro | studio) and keeps the
+ * legacy single-price vars working. Old "business" prices resolve to 'studio'.
+ */
 function pricePlans() {
   const map = {};
-  if (process.env.STRIPE_PRICE_STARTER) map[process.env.STRIPE_PRICE_STARTER] = 'starter';
-  if (process.env.STRIPE_PRICE_PRO) map[process.env.STRIPE_PRICE_PRO] = 'pro';
-  if (process.env.STRIPE_PRICE_BUSINESS) map[process.env.STRIPE_PRICE_BUSINESS] = 'business';
+  const add = (envVar, plan) => {
+    if (process.env[envVar]) map[process.env[envVar]] = plan;
+  };
+  // New monthly/yearly prices
+  add('STRIPE_PRICE_STARTER_MONTHLY', 'starter');
+  add('STRIPE_PRICE_STARTER_YEARLY', 'starter');
+  add('STRIPE_PRICE_PRO_MONTHLY', 'pro');
+  add('STRIPE_PRICE_PRO_YEARLY', 'pro');
+  add('STRIPE_PRICE_STUDIO_MONTHLY', 'studio');
+  add('STRIPE_PRICE_STUDIO_YEARLY', 'studio');
+  // Legacy single-price vars (business → studio alias for old data)
+  add('STRIPE_PRICE_STARTER', 'starter');
+  add('STRIPE_PRICE_PRO', 'pro');
+  add('STRIPE_PRICE_BUSINESS', 'studio');
   return map;
 }
 
