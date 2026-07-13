@@ -89,15 +89,17 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [upgrade, setUpgrade] = useState(false);
+  const [warnings, setWarnings] = useState([]);
 
   const missing = fields.some(
     (f) => f.required && (values[f.name] == null || values[f.name] === '' || (Array.isArray(values[f.name]) && !values[f.name].length))
   );
 
   async function run() {
-    setBusy(true); setError(null); setUpgrade(false);
+    setBusy(true); setError(null); setUpgrade(false); setWarnings([]);
     try {
       const res = await generate(values);
+      setWarnings(res.quality_warnings || []);
       onGenerated(res.emails || []);
     } catch (e) {
       if (e.status === 402 || e.code === 'UPGRADE') setUpgrade(true);
@@ -122,6 +124,12 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
         <p className="flow-err">
           You've hit your plan limit for generations. <Link to="/#pricing">Upgrade your plan</Link> to keep going.
         </p>
+      )}
+      {warnings.length > 0 && (
+        <div className="gen-warnings">
+          <strong>Quality checks ({warnings.length})</strong>
+          <ul>{warnings.map((wm, i) => <li key={i}>{wm}</li>)}</ul>
+        </div>
       )}
     </div>
   );

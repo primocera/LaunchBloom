@@ -18,6 +18,7 @@ const express = require('express');
 const supabase = require('../lib/supabase');
 const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
+const { qualityWarnings } = require('../lib/quality-checks');
 const {
   websiteKitSchema,
   emailFlowSchema,
@@ -231,7 +232,13 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
     const { data: saved, error } = await supabase.from('website_pages').insert(rows).select();
     if (error) throw new Error('Failed to save website pages: ' + error.message);
 
-    res.json({ ok: true, pages: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({
+      ok: true,
+      pages: saved,
+      quality_warnings: qualityWarnings('website', result),
+      plan: req.userPlan,
+      usage: await usageFor(ws.id, req.userPlan),
+    });
   } catch (err) {
     next(err);
   }
@@ -300,7 +307,13 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
     const { data: saved, error } = await supabase.from('email_assets').insert(rows).select();
     if (error) throw new Error('Failed to save emails: ' + error.message);
 
-    res.json({ ok: true, emails: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({
+      ok: true,
+      emails: saved,
+      quality_warnings: qualityWarnings('email', result, { hasDeadline: false }),
+      plan: req.userPlan,
+      usage: await usageFor(ws.id, req.userPlan),
+    });
   } catch (err) {
     next(err);
   }
@@ -382,6 +395,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       campaign_theme: result.campaign_theme,
       campaign_goal: result.campaign_goal,
       emails: saved,
+      quality_warnings: qualityWarnings('email', result, { hasDeadline }),
       plan: req.userPlan,
       usage: await usageFor(ws.id, req.userPlan),
     });
@@ -453,7 +467,13 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
     const { data: saved, error } = await supabase.from('social_assets').insert(rows).select();
     if (error) throw new Error('Failed to save social assets: ' + error.message);
 
-    res.json({ ok: true, items: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({
+      ok: true,
+      items: saved,
+      quality_warnings: qualityWarnings('social', result),
+      plan: req.userPlan,
+      usage: await usageFor(ws.id, req.userPlan),
+    });
   } catch (err) {
     next(err);
   }
@@ -524,7 +544,13 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
     const { data: saved, error } = await supabase.from('creative_assets').insert(rows).select();
     if (error) throw new Error('Failed to save creative assets: ' + error.message);
 
-    res.json({ ok: true, items: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({
+      ok: true,
+      items: saved,
+      quality_warnings: qualityWarnings('creative', result),
+      plan: req.userPlan,
+      usage: await usageFor(ws.id, req.userPlan),
+    });
   } catch (err) {
     next(err);
   }

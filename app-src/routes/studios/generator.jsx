@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { download } from '../../lib/export';
 import { CopyBtn } from './common';
 import '../../flow.css';
 
@@ -126,6 +127,7 @@ export default function GeneratorStudio({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [upgrade, setUpgrade] = useState(false);
+  const [warnings, setWarnings] = useState([]);
   const [items, setItems] = useState(null); // saved assets
 
   useEffect(() => {
@@ -141,9 +143,11 @@ export default function GeneratorStudio({
     setBusy(true);
     setError(null);
     setUpgrade(false);
+    setWarnings([]);
     try {
       const res = await generate(values);
       const fresh = res[resultKey] || [];
+      setWarnings(res.quality_warnings || []);
       // Newest first, prepended to any previously-saved assets.
       setItems((prev) => [...fresh, ...(prev || [])]);
     } catch (e) {
@@ -152,6 +156,11 @@ export default function GeneratorStudio({
     } finally {
       setBusy(false);
     }
+  }
+
+  function exportAll() {
+    const md = (items || []).map((i) => (fullCopy ? fullCopy(i) : JSON.stringify(i, null, 2))).join('\n\n---\n\n');
+    download(`${(table || 'assets')}.md`, md, 'text/markdown');
   }
 
   function updateItem(updated) {
@@ -188,7 +197,19 @@ export default function GeneratorStudio({
               <Link to="/#pricing">Upgrade your plan</Link> to keep going.
             </p>
           )}
+          {warnings.length > 0 && (
+            <div className="gen-warnings">
+              <strong>Quality checks ({warnings.length})</strong>
+              <ul>{warnings.map((wm, i) => <li key={i}>{wm}</li>)}</ul>
+            </div>
+          )}
         </div>
+
+        {items && items.length > 0 && (
+          <div className="flow-row" style={{ marginBottom: 12 }}>
+            <button className="kit-copy" onClick={exportAll}>Export all (Markdown)</button>
+          </div>
+        )}
 
         {items && items.length === 0 && !busy && (
           <div className="flow-card">

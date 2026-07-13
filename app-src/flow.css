@@ -766,3 +766,18 @@
 .gen-status.is-ready { background: #ecfdf5; color: #10b981; border-color: #a7f3d0; }
 .gen-status.is-published { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
 .gen-status.is-edited { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+
+.gen-warnings {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #92400e;
+}
+
+.gen-warnings ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
