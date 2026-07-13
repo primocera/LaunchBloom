@@ -743,6 +743,43 @@
   text-align: left;
 }
 
+.lp-billing-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 28px;
+  padding: 4px;
+  background: rgba(17, 17, 17, 0.05);
+  border-radius: 999px;
+}
+
+.lp-billing-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--muted, #6B7280);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lp-billing-toggle button.is-active {
+  background: var(--surface, #fff);
+  color: var(--text, #111827);
+  box-shadow: 0 1px 6px rgba(17, 17, 17, 0.08);
+}
+
+.lp-billing-save {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--success, #10B981);
+}
+
 .lp-price-card {
   display: flex;
   flex-direction: column;

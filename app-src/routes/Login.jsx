@@ -12,8 +12,10 @@ import { api } from '../lib/api';
 export async function resumePendingCheckout(email) {
   const pendingPlan = localStorage.getItem('of-pending-plan');
   if (!pendingPlan) return false;
+  const pendingInterval = localStorage.getItem('of-pending-interval') || 'monthly';
   localStorage.removeItem('of-pending-plan');
-  const data = await api.checkout(pendingPlan, email);
+  localStorage.removeItem('of-pending-interval');
+  const data = await api.checkout(pendingPlan, email, pendingInterval);
   if (!data.url) throw new Error('Could not start checkout.');
   window.location.href = data.url;
   return true; // the browser is navigating to Stripe

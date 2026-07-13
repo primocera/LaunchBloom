@@ -33,67 +33,65 @@ const PROMPTS = [
   'I have a skill, zero audience, and 5 hours a week',
 ];
 
-// Prompt 25 plans — checkout resolves the plan name to STRIPE_PRICE_* env
-// vars on the backend, so no price IDs live in client code.
+// The six things you can create — each maps to a studio in the app.
+const MODULES = [
+  { n: '1', title: 'Build your offer', body: 'Positioning, ideal customer and three offer options to choose from.' },
+  { n: '2', title: 'Write your website', body: 'Home, product, cart, about, FAQ and landing page copy — ready to paste.' },
+  { n: '3', title: 'Create email flows', body: 'Welcome, abandon cart, post-purchase, review, winback and campaign emails.' },
+  { n: '4', title: 'Plan captions and campaigns', body: 'Captions, hooks, carousels, reels and full seasonal campaign plans.' },
+  { n: '5', title: 'Generate ad hooks, video ideas and image briefs', body: 'Meta, TikTok, Google and Pinterest creative you can shoot with a phone.' },
+  { n: '6', title: 'Improve SEO', body: 'Long-tail keywords, meta titles, blog ideas, FAQ and internal links.' },
+];
+
+// Upgrade Prompt 3/4 pricing — a 3-day free trial then a paid plan. Checkout
+// resolves the plan name + interval to STRIPE_PRICE_<PLAN>_<INTERVAL> env vars
+// on the backend, so no price IDs live in client code.
 const PLANS = [
-  {
-    name: 'Free',
-    plan: null,
-    price: '€0',
-    note: 'Try the whole path once',
-    sub: 'No card needed',
-    features: [
-      '1 workspace',
-      '1 positioning output',
-      '1 offer generation (3 options)',
-      '1 limited launch kit — 7-day content plan',
-    ],
-    cta: 'Start free',
-  },
   {
     name: 'Starter',
     plan: 'starter',
-    price: '€12',
-    note: 'Your first real launch',
-    sub: '1 full launch kit every month',
+    price: { monthly: '€12.99', yearly: '€99' },
+    note: 'Freelancers, creators, solo starters',
+    sub: '3 full kits + 25 asset generations / month',
     features: [
       '1 workspace',
-      '3 offer generations / month',
-      '1 full launch kit / month',
+      '3 full launch kits / month',
+      '25 asset generations / month',
       '30-day content plan',
-      'Landing page draft + email sequence',
+      'Exports included',
     ],
-    cta: 'Choose Starter',
+    cta: 'Start 3-day free trial',
   },
   {
     name: 'Pro',
     plan: 'pro',
-    price: '€29',
+    price: { monthly: '€24.99', yearly: '€199' },
     badge: 'Most popular',
-    note: 'Launch again and again',
-    sub: '5 launch kits every month',
+    note: 'Small ecommerce brands and serious creators',
+    sub: '10 full kits + 100 asset generations / month',
     features: [
       '3 workspaces',
-      'Unlimited offer drafts (fair use)',
-      '5 launch kits / month',
-      'Full content plans, emails, ads, SEO',
-      'Weekly action plans',
-    ],
-    cta: 'Choose Pro',
-  },
-  {
-    name: 'Business',
-    plan: 'business',
-    price: '€59',
-    note: 'For serious operators',
-    sub: 'Multiple brands, deeper kits',
-    features: [
-      '10 workspaces',
-      'Advanced launch kits',
-      'Multiple offers per workspace',
+      '10 full launch kits / month',
+      '100 asset generations / month',
+      'Website, email, campaign & creative studios',
       'Priority exports',
     ],
-    cta: 'Choose Business',
+    cta: 'Start 3-day free trial',
+  },
+  {
+    name: 'Studio',
+    plan: 'studio',
+    price: { monthly: '€59', yearly: '€499' },
+    note: 'Agencies and multi-brand users',
+    sub: '30 full kits + 300 asset generations / month',
+    features: [
+      '10 workspaces',
+      '30 full launch kits / month',
+      '300 asset generations / month',
+      'Client-ready exports',
+      'Advanced brand voice',
+    ],
+    cta: 'Start 3-day free trial',
   },
 ];
 
@@ -151,8 +149,8 @@ const FAQ = [
     a: 'That is exactly who it is for. The positioning step picks a niche you can realistically reach with the platforms and hours you actually have, and the weekly plan starts from zero — not from "post to your list".',
   },
   {
-    q: 'What does the free plan cover?',
-    a: 'No card needed: one positioning output, one offer generation with three options, and one starter launch kit with a 7-day content plan. Enough to walk the whole path once and see if the output fits you before paying.',
+    q: 'How does the free trial work?',
+    a: 'Every plan starts with a 3-day free trial. You add a payment method, get one full launch kit and 20 asset generations to try the whole workspace, and you can cancel anytime before the trial ends without being charged.',
   },
   {
     q: 'Will it promise me revenue?',
@@ -182,11 +180,15 @@ function Faq() {
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [interval, setInterval] = useState('monthly');
 
-  // Remember which plan was clicked; checkout resumes once they are signed in.
+  // Remember which plan + interval was clicked; checkout resumes once signed in.
   function choose(plan) {
     try {
-      if (plan) localStorage.setItem('of-pending-plan', plan);
+      if (plan) {
+        localStorage.setItem('of-pending-plan', plan);
+        localStorage.setItem('of-pending-interval', interval);
+      }
     } catch {
       /* private mode: they can still pick the plan again after signing in */
     }
@@ -221,9 +223,10 @@ export default function Landing() {
             </span>
           </h1>
           <p className="lp-sub">
-            OfferFlow AI helps creators, freelancers and solo founders define what to sell, write
-            their landing page, plan content, create emails, test ads and build a simple weekly
-            sales system.
+            OfferFlow AI is an AI marketing workspace for solo founders, creators, freelancers and
+            small ecommerce brands. Create your offer strategy, website copy, product pages, email
+            flows, campaign emails, captions, ads, SEO and weekly action plans — all from one clear
+            offer.
           </p>
 
           <div className="lp-hero-actions">
@@ -296,6 +299,25 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── 4b. What you can create (six modules) ──────────────────────── */}
+      <section className="lp-how">
+        <div className="lp-how-inner">
+          <Reveal>
+            <div className="lp-eyebrow">What you can create</div>
+            <h2 className="lp-h2">Six studios, one clear offer</h2>
+          </Reveal>
+          <div className="lp-how-grid">
+            {MODULES.map((m, i) => (
+              <Reveal className="lp-how-step" key={m.n} delay={i * 70}>
+                <div className="lp-how-n">{m.n}</div>
+                <h3>{m.title}</h3>
+                <p>{m.body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── 5. Features (8 cards, spec names) ──────────────────────────── */}
       <section className="lp-features">
         <div className="lp-feature-grid">
@@ -358,11 +380,28 @@ export default function Landing() {
         <div className="lp-pricing-inner">
           <Reveal>
             <div className="lp-eyebrow">Pricing plans</div>
-            <h2 className="lp-h2">Simple pricing for first-time founders</h2>
-            <p className="lp-h2-sub">Your first launch kit is free. Cancel anytime.</p>
+            <h2 className="lp-h2">Start with a 3-day free trial</h2>
+            <p className="lp-h2-sub">Try any plan free for 3 days. Cancel anytime before it ends.</p>
           </Reveal>
 
-          <div className="lp-price-grid is-four">
+          <div className="lp-billing-toggle" role="group" aria-label="Billing interval">
+            <button
+              className={interval === 'monthly' ? 'is-active' : ''}
+              onClick={() => setInterval('monthly')}
+              type="button"
+            >
+              Monthly
+            </button>
+            <button
+              className={interval === 'yearly' ? 'is-active' : ''}
+              onClick={() => setInterval('yearly')}
+              type="button"
+            >
+              Yearly <span className="lp-billing-save">Save up to 35%</span>
+            </button>
+          </div>
+
+          <div className="lp-price-grid">
             {PLANS.map((p, i) => (
               <Reveal className="lp-price-card" key={p.name} delay={i * 90}>
                 <div className="lp-price-top">
@@ -370,7 +409,7 @@ export default function Landing() {
                   {p.badge && <span className="lp-price-badge">{p.badge}</span>}
                 </div>
                 <div className="lp-price-amount">
-                  {p.price}<span>/mo</span>
+                  {p.price[interval]}<span>{interval === 'yearly' ? '/yr' : '/mo'}</span>
                 </div>
                 <div className="lp-price-note">
                   <div className="lp-price-note-title">{p.note}</div>
@@ -382,17 +421,11 @@ export default function Landing() {
                   {p.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
 
-                {p.plan ? (
-                  <button className="lp-price-btn" onClick={() => choose(p.plan)}>
-                    {p.cta}
-                  </button>
-                ) : (
-                  <Link className="lp-price-btn" to="/app">
-                    {p.cta}
-                  </Link>
-                )}
+                <button className="lp-price-btn" onClick={() => choose(p.plan)}>
+                  {p.cta}
+                </button>
                 <div className="lp-price-micro">
-                  {p.plan ? 'Cancel anytime · no setup fees' : 'No card needed'}
+                  3-day free trial · cancel anytime
                 </div>
               </Reveal>
             ))}
@@ -413,7 +446,7 @@ export default function Landing() {
               One Place
             </h2>
             <p className="lp-faq-blurb">
-              Quick answers about how the workflow guides you, what the free credits cover, and what
+              Quick answers about how the workflow guides you, how the free trial works, and what
               the kit will never do.
             </p>
           </Reveal>
@@ -427,7 +460,7 @@ export default function Landing() {
       <section className="lp-final">
         <Reveal className="lp-final-inner">
           <h2>Stop planning. Start launching.</h2>
-          <p>Answer a few questions and get your first launch kit today — free.</p>
+          <p>Answer a few questions and build your marketing workspace today — free for 3 days.</p>
           <Link className="lp-cta" to="/app">
             Create my launch kit
           </Link>

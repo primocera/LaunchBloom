@@ -9,17 +9,17 @@ import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 // ---------------------------------------------------------------------------
 
 const MAIN_NAV = [
-  { to: '/app', label: 'Dashboard', Icon: PagesIcon, end: true },
-  { to: '/app/flow', label: 'Launch Flow', Icon: TrendsIcon },
+  { to: '/app', label: 'Marketing Workspace', Icon: PagesIcon, end: true },
+  { to: '/app/flow', label: 'Full Launch Kit', Icon: TrendsIcon },
 ];
 
 const STUDIO_NAV = [
-  { to: '/app/landing-page', label: 'Landing Page' },
-  { to: '/app/content-plan', label: 'Content Plan' },
-  { to: '/app/email-sequence', label: 'Emails' },
-  { to: '/app/ads', label: 'Ads' },
-  { to: '/app/seo', label: 'SEO' },
-  { to: '/app/weekly-plan', label: 'Weekly Plan' },
+  { to: '/app/landing-page', label: 'Website & Landing Pages' },
+  { to: '/app/content-plan', label: 'Captions & Content' },
+  { to: '/app/email-sequence', label: 'Email Flows' },
+  { to: '/app/ads', label: 'Ads & Creative Ideas' },
+  { to: '/app/seo', label: 'SEO Studio' },
+  { to: '/app/weekly-plan', label: 'Action Plan' },
 ];
 
 function AccountBlock() {
@@ -79,7 +79,7 @@ export default function Sidebar({ onCollapse }) {
           <div className="brand-mark"><BloomMark /></div>
           <div>
             <div className="brand-name">OfferFlow AI</div>
-            <div className="brand-sub">idea → offer → launch</div>
+            <div className="brand-sub">AI marketing workspace</div>
           </div>
         </Link>
         <button className="icon-btn" onClick={onCollapse} aria-label="Collapse sidebar">

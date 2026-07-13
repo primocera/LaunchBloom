@@ -65,7 +65,7 @@ export default function Dashboard() {
     return (
       <div className="flow dash">
         <div className="flow-main is-wide">
-          <h2 className="flow-h2">Dashboard</h2>
+          <h2 className="flow-h2">Marketing Workspace</h2>
           <div className="dash-grid">
             {[...Array(6)].map((_, i) => <div className="flow-card dash-skeleton" key={i} />)}
           </div>
@@ -79,7 +79,7 @@ export default function Dashboard() {
   return (
     <div className="flow dash">
       <div className="flow-main is-wide">
-        <h2 className="flow-h2">Dashboard</h2>
+        <h2 className="flow-h2">Marketing Workspace</h2>
         {error && <p className="flow-err">{error}</p>}
 
         <div className="dash-grid">
