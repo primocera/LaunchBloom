@@ -88,7 +88,7 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-/** 'starter' | 'pro' | 'business' | null for an email - single source of plan truth. */
+/** 'trial' | 'starter' | 'pro' | 'studio' | null for an email - single source of plan truth. */
 async function planFor(email) {
   email = (email || '').trim().toLowerCase();
   if (!email) return null;
@@ -109,7 +109,13 @@ async function planFor(email) {
       .limit(1)
       .single();
 
-    if (sub) return pricePlans()[sub.stripe_price_id] || 'pro';
+    // A subscription still inside its 3-day free trial gets the limited 'trial'
+    // plan regardless of which price it is on; it upgrades to the real plan once
+    // Stripe flips the status to 'active'.
+    if (sub) {
+      if (sub.status === 'trialing') return 'trial';
+      return pricePlans()[sub.stripe_price_id] || 'pro';
+    }
 
     // Succeeded one-time payment = lifetime access
     const { data: payment } = await supabase
