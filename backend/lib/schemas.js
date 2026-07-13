@@ -287,6 +287,209 @@ const launchSummarySchema = {
   additionalProperties: false,
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Upgrade Prompt 6: dedicated schemas for the new marketing studios. These are
+// used by the /api/ai/generate-* asset routes (routes/assets.js), not by the
+// launch-kit generator, so they are exported separately (NOT in SECTION_SCHEMAS)
+// and mirror the 004_marketing_assets tables 1:1.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PAGE_TYPES = ['home', 'product', 'collection', 'cart', 'about', 'faq', 'thank_you', 'contact', 'landing'];
+
+// Website Studio → website_pages
+const websiteKitSchema = {
+  type: 'object',
+  properties: {
+    pages: {
+      type: 'array',
+      minItems: 4,
+      maxItems: 8,
+      items: {
+        type: 'object',
+        properties: {
+          page_type: { type: 'string', enum: PAGE_TYPES },
+          page_goal: { type: 'string' },
+          seo_title: { type: 'string' },
+          meta_description: { type: 'string', description: 'Preferably under 160 characters.' },
+          h1: { type: 'string' },
+          hero_headline: { type: 'string' },
+          hero_subheadline: { type: 'string' },
+          primary_cta: { type: 'string' },
+          sections: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 10,
+            items: {
+              type: 'object',
+              properties: {
+                section_name: { type: 'string' },
+                headline: { type: 'string' },
+                body: { type: 'string' },
+                bullets: { type: 'array', maxItems: 8, items: { type: 'string' } },
+                cta: { type: 'string' },
+              },
+              required: ['section_name', 'headline', 'body', 'bullets', 'cta'],
+              additionalProperties: false,
+            },
+          },
+          trust_elements: { type: 'array', maxItems: 8, items: { type: 'string' } },
+          faq: {
+            type: 'array',
+            maxItems: 8,
+            items: {
+              type: 'object',
+              properties: { question: { type: 'string' }, answer: { type: 'string' } },
+              required: ['question', 'answer'],
+              additionalProperties: false,
+            },
+          },
+          design_notes: { type: 'string' },
+        },
+        required: [
+          'page_type', 'page_goal', 'seo_title', 'meta_description', 'h1', 'hero_headline',
+          'hero_subheadline', 'primary_cta', 'sections', 'trust_elements', 'faq', 'design_notes',
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['pages'],
+  additionalProperties: false,
+};
+
+// Email Flow Studio → email_assets
+const emailFlowSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      minItems: 5,
+      maxItems: 12,
+      items: {
+        type: 'object',
+        properties: {
+          flow_type: {
+            type: 'string',
+            enum: ['welcome', 'abandon_cart', 'browse_abandon', 'post_purchase', 'review_request', 'winback', 'campaign', 'launch', 'last_chance'],
+          },
+          email_order: { type: 'integer' },
+          subject_line: { type: 'string' },
+          preheader: { type: 'string' },
+          headline: { type: 'string' },
+          body_copy: { type: 'string' },
+          cta: { type: 'string' },
+          send_timing: { type: 'string' },
+          segment: { type: 'string' },
+          design_notes: { type: 'string' },
+        },
+        required: [
+          'flow_type', 'email_order', 'subject_line', 'preheader', 'headline',
+          'body_copy', 'cta', 'send_timing', 'segment', 'design_notes',
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['items'],
+  additionalProperties: false,
+};
+
+// Social Caption Studio → social_assets
+const socialCaptionSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      minItems: 10,
+      maxItems: 30,
+      items: {
+        type: 'object',
+        properties: {
+          platform: { type: 'string', enum: ['instagram', 'tiktok', 'linkedin', 'pinterest', 'facebook'] },
+          content_type: { type: 'string', enum: ['caption', 'carousel', 'reel', 'story', 'short_video'] },
+          hook: { type: 'string' },
+          caption: { type: 'string' },
+          cta: { type: 'string' },
+          visual_direction: { type: 'string' },
+          hashtags: { type: 'array', maxItems: 12, items: { type: 'string' } },
+          goal: { type: 'string' },
+        },
+        required: ['platform', 'content_type', 'hook', 'caption', 'cta', 'visual_direction', 'hashtags', 'goal'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['items'],
+  additionalProperties: false,
+};
+
+// Ads & Creative Studio → creative_assets
+const creativeIdeasSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      minItems: 8,
+      maxItems: 20,
+      items: {
+        type: 'object',
+        properties: {
+          platform: { type: 'string', enum: ['meta', 'tiktok', 'google', 'pinterest'] },
+          creative_type: { type: 'string', enum: ['static', 'video', 'ugc', 'carousel', 'search_ad'] },
+          hook: { type: 'string' },
+          headline: { type: 'string' },
+          primary_text: { type: 'string' },
+          visual_direction: { type: 'string' },
+          shot_list: { type: 'array', maxItems: 12, items: { type: 'string' } },
+          text_overlays: { type: 'array', maxItems: 12, items: { type: 'string' } },
+          cta: { type: 'string' },
+          testing_angle: { type: 'string' },
+        },
+        required: [
+          'platform', 'creative_type', 'hook', 'headline', 'primary_text',
+          'visual_direction', 'shot_list', 'text_overlays', 'cta', 'testing_angle',
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['items'],
+  additionalProperties: false,
+};
+
+// Campaign Email Generator → email_assets (flow_type='campaign')
+const campaignEmailSchema = {
+  type: 'object',
+  properties: {
+    campaign_theme: { type: 'string' },
+    campaign_goal: { type: 'string' },
+    items: {
+      type: 'array',
+      minItems: 3,
+      maxItems: 8,
+      items: {
+        type: 'object',
+        properties: {
+          email_type: {
+            type: 'string',
+            enum: ['teaser', 'educational', 'product_focus', 'social_proof', 'offer', 'last_chance', 'reminder', 'newsletter'],
+          },
+          send_day: { type: 'string' },
+          subject_line: { type: 'string' },
+          preheader: { type: 'string' },
+          body_copy: { type: 'string' },
+          cta: { type: 'string' },
+          design_notes: { type: 'string' },
+        },
+        required: ['email_type', 'send_day', 'subject_line', 'preheader', 'body_copy', 'cta', 'design_notes'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['campaign_theme', 'campaign_goal', 'items'],
+  additionalProperties: false,
+};
+
 // Section name → schema, used by generate-launch-kit and regenerate-section.
 const SECTION_SCHEMAS = {
   landing_page: landingPageSchema,
@@ -308,4 +511,10 @@ module.exports = {
   weeklyPlanSchema,
   launchSummarySchema,
   SECTION_SCHEMAS,
+  // Upgrade Prompt 6 — dedicated studio schemas
+  websiteKitSchema,
+  emailFlowSchema,
+  socialCaptionSchema,
+  creativeIdeasSchema,
+  campaignEmailSchema,
 };
