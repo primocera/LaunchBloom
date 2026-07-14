@@ -7,8 +7,60 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
-const { pricePlans } = require('./customers');
+const { pricePlans, planFor } = require('./customers');
 const { requireAuth } = require('../lib/auth');
+
+const VALID_PLANS = ['starter', 'pro', 'studio'];
+const VALID_INTERVALS = ['monthly', 'yearly'];
+
+/**
+ * Resolve the redirect base URL for Checkout. Uses server-configured PUBLIC_URL
+ * only — never the client-controllable Origin/Host (audit Prompt 4). Falls back
+ * to localhost in non-production so local dev still works.
+ */
+function resolveBaseUrl() {
+  const configured = (process.env.PUBLIC_URL || '').trim().replace(/\/$/, '');
+  if (configured) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(configured);
+      return configured;
+    } catch {
+      throw Object.assign(new Error('PUBLIC_URL is misconfigured.'), { status: 500 });
+    }
+  }
+  if (process.env.NODE_ENV !== 'production') return 'http://localhost:3000';
+  throw Object.assign(new Error('Checkout is not configured (PUBLIC_URL missing).'), { status: 500 });
+}
+
+/**
+ * Return the single Stripe customer id for this app user, creating exactly one
+ * if none exists. The customer carries app_user_id in metadata so Stripe and
+ * the app stay linked even if the email later changes.
+ */
+async function ensureStripeCustomer(email, userId) {
+  const { data: existing } = await supabase
+    .from('customers')
+    .select('id, stripe_customer_id')
+    .eq('email', email)
+    .single();
+
+  if (existing && existing.stripe_customer_id) return existing.stripe_customer_id;
+
+  const stripeCustomer = await stripe.customers.create({
+    email,
+    metadata: { app_user_id: userId || '', source: 'launchbloom' },
+  });
+
+  await supabase
+    .from('customers')
+    .upsert(
+      { email, stripe_customer_id: stripeCustomer.id, metadata: { app_user_id: userId || '' } },
+      { onConflict: 'email' }
+    );
+
+  return stripeCustomer.id;
+}
 
 /** 404s unless the subscription's customer email matches the session email. */
 async function ownsSubscription(subscriptionId, userEmail) {
@@ -80,53 +132,62 @@ async function hadTrialOrActiveSubscription(email) {
 }
 
 /**
- * POST /api/payments/create-checkout-session
+ * POST /api/payments/create-checkout-session  (auth required)
  * Creates a Stripe Checkout Session in subscription mode and returns the
  * hosted Checkout URL for the browser to redirect to.
  *
- * Body: { plan, interval, email } or { priceId, email } — plan names
- * (starter | pro | studio) + interval (monthly | yearly) resolve to the
- * STRIPE_PRICE_<PLAN>_<INTERVAL> env vars, per the upgrade playbook. New
- * customers get a 3-day free trial; returning customers do not.
+ * Body: { plan: starter|pro|studio, interval: monthly|yearly }. The customer
+ * identity is derived from the authenticated session — any client-supplied
+ * email or priceId is ignored (audit Prompt 4). New customers get a 3-day free
+ * trial; returning customers do not; already-subscribed users are blocked.
  */
-router.post('/create-checkout-session', async (req, res) => {
+router.post('/create-checkout-session', requireAuth, async (req, res) => {
   try {
-    const { plan: planName, email } = req.body || {};
-    const interval = (req.body && req.body.interval) === 'yearly' ? 'yearly' : 'monthly';
-    let { priceId } = req.body || {};
+    const email = req.userEmail; // derived server-side; body email is ignored
+    const userId = req.userId;
 
-    if (!priceId && planName) {
-      priceId = resolvePriceId(planName, interval);
-      if (!priceId) {
-        return res.status(400).json({ error: `Plan "${planName}" (${interval}) is not configured (missing STRIPE_PRICE_* env var).` });
-      }
+    const planName = String((req.body || {}).plan || '').toLowerCase();
+    const interval = (req.body || {}).interval === 'yearly' ? 'yearly' : 'monthly';
+
+    if (!VALID_PLANS.includes(planName)) {
+      return res.status(400).json({ error: 'Choose a valid plan: starter, pro or studio.' });
     }
-    if (!priceId || typeof priceId !== 'string') {
-      return res.status(400).json({ error: 'plan or priceId is required' });
-    }
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: 'email is required and must be a string' });
+    if (!VALID_INTERVALS.includes(interval)) {
+      return res.status(400).json({ error: 'Choose a valid billing interval: monthly or yearly.' });
     }
 
-    const baseUrl =
-      process.env.PUBLIC_URL ||
-      req.headers.origin ||
-      `${req.protocol}://${req.get('host')}`;
+    const priceId = resolvePriceId(planName, interval);
+    if (!priceId) {
+      return res.status(400).json({ error: `Plan "${planName}" (${interval}) is not configured (missing STRIPE_PRICE_* env var).` });
+    }
 
-    const plan = pricePlans()[priceId] || PLAN_ALIASES[planName] || planName || 'pro';
+    // Block duplicate concurrent subscriptions — send existing subscribers to
+    // the billing portal to change plans instead of stacking a second one.
+    const currentPlan = await planFor(email);
+    if (currentPlan) {
+      return res.status(409).json({
+        error: 'You already have an active subscription. Manage or change your plan from billing.',
+        code: 'ALREADY_SUBSCRIBED',
+        plan: currentPlan,
+      });
+    }
+
+    const baseUrl = resolveBaseUrl();
+    const customerId = await ensureStripeCustomer(email, userId);
 
     // 3-day free trial for first-time subscribers only (no double-trialing).
-    const subscriptionData = {};
-    if (!(await hadTrialOrActiveSubscription(email))) {
-      subscriptionData.trial_period_days = 3;
-    }
+    const giveTrial = !(await hadTrialOrActiveSubscription(email));
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      customer_email: email,
-      ...(subscriptionData.trial_period_days ? { subscription_data: subscriptionData } : {}),
-      success_url: `${baseUrl}/?payment=success&plan=${plan}&interval=${interval}`,
+      customer: customerId,
+      client_reference_id: userId || undefined,
+      subscription_data: {
+        metadata: { app_user_id: userId || '' },
+        ...(giveTrial ? { trial_period_days: 3 } : {}),
+      },
+      success_url: `${baseUrl}/?payment=success&plan=${planName}&interval=${interval}`,
       cancel_url: `${baseUrl}/?payment=cancelled`,
     });
 

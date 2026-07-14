@@ -23,7 +23,7 @@ export default function Signup() {
   // checkout; otherwise send them to the app.
   useEffect(() => {
     if (!account) return;
-    resumePendingCheckout(account.email)
+    resumePendingCheckout()
       .then((going) => { if (!going) navigate('/app', { replace: true }); })
       .catch(() => navigate('/app', { replace: true }));
   }, [account, navigate]);
@@ -47,7 +47,7 @@ export default function Signup() {
         setBusy(false);
         return;
       }
-      if (await resumePendingCheckout(address)) return;
+      if (await resumePendingCheckout()) return;
       navigate('/app');
     } catch (err) {
       setError(err.message);

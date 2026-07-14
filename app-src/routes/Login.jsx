@@ -9,14 +9,17 @@ import BloomMark from '../components/BloomMark';
 // redirect: already-signed-in visitors go straight to the dashboard.
 // ---------------------------------------------------------------------------
 
-/** Hand off to Stripe using the account we just signed in as. */
-export async function resumePendingCheckout(email) {
+/**
+ * Hand off to Stripe. The customer is derived from the signed-in session
+ * server-side, so no email is passed from the client (Prompt 4).
+ */
+export async function resumePendingCheckout() {
   const pendingPlan = localStorage.getItem('of-pending-plan');
   if (!pendingPlan) return false;
   const pendingInterval = localStorage.getItem('of-pending-interval') || 'monthly';
   localStorage.removeItem('of-pending-plan');
   localStorage.removeItem('of-pending-interval');
-  const data = await api.checkout(pendingPlan, email, pendingInterval);
+  const data = await api.checkout(pendingPlan, pendingInterval);
   if (!data.url) throw new Error('Could not start checkout.');
   window.location.href = data.url;
   return true; // the browser is navigating to Stripe
@@ -45,7 +48,7 @@ export default function Login() {
   // picked on the landing page, hand off to Stripe; otherwise go to the app.
   useEffect(() => {
     if (!account) return;
-    resumePendingCheckout(account.email)
+    resumePendingCheckout()
       .then((going) => { if (!going) navigate('/app', { replace: true }); })
       .catch(() => navigate('/app', { replace: true }));
   }, [account, navigate]);
@@ -61,7 +64,7 @@ export default function Login() {
     const address = email.trim();
     try {
       await login(address, password);
-      if (await resumePendingCheckout(address)) return;
+      if (await resumePendingCheckout()) return;
       navigate('/app');
     } catch (err) {
       if (err.code === 'EMAIL_NOT_CONFIRMED') {

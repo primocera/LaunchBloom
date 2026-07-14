@@ -69,6 +69,7 @@ export const api = {
   // List saved assets for the whole workspace (no launch-kit filter).
   assets: (table) => request(`/api/workspace/items/${table}`),
 
-  checkout: (plan, email, interval = 'monthly') =>
-    request('/api/payments/create-checkout-session', { method: 'POST', body: { plan, email, interval } }),
+  // Email is derived from the authenticated session server-side (Prompt 4).
+  checkout: (plan, interval = 'monthly') =>
+    request('/api/payments/create-checkout-session', { method: 'POST', body: { plan, interval } }),
 };

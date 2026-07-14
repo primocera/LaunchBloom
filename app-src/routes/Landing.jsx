@@ -199,7 +199,7 @@ export default function Landing() {
     // Already signed in? Go straight to Stripe instead of the signup screen.
     if (account) {
       try {
-        if (await resumePendingCheckout(account.email)) return;
+        if (await resumePendingCheckout()) return;
       } catch {
         /* fall through to the app; they can retry from there */
       }
