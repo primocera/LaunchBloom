@@ -50,7 +50,10 @@ button {
 }
 
 .shell.is-collapsed {
-  grid-template-columns: 0 1fr;
+  /* Sidebar is unmounted when collapsed, so the main pane is the only grid
+     item — give it the full width (a leading 0-width column would swallow it
+     and render a blank page). */
+  grid-template-columns: 1fr;
 }
 
 .sidebar {
@@ -221,6 +224,7 @@ button {
 /* ── Account block ────────────────────────────────────────────────────── */
 
 .account {
+  flex: none;
   padding: 14px 16px 16px;
   border-top: 1px solid var(--border);
 }
