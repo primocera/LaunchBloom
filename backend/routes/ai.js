@@ -120,7 +120,7 @@ router.post('/generate-positioning', planGate('positioning'), async (req, res, n
       .single();
     if (error) throw new Error('Failed to save positioning: ' + error.message);
 
-    res.json({ ok: true, positioning: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({ ok: true, positioning: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail) });
   } catch (err) {
     next(err);
   }
@@ -154,7 +154,7 @@ router.post('/generate-offers', planGate('offer_generations'), async (req, res, 
     const { data: saved, error } = await supabase.from('offers').insert(rows).select();
     if (error) throw new Error('Failed to save offers: ' + error.message);
 
-    res.json({ ok: true, offers: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({ ok: true, offers: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail) });
   } catch (err) {
     next(err);
   }
@@ -302,7 +302,7 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
       )
     );
 
-    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan) });
+    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail) });
   } catch (err) {
     next(err);
   }
@@ -310,7 +310,7 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
 
 // ── 4. Regenerate one section ──────────────────────────────────────────────
 
-router.post('/regenerate-section', planGate(null), async (req, res, next) => {
+router.post('/regenerate-section', planGate('regenerate_section'), async (req, res, next) => {
   try {
     const { launch_kit_id, section, feedback } = req.body || {};
     if (!launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });

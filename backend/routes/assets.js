@@ -237,7 +237,7 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       pages: saved,
       quality_warnings: qualityWarnings('website', result),
       plan: req.userPlan,
-      usage: await usageFor(ws.id, req.userPlan),
+      usage: await usageFor(ws.id, req.userPlan, req.userEmail),
     });
   } catch (err) {
     next(err);
@@ -312,7 +312,7 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       emails: saved,
       quality_warnings: qualityWarnings('email', result, { hasDeadline: false }),
       plan: req.userPlan,
-      usage: await usageFor(ws.id, req.userPlan),
+      usage: await usageFor(ws.id, req.userPlan, req.userEmail),
     });
   } catch (err) {
     next(err);
@@ -397,7 +397,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       emails: saved,
       quality_warnings: qualityWarnings('email', result, { hasDeadline }),
       plan: req.userPlan,
-      usage: await usageFor(ws.id, req.userPlan),
+      usage: await usageFor(ws.id, req.userPlan, req.userEmail),
     });
   } catch (err) {
     next(err);
@@ -472,7 +472,7 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       items: saved,
       quality_warnings: qualityWarnings('social', result),
       plan: req.userPlan,
-      usage: await usageFor(ws.id, req.userPlan),
+      usage: await usageFor(ws.id, req.userPlan, req.userEmail),
     });
   } catch (err) {
     next(err);
@@ -549,7 +549,7 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       items: saved,
       quality_warnings: qualityWarnings('creative', result),
       plan: req.userPlan,
-      usage: await usageFor(ws.id, req.userPlan),
+      usage: await usageFor(ws.id, req.userPlan, req.userEmail),
     });
   } catch (err) {
     next(err);

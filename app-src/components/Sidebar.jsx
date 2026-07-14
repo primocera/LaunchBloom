@@ -41,9 +41,9 @@ function AccountBlock() {
 
   const name = account.email.split('@')[0];
   const { usage, limits, plan_label: planLabel } = account;
-  const unlimited = !limits || limits.launch_kits == null;
-  const used = usage?.launch_kits ?? 0;
-  const limit = limits?.launch_kits ?? 0;
+  const unlimited = !limits || limits.ai_actions == null;
+  const used = usage?.ai_actions ?? 0;
+  const limit = limits?.ai_actions ?? 0;
   const pct = unlimited ? 100 : Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
 
   return (
@@ -58,10 +58,10 @@ function AccountBlock() {
       </div>
 
       {unlimited ? (
-        <div className="account-usage">Unlimited launch kits</div>
+        <div className="account-usage">Unlimited AI actions</div>
       ) : (
         <div className="account-usage">
-          {used}/{limit} launch kit{limit === 1 ? '' : 's'} {limits?.monthly ? 'this month' : 'used'}
+          {used}/{limit} AI action{limit === 1 ? '' : 's'} {limits?.monthly ? 'this month' : 'used'}
         </div>
       )}
       <div className="account-hint">

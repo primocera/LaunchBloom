@@ -1,41 +1,37 @@
 // ---------------------------------------------------------------------------
-// Prompt 25 + Upgrade Prompt 4: plan definitions and feature limits.
+// Plan definitions + feature limits (audit Prompt 6).
 //
-// Monetization is a 3-day paid Stripe trial → starter | pro | studio. The
-// `trial` and `free` plans use lifetime totals (monthly: false); paid plans
-// reset monthly (rows created since the start of the current calendar month).
+// Metering is a single pool of "AI actions": one successful user-triggered
+// generation = one action, regardless of how many rows it produces. Launch kits
+// keep an additional sub-cap. Paid plans meter per rolling Stripe billing
+// period; trial/free use lifetime totals. The ledger lives in lib/usage.js.
+//
 // The plan itself comes from routes/customers.js planFor() — Stripe is the
 // source of truth; this file only says what each plan may do.
 // ---------------------------------------------------------------------------
 
-const supabase = require('./supabase');
 const { planFor } = require('../routes/customers');
 const { requireAuth } = require('./auth');
+const usage = require('./usage');
 
 const PLAN_LIMITS = {
-  // Very limited demo for unauthenticated/public sample mode and old accounts.
-  // Full launch kits are gated behind starting the trial.
+  // Very limited demo. Full generation is gated behind starting the trial.
   free: {
     label: 'Free',
-    monthly: false, // lifetime totals
+    monthly: false,
     workspaces: 1,
-    positioning: 1,
-    offer_generations: 1,
-    launch_kits: 0, // 0 full kits unless a trial is started
-    asset_generations: 0,
+    ai_actions: 0,
+    launch_kits: 0,
     content_plan_days: 7,
     can_export: false,
   },
-  // 3-day free trial (Stripe status "trialing"). Treated like starter but with
-  // hard lifetime caps of 1 full kit and 20 asset generations.
+  // 3-day paid trial (Stripe status "trialing"): 20 actions, 1 launch kit.
   trial: {
     label: 'Trial',
     monthly: false, // lifetime totals over the 3-day window
     workspaces: 1,
-    positioning: 10,
-    offer_generations: 5,
+    ai_actions: 20,
     launch_kits: 1,
-    asset_generations: 20,
     content_plan_days: 30,
     can_export: true,
   },
@@ -43,10 +39,8 @@ const PLAN_LIMITS = {
     label: 'Starter',
     monthly: true,
     workspaces: 1,
-    positioning: 10,
-    offer_generations: 5,
+    ai_actions: 30,
     launch_kits: 3,
-    asset_generations: 25,
     content_plan_days: 30,
     can_export: true,
   },
@@ -54,10 +48,8 @@ const PLAN_LIMITS = {
     label: 'Pro',
     monthly: true,
     workspaces: 3,
-    positioning: Infinity, // unlimited within fair-use rate limits
-    offer_generations: Infinity,
+    ai_actions: 120,
     launch_kits: 10,
-    asset_generations: 100,
     content_plan_days: 30,
     can_export: true,
   },
@@ -65,10 +57,8 @@ const PLAN_LIMITS = {
     label: 'Studio',
     monthly: true,
     workspaces: 10,
-    positioning: Infinity,
-    offer_generations: Infinity,
+    ai_actions: 400,
     launch_kits: 30,
-    asset_generations: 300,
     content_plan_days: 30,
     can_export: true,
   },
@@ -81,119 +71,103 @@ function limitsFor(plan) {
   return PLAN_LIMITS[PLAN_ALIASES[plan] || plan] || PLAN_LIMITS.free;
 }
 
-function monthStart() {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
-}
-
-/** Count rows in `table` for a workspace — this month for paid, lifetime otherwise. */
-async function countUsage(table, workspaceId, monthly) {
-  let q = supabase.from(table).select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId);
-  if (monthly) q = q.gte('created_at', monthStart());
-  const { count, error } = await q;
-  // A missing table (migration not applied yet) counts as zero usage rather
-  // than blowing up the gate.
-  if (error) return 0;
-  return count || 0;
-}
-
-// Marketing-asset tables (upgrade migration 004). One generated row = one
-// "asset generation" for limit purposes; all five tables share the same key.
-const ASSET_TABLES = ['website_pages', 'email_assets', 'social_assets', 'creative_assets', 'seo_assets'];
-
-/** Total marketing-asset rows across all asset tables for a workspace. */
-async function countAssetGenerations(workspaceId, monthly) {
-  const counts = await Promise.all(ASSET_TABLES.map((t) => countUsage(t, workspaceId, monthly)));
-  return counts.reduce((a, b) => a + b, 0);
-}
-
-/** Usage snapshot for the account page / upgrade prompts. */
-async function usageFor(workspaceId, plan) {
-  const { monthly } = limitsFor(plan);
-  const [positioning, offers, kits, assets] = await Promise.all([
-    countUsage('positioning_outputs', workspaceId, monthly),
-    countUsage('offers', workspaceId, monthly),
-    countUsage('launch_kits', workspaceId, monthly),
-    countAssetGenerations(workspaceId, monthly),
-  ]);
-  return {
-    positioning,
-    offer_generations: Math.ceil(offers / 3),
-    launch_kits: kits,
-    asset_generations: assets,
-  };
-}
-
-const FEATURE_TABLE = {
-  positioning: 'positioning_outputs',
-  offer_generations: 'offers',
-  launch_kits: 'launch_kits',
-};
-
 /**
- * canGenerate('launch_kits', plan, workspaceId) → { ok, used, limit, plan }
- * offer_generations counts 3 offer rows as one generation.
- * asset_generations sums rows across all marketing-asset tables.
+ * Usage snapshot for the account page / upgrade prompts:
+ *   { ai_actions: <used>, launch_kits: <used> }
+ * Counted from the usage_events ledger within the plan's billing window.
  */
-async function canGenerate(feature, plan, workspaceId) {
-  const limits = limitsFor(plan);
-  const limit = limits[feature];
-  if (limit === Infinity) return { ok: true, used: null, limit: null, plan };
-
-  let used;
-  if (feature === 'asset_generations') {
-    used = await countAssetGenerations(workspaceId, limits.monthly);
-  } else {
-    used = await countUsage(FEATURE_TABLE[feature], workspaceId, limits.monthly);
-    if (feature === 'offer_generations') used = Math.ceil(used / 3);
-  }
-  return { ok: used < limit, used, limit, plan };
-}
-
-async function canCreateWorkspace(plan, currentCount) {
-  return currentCount < limitsFor(plan).workspaces;
+async function usageFor(workspaceId, plan, email) {
+  const since = await usage.windowStart(email, plan);
+  const [actions, kits] = await Promise.all([
+    usage.countActions(workspaceId, since, null),
+    usage.countActions(workspaceId, since, 'launch_kits'),
+  ]);
+  return { ai_actions: actions, launch_kits: kits };
 }
 
 // Which plan a user should upgrade to when they hit a wall on their current one.
 const NEXT_PLAN = { free: 'Trial', trial: 'Starter', starter: 'Pro', pro: 'Studio', studio: 'Studio' };
 
+function upgradeMessage(plan, feature) {
+  const limits = limitsFor(plan);
+  const upgradeTo = NEXT_PLAN[PLAN_ALIASES[plan] || plan] || 'Pro';
+  const perPeriod = limits.monthly ? "this month's" : 'your';
+  const label = feature === 'launch_kits' ? 'launch kit' : 'AI action';
+  if (plan === 'free') return `Start your free trial to generate.`;
+  return `You've hit ${perPeriod} ${label} limit on ${limits.label}. Upgrade to ${upgradeTo} for more.`;
+}
+
 /**
- * Express middleware factory: authenticates, resolves the plan, and enforces
- * the feature limit against the caller's workspace. Attaches req.userPlan
- * and req.planLimits. 402 + code UPGRADE when the limit is hit.
+ * Express middleware factory. Authenticates, resolves the plan + workspace, and
+ * meters the request against the AI-action pool (plus the launch-kit sub-cap).
+ * It RESERVES an action before the route runs and, via a response hook,
+ * finalizes it on success or releases it on failure — so failed generations
+ * never consume quota. Pass feature=null to authenticate without metering.
  */
 function planGate(feature) {
   return function (req, res, next) {
     requireAuth(req, res, async () => {
       try {
         const plan = (await planFor(req.userEmail)) || 'free';
+        const limits = limitsFor(plan);
         req.userPlan = plan;
-        req.planLimits = limitsFor(plan);
+        req.planLimits = limits;
 
-        // Resolve the caller's workspace (same get-or-create as workspaces.js)
         const { ensureWorkspace } = require('../routes/workspaces');
         const ws = await ensureWorkspace(req.userEmail, req.userId);
         req.workspace = ws;
 
-        if (feature) {
-          const check = await canGenerate(feature, plan, ws.id);
-          if (!check.ok) {
-            const featureLabel = feature.replace(/_/g, ' ');
-            const upgradeTo = NEXT_PLAN[PLAN_ALIASES[plan] || plan] || 'Pro';
-            const perPeriod = limitsFor(plan).monthly ? "this month's" : 'your';
-            return res.status(402).json({
-              error:
-                plan === 'free'
-                  ? `Start your free trial to generate ${featureLabel}.`
-                  : `You've hit ${perPeriod} ${featureLabel} limit on ${limitsFor(plan).label}. Upgrade to ${upgradeTo} for more.`,
-              code: 'UPGRADE',
-              feature,
-              used: check.used,
-              limit: check.limit,
-              plan,
-            });
+        if (!feature) return next();
+
+        const since = await usage.windowStart(req.userEmail, plan);
+
+        // Launch-kit sub-cap (counts reserved + succeeded kit actions).
+        if (feature === 'launch_kits') {
+          const kitsUsed = await usage.countActions(ws.id, since, 'launch_kits');
+          if (kitsUsed >= limits.launch_kits) {
+            return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits));
           }
         }
+
+        // AI-action pool.
+        const poolLimit = limits.ai_actions;
+        if (poolLimit !== Infinity) {
+          const used = await usage.countActions(ws.id, since, null);
+          if (used >= poolLimit) {
+            return res.status(402).json(gateBody(plan, feature, used, poolLimit));
+          }
+        }
+
+        // Reserve, then re-verify (concurrency: err toward rejecting, not over-allowing).
+        const reservationId = await usage.reserveAction({
+          userId: req.userId,
+          workspaceId: ws.id,
+          feature,
+          model: process.env.ANTHROPIC_MODEL || null,
+        });
+
+        if (poolLimit !== Infinity && reservationId) {
+          const after = await usage.countActions(ws.id, since, null);
+          if (after > poolLimit) {
+            await usage.releaseAction(reservationId);
+            return res.status(402).json(gateBody(plan, feature, poolLimit, poolLimit));
+          }
+        }
+
+        req.usageEventId = reservationId;
+
+        // Finalize on success, release on failure — exactly once.
+        let settled = false;
+        res.on('finish', () => {
+          if (settled) return;
+          settled = true;
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            usage.finalizeAction(reservationId, req.usageInfo || {}).catch(() => {});
+          } else {
+            usage.releaseAction(reservationId, res.statusCode >= 500).catch(() => {});
+          }
+        });
+
         next();
       } catch (err) {
         next(err);
@@ -202,12 +176,20 @@ function planGate(feature) {
   };
 }
 
+function gateBody(plan, feature, used, limit) {
+  return {
+    error: upgradeMessage(plan, feature),
+    code: 'UPGRADE',
+    feature,
+    used,
+    limit,
+    plan,
+  };
+}
+
 module.exports = {
   PLAN_LIMITS,
   limitsFor,
   usageFor,
-  canGenerate,
-  canCreateWorkspace,
-  countAssetGenerations,
   planGate,
 };

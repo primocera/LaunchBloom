@@ -51,15 +51,14 @@ async function accountStatus(email, userId) {
   const plan = (await planFor(email)) || 'free';
   const limits = limitsFor(plan);
   const ws = await ensureWorkspace(email, userId);
-  const usage = await usageFor(ws.id, plan);
+  const usage = await usageFor(ws.id, plan, email);
   return {
     email,
     plan,
     plan_label: limits.label,
     usage,
     limits: {
-      positioning: limits.positioning === Infinity ? null : limits.positioning,
-      offer_generations: limits.offer_generations === Infinity ? null : limits.offer_generations,
+      ai_actions: limits.ai_actions === Infinity ? null : limits.ai_actions,
       launch_kits: limits.launch_kits === Infinity ? null : limits.launch_kits,
       content_plan_days: limits.content_plan_days,
       can_export: limits.can_export,
