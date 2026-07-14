@@ -641,6 +641,28 @@
   color: #2563eb;
 }
 
+.login-err {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.login-note {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #059669;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* ── Generator studios (Upgrade prompts 16-18) ──────────────────────────── */
 .flow-field select {
   width: 100%;

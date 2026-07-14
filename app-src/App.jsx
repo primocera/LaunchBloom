@@ -9,6 +9,8 @@ import KitDetail from './routes/KitDetail';
 import Landing from './routes/Landing';
 import Login from './routes/Login';
 import Signup from './routes/Signup';
+import ForgotPassword from './routes/ForgotPassword';
+import ResetPassword from './routes/ResetPassword';
 import AdsStudio from './routes/studios/AdsStudio';
 import ContentStudio from './routes/studios/ContentStudio';
 import EmailStudio from './routes/studios/EmailStudio';
@@ -30,6 +32,8 @@ export default function App() {
       <Route path="/app/home" element={<Landing />} />
       <Route path="/app/login" element={<Login />} />
       <Route path="/app/signup" element={<Signup />} />
+      <Route path="/app/forgot-password" element={<ForgotPassword />} />
+      <Route path="/app/reset-password" element={<ResetPassword />} />
       <Route path="/app/*" element={<AppShell />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -17,6 +17,7 @@ export default function Signup() {
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
 
   // Already signed in? If a plan was picked on the landing page, resume its
   // checkout; otherwise send them to the app.
@@ -39,13 +40,37 @@ export default function Signup() {
 
     const address = email.trim();
     try {
-      await signup(address, password);
+      const data = await signup(address, password);
+      // Email confirmation required: show a "check your inbox" notice and stop.
+      if (data && data.requiresVerification) {
+        setDone(true);
+        setBusy(false);
+        return;
+      }
       if (await resumePendingCheckout(address)) return;
       navigate('/app');
     } catch (err) {
       setError(err.message);
       setBusy(false);
     }
+  }
+
+  if (done) {
+    return (
+      <div className="login">
+        <div className="login-card">
+          <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
+          <h1>Check your inbox</h1>
+          <p>
+            We sent a verification link to <strong>{email.trim()}</strong>. Click it to activate
+            your account, then sign in.
+          </p>
+          <p className="login-alt">
+            <Link to="/app/login">Back to sign in</Link>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

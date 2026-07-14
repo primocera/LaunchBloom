@@ -30,7 +30,7 @@ function makeFakeSupabase(results = {}) {
     const b = {};
     const chain = [
       'select', 'insert', 'update', 'upsert', 'delete',
-      'eq', 'neq', 'in', 'gte', 'lte', 'order', 'limit',
+      'eq', 'neq', 'in', 'is', 'gte', 'lte', 'order', 'limit',
     ];
     for (const m of chain) b[m] = () => b;
     b.single = () => Promise.resolve(result);
@@ -45,6 +45,17 @@ function makeFakeSupabase(results = {}) {
         upload: async () => ({ error: null }),
       }),
     },
+    // Default auth client: unauthenticated (no user, no refresh). Tests that
+    // exercise auth flows override this after building the fake.
+    authClient: () => ({
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: { message: 'no session' } }),
+        refreshSession: async () => ({ data: { session: null, user: null }, error: { message: 'no refresh' } }),
+      },
+    }),
+    adminClient: () => ({
+      auth: { admin: { signOut: async () => ({}), updateUserById: async () => ({ error: null }) } },
+    }),
   };
 }
 

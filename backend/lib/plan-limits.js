@@ -172,7 +172,7 @@ function planGate(feature) {
 
         // Resolve the caller's workspace (same get-or-create as workspaces.js)
         const { ensureWorkspace } = require('../routes/workspaces');
-        const ws = await ensureWorkspace(req.userEmail);
+        const ws = await ensureWorkspace(req.userEmail, req.userId);
         req.workspace = ws;
 
         if (feature) {

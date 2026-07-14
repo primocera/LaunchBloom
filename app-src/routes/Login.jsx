@@ -29,6 +29,17 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [unverified, setUnverified] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  // The email-link callback redirects here with ?error=expired_link when a
+  // verification/recovery link is stale.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'expired_link') {
+      setError('That link has expired or was already used. Sign in or request a new one.');
+    }
+  }, []);
 
   // Logged-in users don't belong on /login. If they arrived here with a plan
   // picked on the landing page, hand off to Stripe; otherwise go to the app.
@@ -44,6 +55,8 @@ export default function Login() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setUnverified(false);
+    setNotice(null);
 
     const address = email.trim();
     try {
@@ -51,12 +64,23 @@ export default function Login() {
       if (await resumePendingCheckout(address)) return;
       navigate('/app');
     } catch (err) {
-      if (err.code === 'NO_ACCOUNT') {
-        setError('No account with this email yet — create one below.');
+      if (err.code === 'EMAIL_NOT_CONFIRMED') {
+        setUnverified(true);
+        setError('Please verify your email first — check your inbox for the link.');
       } else {
         setError(err.message);
       }
       setBusy(false);
+    }
+  }
+
+  async function resend() {
+    setNotice(null);
+    try {
+      await api.resendVerification(email.trim());
+      setNotice('Verification email sent. Check your inbox.');
+    } catch {
+      setNotice('Verification email sent. Check your inbox.');
     }
   }
 
@@ -91,7 +115,16 @@ export default function Login() {
         </button>
 
         {error && <p className="login-err">{error}</p>}
+        {unverified && (
+          <p className="login-alt">
+            <button type="button" className="link-btn" onClick={resend}>Resend verification email</button>
+          </p>
+        )}
+        {notice && <p className="login-note">{notice}</p>}
 
+        <p className="login-alt">
+          <Link to="/app/forgot-password">Forgot your password?</Link>
+        </p>
         <p className="login-alt">
           New here? <Link to="/app/signup">Create an account</Link>
         </p>

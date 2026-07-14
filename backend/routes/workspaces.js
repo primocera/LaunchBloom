@@ -1,9 +1,10 @@
 // ---------------------------------------------------------------------------
 // Workspaces + onboarding answers.
 //
-// No Supabase Auth here (same as ConversionForge): the HMAC session email is
-// the identity, so workspaces hang off user_email. MVP: one workspace per
-// account, get-or-create on first touch.
+// Ownership is keyed on the stable Supabase Auth user id (audit Prompt 3):
+// changing an email must not orphan data. workspaces.user_id is the primary
+// owner key; user_email is kept for display and legacy backfill. MVP: one
+// workspace per account, get-or-create on first touch.
 // ---------------------------------------------------------------------------
 
 const express = require('express');
@@ -12,40 +13,81 @@ const { requireAuth } = require('../lib/auth');
 
 const router = express.Router();
 
-/** Get-or-create the caller's workspace. */
-async function ensureWorkspace(email, name) {
-  const { data: existing } = await supabase
-    .from('workspaces')
-    .select('*')
-    .eq('user_email', email)
-    .limit(1)
-    .single();
-  if (existing) return existing;
+/**
+ * Get-or-create the caller's workspace, keyed on the stable user_id when we
+ * have one (email is a fallback for pre-migration rows). Always stamps user_id
+ * on the resolved row so legacy workspaces get backfilled on first touch.
+ */
+async function ensureWorkspace(email, userId, name) {
+  // Prefer the stable id.
+  if (userId) {
+    const { data: byId } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('user_id', userId)
+      .limit(1)
+      .single();
+    if (byId) return byId;
+  }
+
+  // Legacy row created before user_id existed: adopt it and stamp the id.
+  if (email) {
+    const { data: byEmail } = await supabase
+      .from('workspaces')
+      .select('*')
+      .is('user_id', null)
+      .eq('user_email', email)
+      .limit(1)
+      .single();
+    if (byEmail) {
+      if (userId) {
+        const { data: adopted } = await supabase
+          .from('workspaces')
+          .update({ user_id: userId })
+          .eq('id', byEmail.id)
+          .select()
+          .single();
+        return adopted || byEmail;
+      }
+      return byEmail;
+    }
+  }
 
   const { data: created, error } = await supabase
     .from('workspaces')
-    .insert({ user_email: email, name: name || 'My business' })
+    .insert({ user_id: userId || null, user_email: email, name: name || 'My business' })
     .select()
     .single();
   if (error) throw new Error('Failed to create workspace: ' + error.message);
   return created;
 }
 
-/** 404s unless the workspace exists and belongs to the caller. */
-async function ownedWorkspace(workspaceId, email) {
-  const { data } = await supabase
-    .from('workspaces')
-    .select('*')
-    .eq('id', workspaceId)
-    .eq('user_email', email)
-    .single();
-  return data || null;
+/**
+ * 404s unless the workspace exists and belongs to the caller. Matches on
+ * user_id first (stable), falling back to user_email for un-backfilled rows.
+ */
+async function ownedWorkspace(workspaceId, email, userId) {
+  let q = supabase.from('workspaces').select('*').eq('id', workspaceId);
+  if (userId) {
+    const { data } = await q.eq('user_id', userId).single();
+    if (data) return data;
+  }
+  if (email) {
+    const { data } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('id', workspaceId)
+      .eq('user_email', email)
+      .single();
+    return data || null;
+  }
+  return null;
 }
 
 // GET /api/workspace — the caller's workspace + latest onboarding/positioning
 router.get('/api/workspace', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
     const [{ data: onboarding }, { data: positioning }] = await Promise.all([
       supabase.from('onboarding_answers').select('*').eq('workspace_id', ws.id)
         .order('created_at', { ascending: false }).limit(1).single(),
@@ -61,7 +103,7 @@ router.get('/api/workspace', requireAuth, async (req, res, next) => {
 // POST /api/workspace/onboarding — save (replace) onboarding answers
 router.post('/api/workspace/onboarding', requireAuth, express.json({ limit: '32kb' }), async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
     const b = req.body || {};
     const row = {
       workspace_id: ws.id,
@@ -90,7 +132,7 @@ router.post('/api/workspace/onboarding', requireAuth, express.json({ limit: '32k
 // GET /api/workspace/offers — the caller's offers (newest first)
 router.get('/api/workspace/offers', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
     const { data, error } = await supabase
       .from('offers')
       .select('*')
@@ -106,7 +148,7 @@ router.get('/api/workspace/offers', requireAuth, async (req, res, next) => {
 // GET /api/workspace/launch-kits — the caller's launch kits (newest first)
 router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
     const { data, error } = await supabase
       .from('launch_kits')
       .select('id, offer_id, title, summary, created_at, updated_at')
@@ -124,7 +166,7 @@ router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => 
 // kit, and progress counts. All real Supabase data with nulls for empty state.
 router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
 
     const [
       { data: onboarding },
@@ -215,7 +257,7 @@ router.patch(
       if (!data || typeof data !== 'object') {
         return res.status(400).json({ error: 'data object is required' });
       }
-      const ws = await ensureWorkspace(req.userEmail);
+      const ws = await ensureWorkspace(req.userEmail, req.userId);
       const { data: kit } = await supabase
         .from('launch_kits')
         .select('id')
@@ -240,7 +282,7 @@ router.patch(
 // GET /api/workspace/launch-kits/:id — one full launch kit
 router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
     const { data, error } = await supabase
       .from('launch_kits')
       .select('*')
@@ -266,7 +308,7 @@ const { safetyCheck } = require('../lib/safety-check');
 
 router.get('/api/workspace/launch-kits/:id/quality', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
     const { data: kit } = await supabase
       .from('launch_kits')
       .select('*')
@@ -357,7 +399,7 @@ router.get('/api/workspace/items/:table', requireAuth, async (req, res, next) =>
   try {
     const cfg = ITEM_TABLES[req.params.table];
     if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
-    const ws = await ensureWorkspace(req.userEmail);
+    const ws = await ensureWorkspace(req.userEmail, req.userId);
 
     let q = supabase.from(req.params.table).select('*').eq('workspace_id', ws.id);
     if (req.query.launch_kit_id) q = q.eq('launch_kit_id', req.query.launch_kit_id);
@@ -378,7 +420,7 @@ router.patch(
     try {
       const cfg = ITEM_TABLES[req.params.table];
       if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
-      const ws = await ensureWorkspace(req.userEmail);
+      const ws = await ensureWorkspace(req.userEmail, req.userId);
 
       // Only allow whitelisted, present fields — never workspace_id/id/kit id.
       const updates = {};
@@ -411,7 +453,7 @@ router.post(
   express.json({ limit: '8kb' }),
   async (req, res, next) => {
     try {
-      const ws = await ensureWorkspace(req.userEmail);
+      const ws = await ensureWorkspace(req.userEmail, req.userId);
       const b = req.body || {};
       if (!b.launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });
       if (!b.task_title) return res.status(400).json({ error: 'task_title is required' });

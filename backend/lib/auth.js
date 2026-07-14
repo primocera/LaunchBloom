@@ -1,26 +1,25 @@
 // ---------------------------------------------------------------------------
-// Sessions + credits. (Same design as ConversionForge's lib/auth.js.)
+// Authentication (audit Prompt 3): Supabase Auth with server-managed HttpOnly
+// cookies. The old stateless HMAC token in localStorage is gone. Each request
+// is authenticated from the sb_access cookie (validated against Supabase Auth);
+// an expired access token is silently refreshed with the sb_refresh cookie.
 //
-// Login (POST /api/auth/login {email}) mints a signed session token:
-//   base64url(email|exp).hmac - stateless, 30 days, no DB lookups.
-// Credits: free accounts get FREE_CREDITS lifetime credits (tracked
-// server-side in the storage bucket); active subscribers are unlimited.
+// The credit helpers (creditsUsed / chargeCredit) are the inherited
+// ConversionForge credit system used by lib/gate.js and are kept unchanged.
 // ---------------------------------------------------------------------------
 
-const crypto = require('crypto');
 const supabase = require('./supabase');
+const {
+  readAccessToken,
+  readRefreshToken,
+  setSessionCookies,
+  clearSessionCookies,
+} = require('./session');
 
 const BUCKET = 'offerflow-data';
 const CREDITS_KEY = 'credits.json';
 
 const FREE_CREDITS = 10;
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-function secret() {
-  const s = process.env.SESSION_SECRET;
-  if (!s) throw new Error('SESSION_SECRET must be set for auth');
-  return s;
-}
 
 // ── bucket JSON helpers ─────────────────────────────────────────────────────
 
@@ -42,75 +41,61 @@ async function writeJson(key, value) {
   if (error) throw error;
 }
 
-// ── passwords (Prompt 8: email/password auth) ───────────────────────────────
+// ── session resolution ──────────────────────────────────────────────────────
 
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return salt + ':' + hash;
-}
+/**
+ * Resolve the Supabase user for a request from its cookies. Validates the
+ * access token; if it is missing/expired, tries a refresh and, on success,
+ * writes fresh cookies to `res`. Returns the Supabase user or null.
+ */
+async function resolveUser(req, res) {
+  const client = supabase.authClient();
 
-function verifyPassword(password, stored) {
-  try {
-    const [salt, hash] = String(stored).split(':');
-    if (!salt || !hash) return false;
-    const check = crypto.scryptSync(password, salt, 64);
-    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), check);
-  } catch (e) {
-    return false;
+  const access = readAccessToken(req);
+  if (access) {
+    const { data, error } = await client.auth.getUser(access);
+    if (!error && data && data.user) return data.user;
   }
-}
 
-// ── sessions ────────────────────────────────────────────────────────────────
-
-function b64url(s) {
-  return Buffer.from(s).toString('base64url');
-}
-
-function mintSession(email) {
-  const payload = email + '|' + (Date.now() + SESSION_TTL_MS);
-  const sig = crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
-  return b64url(payload) + '.' + sig;
-}
-
-/** Returns the email for a valid unexpired token, else null. */
-function sessionEmail(token) {
-  try {
-    const [p, sig] = String(token).split('.');
-    if (!p || !sig) return null;
-    const payload = Buffer.from(p, 'base64url').toString('utf8');
-    const expect = crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
-    const [email, exp] = payload.split('|');
-    if (!email || Number(exp) < Date.now()) return null;
-    return email.toLowerCase();
-  } catch (e) {
-    return null;
+  const refresh = readRefreshToken(req);
+  if (refresh) {
+    const { data, error } = await client.auth.refreshSession({ refresh_token: refresh });
+    if (!error && data && data.session && data.user) {
+      setSessionCookies(res, data.session);
+      return data.user;
+    }
   }
+
+  return null;
 }
 
-/** Express middleware: attaches req.userEmail or 401s. */
+/**
+ * Express middleware: attaches req.userId (stable UUID) + req.userEmail, or
+ * 401s and clears stale cookies. Async under the hood but keeps the classic
+ * (req, res, next) signature.
+ */
 function requireAuth(req, res, next) {
-  const auth = req.get('authorization') || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  const email = sessionEmail(token);
-  if (!email) return res.status(401).json({ error: 'Sign in required.', code: 'AUTH' });
-  req.userEmail = email;
-  next();
+  resolveUser(req, res)
+    .then((user) => {
+      if (!user) {
+        clearSessionCookies(res);
+        return res.status(401).json({ error: 'Sign in required.', code: 'AUTH' });
+      }
+      req.userId = user.id;
+      req.userEmail = (user.email || '').toLowerCase();
+      req.authUser = user;
+      next();
+    })
+    .catch(next);
 }
 
-// ── credits ─────────────────────────────────────────────────────────────────
+// ── credits (inherited ConversionForge system, used by lib/gate.js) ──────────
 
 async function creditsUsed(email) {
   const all = await readJson(CREDITS_KEY, {});
   return all[email] || 0;
 }
 
-/**
- * Charge `cost` credits. Returns {ok, used, limit} - ok=false when there
- * aren't enough left. Callers must check the plan first; paid users should
- * never be charged.
- */
 async function chargeCredit(email, cost = 1) {
   const all = await readJson(CREDITS_KEY, {});
   const used = all[email] || 0;
@@ -122,11 +107,8 @@ async function chargeCredit(email, cost = 1) {
 
 module.exports = {
   FREE_CREDITS,
-  mintSession,
-  sessionEmail,
   requireAuth,
+  resolveUser,
   creditsUsed,
   chargeCredit,
-  hashPassword,
-  verifyPassword,
 };

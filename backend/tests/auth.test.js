@@ -1,70 +1,98 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-process.env.SESSION_SECRET = 'test-secret-for-unit-tests';
+const { stubModule } = require('./helpers');
 
-const { mockRes } = require('./helpers');
-const {
-  mintSession,
-  sessionEmail,
-  requireAuth,
-  hashPassword,
-  verifyPassword,
-} = require('../lib/auth');
+// A configurable fake auth client. Tests set `getUserResult` / `refreshResult`
+// before calling requireAuth.
+const authState = {
+  getUserResult: { data: { user: null }, error: { message: 'no' } },
+  refreshResult: { data: { session: null, user: null }, error: { message: 'no' } },
+};
 
-test('passwords: hash/verify roundtrip', () => {
-  const stored = hashPassword('hunter22');
-  assert.notEqual(stored, 'hunter22');
-  assert.equal(verifyPassword('hunter22', stored), true);
-  assert.equal(verifyPassword('wrong', stored), false);
-  assert.equal(verifyPassword('hunter22', 'garbage'), false);
-  assert.equal(verifyPassword('hunter22', null), false);
+const fakeAuth = {
+  auth: {
+    getUser: async () => authState.getUserResult,
+    refreshSession: async () => authState.refreshResult,
+  },
+};
+
+// Stub lib/supabase.js with just what lib/auth.js touches.
+stubModule('lib/supabase.js', {
+  authClient: () => fakeAuth,
+  storage: { from: () => ({ download: async () => null, upload: async () => ({ error: null }) }) },
 });
 
-test('sessions: mint/verify roundtrip lowercases email', () => {
-  const token = mintSession('User@Example.com');
-  assert.equal(sessionEmail(token), 'user@example.com');
-});
+const { requireAuth } = require('../lib/auth');
 
-test('sessions: tampered token is rejected', () => {
-  const token = mintSession('a@b.com');
-  const [payload, sig] = token.split('.');
-  // Forge a different payload with the original signature
-  const forged = Buffer.from('evil@b.com|9999999999999').toString('base64url') + '.' + sig;
-  assert.equal(sessionEmail(forged), null);
-  assert.equal(sessionEmail(payload), null); // missing signature
-  assert.equal(sessionEmail('not-a-token'), null);
-  assert.equal(sessionEmail(''), null);
-});
+function mockRes() {
+  const headers = {};
+  return {
+    statusCode: 200,
+    body: null,
+    status(c) { this.statusCode = c; return this; },
+    json(b) { this.body = b; return this; },
+    getHeader: (k) => headers[k],
+    setHeader: (k, v) => { headers[k] = v; },
+    _cookies: () => {
+      const c = headers['Set-Cookie'];
+      return Array.isArray(c) ? c : c ? [c] : [];
+    },
+  };
+}
 
-test('sessions: expired token is rejected', () => {
-  // Hand-mint an expired payload with the real secret
-  const crypto = require('node:crypto');
-  const payload = 'a@b.com|' + (Date.now() - 1000);
-  const sig = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(payload).digest('base64url');
-  const token = Buffer.from(payload).toString('base64url') + '.' + sig;
-  assert.equal(sessionEmail(token), null);
-});
-
-test('requireAuth: 401 without/with bad token, passes with valid token', () => {
-  const cases = [
-    { header: undefined, ok: false },
-    { header: 'Bearer garbage', ok: false },
-    { header: 'Basic abc', ok: false },
-    { header: 'Bearer ' + mintSession('u@x.com'), ok: true },
-  ];
-  for (const c of cases) {
-    const req = { get: () => c.header };
+function run(req) {
+  return new Promise((resolve) => {
     const res = mockRes();
-    let called = false;
-    requireAuth(req, res, () => { called = true; });
-    if (c.ok) {
-      assert.equal(called, true);
-      assert.equal(req.userEmail, 'u@x.com');
-    } else {
-      assert.equal(called, false);
-      assert.equal(res.statusCode, 401);
-      assert.equal(res.body.code, 'AUTH');
-    }
-  }
+    const origJson = res.json.bind(res);
+    // Resolve when the middleware either calls next() or writes a response.
+    res.json = (b) => { origJson(b); resolve({ res, req, nexted: false }); return res; };
+    requireAuth(req, res, () => resolve({ res, req, nexted: true }));
+  });
+}
+
+test('valid access cookie authenticates and sets req.userId/email', async () => {
+  authState.getUserResult = { data: { user: { id: 'uuid-1', email: 'User@Example.com' } }, error: null };
+  const req = { headers: { cookie: 'sb_access=goodtoken' } };
+  const { nexted } = await run(req);
+  assert.equal(nexted, true);
+  assert.equal(req.userId, 'uuid-1');
+  assert.equal(req.userEmail, 'user@example.com');
+});
+
+test('no cookies → 401 AUTH and cleared cookies', async () => {
+  authState.getUserResult = { data: { user: null }, error: { message: 'no' } };
+  const req = { headers: {} };
+  const { res, nexted } = await run(req);
+  assert.equal(nexted, false);
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.body.code, 'AUTH');
+  assert.equal(res._cookies().length, 2); // both expired
+});
+
+test('expired access but valid refresh → refreshed session, cookies re-set', async () => {
+  authState.getUserResult = { data: { user: null }, error: { message: 'expired' } };
+  authState.refreshResult = {
+    data: {
+      session: { access_token: 'NEW_A', refresh_token: 'NEW_R' },
+      user: { id: 'uuid-2', email: 'a@b.com' },
+    },
+    error: null,
+  };
+  const req = { headers: { cookie: 'sb_access=old; sb_refresh=validrefresh' } };
+  const { res, req: r, nexted } = await run(req);
+  assert.equal(nexted, true);
+  assert.equal(r.userId, 'uuid-2');
+  const cookies = res._cookies();
+  assert.ok(cookies.some((c) => c.includes('NEW_A')));
+  assert.ok(cookies.some((c) => c.includes('NEW_R')));
+});
+
+test('bad access and bad refresh → 401', async () => {
+  authState.getUserResult = { data: { user: null }, error: { message: 'no' } };
+  authState.refreshResult = { data: { session: null, user: null }, error: { message: 'bad' } };
+  const req = { headers: { cookie: 'sb_access=x; sb_refresh=y' } };
+  const { res, nexted } = await run(req);
+  assert.equal(nexted, false);
+  assert.equal(res.statusCode, 401);
 });

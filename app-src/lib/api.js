@@ -1,22 +1,14 @@
-const TOKEN_KEY = 'of_token';
-
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
+// Auth is cookie-based (audit Prompt 3): the backend sets HttpOnly session
+// cookies, so there is no token in JS/localStorage. Every request must send
+// cookies with `credentials: 'include'`.
 
 async function request(path, { method = 'GET', body, signal } = {}) {
-  const token = getToken();
   const res = await fetch(path, {
     method,
     signal,
+    credentials: 'include',
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -32,9 +24,14 @@ async function request(path, { method = 'GET', body, signal } = {}) {
 }
 
 export const api = {
+  // Auth
   login: (email, password) => request('/api/auth/login', { method: 'POST', body: { email, password } }),
   signup: (email, password) => request('/api/auth/signup', { method: 'POST', body: { email, password } }),
+  logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/auth/me'),
+  forgotPassword: (email) => request('/api/auth/forgot-password', { method: 'POST', body: { email } }),
+  resetPassword: (password) => request('/api/auth/reset-password', { method: 'POST', body: { password } }),
+  resendVerification: (email) => request('/api/auth/resend-verification', { method: 'POST', body: { email } }),
 
   workspace: () => request('/api/workspace'),
   dashboard: () => request('/api/workspace/dashboard'),

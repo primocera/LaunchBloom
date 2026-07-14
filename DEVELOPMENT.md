@@ -52,6 +52,28 @@ committed, it can drift from `app-src/`. Two guards:
 **Rule: after editing anything in `app-src/`, run `npm run build:app` and commit
 the regenerated `app/` output in the same change.**
 
+## Authentication (Supabase Auth)
+
+Auth is **Supabase Auth** with **server-managed HttpOnly cookies** — there is no
+token in localStorage. The backend (`backend/lib/auth.js` + `lib/session.js`)
+validates the `sb_access` cookie against Supabase on every request and silently
+refreshes it with `sb_refresh` when expired. The frontend never sees the token;
+`app-src/lib/api.js` just sends `credentials: 'include'`.
+
+Flows live in `backend/routes/auth.js`: signup, email verification, login,
+logout (server-side revocation), forgot/reset password, resend verification, and
+an email-link `/api/auth/callback` (uses `verifyOtp` with `token_hash`).
+
+Setup requires `SUPABASE_ANON_KEY` plus enabling the Email provider and editing
+the confirm/recovery email templates to the token_hash callback form — see
+`backend/.env.example`. Run migration `backend/migrations/005_supabase_auth.sql`
+(adds `workspaces.user_id`, backfills it, documents the forced-reset path for
+existing scrypt users — their hashes cannot be imported into Supabase Auth).
+
+Unit tests fake the auth client, so no live Supabase is needed to run them; a
+true end-to-end (real verification email → cookie → refresh) needs the Email
+provider enabled and the anon key set.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every push to `main` and every PR:

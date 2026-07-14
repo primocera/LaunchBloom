@@ -1,24 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api, getToken, setToken } from './api';
+import { api } from './api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [account, setAccount] = useState(null);
-  const [loading, setLoading] = useState(Boolean(getToken()));
+  const [loading, setLoading] = useState(true);
 
-  // A stored token may be expired or minted by an older deploy; treat any
-  // failure as signed-out rather than trapping the user on a spinner.
+  // Sessions live in HttpOnly cookies we can't read from JS, so we always ask
+  // the server once on mount. A 401 simply means signed-out.
   useEffect(() => {
-    if (!getToken()) return;
     let cancelled = false;
-
     api
       .me()
       .then((data) => !cancelled && setAccount(data))
-      .catch(() => setToken(null))
+      .catch(() => !cancelled && setAccount(null))
       .finally(() => !cancelled && setLoading(false));
-
     return () => {
       cancelled = true;
     };
@@ -26,18 +23,25 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const data = await api.login(email, password);
-    setToken(data.token);
     setAccount(data);
+    return data;
   }, []);
 
+  // Returns { requiresVerification } so the UI can show a "check your inbox"
+  // notice. Only sets the account when the server logged us straight in
+  // (email confirmation disabled).
   const signup = useCallback(async (email, password) => {
     const data = await api.signup(email, password);
-    setToken(data.token);
-    setAccount(data);
+    if (data && data.requiresVerification === false) setAccount(data);
+    return data;
   }, []);
 
-  const logout = useCallback(() => {
-    setToken(null);
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      /* clear locally regardless */
+    }
     setAccount(null);
   }, []);
 

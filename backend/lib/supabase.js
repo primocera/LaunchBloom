@@ -20,7 +20,36 @@ function get() {
   return client;
 }
 
-module.exports = new Proxy(
+// Anon-key client for Supabase Auth (GoTrue) operations. Separate from the
+// service_role client above: it only ever performs auth calls (signUp,
+// signInWithPassword, getUser, refreshSession, verifyOtp, resetPasswordForEmail).
+// We manage tokens ourselves via HttpOnly cookies, so session persistence and
+// auto-refresh are disabled.
+let authClientInstance = null;
+function authClient() {
+  if (authClientInstance) return authClientInstance;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    throw Object.assign(
+      new Error('Auth is not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing).'),
+      { status: 503 }
+    );
+  }
+  authClientInstance = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false, flowType: 'pkce' },
+  });
+  return authClientInstance;
+}
+
+// service_role admin client for privileged auth admin calls (e.g. global
+// sign-out / user deletion). Bypasses RLS — server-side only.
+let adminClientInstance = null;
+function adminClient() {
+  if (adminClientInstance) return adminClientInstance;
+  adminClientInstance = get(); // same service_role client
+  return adminClientInstance;
+}
+
+const proxy = new Proxy(
   {},
   {
     get(_t, prop) {
@@ -29,3 +58,8 @@ module.exports = new Proxy(
     },
   }
 );
+
+proxy.authClient = authClient;
+proxy.adminClient = adminClient;
+
+module.exports = proxy;
