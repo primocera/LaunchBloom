@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { BRAND } from '../brand';
 import { resumePendingCheckout } from './Login';
 import AskBox from '../components/AskBox';
 import BloomMark from '../components/BloomMark';
@@ -220,7 +221,7 @@ export default function Landing() {
             <span className="lp-brand-mark">
               <BloomMark />
             </span>
-            OfferFlow AI
+            {BRAND.name}
           </div>
           <Link className="lp-header-cta" to="/app">
             Create my launch kit
@@ -236,7 +237,7 @@ export default function Landing() {
             </span>
           </h1>
           <p className="lp-sub">
-            OfferFlow AI is an AI marketing workspace for solo founders, creators, freelancers and
+            {BRAND.name} is an AI marketing workspace for solo founders, creators, freelancers and
             small ecommerce brands. Create your offer strategy, website copy, product pages, email
             flows, campaign emails, captions, ads, SEO and weekly action plans — all from one clear
             offer.
@@ -254,7 +255,7 @@ export default function Landing() {
           <div className="lp-ask">
             <div className="lp-ask-head">
               <div className="lp-ask-title">
-                <span className="lp-ask-spark">✦</span> Tell OfferFlow your idea
+                <span className="lp-ask-spark">✦</span> Tell {BRAND.name} your idea
               </div>
               <span className="lp-ask-pill">Guided workflow</span>
             </div>
@@ -487,7 +488,7 @@ export default function Landing() {
             <span className="lp-brand-mark">
               <BloomMark />
             </span>
-            OfferFlow AI
+            {BRAND.name}
           </div>
           <div className="lp-footer-col">
             <div className="lp-footer-head">Product</div>
@@ -500,7 +501,7 @@ export default function Landing() {
             <a href="#pricing">Plans</a>
           </div>
         </div>
-        <div className="lp-copy">© OfferFlow AI {new Date().getFullYear()}. All rights reserved.</div>
+        <div className="lp-copy">© {BRAND.name} {new Date().getFullYear()}. All rights reserved.</div>
       </footer>
     </div>
   );

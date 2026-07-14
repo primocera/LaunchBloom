@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import BloomMark from '../components/BloomMark';
 
 // ---------------------------------------------------------------------------
 // Prompt 8: email/password sign-in. Friendly errors, loading state, and a
@@ -62,7 +63,7 @@ export default function Login() {
   return (
     <div className="login">
       <form className="login-card" onSubmit={submit}>
-        <div className="brand-mark" style={{ margin: '0 auto' }}>OF</div>
+        <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
         <h1>Welcome back</h1>
         <p>Sign in to continue building your launch.</p>
 

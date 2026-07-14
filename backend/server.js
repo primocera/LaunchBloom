@@ -4,6 +4,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { BRAND } = require('./lib/brand');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -103,7 +104,7 @@ app.use('/api/customers', apiLimiter, customerRouter);
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    app: 'offerflow',
+    app: BRAND.name,
     ai: process.env.ANTHROPIC_API_KEY ? 'live' : 'mock',
     model: process.env.ANTHROPIC_API_KEY ? (process.env.ANTHROPIC_MODEL || 'claude-opus-4-8') : null,
     timestamp: new Date().toISOString(),
@@ -129,7 +130,7 @@ app.use((err, _req, res, _next) => {
 // ---------------------------------------------------------------------------
 if (require.main === module && !process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`OfferFlow backend running on port ${PORT}`);
+    console.log(`${BRAND.name} backend running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`AI mode: ${process.env.ANTHROPIC_API_KEY ? 'live (Anthropic)' : 'MOCK (no ANTHROPIC_API_KEY)'}`);
   });

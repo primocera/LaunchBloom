@@ -1,7 +1,7 @@
 {
-  "name": "offerflow-backend",
+  "name": "launchbloom-backend",
   "version": "1.0.0",
-  "description": "Node.js backend for OfferFlow AI — Express + Supabase + Stripe + Anthropic (ConversionForge-derived skeleton)",
+  "description": "Node.js backend for LaunchBloom — Express + Supabase + Stripe + Anthropic (ConversionForge-derived skeleton)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

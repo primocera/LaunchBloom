@@ -1,4 +1,5 @@
 const Stripe = require('stripe');
+const { BRAND } = require('./brand');
 
 // Lazy init: constructing the client throws when STRIPE_SECRET_KEY is missing.
 // Doing that at require-time would crash EVERY route (login, AI, workspace)
@@ -15,7 +16,7 @@ function get() {
   }
   client = Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2023-10-16',
-    appInfo: { name: 'OfferFlowAI', version: '1.0.0' },
+    appInfo: { name: BRAND.name, version: '1.0.0' },
   });
   return client;
 }

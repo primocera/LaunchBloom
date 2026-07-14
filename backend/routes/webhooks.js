@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
+const { BRAND, emailFrom } = require('../lib/brand');
 
 // Resend is optional — welcome emails are skipped without a key.
 let resend = null;
@@ -108,9 +109,9 @@ async function onCheckoutSessionCompleted(session) {
 
   if (resend) {
     resend.emails.send({
-      from: 'OfferFlow AI <hello@offerflow.app>',
+      from: emailFrom(),
       to: email,
-      subject: 'Welcome to OfferFlow AI',
+      subject: `Welcome to ${BRAND.name}`,
       html: `<h1>Welcome aboard!</h1><p>Your subscription is active. Head to your dashboard and let's take your idea from offer to launch.</p>`,
     }).catch((emailErr) => {
       console.error('[checkout.session.completed] failed to send welcome email', emailErr);

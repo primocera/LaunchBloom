@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { resumePendingCheckout } from './Login';
+import BloomMark from '../components/BloomMark';
 
 // ---------------------------------------------------------------------------
 // Prompt 8: email/password sign-up. Creates the account, signs the user in,
@@ -50,7 +51,7 @@ export default function Signup() {
   return (
     <div className="login">
       <form className="login-card" onSubmit={submit}>
-        <div className="brand-mark" style={{ margin: '0 auto' }}>OF</div>
+        <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
         <h1>Create your account</h1>
         <p>Free to start — your first launch kit is on us.</p>
 

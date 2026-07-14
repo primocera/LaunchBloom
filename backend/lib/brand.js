@@ -1,0 +1,35 @@
+// ---------------------------------------------------------------------------
+// Central brand configuration (audit Prompt 2).
+//
+// Single source of truth for the product's customer-facing identity so the
+// name, sender address, URLs and legal entity are never hardcoded across the
+// codebase. All values are env-overridable for deploy-specific domains; the
+// defaults use the LaunchBloom brand with clearly-marked placeholder legal
+// values for counsel review.
+//
+// Do NOT hardcode a domain anywhere else — read it from here.
+// ---------------------------------------------------------------------------
+
+const BRAND = {
+  // Product / display name
+  name: process.env.BRAND_NAME || 'LaunchBloom',
+  tagline: process.env.BRAND_TAGLINE || 'From Idea to Offer to Launch',
+
+  // URLs
+  siteUrl: process.env.BRAND_URL || 'https://launchbloom.app',
+
+  // Support + transactional email identity
+  supportEmail: process.env.BRAND_SUPPORT_EMAIL || 'support@launchbloom.app',
+  senderName: process.env.BRAND_SENDER_NAME || 'LaunchBloom',
+  senderEmail: process.env.BRAND_SENDER_EMAIL || 'hello@launchbloom.app',
+
+  // Legal entity — PLACEHOLDER for legal review before public launch (Prompt 14)
+  legalName: process.env.BRAND_LEGAL_NAME || 'LaunchBloom (legal entity TBD)',
+};
+
+/** "LaunchBloom <hello@launchbloom.app>" for email `from` headers. */
+function emailFrom() {
+  return `${BRAND.senderName} <${BRAND.senderEmail}>`;
+}
+
+module.exports = { BRAND, emailFrom };

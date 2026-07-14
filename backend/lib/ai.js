@@ -6,6 +6,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { reserveAiCall } = require('./spend-guard');
+const { BRAND } = require('./brand');
 
 // Model is env-configurable so you can trade cost vs quality without a code
 // change. Structured (json_schema) output works on all three:
@@ -14,10 +15,10 @@ const { reserveAiCall } = require('./spend-guard');
 //   claude-haiku-4-5 — cheapest, ~$0.08/kit ($1/$5) — plenty for this workload
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-8';
 
-// Shared guardrails for every OfferFlow generation. The playbook rules:
+// Shared guardrails for every LaunchBloom generation. The playbook rules:
 // guided business workflow, ethical marketing, no overpromising.
 const BASE_SYSTEM =
-  'You are the AI engine of OfferFlow AI, a guided business workflow that takes solopreneurs, ' +
+  `You are the AI engine of ${BRAND.name}, a guided business workflow that takes solopreneurs, ` +
   'creators, freelancers, coaches, consultants and small service providers from idea to offer to launch. ' +
   'You produce specific, practical, grounded output based on the exact user data provided - never generic filler. ' +
   'Use ethical marketing language. Never promise specific income, revenue, or guaranteed results. ' +

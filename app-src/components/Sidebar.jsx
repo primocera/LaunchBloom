@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { BRAND } from '../brand';
 import BloomMark from './BloomMark';
 import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 
@@ -81,7 +82,7 @@ export default function Sidebar({ onCollapse }) {
         <Link to="/" className="brand" style={{ textDecoration: 'none' }}>
           <div className="brand-mark"><BloomMark /></div>
           <div>
-            <div className="brand-name">OfferFlow AI</div>
+            <div className="brand-name">{BRAND.name}</div>
             <div className="brand-sub">AI marketing workspace</div>
           </div>
         </Link>

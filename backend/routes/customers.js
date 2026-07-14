@@ -62,7 +62,7 @@ router.post('/', requireAuth, async (req, res) => {
     const stripeCustomer = await stripe.customers.create({
       email: normalizedEmail,
       name: name || undefined,
-      metadata: { ...metadata, source: 'offerflow' },
+      metadata: { ...metadata, source: 'launchbloom' },
     });
 
     const { data: customer, error } = await supabase
