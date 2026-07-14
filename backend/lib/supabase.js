@@ -53,13 +53,15 @@ const proxy = new Proxy(
   {},
   {
     get(_t, prop) {
+      // Our own helpers must win over the underlying client's properties —
+      // the get trap intercepts every access, so returning them here is the
+      // only way `supabase.authClient()` resolves.
+      if (prop === 'authClient') return authClient;
+      if (prop === 'adminClient') return adminClient;
       const value = get()[prop];
       return typeof value === 'function' ? value.bind(get()) : value;
     },
   }
 );
-
-proxy.authClient = authClient;
-proxy.adminClient = adminClient;
 
 module.exports = proxy;
