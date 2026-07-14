@@ -224,7 +224,6 @@ button {
 /* ── Account block ────────────────────────────────────────────────────── */
 
 .account {
-  flex: none;
   padding: 14px 16px 16px;
   border-top: 1px solid var(--border);
 }
