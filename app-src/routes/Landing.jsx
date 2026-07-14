@@ -500,6 +500,14 @@ export default function Landing() {
             <a href="#example">Example kit</a>
             <a href="#pricing">Plans</a>
           </div>
+          <div className="lp-footer-col">
+            <div className="lp-footer-head">Legal</div>
+            <Link to="/legal/terms">Terms</Link>
+            <Link to="/legal/privacy">Privacy</Link>
+            <Link to="/legal/cookies">Cookies</Link>
+            <Link to="/legal/refund">Refunds</Link>
+            <a href={`mailto:${BRAND.supportEmail}`}>Contact</a>
+          </div>
         </div>
         <div className="lp-copy">© {BRAND.name} {new Date().getFullYear()}. All rights reserved.</div>
       </footer>

@@ -20,7 +20,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const auth = require('../lib/auth');
 const supabase = require('../lib/supabase');
-const { BRAND } = require('../lib/brand');
+const { BRAND, LEGAL_VERSION } = require('../lib/brand');
 const { setSessionCookies, clearSessionCookies, readAccessToken } = require('../lib/session');
 const { planFor } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
@@ -87,6 +87,11 @@ router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
     const creds = readCredentials(req, res);
     if (!creds) return;
 
+    // Consent is required and version-logged (Prompt 14).
+    if ((req.body || {}).acceptTerms !== true) {
+      return res.status(400).json({ error: 'Please accept the Terms and Privacy Policy to continue.' });
+    }
+
     const client = supabase.authClient();
     const { data, error } = await client.auth.signUp({
       email: creds.email,
@@ -102,6 +107,19 @@ router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
     }
     if (error) {
       return res.status(429).json({ error: 'Too many attempts - try again in a few minutes.' });
+    }
+
+    // Log consent (best-effort; never blocks signup).
+    if (data && data.user) {
+      supabase
+        .from('legal_consents')
+        .insert({
+          user_id: data.user.id,
+          email: creds.email,
+          terms_version: LEGAL_VERSION,
+          ip: (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || null,
+        })
+        .then(() => {}, () => {});
     }
 
     // Email confirmation disabled → Supabase returns a session; log the user in.

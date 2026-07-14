@@ -67,7 +67,9 @@ function AccountBlock() {
       <div className="account-hint">
         {planLabel || 'Free'} plan
         {' '}&middot;{' '}
-        <a className="account-link" href="/#pricing">Upgrade plan</a>
+        <Link className="account-link" to="/app/account">Account</Link>
+        {' '}&middot;{' '}
+        <a className="account-link" href="/#pricing">Upgrade</a>
         {' '}&middot;{' '}
         <button className="account-link" onClick={logout}>Sign out</button>
       </div>

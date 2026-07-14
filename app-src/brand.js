@@ -6,4 +6,8 @@ export const BRAND = {
   tagline: 'From Idea to Offer to Launch',
   siteUrl: 'https://launchbloom.app',
   supportEmail: 'support@launchbloom.app',
+  legalName: 'LaunchBloom (legal entity TBD)',
 };
+
+// Keep in sync with backend/lib/brand.js LEGAL_VERSION.
+export const LEGAL_VERSION = '2026-07-15';

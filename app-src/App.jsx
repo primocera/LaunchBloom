@@ -11,6 +11,8 @@ import Login from './routes/Login';
 import Signup from './routes/Signup';
 import ForgotPassword from './routes/ForgotPassword';
 import ResetPassword from './routes/ResetPassword';
+import Legal from './routes/Legal';
+import Account from './routes/Account';
 import AdsStudio from './routes/studios/AdsStudio';
 import ContentStudio from './routes/studios/ContentStudio';
 import EmailStudio from './routes/studios/EmailStudio';
@@ -34,6 +36,7 @@ export default function App() {
       <Route path="/app/signup" element={<Signup />} />
       <Route path="/app/forgot-password" element={<ForgotPassword />} />
       <Route path="/app/reset-password" element={<ResetPassword />} />
+      <Route path="/legal/:slug" element={<Legal />} />
       <Route path="/app/*" element={<AppShell />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -68,6 +71,7 @@ function AppShell() {
 
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/flow" element={<Flow />} />
           <Route path="/kits/:id" element={<KitDetail />} />
           {/* Studios, Prompts 18-23 */}

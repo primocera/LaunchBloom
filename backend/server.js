@@ -98,6 +98,9 @@ const customerRouter = require('./routes/customers');
 app.use('/api/payments', apiLimiter, paymentLimiter, paymentRouter);
 app.use('/api/customers', apiLimiter, customerRouter);
 
+const accountRouter = require('./routes/account');
+app.use(apiLimiter, accountRouter);
+
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------

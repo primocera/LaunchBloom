@@ -43,21 +43,27 @@ app.use(authRouter);
 
 test('signup returns generic success (no account-existence leak)', async () => {
   authState.signUp = { data: { session: null, user: { id: 'u1' } }, error: null };
-  const r = await request(app).post('/api/auth/signup').send({ email: 'new@b.com', password: 'password1' });
+  const r = await request(app).post('/api/auth/signup').send({ email: 'new@b.com', password: 'password1', acceptTerms: true });
   assert.equal(r.status, 201);
   assert.equal(r.body.requiresVerification, true);
 });
 
 test('signup with an existing email still returns generic success', async () => {
   authState.signUp = { data: { user: null }, error: { message: 'User already registered' } };
-  const r = await request(app).post('/api/auth/signup').send({ email: 'taken@b.com', password: 'password1' });
+  const r = await request(app).post('/api/auth/signup').send({ email: 'taken@b.com', password: 'password1', acceptTerms: true });
   assert.equal(r.status, 200);
   assert.equal(r.body.requiresVerification, true);
 });
 
 test('signup rejects short passwords', async () => {
-  const r = await request(app).post('/api/auth/signup').send({ email: 'a@b.com', password: 'short' });
+  const r = await request(app).post('/api/auth/signup').send({ email: 'a@b.com', password: 'short', acceptTerms: true });
   assert.equal(r.status, 400);
+});
+
+test('signup requires accepting the terms', async () => {
+  const r = await request(app).post('/api/auth/signup').send({ email: 'a@b.com', password: 'password1' });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /Terms|Privacy/);
 });
 
 test('login with bad credentials is a generic 401', async () => {

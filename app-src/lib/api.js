@@ -26,12 +26,29 @@ async function request(path, { method = 'GET', body, signal } = {}) {
 export const api = {
   // Auth
   login: (email, password) => request('/api/auth/login', { method: 'POST', body: { email, password } }),
-  signup: (email, password) => request('/api/auth/signup', { method: 'POST', body: { email, password } }),
+  signup: (email, password, acceptTerms) =>
+    request('/api/auth/signup', { method: 'POST', body: { email, password, acceptTerms } }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/auth/me'),
   forgotPassword: (email) => request('/api/auth/forgot-password', { method: 'POST', body: { email } }),
   resetPassword: (password) => request('/api/auth/reset-password', { method: 'POST', body: { password } }),
   resendVerification: (email) => request('/api/auth/resend-verification', { method: 'POST', body: { email } }),
+
+  // Account data controls (Prompt 14)
+  deleteAccount: () => request('/api/account/delete', { method: 'POST' }),
+  exportData: async () => {
+    const res = await fetch('/api/account/export', { credentials: 'include' });
+    if (!res.ok) throw new Error('Could not export your data. Please try again.');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'launchbloom-export.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
 
   workspace: () => request('/api/workspace'),
   dashboard: () => request('/api/workspace/dashboard'),

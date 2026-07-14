@@ -806,3 +806,72 @@
   margin: 6px 0 0;
   padding-left: 18px;
 }
+
+/* ── Legal pages + Account (Prompt 14) ──────────────────────────────────── */
+.legal {
+  min-height: 100vh;
+  background: #f8f7f4;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.legal-card {
+  max-width: 720px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 32px 36px;
+}
+.legal-card h1 { margin: 4px 0 2px; }
+.legal-card h2 { font-size: 16px; margin: 22px 0 6px; }
+.legal-card p { color: #374151; line-height: 1.6; }
+.legal-meta { color: #6b7280; font-size: 13px; }
+.legal-back a, .legal-links a { color: #2563eb; }
+.legal-links { font-size: 13px; color: #6b7280; }
+.legal hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0 16px; }
+
+.account-page { max-width: 640px; padding: 8px 4px; }
+.account-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 16px 0;
+}
+.account-section h2 { font-size: 16px; margin: 0 0 8px; }
+.account-section.danger { border-color: #fecaca; }
+.account-section.danger h2 { color: #b91c1c; }
+.account-legal { font-size: 13px; color: #6b7280; margin-top: 20px; }
+.account-legal a { color: #2563eb; }
+.confirm-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: left;
+  margin: 4px 0 2px;
+}
+.consent a { color: #2563eb; }
+
+.btn-secondary {
+  font: inherit;
+  padding: 9px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+.btn-danger {
+  font: inherit;
+  padding: 9px 16px;
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+}
+.btn-danger:disabled { opacity: 0.6; cursor: default; }

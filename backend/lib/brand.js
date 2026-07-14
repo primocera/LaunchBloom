@@ -27,9 +27,13 @@ const BRAND = {
   legalName: process.env.BRAND_LEGAL_NAME || 'LaunchBloom (legal entity TBD)',
 };
 
+// Bump when Terms/Privacy change materially; signup records the accepted
+// version so consent is auditable (Prompt 14).
+const LEGAL_VERSION = process.env.LEGAL_VERSION || '2026-07-15';
+
 /** "LaunchBloom <hello@launchbloom.app>" for email `from` headers. */
 function emailFrom() {
   return `${BRAND.senderName} <${BRAND.senderEmail}>`;
 }
 
-module.exports = { BRAND, emailFrom };
+module.exports = { BRAND, emailFrom, LEGAL_VERSION };

@@ -15,6 +15,7 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [accept, setAccept] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(false);
@@ -35,12 +36,16 @@ export default function Signup() {
       setError("Passwords don't match.");
       return;
     }
+    if (!accept) {
+      setError('Please accept the Terms and Privacy Policy.');
+      return;
+    }
     setBusy(true);
     setError(null);
 
     const address = email.trim();
     try {
-      const data = await signup(address, password);
+      const data = await signup(address, password, accept);
       // Email confirmation required: show a "check your inbox" notice and stop.
       if (data && data.requiresVerification) {
         setDone(true);
@@ -109,10 +114,17 @@ export default function Signup() {
           minLength={8}
           aria-label="Repeat password"
         />
+        <label className="consent">
+          <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
+          <span>
+            I agree to the <Link to="/legal/terms">Terms</Link> and{' '}
+            <Link to="/legal/privacy">Privacy Policy</Link>.
+          </span>
+        </label>
         <button
           className="btn-primary"
           type="submit"
-          disabled={busy || !email.trim() || password.length < 8 || !confirm}
+          disabled={busy || !email.trim() || password.length < 8 || !confirm || !accept}
         >
           {busy ? 'Creating account...' : 'Create account'}
         </button>
