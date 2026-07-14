@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit & integration tests (no secrets required)
+        run: npm test
+
+      - name: Production build
+        run: npm run build:app
+
+      - name: Committed app/ bundle matches app-src/ source
+        run: git status --porcelain -- app/ | tee /dev/stderr | wc -l | grep -qx '0'
