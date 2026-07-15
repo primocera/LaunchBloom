@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 const express = require('express');
+const crypto = require('crypto');
 const supabase = require('../lib/supabase');
 const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
@@ -223,12 +224,14 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: WEBSITE_SYSTEM, prompt: brand.text + camp.text + prompt, schema: websiteKitSchema, maxTokens: 12000 });
     req.usageInfo = result.__meta;
+    const runId = crypto.randomUUID();
 
     const rows = (result.pages || []).map((p) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      generation_run_id: runId,
       page_type: p.page_type,
       title: p.h1 || p.hero_headline || p.page_type,
       seo_title: p.seo_title,
@@ -314,12 +317,14 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + camp.text + prompt, schema: emailFlowSchema, maxTokens: 14000 });
     req.usageInfo = result.__meta;
+    const runId = crypto.randomUUID();
 
     const rows = (result.items || []).map((e, i) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      generation_run_id: runId,
       flow_type: e.flow_type || (seq.emails[i] && seq.emails[i].flow_type),
       email_order: e.email_order || (seq.emails[i] && seq.emails[i].email_order),
       objective: e.objective || (seq.emails[i] && seq.emails[i].objective),
@@ -513,6 +518,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: CAMPAIGN_SYSTEM, prompt: brand.text + camp.text + prompt, schema: campaignEmailSchema, maxTokens: 10000 });
     req.usageInfo = result.__meta;
+    const runId = crypto.randomUUID();
 
     // Campaign emails live in email_assets with flow_type='campaign'; the
     // specific campaign email_type (teaser/offer/…) is kept in the segment column.
@@ -521,6 +527,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      generation_run_id: runId,
       flow_type: 'campaign',
       email_order: i + 1,
       subject_line: e.subject_line,
@@ -600,12 +607,14 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: SOCIAL_SYSTEM, prompt: brand.text + camp.text + prompt, schema: socialCaptionSchema, maxTokens: 12000 });
     req.usageInfo = result.__meta;
+    const runId = crypto.randomUUID();
 
     const rows = (result.items || []).map((s) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      generation_run_id: runId,
       platform: s.platform,
       content_type: s.content_type,
       hook: s.hook,
@@ -680,12 +689,14 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: CREATIVE_SYSTEM, prompt: brand.text + camp.text + prompt, schema: creativeIdeasSchema, maxTokens: 12000 });
     req.usageInfo = result.__meta;
+    const runId = crypto.randomUUID();
 
     const rows = (result.items || []).map((c) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      generation_run_id: runId,
       platform: c.platform,
       creative_type: c.creative_type,
       hook: c.hook,

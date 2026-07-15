@@ -1,0 +1,165 @@
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
+
+// Prompt 13: one searchable library for everything the studios generate.
+const TYPES = [
+  ['', 'All types'],
+  ['website_pages', 'Website pages'],
+  ['email_assets', 'Emails'],
+  ['social_assets', 'Social posts'],
+  ['creative_assets', 'Ad creatives'],
+  ['seo_assets', 'SEO assets'],
+];
+
+const REWRITES = [
+  ['shorter', 'Shorter'],
+  ['longer', 'Longer'],
+  ['direct', 'More direct'],
+  ['native', 'More native'],
+  ['instruction', 'Custom instruction…'],
+];
+
+export default function AssetLibrary() {
+  const [filters, setFilters] = useState({ type: '', q: '', favourite: '', archived: '' });
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  const [selected, setSelected] = useState({});
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState(null);
+
+  function load(p = page) {
+    const params = { page: p, per: 25 };
+    if (filters.type) params.type = filters.type;
+    if (filters.q) params.q = filters.q;
+    if (filters.favourite) params.favourite = filters.favourite;
+    if (filters.archived) params.archived = filters.archived;
+    api.library(params).then(setData).catch((e) => setError(e.message));
+  }
+
+  useEffect(() => { setPage(1); load(1); }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function act(fn, id) {
+    setBusyId(id);
+    setError(null);
+    try { await fn(); load(); } catch (e) { setError(e.message); }
+    setBusyId(null);
+  }
+
+  const toggleSel = (item) => {
+    const key = `${item.table}:${item.id}`;
+    setSelected((s) => ({ ...s, [key]: s[key] ? undefined : { table: item.table, id: item.id } }));
+  };
+  const selItems = Object.values(selected).filter(Boolean);
+
+  async function bulkArchive() {
+    if (selItems.length === 0) return;
+    await api.bulkAssets(filters.archived ? 'unarchive' : 'archive', selItems);
+    setSelected({});
+    load();
+  }
+
+  async function rewrite(item, mode) {
+    let instruction = '';
+    if (mode === 'instruction') {
+      instruction = window.prompt('How should this be rewritten?') || '';
+      if (!instruction.trim()) return;
+    }
+    await act(() => api.rewriteAsset(item.table, item.id, mode, instruction), item.id);
+  }
+
+  async function showVersions(item) {
+    const { versions } = await api.assetVersions(item.table, item.id);
+    if (!versions.length) { window.alert('No previous versions yet.'); return; }
+    const pick = window.prompt(
+      `${versions.length} version(s):\n` +
+      versions.map((v, i) => `${i + 1}. ${new Date(v.created_at).toLocaleString()}`).join('\n') +
+      '\n\nEnter a number to restore, or cancel:'
+    );
+    const idx = parseInt(pick, 10) - 1;
+    if (Number.isInteger(idx) && versions[idx]) {
+      await act(() => api.restoreAsset(item.table, item.id, versions[idx].id), item.id);
+    }
+  }
+
+  return (
+    <div className="library-page">
+      <h1>Asset library</h1>
+      <p className="muted">Everything your studios generate, in one searchable place.</p>
+
+      <div className="library-filters">
+        <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
+          {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <input
+          placeholder="Search…"
+          value={filters.q}
+          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+        />
+        <label className="consent" style={{ margin: 0 }}>
+          <input type="checkbox" checked={filters.favourite === 'true'}
+            onChange={(e) => setFilters({ ...filters, favourite: e.target.checked ? 'true' : '' })} />
+          <span>Favourites</span>
+        </label>
+        <label className="consent" style={{ margin: 0 }}>
+          <input type="checkbox" checked={filters.archived === 'true'}
+            onChange={(e) => setFilters({ ...filters, archived: e.target.checked ? 'true' : '' })} />
+          <span>Archived</span>
+        </label>
+        {selItems.length > 0 && (
+          <button className="btn-secondary" onClick={bulkArchive}>
+            {filters.archived ? 'Unarchive' : 'Archive'} {selItems.length} selected
+          </button>
+        )}
+      </div>
+
+      {error && <p className="login-err">{error}</p>}
+      {!data && <p className="muted">Loading…</p>}
+      {data && data.items.length === 0 && <p className="muted">Nothing here yet — generate something in a studio.</p>}
+
+      {(data?.items || []).map((item) => (
+        <div className="library-row" key={`${item.table}:${item.id}`}>
+          <input type="checkbox" checked={!!selected[`${item.table}:${item.id}`]} onChange={() => toggleSel(item)} />
+          <div className="library-main">
+            <div className="library-title">
+              <button className="library-star" onClick={() => act(() => api.updateAsset(item.table, item.id, { favourite: !item.favourite }), item.id)} title="Favourite">
+                {item.favourite ? '★' : '☆'}
+              </button>
+              <strong>{item.title}</strong>
+              <span className="campaign-badge">{item.type_label}</span>
+              <span className="campaign-badge">{item.status}</span>
+            </div>
+            <div className="library-snippet">{item.snippet}</div>
+            <div className="library-actions">
+              <select defaultValue="" disabled={busyId === item.id} onChange={(e) => { if (e.target.value) { rewrite(item, e.target.value); e.target.value = ''; } }}>
+                <option value="" disabled>{busyId === item.id ? 'Working…' : 'AI rewrite (1 action)'}</option>
+                {REWRITES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <button onClick={() => {
+                const name = window.prompt('Rename:', item.title);
+                if (name !== null) act(() => api.updateAsset(item.table, item.id, { title: name }), item.id);
+              }}>Rename</button>
+              <button onClick={() => act(() => api.duplicateAsset(item.table, item.id), item.id)}>Duplicate</button>
+              <button onClick={() => showVersions(item)}>History</button>
+              <button onClick={() => act(() => api.updateAsset(item.table, item.id, { archived: !item.archived }), item.id)}>
+                {item.archived ? 'Unarchive' : 'Archive'}
+              </button>
+              <button onClick={() => {
+                if (window.confirm('Delete this asset? A snapshot is kept in history.')) {
+                  act(() => api.deleteAsset(item.table, item.id), item.id);
+                }
+              }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {data && data.total > data.per && (
+        <div className="library-pager">
+          <button className="btn-secondary" disabled={page <= 1} onClick={() => { setPage(page - 1); load(page - 1); }}>← Prev</button>
+          <span className="muted"> Page {page} of {Math.ceil(data.total / data.per)} </span>
+          <button className="btn-secondary" disabled={page >= Math.ceil(data.total / data.per)} onClick={() => { setPage(page + 1); load(page + 1); }}>Next →</button>
+        </div>
+      )}
+    </div>
+  );
+}

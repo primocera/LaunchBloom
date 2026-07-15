@@ -951,3 +951,27 @@
 .campaign-calendar { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: #374151; }
 .campaign-dates input { width: auto; }
 .campaign-channels { display: flex; gap: 14px; flex-wrap: wrap; }
+
+/* Asset Library (Prompt 13) */
+.library-page { max-width: 820px; padding: 8px 4px 40px; }
+.library-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.library-filters select, .library-filters input[type="text"], .library-filters input:not([type]) {
+  font: inherit; font-size: 13px; padding: 7px 10px;
+  border: 1px solid #e5e7eb; border-radius: 8px; background: #fff;
+}
+.library-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  padding: 12px 14px; margin: 10px 0;
+}
+.library-row > input[type="checkbox"] { margin-top: 5px; }
+.library-main { flex: 1; min-width: 0; }
+.library-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.library-star { background: none; border: none; cursor: pointer; font-size: 16px; color: #f59e0b; padding: 0; }
+.library-snippet { font-size: 13px; color: #6b7280; margin: 4px 0 8px; overflow: hidden; text-overflow: ellipsis; }
+.library-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.library-actions button, .library-actions select {
+  font: inherit; font-size: 12px; padding: 4px 9px;
+  border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer;
+}
+.library-pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; }

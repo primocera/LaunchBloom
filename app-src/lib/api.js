@@ -80,6 +80,17 @@ export const api = {
   updateCampaign: (id, patch) => request(`/api/campaigns/${id}`, { method: 'PATCH', body: patch }),
   deleteCampaign: (id) => request(`/api/campaigns/${id}`, { method: 'DELETE' }),
   generateCampaignStrategy: (id) => request(`/api/campaigns/${id}/strategy`, { method: 'POST', body: {} }),
+  // Asset Library (Prompt 13)
+  library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
+  updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),
+  duplicateAsset: (table, id) => request(`/api/assets/library/${table}/${id}/duplicate`, { method: 'POST' }),
+  deleteAsset: (table, id) => request(`/api/assets/library/${table}/${id}`, { method: 'DELETE' }),
+  bulkAssets: (action, items) => request('/api/assets/library/bulk', { method: 'POST', body: { action, items } }),
+  assetVersions: (table, id) => request(`/api/assets/library/${table}/${id}/versions`),
+  restoreAsset: (table, id, versionId) =>
+    request(`/api/assets/library/${table}/${id}/restore`, { method: 'POST', body: { version_id: versionId } }),
+  rewriteAsset: (table, id, mode, instruction) =>
+    request(`/api/ai/asset/${table}/${id}/rewrite`, { method: 'POST', body: { mode, instruction } }),
   saveOnboarding: (answers) => request('/api/workspace/onboarding', { method: 'POST', body: answers }),
   offers: () => request('/api/workspace/offers'),
   launchKits: () => request('/api/workspace/launch-kits'),

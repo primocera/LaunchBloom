@@ -105,6 +105,10 @@ app.use(apiLimiter, accountRouter);
 const campaignsRouter = require('./routes/campaigns');
 app.use(apiLimiter, campaignsRouter);
 
+// Asset Library (Prompt 13) — brings its own JSON parser.
+const libraryRouter = require('./routes/library');
+app.use(apiLimiter, libraryRouter);
+
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------
