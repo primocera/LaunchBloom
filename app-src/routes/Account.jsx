@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { api } from '../lib/api';
+import { api, getActiveWorkspace, setActiveWorkspace } from '../lib/api';
 import { BRAND } from '../brand';
 
 // Prompts 8 + 14: account page — profile, billing (plan, trial countdown, next
@@ -27,12 +27,34 @@ export default function Account() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [workspaces, setWorkspaces] = useState([]);
+
+  function loadWorkspaces() {
+    api.workspaces().then(({ workspaces: list }) => setWorkspaces(list)).catch(() => {});
+  }
 
   useEffect(() => {
     let cancelled = false;
     api.billing().then((b) => !cancelled && setBilling(b)).catch(() => {});
+    loadWorkspaces();
     return () => { cancelled = true; };
   }, []);
+
+  async function renameWorkspace(w) {
+    const name = window.prompt('Rename workspace:', w.name);
+    if (name === null) return;
+    try { await api.renameWorkspace(w.id, name.trim() || w.name); loadWorkspaces(); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function removeWorkspace(w) {
+    if (!window.confirm(`Delete "${w.name}" and all its data? This cannot be undone.`)) return;
+    try {
+      await api.deleteWorkspace(w.id);
+      if (getActiveWorkspace() === w.id) setActiveWorkspace(null);
+      loadWorkspaces();
+    } catch (err) { setError(err.message); }
+  }
 
   async function openPortal() {
     setError(null);
@@ -108,6 +130,18 @@ export default function Account() {
         {sub && (
           <a className="btn-secondary inline" href="/#pricing" style={{ marginLeft: 8 }}>Change plan</a>
         )}
+      </section>
+
+      <section className="account-section">
+        <h2>Workspaces</h2>
+        <p className="muted">Each workspace is a separate brand or client with its own assets.</p>
+        {workspaces.map((w) => (
+          <div className="ws-row" key={w.id}>
+            <span className="ws-name">{w.name}{w.archived ? ' (archived)' : ''}</span>
+            <button onClick={() => renameWorkspace(w)}>Rename</button>
+            <button onClick={() => removeWorkspace(w)}>Delete</button>
+          </div>
+        ))}
       </section>
 
       <section className="account-section">

@@ -15,6 +15,7 @@ const { clearSessionCookies } = require('../lib/session');
 const { ensureWorkspace } = require('./workspaces');
 const { planFor, pricePlans } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
+const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
 
 function appUrl() {
   return (process.env.PUBLIC_URL || BRAND.siteUrl || '').replace(/\/$/, '');
@@ -30,35 +31,6 @@ function intervalForPrice(priceId) {
   return null;
 }
 
-// Workspace-scoped tables to export/delete (best-effort; missing tables are
-// skipped so a partially-migrated DB doesn't break the operation).
-const WORKSPACE_TABLES = [
-  'onboarding_answers',
-  'positioning_outputs',
-  'offers',
-  'launch_kits',
-  'content_items',
-  'email_items',
-  'ad_ideas',
-  'seo_items',
-  'weekly_tasks',
-  'website_pages',
-  'email_assets',
-  'social_assets',
-  'creative_assets',
-  'seo_assets',
-  'usage_events',
-];
-
-async function collectWorkspaceData(workspaceId) {
-  const out = {};
-  for (const table of WORKSPACE_TABLES) {
-    const { data, error } = await supabase.from(table).select('*').eq('workspace_id', workspaceId);
-    if (!error) out[table] = data || [];
-  }
-  return out;
-}
-
 // GET /api/account/billing — current plan, trial/renewal dates, status, usage.
 router.get('/api/account/billing', requireAuth, async (req, res, next) => {
   try {
@@ -66,7 +38,7 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
     const plan = (await planFor(email)) || 'free';
     const limits = limitsFor(plan);
     const ws = await ensureWorkspace(email, req.userId);
-    const usage = await usageFor(ws.id, plan, email);
+    const usage = await usageFor(ws.id, plan, email, req.userId);
 
     let subscription = null;
     const { data: customer } = await supabase
@@ -181,15 +153,16 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       /* billing cleanup is best-effort; continue with data deletion */
     }
 
-    // 2. Delete all workspace-scoped data, then the workspace. ensureWorkspace
-    // resolves (and adopts) the caller's workspace; MVP is one per user.
-    const ws = await ensureWorkspace(email, userId);
-    for (const table of WORKSPACE_TABLES) {
-      await supabase.from(table).delete().eq('workspace_id', ws.id).then(() => {}, () => {});
+    // 2. Delete every workspace the user owns and all of its data.
+    const { data: workspaces } = await supabase
+      .from('workspaces')
+      .select('id')
+      .eq('user_id', userId);
+    const owned = workspaces && workspaces.length ? workspaces : [await ensureWorkspace(email, userId)];
+    for (const ws of owned) {
+      await deleteWorkspaceData(ws.id);
+      await supabase.from('workspaces').delete().eq('id', ws.id).then(() => {}, () => {});
     }
-    await supabase.from('workspaces').delete().eq('id', ws.id).then(() => {}, () => {});
-    // Belt-and-braces: any other workspace still keyed to this user id.
-    await supabase.from('workspaces').delete().eq('user_id', userId).then(() => {}, () => {});
 
     // 3. Delete the Supabase Auth user (revokes all sessions) and clear cookies.
     try {

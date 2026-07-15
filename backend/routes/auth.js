@@ -51,7 +51,7 @@ async function accountStatus(email, userId) {
   const plan = (await planFor(email)) || 'free';
   const limits = limitsFor(plan);
   const ws = await ensureWorkspace(email, userId);
-  const usage = await usageFor(ws.id, plan, email);
+  const usage = await usageFor(ws.id, plan, email, userId);
   return {
     email,
     plan,

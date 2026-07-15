@@ -65,6 +65,24 @@ async function countActions(workspaceId, since, feature) {
   return count || 0;
 }
 
+/**
+ * Count metered actions across ALL of a user's workspaces since `since`. The
+ * AI-action pool is account-wide (a Pro user's 120 actions are shared across
+ * their 3 workspaces, not 120 each), so limits count by user_id.
+ */
+async function countUserActions(userId, since, feature) {
+  let q = supabase
+    .from('usage_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .in('status', COUNTED_STATUSES);
+  if (feature) q = q.eq('feature', feature);
+  if (since) q = q.gte('created_at', since);
+  const { count, error } = await q;
+  if (error) return 0;
+  return count || 0;
+}
+
 /** Insert a reserved action; returns its id (or null if the ledger is missing). */
 async function reserveAction({ userId, workspaceId, feature, model }) {
   const { data, error } = await supabase
@@ -111,6 +129,7 @@ async function releaseAction(id, failed = false) {
 module.exports = {
   windowStart,
   countActions,
+  countUserActions,
   reserveAction,
   finalizeAction,
   releaseAction,

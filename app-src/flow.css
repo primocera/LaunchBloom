@@ -881,3 +881,38 @@
 .account-section .warn { color: #b45309; }
 .btn-primary.inline, .btn-secondary.inline { display: inline-block; text-decoration: none; }
 .account-section .btn-secondary { margin-top: 6px; }
+
+/* Workspace switcher (Prompt 7) */
+.ws-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 0;
+  flex-wrap: wrap;
+}
+.ws-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: .04em; width: 100%; }
+.ws-select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+.ws-new {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ws-error { width: 100%; font-size: 12px; color: #b91c1c; }
+
+.ws-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f1ef; }
+.ws-row .ws-name { flex: 1; }
+.ws-row button { font: inherit; font-size: 12px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; }

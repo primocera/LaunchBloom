@@ -84,10 +84,140 @@ async function ownedWorkspace(workspaceId, email, userId) {
   return null;
 }
 
+/** List the caller's non-archived workspaces (oldest first). */
+async function listWorkspaces(userId, { includeArchived = false } = {}) {
+  let q = supabase.from('workspaces').select('*').eq('user_id', userId);
+  if (!includeArchived) q = q.eq('archived', false);
+  const { data } = await q.order('created_at', { ascending: true });
+  return data || [];
+}
+
+/**
+ * Resolve the workspace a request should act on: the client-supplied
+ * X-Workspace-Id when the caller owns it and it isn't archived, otherwise the
+ * caller's first active workspace (get-or-create). Every route uses this so a
+ * workspace is only ever touched by its owner.
+ */
+async function resolveWorkspace(req) {
+  const wanted =
+    req.get('x-workspace-id') ||
+    (req.body && req.body.workspace_id) ||
+    (req.query && req.query.workspace_id);
+
+  if (wanted) {
+    const owned = await ownedWorkspace(wanted, req.userEmail, req.userId);
+    if (owned && !owned.archived) return owned;
+  }
+  const active = await listWorkspaces(req.userId);
+  if (active[0]) return active[0];
+  return ensureWorkspace(req.userEmail, req.userId);
+}
+
+// ── workspace CRUD (Prompt 7) ───────────────────────────────────────────────
+
+// GET /api/workspaces — list active (+ archived) workspaces for the switcher.
+router.get('/api/workspaces', requireAuth, async (req, res, next) => {
+  try {
+    const workspaces = await listWorkspaces(req.userId, { includeArchived: true });
+    res.json({ workspaces });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/workspaces — create a new workspace, enforcing the plan's cap.
+router.post('/api/workspaces', requireAuth, express.json({ limit: '2kb' }), async (req, res, next) => {
+  try {
+    const { planFor } = require('./customers');
+    const { limitsFor } = require('../lib/plan-limits');
+    const plan = (await planFor(req.userEmail)) || 'free';
+    const max = limitsFor(plan).workspaces;
+
+    const active = await listWorkspaces(req.userId);
+    if (active.length >= max) {
+      return res.status(402).json({
+        error: `Your ${limitsFor(plan).label} plan allows ${max} workspace${max === 1 ? '' : 's'}. Upgrade for more.`,
+        code: 'UPGRADE',
+        feature: 'workspaces',
+        used: active.length,
+        limit: max,
+        plan,
+      });
+    }
+
+    const name = String((req.body || {}).name || '').trim().slice(0, 80) || 'New workspace';
+    const { data: created, error } = await supabase
+      .from('workspaces')
+      .insert({ user_id: req.userId, user_email: req.userEmail, name })
+      .select()
+      .single();
+    if (error) throw new Error('Failed to create workspace: ' + error.message);
+    res.status(201).json({ workspace: created });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/workspaces/:id — rename or archive/unarchive.
+router.patch('/api/workspaces/:id', requireAuth, express.json({ limit: '2kb' }), async (req, res, next) => {
+  try {
+    const owned = await ownedWorkspace(req.params.id, req.userEmail, req.userId);
+    if (!owned) return res.status(404).json({ error: 'Workspace not found' });
+
+    const patch = {};
+    const b = req.body || {};
+    if (typeof b.name === 'string') patch.name = b.name.trim().slice(0, 80) || owned.name;
+    if (typeof b.archived === 'boolean') {
+      // Never archive the caller's last active workspace.
+      if (b.archived) {
+        const active = await listWorkspaces(req.userId);
+        if (active.length <= 1) {
+          return res.status(400).json({ error: 'You must keep at least one active workspace.' });
+        }
+      }
+      patch.archived = b.archived;
+    }
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'Nothing to update.' });
+    }
+
+    const { data, error } = await supabase
+      .from('workspaces')
+      .update(patch)
+      .eq('id', owned.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    res.json({ workspace: data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/workspaces/:id — delete a workspace and its data (not the last one).
+router.delete('/api/workspaces/:id', requireAuth, async (req, res, next) => {
+  try {
+    const owned = await ownedWorkspace(req.params.id, req.userEmail, req.userId);
+    if (!owned) return res.status(404).json({ error: 'Workspace not found' });
+
+    const all = await listWorkspaces(req.userId, { includeArchived: true });
+    if (all.length <= 1) {
+      return res.status(400).json({ error: 'You can’t delete your only workspace.' });
+    }
+
+    const { deleteWorkspaceData } = require('../lib/workspace-data');
+    await deleteWorkspaceData(owned.id);
+    await supabase.from('workspaces').delete().eq('id', owned.id).then(() => {}, () => {});
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/workspace — the caller's workspace + latest onboarding/positioning
 router.get('/api/workspace', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
     const [{ data: onboarding }, { data: positioning }] = await Promise.all([
       supabase.from('onboarding_answers').select('*').eq('workspace_id', ws.id)
         .order('created_at', { ascending: false }).limit(1).single(),
@@ -103,7 +233,7 @@ router.get('/api/workspace', requireAuth, async (req, res, next) => {
 // POST /api/workspace/onboarding — save (replace) onboarding answers
 router.post('/api/workspace/onboarding', requireAuth, express.json({ limit: '32kb' }), async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
     const b = req.body || {};
     const row = {
       workspace_id: ws.id,
@@ -132,7 +262,7 @@ router.post('/api/workspace/onboarding', requireAuth, express.json({ limit: '32k
 // GET /api/workspace/offers — the caller's offers (newest first)
 router.get('/api/workspace/offers', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
     const { data, error } = await supabase
       .from('offers')
       .select('*')
@@ -148,7 +278,7 @@ router.get('/api/workspace/offers', requireAuth, async (req, res, next) => {
 // GET /api/workspace/launch-kits — the caller's launch kits (newest first)
 router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
     const { data, error } = await supabase
       .from('launch_kits')
       .select('id, offer_id, title, summary, created_at, updated_at')
@@ -166,7 +296,7 @@ router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => 
 // kit, and progress counts. All real Supabase data with nulls for empty state.
 router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
 
     const [
       { data: onboarding },
@@ -257,7 +387,7 @@ router.patch(
       if (!data || typeof data !== 'object') {
         return res.status(400).json({ error: 'data object is required' });
       }
-      const ws = await ensureWorkspace(req.userEmail, req.userId);
+      const ws = await resolveWorkspace(req);
       const { data: kit } = await supabase
         .from('launch_kits')
         .select('id')
@@ -282,7 +412,7 @@ router.patch(
 // GET /api/workspace/launch-kits/:id — one full launch kit
 router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
     const { data, error } = await supabase
       .from('launch_kits')
       .select('*')
@@ -308,7 +438,7 @@ const { safetyCheck } = require('../lib/safety-check');
 
 router.get('/api/workspace/launch-kits/:id/quality', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
     const { data: kit } = await supabase
       .from('launch_kits')
       .select('*')
@@ -399,7 +529,7 @@ router.get('/api/workspace/items/:table', requireAuth, async (req, res, next) =>
   try {
     const cfg = ITEM_TABLES[req.params.table];
     if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
+    const ws = await resolveWorkspace(req);
 
     let q = supabase.from(req.params.table).select('*').eq('workspace_id', ws.id);
     if (req.query.launch_kit_id) q = q.eq('launch_kit_id', req.query.launch_kit_id);
@@ -420,7 +550,7 @@ router.patch(
     try {
       const cfg = ITEM_TABLES[req.params.table];
       if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
-      const ws = await ensureWorkspace(req.userEmail, req.userId);
+      const ws = await resolveWorkspace(req);
 
       // Only allow whitelisted, present fields — never workspace_id/id/kit id.
       const updates = {};
@@ -453,7 +583,7 @@ router.post(
   express.json({ limit: '8kb' }),
   async (req, res, next) => {
     try {
-      const ws = await ensureWorkspace(req.userEmail, req.userId);
+      const ws = await resolveWorkspace(req);
       const b = req.body || {};
       if (!b.launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });
       if (!b.task_title) return res.status(400).json({ error: 'task_title is required' });
@@ -478,3 +608,5 @@ router.post(
 module.exports = router;
 module.exports.ensureWorkspace = ensureWorkspace;
 module.exports.ownedWorkspace = ownedWorkspace;
+module.exports.resolveWorkspace = resolveWorkspace;
+module.exports.listWorkspaces = listWorkspaces;

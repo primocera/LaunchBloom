@@ -120,7 +120,7 @@ router.post('/generate-positioning', planGate('positioning'), async (req, res, n
       .single();
     if (error) throw new Error('Failed to save positioning: ' + error.message);
 
-    res.json({ ok: true, positioning: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail) });
+    res.json({ ok: true, positioning: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }
@@ -154,7 +154,7 @@ router.post('/generate-offers', planGate('offer_generations'), async (req, res, 
     const { data: saved, error } = await supabase.from('offers').insert(rows).select();
     if (error) throw new Error('Failed to save offers: ' + error.message);
 
-    res.json({ ok: true, offers: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail) });
+    res.json({ ok: true, offers: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }
@@ -302,7 +302,7 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
       )
     );
 
-    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail) });
+    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }

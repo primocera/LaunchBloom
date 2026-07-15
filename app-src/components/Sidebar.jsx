@@ -2,6 +2,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { BRAND } from '../brand';
 import BloomMark from './BloomMark';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -90,6 +91,8 @@ export default function Sidebar({ onCollapse }) {
           <CollapseIcon />
         </button>
       </div>
+
+      <WorkspaceSwitcher />
 
       <nav className="sidebar-nav">
         {MAIN_NAV.map(({ to, label, Icon, end }) => (

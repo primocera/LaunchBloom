@@ -76,12 +76,18 @@ function limitsFor(plan) {
  *   { ai_actions: <used>, launch_kits: <used> }
  * Counted from the usage_events ledger within the plan's billing window.
  */
-async function usageFor(workspaceId, plan, email) {
+async function usageFor(workspaceId, plan, email, userId) {
   const since = await usage.windowStart(email, plan);
-  const [actions, kits] = await Promise.all([
-    usage.countActions(workspaceId, since, null),
-    usage.countActions(workspaceId, since, 'launch_kits'),
-  ]);
+  // Account-wide pool when we have a user id; else fall back to the workspace.
+  const [actions, kits] = userId
+    ? await Promise.all([
+        usage.countUserActions(userId, since, null),
+        usage.countUserActions(userId, since, 'launch_kits'),
+      ])
+    : await Promise.all([
+        usage.countActions(workspaceId, since, null),
+        usage.countActions(workspaceId, since, 'launch_kits'),
+      ]);
   return { ai_actions: actions, launch_kits: kits };
 }
 
@@ -113,26 +119,26 @@ function planGate(feature) {
         req.userPlan = plan;
         req.planLimits = limits;
 
-        const { ensureWorkspace } = require('../routes/workspaces');
-        const ws = await ensureWorkspace(req.userEmail, req.userId);
+        const { resolveWorkspace } = require('../routes/workspaces');
+        const ws = await resolveWorkspace(req);
         req.workspace = ws;
 
         if (!feature) return next();
 
         const since = await usage.windowStart(req.userEmail, plan);
 
-        // Launch-kit sub-cap (counts reserved + succeeded kit actions).
+        // Launch-kit sub-cap — account-wide (counts reserved + succeeded).
         if (feature === 'launch_kits') {
-          const kitsUsed = await usage.countActions(ws.id, since, 'launch_kits');
+          const kitsUsed = await usage.countUserActions(req.userId, since, 'launch_kits');
           if (kitsUsed >= limits.launch_kits) {
             return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits));
           }
         }
 
-        // AI-action pool.
+        // AI-action pool — account-wide across the user's workspaces.
         const poolLimit = limits.ai_actions;
         if (poolLimit !== Infinity) {
-          const used = await usage.countActions(ws.id, since, null);
+          const used = await usage.countUserActions(req.userId, since, null);
           if (used >= poolLimit) {
             return res.status(402).json(gateBody(plan, feature, used, poolLimit));
           }
@@ -147,7 +153,7 @@ function planGate(feature) {
         });
 
         if (poolLimit !== Infinity && reservationId) {
-          const after = await usage.countActions(ws.id, since, null);
+          const after = await usage.countUserActions(req.userId, since, null);
           if (after > poolLimit) {
             await usage.releaseAction(reservationId);
             return res.status(402).json(gateBody(plan, feature, poolLimit, poolLimit));

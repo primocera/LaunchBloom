@@ -2,13 +2,24 @@
 // cookies, so there is no token in JS/localStorage. Every request must send
 // cookies with `credentials: 'include'`.
 
+const WORKSPACE_KEY = 'active_workspace_id';
+export function getActiveWorkspace() {
+  return localStorage.getItem(WORKSPACE_KEY);
+}
+export function setActiveWorkspace(id) {
+  if (id) localStorage.setItem(WORKSPACE_KEY, id);
+  else localStorage.removeItem(WORKSPACE_KEY);
+}
+
 async function request(path, { method = 'GET', body, signal } = {}) {
+  const ws = getActiveWorkspace();
   const res = await fetch(path, {
     method,
     signal,
     credentials: 'include',
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(ws ? { 'X-Workspace-Id': ws } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -53,6 +64,12 @@ export const api = {
   },
 
   workspace: () => request('/api/workspace'),
+  // Multi-workspace CRUD (Prompt 7)
+  workspaces: () => request('/api/workspaces'),
+  createWorkspace: (name) => request('/api/workspaces', { method: 'POST', body: { name } }),
+  renameWorkspace: (id, name) => request(`/api/workspaces/${id}`, { method: 'PATCH', body: { name } }),
+  archiveWorkspace: (id, archived) => request(`/api/workspaces/${id}`, { method: 'PATCH', body: { archived } }),
+  deleteWorkspace: (id) => request(`/api/workspaces/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/api/workspace/dashboard'),
   saveOnboarding: (answers) => request('/api/workspace/onboarding', { method: 'POST', body: answers }),
   offers: () => request('/api/workspace/offers'),
