@@ -103,18 +103,19 @@ async function reserveAction({ userId, workspaceId, feature, model }) {
   return data.id;
 }
 
+// Accepts either camelCase or the generateJson `__meta` (snake_case) shape.
 async function finalizeAction(id, info = {}) {
   if (!id) return;
-  await supabase
-    .from('usage_events')
-    .update({
-      status: 'succeeded',
-      model: info.model || null,
-      input_tokens: info.inputTokens ?? null,
-      output_tokens: info.outputTokens ?? null,
-      estimated_cost: info.estimatedCost ?? null,
-    })
-    .eq('id', id);
+  const patch = { status: 'succeeded' };
+  const model = info.model;
+  const inTok = info.input_tokens ?? info.inputTokens;
+  const outTok = info.output_tokens ?? info.outputTokens;
+  const cost = info.estimated_cost ?? info.estimatedCost;
+  if (model != null) patch.model = model;
+  if (inTok != null) patch.input_tokens = inTok;
+  if (outTok != null) patch.output_tokens = outTok;
+  if (cost != null) patch.estimated_cost = cost;
+  await supabase.from('usage_events').update(patch).eq('id', id);
 }
 
 /** Release a reservation so it no longer counts (failed / aborted generation). */

@@ -105,11 +105,10 @@ app.use(apiLimiter, accountRouter);
 // Health check
 // ---------------------------------------------------------------------------
 app.get('/health', (_req, res) => {
+  // Public health check must not expose model / AI-mode / config details (Prompt 10).
   res.json({
     status: 'ok',
     app: BRAND.name,
-    ai: process.env.ANTHROPIC_API_KEY ? 'live' : 'mock',
-    model: process.env.ANTHROPIC_API_KEY ? (process.env.ANTHROPIC_MODEL || 'claude-opus-4-8') : null,
     timestamp: new Date().toISOString(),
   });
 });

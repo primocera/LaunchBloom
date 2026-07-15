@@ -115,6 +115,7 @@ router.post('/generate-positioning', planGate('positioning'), async (req, res, n
         `Create positioning for this person based on their onboarding answers:\n\n${onboardingContext(onboarding)}`,
       schema: positioningSchema,
     });
+    req.usageInfo = result.__meta;
 
     const { data: saved, error } = await supabase
       .from('positioning_outputs')
@@ -154,6 +155,7 @@ router.post('/generate-offers', planGate('offer_generations'), async (req, res, 
         (onboarding ? `Onboarding answers:\n${onboardingContext(onboarding)}` : ''),
       schema: offersSchema,
     });
+    req.usageInfo = result.__meta;
 
     const rows = result.offers.map((o) => ({ workspace_id: ws.id, status: 'draft', ...o }));
     const { data: saved, error } = await supabase.from('offers').insert(rows).select();

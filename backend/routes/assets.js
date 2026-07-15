@@ -218,6 +218,7 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: WEBSITE_SYSTEM, prompt: brand.text + prompt, schema: websiteKitSchema, maxTokens: 12000 });
+    req.usageInfo = result.__meta;
 
     const rows = (result.pages || []).map((p) => ({
       workspace_id: ws.id,
@@ -291,6 +292,7 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + prompt, schema: emailFlowSchema, maxTokens: 12000 });
+    req.usageInfo = result.__meta;
 
     const rows = (result.items || []).map((e) => ({
       workspace_id: ws.id,
@@ -375,6 +377,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: CAMPAIGN_SYSTEM, prompt: brand.text + prompt, schema: campaignEmailSchema, maxTokens: 10000 });
+    req.usageInfo = result.__meta;
 
     // Campaign emails live in email_assets with flow_type='campaign'; the
     // specific campaign email_type (teaser/offer/…) is kept in the segment column.
@@ -458,6 +461,7 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: SOCIAL_SYSTEM, prompt: brand.text + prompt, schema: socialCaptionSchema, maxTokens: 12000 });
+    req.usageInfo = result.__meta;
 
     const rows = (result.items || []).map((s) => ({
       workspace_id: ws.id,
@@ -534,6 +538,7 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({ system: CREATIVE_SYSTEM, prompt: brand.text + prompt, schema: creativeIdeasSchema, maxTokens: 12000 });
+    req.usageInfo = result.__meta;
 
     const rows = (result.items || []).map((c) => ({
       workspace_id: ws.id,
