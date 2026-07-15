@@ -214,6 +214,43 @@ router.delete('/api/workspaces/:id', requireAuth, async (req, res, next) => {
   }
 });
 
+// ── Brand Profile (Prompt 9) ────────────────────────────────────────────────
+
+// GET /api/workspace/brand-profile
+router.get('/api/workspace/brand-profile', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const { data } = await supabase
+      .from('brand_profiles')
+      .select('data, updated_at')
+      .eq('workspace_id', ws.id)
+      .single();
+    res.json({ workspace_id: ws.id, profile: (data && data.data) || {}, updated_at: (data && data.updated_at) || null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/workspace/brand-profile — upsert (autosave from the guided form).
+router.put('/api/workspace/brand-profile', requireAuth, express.json({ limit: '32kb' }), async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const profile = (req.body && typeof req.body === 'object') ? (req.body.profile || req.body) : {};
+    const { data, error } = await supabase
+      .from('brand_profiles')
+      .upsert(
+        { workspace_id: ws.id, data: profile, updated_at: new Date().toISOString() },
+        { onConflict: 'workspace_id' }
+      )
+      .select('data, updated_at')
+      .single();
+    if (error) throw new Error('Failed to save brand profile: ' + error.message);
+    res.json({ ok: true, profile: data.data, updated_at: data.updated_at });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/workspace — the caller's workspace + latest onboarding/positioning
 router.get('/api/workspace', requireAuth, async (req, res, next) => {
   try {

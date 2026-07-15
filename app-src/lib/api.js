@@ -71,6 +71,9 @@ export const api = {
   archiveWorkspace: (id, archived) => request(`/api/workspaces/${id}`, { method: 'PATCH', body: { archived } }),
   deleteWorkspace: (id) => request(`/api/workspaces/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/api/workspace/dashboard'),
+  // Brand Profile (Prompt 9)
+  brandProfile: () => request('/api/workspace/brand-profile'),
+  saveBrandProfile: (profile) => request('/api/workspace/brand-profile', { method: 'PUT', body: { profile } }),
   saveOnboarding: (answers) => request('/api/workspace/onboarding', { method: 'POST', body: answers }),
   offers: () => request('/api/workspace/offers'),
   launchKits: () => request('/api/workspace/launch-kits'),

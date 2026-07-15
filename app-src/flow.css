@@ -916,3 +916,20 @@
 .ws-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f1ef; }
 .ws-row .ws-name { flex: 1; }
 .ws-row button { font: inherit; font-size: 12px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; }
+
+/* Brand Profile (Prompt 9) */
+.brand-page { max-width: 680px; padding: 8px 4px 40px; }
+.brand-head { display: flex; align-items: baseline; justify-content: space-between; }
+.brand-status { font-size: 12px; color: #10b981; }
+.brand-field { margin: 14px 0; }
+.brand-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #374151; }
+.brand-field input, .brand-field textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  resize: vertical;
+}

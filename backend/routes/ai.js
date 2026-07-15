@@ -18,6 +18,7 @@ const express = require('express');
 const supabase = require('../lib/supabase');
 const { planGate, limitsFor, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
+const { brandContextFor } = require('../lib/brand-profile');
 const {
   positioningSchema,
   offersSchema,
@@ -103,12 +104,14 @@ router.post('/generate-positioning', planGate('positioning'), async (req, res, n
       return res.status(400).json({ error: 'Complete onboarding first.', code: 'NO_ONBOARDING' });
     }
 
+    const brand = await brandContextFor(ws.id);
     const result = await generateJson({
       system:
         'You are doing the positioning step: turn raw onboarding answers into clear market positioning. ' +
         'Niches must be specific (audience + problem), realistic for this person\'s actual skills and available time, ' +
         'and reachable on the platforms they already use.',
       prompt:
+        brand.text +
         `Create positioning for this person based on their onboarding answers:\n\n${onboardingContext(onboarding)}`,
       schema: positioningSchema,
     });
@@ -120,7 +123,7 @@ router.post('/generate-positioning', planGate('positioning'), async (req, res, n
       .single();
     if (error) throw new Error('Failed to save positioning: ' + error.message);
 
-    res.json({ ok: true, positioning: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
+    res.json({ ok: true, positioning: saved, plan: req.userPlan, context_used: brand.summary, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }
@@ -139,12 +142,14 @@ router.post('/generate-offers', planGate('offer_generations'), async (req, res, 
       return res.status(400).json({ error: 'Generate positioning first.', code: 'NO_POSITIONING' });
     }
 
+    const brand = await brandContextFor(ws.id);
     const result = await generateJson({
       system:
         'You are doing the offer design step: turn positioning into three distinct, monetizable offer options. ' +
         'Make them genuinely different (e.g. different price points, formats, or depth) - not three flavors of the same thing. ' +
         'Each must be deliverable by one person with their stated weekly time. Price suggestions are ranges, not promises.',
       prompt:
+        brand.text +
         `Design 3 offer options for this person.\n\nPositioning:\n${positioningContext(positioning)}\n\n` +
         (onboarding ? `Onboarding answers:\n${onboardingContext(onboarding)}` : ''),
       schema: offersSchema,
@@ -154,7 +159,7 @@ router.post('/generate-offers', planGate('offer_generations'), async (req, res, 
     const { data: saved, error } = await supabase.from('offers').insert(rows).select();
     if (error) throw new Error('Failed to save offers: ' + error.message);
 
-    res.json({ ok: true, offers: saved, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
+    res.json({ ok: true, offers: saved, plan: req.userPlan, context_used: brand.summary, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }
@@ -253,7 +258,9 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
       latestPositioning(ws.id),
     ]);
 
+    const brand = await brandContextFor(ws.id);
     const ctx =
+      brand.text +
       `Offer:\n${offerContext(offer)}\n\n` +
       (positioning ? `Positioning:\n${positioningContext(positioning)}\n\n` : '') +
       (onboarding ? `About the person:\n${onboardingContext(onboarding)}` : '');
@@ -302,7 +309,7 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
       )
     );
 
-    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
+    res.json({ ok: true, launch_kit: kit, plan: req.userPlan, context_used: brand.summary, usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }

@@ -18,6 +18,7 @@ const express = require('express');
 const supabase = require('../lib/supabase');
 const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
+const { brandContextFor } = require('../lib/brand-profile');
 const { qualityWarnings } = require('../lib/quality-checks');
 const {
   websiteKitSchema,
@@ -215,7 +216,8 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       'Return structured JSON with a pages array covering the requested page types.',
     ].filter(Boolean).join('\n\n');
 
-    const result = await generateJson({ system: WEBSITE_SYSTEM, prompt, schema: websiteKitSchema, maxTokens: 12000 });
+    const brand = await brandContextFor(ws.id);
+    const result = await generateJson({ system: WEBSITE_SYSTEM, prompt: brand.text + prompt, schema: websiteKitSchema, maxTokens: 12000 });
 
     const rows = (result.pages || []).map((p) => ({
       workspace_id: ws.id,
@@ -237,6 +239,7 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       pages: saved,
       quality_warnings: qualityWarnings('website', result),
       plan: req.userPlan,
+      context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
     });
   } catch (err) {
@@ -286,7 +289,8 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       'Return a JSON items array of emails. Preheader must not repeat the subject line.',
     ].filter(Boolean).join('\n\n');
 
-    const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt, schema: emailFlowSchema, maxTokens: 12000 });
+    const brand = await brandContextFor(ws.id);
+    const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + prompt, schema: emailFlowSchema, maxTokens: 12000 });
 
     const rows = (result.items || []).map((e) => ({
       workspace_id: ws.id,
@@ -312,6 +316,7 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       emails: saved,
       quality_warnings: qualityWarnings('email', result, { hasDeadline: false }),
       plan: req.userPlan,
+      context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
     });
   } catch (err) {
@@ -368,7 +373,8 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
         : 'This campaign has no end date, so do not invent a deadline or fake scarcity.',
     ].filter(Boolean).join('\n\n');
 
-    const result = await generateJson({ system: CAMPAIGN_SYSTEM, prompt, schema: campaignEmailSchema, maxTokens: 10000 });
+    const brand = await brandContextFor(ws.id);
+    const result = await generateJson({ system: CAMPAIGN_SYSTEM, prompt: brand.text + prompt, schema: campaignEmailSchema, maxTokens: 10000 });
 
     // Campaign emails live in email_assets with flow_type='campaign'; the
     // specific campaign email_type (teaser/offer/…) is kept in the segment column.
@@ -397,6 +403,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       emails: saved,
       quality_warnings: qualityWarnings('email', result, { hasDeadline }),
       plan: req.userPlan,
+      context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
     });
   } catch (err) {
@@ -449,7 +456,8 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       'Return a JSON items array with a mix of educational, story, proof, objection, soft-sell and offer posts.',
     ].filter(Boolean).join('\n\n');
 
-    const result = await generateJson({ system: SOCIAL_SYSTEM, prompt, schema: socialCaptionSchema, maxTokens: 12000 });
+    const brand = await brandContextFor(ws.id);
+    const result = await generateJson({ system: SOCIAL_SYSTEM, prompt: brand.text + prompt, schema: socialCaptionSchema, maxTokens: 12000 });
 
     const rows = (result.items || []).map((s) => ({
       workspace_id: ws.id,
@@ -472,6 +480,7 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       items: saved,
       quality_warnings: qualityWarnings('social', result),
       plan: req.userPlan,
+      context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
     });
   } catch (err) {
@@ -523,7 +532,8 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       'Return a JSON items array. For video ideas include the first 3-second hook, scenes, text overlays and CTA.',
     ].filter(Boolean).join('\n\n');
 
-    const result = await generateJson({ system: CREATIVE_SYSTEM, prompt, schema: creativeIdeasSchema, maxTokens: 12000 });
+    const brand = await brandContextFor(ws.id);
+    const result = await generateJson({ system: CREATIVE_SYSTEM, prompt: brand.text + prompt, schema: creativeIdeasSchema, maxTokens: 12000 });
 
     const rows = (result.items || []).map((c) => ({
       workspace_id: ws.id,
@@ -549,6 +559,7 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       items: saved,
       quality_warnings: qualityWarnings('creative', result),
       plan: req.userPlan,
+      context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
     });
   } catch (err) {
