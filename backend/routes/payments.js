@@ -9,6 +9,7 @@ const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { pricePlans, planFor } = require('./customers');
 const { requireAuth } = require('../lib/auth');
+const { track } = require('../lib/analytics');
 
 const VALID_PLANS = ['starter', 'pro', 'studio'];
 const VALID_INTERVALS = ['monthly', 'yearly'];
@@ -192,12 +193,14 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     });
 
     if (!session || !session.url) {
+      track('checkout_failed', { userId, properties: { plan: planName, interval, reason: 'no_url' } });
       return res.status(502).json({ error: 'Stripe did not return a checkout URL' });
     }
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
     console.error('[create-checkout-session] error', err.type, err.code, err.message);
+    track('checkout_failed', { userId: req.userId, properties: { reason: err.code || err.type || 'error' } });
     if (err && err.type === 'StripeInvalidRequestError') {
       return res.status(400).json({ error: err.message || 'Invalid request to Stripe', code: err.code || null });
     }

@@ -25,6 +25,7 @@ const { setSessionCookies, clearSessionCookies, readAccessToken } = require('../
 const { planFor } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { ensureWorkspace } = require('./workspaces');
+const { track } = require('../lib/analytics');
 
 const router = express.Router();
 
@@ -126,9 +127,11 @@ router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
     if (data && data.session) {
       setSessionCookies(res, data.session);
       const status = await accountStatus(creds.email, data.user && data.user.id);
+      track('signup', { userId: data.user && data.user.id, properties: { verified: true } });
       return res.status(201).json(Object.assign({ ok: true, requiresVerification: false }, status));
     }
 
+    track('signup', { userId: data && data.user && data.user.id, properties: { verified: false } });
     return res.status(201).json({ ok: true, requiresVerification: true });
   } catch (err) {
     next(err);
@@ -256,6 +259,9 @@ router.get('/api/auth/callback', async (req, res) => {
     setSessionCookies(res, session);
 
     const isRecovery = flow === 'recovery' || type === 'recovery';
+    if (!isRecovery && type === 'signup') {
+      track('verified', { userId: session.user && session.user.id });
+    }
     return res.redirect(isRecovery ? `${appUrl()}/app/reset-password` : `${appUrl()}/app`);
   } catch (e) {
     return res.redirect(loginErr);

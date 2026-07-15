@@ -35,6 +35,10 @@ async function request(path, { method = 'GET', body, signal } = {}) {
 }
 
 export const api = {
+  // Analytics (Prompt 15) — best-effort, never throws into the caller.
+  trackEvent: (event, properties) =>
+    request('/api/events', { method: 'POST', body: { event, properties } }).catch(() => {}),
+
   // Auth
   login: (email, password) => request('/api/auth/login', { method: 'POST', body: { email, password } }),
   signup: (email, password, acceptTerms) =>

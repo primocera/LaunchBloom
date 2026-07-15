@@ -16,6 +16,7 @@ const { ensureWorkspace } = require('./workspaces');
 const { planFor, pricePlans } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
+const { track } = require('../lib/analytics');
 
 function appUrl() {
   return (process.env.PUBLIC_URL || BRAND.siteUrl || '').replace(/\/$/, '');
@@ -171,6 +172,7 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       /* if this fails the account still has no data; surface a soft error */
     }
     clearSessionCookies(res);
+    track('account_deleted', { userId });
 
     res.json({ ok: true });
   } catch (err) {

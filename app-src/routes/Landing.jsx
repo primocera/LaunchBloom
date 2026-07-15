@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { api } from '../lib/api';
 import { BRAND } from '../brand';
 import { resumePendingCheckout } from './Login';
 import AskBox from '../components/AskBox';
@@ -185,6 +186,23 @@ export default function Landing() {
   const navigate = useNavigate();
   const { account } = useAuth();
   const [interval, setInterval] = useState('monthly');
+  const pricingRef = useRef(null);
+
+  // Fire once when the pricing section first scrolls into view.
+  useEffect(() => {
+    const el = pricingRef.current;
+    if (!el) return;
+    let fired = false;
+    const observer = new IntersectionObserver((entries) => {
+      if (!fired && entries.some((e) => e.isIntersecting)) {
+        fired = true;
+        api.trackEvent('landing_pricing_viewed');
+        observer.disconnect();
+      }
+    }, { threshold: 0.3 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Remember which plan + interval was clicked; checkout resumes once signed in.
   async function choose(plan) {
@@ -390,7 +408,7 @@ export default function Landing() {
       </section>
 
       {/* ── 8. Pricing preview ─────────────────────────────────────────── */}
-      <section className="lp-pricing" id="pricing">
+      <section className="lp-pricing" id="pricing" ref={pricingRef}>
         <div className="lp-pricing-inner">
           <Reveal>
             <div className="lp-eyebrow">Pricing plans</div>

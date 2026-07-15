@@ -9,6 +9,7 @@ const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { BRAND, emailFrom } = require('../lib/brand');
+const { track } = require('../lib/analytics');
 
 // Resend is optional — welcome emails are skipped without a key.
 let resend = null;
@@ -132,7 +133,7 @@ async function handleEvent(event) {
       break;
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      await onSubscriptionUpdated(data, eventAt);
+      await onSubscriptionUpdated(data, eventAt, event.type);
       break;
     case 'customer.subscription.deleted':
       await onSubscriptionDeleted(data, eventAt);
@@ -211,11 +212,21 @@ async function onCheckoutSessionCompleted(session) {
   }
 }
 
-async function onSubscriptionUpdated(subscription, eventAt) {
+async function onSubscriptionUpdated(subscription, eventAt, eventType) {
   // Out-of-order guard: a newer event already wrote this row.
   if (await isStaleSubscriptionEvent(subscription.id, eventAt)) {
     console.log(`Skipping stale subscription event for ${subscription.id}`);
     return;
+  }
+
+  const userId = (subscription.metadata && subscription.metadata.app_user_id) || null;
+  if (eventType === 'customer.subscription.created') {
+    track('subscription_created', { userId, properties: { status: subscription.status } });
+    if (subscription.status === 'trialing') {
+      track('trial_started', { userId, properties: { trial_end: subscription.trial_end || null } });
+    }
+  } else {
+    track('subscription_updated', { userId, properties: { status: subscription.status } });
   }
 
   const { data: customer } = await supabase
@@ -268,6 +279,7 @@ async function onSubscriptionDeleted(subscription, eventAt) {
     throw new Error(`Supabase update failed for subscription deletion: ${error.message}`);
   }
 
+  track('subscription_canceled', { userId: (subscription.metadata && subscription.metadata.app_user_id) || null });
   console.log(`Subscription canceled: ${subscription.id}`);
 }
 

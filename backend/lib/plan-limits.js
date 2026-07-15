@@ -13,6 +13,7 @@
 const { planFor } = require('../routes/customers');
 const { requireAuth } = require('./auth');
 const usage = require('./usage');
+const { track } = require('./analytics');
 
 const PLAN_LIMITS = {
   // Very limited demo. Full generation is gated behind starting the trial.
@@ -131,6 +132,7 @@ function planGate(feature) {
         if (feature === 'launch_kits') {
           const kitsUsed = await usage.countUserActions(req.userId, since, 'launch_kits');
           if (kitsUsed >= limits.launch_kits) {
+            track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature: 'launch_kits' } });
             return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits));
           }
         }
@@ -140,6 +142,7 @@ function planGate(feature) {
         if (poolLimit !== Infinity) {
           const used = await usage.countUserActions(req.userId, since, null);
           if (used >= poolLimit) {
+            track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature } });
             return res.status(402).json(gateBody(plan, feature, used, poolLimit));
           }
         }
@@ -169,8 +172,10 @@ function planGate(feature) {
           settled = true;
           if (res.statusCode >= 200 && res.statusCode < 300) {
             usage.finalizeAction(reservationId, req.usageInfo || {}).catch(() => {});
+            track('generation_success', { userId: req.userId, workspaceId: ws.id, properties: { feature, plan } });
           } else {
             usage.releaseAction(reservationId, res.statusCode >= 500).catch(() => {});
+            track('generation_failed', { userId: req.userId, workspaceId: ws.id, properties: { feature, plan, status: res.statusCode } });
           }
         });
 
