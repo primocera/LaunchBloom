@@ -74,6 +74,12 @@ export const api = {
   // Brand Profile (Prompt 9)
   brandProfile: () => request('/api/workspace/brand-profile'),
   saveBrandProfile: (profile) => request('/api/workspace/brand-profile', { method: 'PUT', body: { profile } }),
+  // Campaigns (Prompt 12)
+  campaigns: () => request('/api/campaigns'),
+  createCampaign: (brief) => request('/api/campaigns', { method: 'POST', body: brief }),
+  updateCampaign: (id, patch) => request(`/api/campaigns/${id}`, { method: 'PATCH', body: patch }),
+  deleteCampaign: (id) => request(`/api/campaigns/${id}`, { method: 'DELETE' }),
+  generateCampaignStrategy: (id) => request(`/api/campaigns/${id}/strategy`, { method: 'POST', body: {} }),
   saveOnboarding: (answers) => request('/api/workspace/onboarding', { method: 'POST', body: answers }),
   offers: () => request('/api/workspace/offers'),
   launchKits: () => request('/api/workspace/launch-kits'),

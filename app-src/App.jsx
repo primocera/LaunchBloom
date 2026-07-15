@@ -14,6 +14,7 @@ import ResetPassword from './routes/ResetPassword';
 import Legal from './routes/Legal';
 import Account from './routes/Account';
 import BrandProfile from './routes/BrandProfile';
+import Campaigns from './routes/Campaigns';
 import AdsStudio from './routes/studios/AdsStudio';
 import ContentStudio from './routes/studios/ContentStudio';
 import EmailStudio from './routes/studios/EmailStudio';
@@ -73,6 +74,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/brand" element={<BrandProfile />} />
+          <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/account" element={<Account />} />
           <Route path="/flow" element={<Flow />} />
           <Route path="/kits/:id" element={<KitDetail />} />

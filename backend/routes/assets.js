@@ -20,6 +20,7 @@ const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
 const { buildSequence } = require('../lib/email-blueprints');
+const { campaignContext } = require('./campaigns');
 const { qualityWarnings } = require('../lib/quality-checks');
 const {
   websiteKitSchema,
@@ -217,14 +218,17 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       'Return structured JSON with a pages array covering the requested page types.',
     ].filter(Boolean).join('\n\n');
 
+    const camp = await campaignContext(ws, (req.body || {}).campaign_id);
+    if (camp.error) return res.status(camp.status).json({ error: camp.error });
     const brand = await brandContextFor(ws.id);
-    const result = await generateJson({ system: WEBSITE_SYSTEM, prompt: brand.text + prompt, schema: websiteKitSchema, maxTokens: 12000 });
+    const result = await generateJson({ system: WEBSITE_SYSTEM, prompt: brand.text + camp.text + prompt, schema: websiteKitSchema, maxTokens: 12000 });
     req.usageInfo = result.__meta;
 
     const rows = (result.pages || []).map((p) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
+      campaign_id: camp.campaign ? camp.campaign.id : null,
       page_type: p.page_type,
       title: p.h1 || p.hero_headline || p.page_type,
       seo_title: p.seo_title,
@@ -305,14 +309,17 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       `Return a JSON items array with exactly ${seq.total} emails matching the blueprint order and flow_type/email_order.`,
     ].filter(Boolean).join('\n\n');
 
+    const camp = await campaignContext(ws, (req.body || {}).campaign_id);
+    if (camp.error) return res.status(camp.status).json({ error: camp.error });
     const brand = await brandContextFor(ws.id);
-    const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + prompt, schema: emailFlowSchema, maxTokens: 14000 });
+    const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + camp.text + prompt, schema: emailFlowSchema, maxTokens: 14000 });
     req.usageInfo = result.__meta;
 
     const rows = (result.items || []).map((e, i) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
+      campaign_id: camp.campaign ? camp.campaign.id : null,
       flow_type: e.flow_type || (seq.emails[i] && seq.emails[i].flow_type),
       email_order: e.email_order || (seq.emails[i] && seq.emails[i].email_order),
       objective: e.objective || (seq.emails[i] && seq.emails[i].objective),
@@ -501,8 +508,10 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
         : 'This campaign has no end date, so do not invent a deadline or fake scarcity.',
     ].filter(Boolean).join('\n\n');
 
+    const camp = await campaignContext(ws, (req.body || {}).campaign_id);
+    if (camp.error) return res.status(camp.status).json({ error: camp.error });
     const brand = await brandContextFor(ws.id);
-    const result = await generateJson({ system: CAMPAIGN_SYSTEM, prompt: brand.text + prompt, schema: campaignEmailSchema, maxTokens: 10000 });
+    const result = await generateJson({ system: CAMPAIGN_SYSTEM, prompt: brand.text + camp.text + prompt, schema: campaignEmailSchema, maxTokens: 10000 });
     req.usageInfo = result.__meta;
 
     // Campaign emails live in email_assets with flow_type='campaign'; the
@@ -511,6 +520,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
+      campaign_id: camp.campaign ? camp.campaign.id : null,
       flow_type: 'campaign',
       email_order: i + 1,
       subject_line: e.subject_line,
@@ -585,14 +595,17 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       'Return a JSON items array with a mix of educational, story, proof, objection, soft-sell and offer posts.',
     ].filter(Boolean).join('\n\n');
 
+    const camp = await campaignContext(ws, (req.body || {}).campaign_id);
+    if (camp.error) return res.status(camp.status).json({ error: camp.error });
     const brand = await brandContextFor(ws.id);
-    const result = await generateJson({ system: SOCIAL_SYSTEM, prompt: brand.text + prompt, schema: socialCaptionSchema, maxTokens: 12000 });
+    const result = await generateJson({ system: SOCIAL_SYSTEM, prompt: brand.text + camp.text + prompt, schema: socialCaptionSchema, maxTokens: 12000 });
     req.usageInfo = result.__meta;
 
     const rows = (result.items || []).map((s) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
+      campaign_id: camp.campaign ? camp.campaign.id : null,
       platform: s.platform,
       content_type: s.content_type,
       hook: s.hook,
@@ -662,14 +675,17 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       'Return a JSON items array. For video ideas include the first 3-second hook, scenes, text overlays and CTA.',
     ].filter(Boolean).join('\n\n');
 
+    const camp = await campaignContext(ws, (req.body || {}).campaign_id);
+    if (camp.error) return res.status(camp.status).json({ error: camp.error });
     const brand = await brandContextFor(ws.id);
-    const result = await generateJson({ system: CREATIVE_SYSTEM, prompt: brand.text + prompt, schema: creativeIdeasSchema, maxTokens: 12000 });
+    const result = await generateJson({ system: CREATIVE_SYSTEM, prompt: brand.text + camp.text + prompt, schema: creativeIdeasSchema, maxTokens: 12000 });
     req.usageInfo = result.__meta;
 
     const rows = (result.items || []).map((c) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
+      campaign_id: camp.campaign ? camp.campaign.id : null,
       platform: c.platform,
       creative_type: c.creative_type,
       hook: c.hook,

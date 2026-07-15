@@ -13,6 +13,7 @@ import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 const MAIN_NAV = [
   { to: '/app', label: 'Marketing Workspace', Icon: PagesIcon, end: true },
   { to: '/app/brand', label: 'Brand Profile', Icon: SavedIcon },
+  { to: '/app/campaigns', label: 'Campaigns', Icon: TrendsIcon },
   { to: '/app/flow', label: 'Full Launch Kit', Icon: TrendsIcon },
 ];
 

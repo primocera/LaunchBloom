@@ -101,6 +101,10 @@ app.use('/api/customers', apiLimiter, customerRouter);
 const accountRouter = require('./routes/account');
 app.use(apiLimiter, accountRouter);
 
+// Campaign Studio (Prompt 12) — brings its own JSON parser.
+const campaignsRouter = require('./routes/campaigns');
+app.use(apiLimiter, campaignsRouter);
+
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------
