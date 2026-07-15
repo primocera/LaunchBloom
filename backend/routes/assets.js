@@ -19,6 +19,7 @@ const supabase = require('../lib/supabase');
 const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
+const { buildSequence } = require('../lib/email-blueprints');
 const { qualityWarnings } = require('../lib/quality-checks');
 const {
   websiteKitSchema,
@@ -252,61 +253,79 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
 
 const EMAIL_FLOW_SYSTEM =
   'You are a senior email marketing copywriter for small ecommerce brands, creators, freelancers and ' +
-  'digital product sellers. Generate practical email copy with subject line, preheader and CTA. Write ' +
-  'emails that feel human, clear and useful, not spammy. Every email must have a purpose: welcome, ' +
-  'educate, reduce objections, recover lost intent, encourage purchase, ask for review or bring back ' +
-  'inactive subscribers. Do not overpromise. Do not invent testimonials or fake urgency.\n\n' +
-  'Required output rules:\n' +
-  '- Every email must include subject_line, preheader, headline, body_copy, cta, send_timing, segment and design_notes.\n' +
-  '- Subject lines should be short and mobile-friendly.\n' +
-  '- Preheaders should complete the subject line, not repeat it.\n' +
-  '- CTA should be specific, not always "Shop now".\n' +
-  '- Include design notes such as hero image idea, product block idea or plain-text style.';
+  'digital product sellers. You are given an EXACT email blueprint (how many emails, and each email\'s ' +
+  'objective, timing and segment). Fill copy into that structure — do NOT add, remove or reorder emails.\n\n' +
+  'Per-email rules:\n' +
+  '- subject_line: under 50 characters where the language allows; specific, not clickbait.\n' +
+  '- preheader: under 90 characters; completes the subject line, never repeats it.\n' +
+  '- objective: restate the email\'s single purpose from the blueprint.\n' +
+  '- body_copy: scannable — short paragraphs or bullets, one idea per block.\n' +
+  '- cta: one specific primary CTA (not always "Shop now"); secondary_cta only if useful, else "".\n' +
+  '- personalization_tokens: list any tokens used (e.g. {{first_name}}); [] if none.\n' +
+  '- exclusions: who to exclude (e.g. already purchased); "" if none.\n' +
+  '- design_notes: hero image idea, product block idea, or plain-text style.\n' +
+  'Never invent testimonials, statistics or fake urgency. Honour any incentive/deadline/compliance notes given.';
 
 router.post('/generate-email-flow', planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
       offer_id, launch_kit_id, flow_types, business_type,
-      target_language, campaign_goal, products, extra_context,
+      target_language, campaign_goal, campaign_count, products, extra_context,
+      tone, email_length, incentive, deadline, compliance_notes,
     } = req.body || {};
 
     if (!Array.isArray(flow_types) || flow_types.length === 0) {
       return res.status(400).json({ error: 'flow_types must be a non-empty array' });
     }
 
+    // Deterministic sequence: the flow type fixes the email count + objectives.
+    const seq = buildSequence(flow_types, { campaignCount: campaign_count });
+    if (seq.total === 0) {
+      return res.status(400).json({ error: 'No known flow types selected.' });
+    }
+
     const ctx = await loadScopedContext(ws, { offer_id, launch_kit_id });
     if (ctx.error) return res.status(ctx.status).json({ error: ctx.error });
 
     const prompt = [
-      'Create email flow copy.',
+      `Write copy for EXACTLY these ${seq.total} emails, following the blueprint precisely:`,
+      seq.structureText,
       brandBlock(ctx),
       line('Business type', business_type),
-      line('Flow types', flow_types),
       line('Target language', target_language || 'English'),
+      line('Tone', tone),
+      line('Email length', email_length),
       line('Campaign goal', campaign_goal),
-      products ? `Products:\n${JSON.stringify(products).slice(0, 2000)}` : null,
+      line('Incentive', incentive),
+      line('Deadline', deadline),
+      line('Compliance / claims to avoid', compliance_notes),
+      products ? `Product facts (use only these; bracket anything missing):\n${JSON.stringify(products).slice(0, 2000)}` : null,
       line('Extra context', extra_context),
-      'Return a JSON items array of emails. Preheader must not repeat the subject line.',
+      `Return a JSON items array with exactly ${seq.total} emails matching the blueprint order and flow_type/email_order.`,
     ].filter(Boolean).join('\n\n');
 
     const brand = await brandContextFor(ws.id);
-    const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + prompt, schema: emailFlowSchema, maxTokens: 12000 });
+    const result = await generateJson({ system: EMAIL_FLOW_SYSTEM, prompt: brand.text + prompt, schema: emailFlowSchema, maxTokens: 14000 });
     req.usageInfo = result.__meta;
 
-    const rows = (result.items || []).map((e) => ({
+    const rows = (result.items || []).map((e, i) => ({
       workspace_id: ws.id,
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
-      flow_type: e.flow_type,
-      email_order: e.email_order,
+      flow_type: e.flow_type || (seq.emails[i] && seq.emails[i].flow_type),
+      email_order: e.email_order || (seq.emails[i] && seq.emails[i].email_order),
+      objective: e.objective || (seq.emails[i] && seq.emails[i].objective),
       subject_line: e.subject_line,
       preheader: e.preheader,
       headline: e.headline,
       body_copy: e.body_copy,
       cta: e.cta,
-      send_timing: e.send_timing,
-      segment: e.segment,
+      secondary_cta: e.secondary_cta || null,
+      personalization_tokens: Array.isArray(e.personalization_tokens) ? e.personalization_tokens : null,
+      send_timing: e.send_timing || (seq.emails[i] && seq.emails[i].send_timing),
+      segment: e.segment || (seq.emails[i] && seq.emails[i].segment),
+      exclusions: e.exclusions || null,
       design_notes: e.design_notes,
       status: 'draft',
     }));
@@ -321,6 +340,113 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Email section-level edits (Prompt 11) ───────────────────────────────────
+
+/** Load an email_assets row the caller owns, or send a 404. */
+async function ownedEmail(ws, id, res) {
+  const { data } = await supabase.from('email_assets').select('*').eq('id', id).eq('workspace_id', ws.id).single();
+  if (!data) { res.status(404).json({ error: 'Email not found' }); return null; }
+  return data;
+}
+
+const subjectSchema = {
+  type: 'object',
+  properties: {
+    subject_line: { type: 'string', description: 'Under 50 characters where possible.' },
+    preheader: { type: 'string', description: 'Under 90 characters; completes, never repeats, the subject.' },
+  },
+  required: ['subject_line', 'preheader'],
+  additionalProperties: false,
+};
+
+// POST /api/ai/email/:id/subject — regenerate subject + preheader only.
+router.post('/email/:id/subject', planGate('regenerate_section'), async (req, res, next) => {
+  try {
+    const email = await ownedEmail(req.workspace, req.params.id, res);
+    if (!email) return;
+    const brand = await brandContextFor(req.workspace.id);
+    const result = await generateJson({
+      system: EMAIL_FLOW_SYSTEM,
+      prompt: brand.text + `Rewrite ONLY the subject line and preheader for this email.\nObjective: ${email.objective || ''}\nHeadline: ${email.headline || ''}\nBody:\n${(email.body_copy || '').slice(0, 1500)}`,
+      schema: subjectSchema,
+      maxTokens: 800,
+    });
+    req.usageInfo = result.__meta;
+    const { data: saved } = await supabase.from('email_assets')
+      .update({ subject_line: result.subject_line, preheader: result.preheader })
+      .eq('id', email.id).select().single();
+    res.json({ ok: true, email: saved, usage: await usageFor(req.workspace.id, req.userPlan, req.userEmail, req.userId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const bodySchema = {
+  type: 'object',
+  properties: { headline: { type: 'string' }, body_copy: { type: 'string' }, cta: { type: 'string' } },
+  required: ['headline', 'body_copy', 'cta'],
+  additionalProperties: false,
+};
+
+// POST /api/ai/email/:id/body — rewrite the body (optional instruction).
+router.post('/email/:id/body', planGate('regenerate_section'), async (req, res, next) => {
+  try {
+    const email = await ownedEmail(req.workspace, req.params.id, res);
+    if (!email) return;
+    const instruction = String((req.body || {}).instruction || '').slice(0, 500);
+    const brand = await brandContextFor(req.workspace.id);
+    const result = await generateJson({
+      system: EMAIL_FLOW_SYSTEM,
+      prompt: brand.text + `Rewrite ONLY the headline, body and primary CTA for this email. Keep the same objective and subject.\nObjective: ${email.objective || ''}\nSubject: ${email.subject_line || ''}\nCurrent body:\n${(email.body_copy || '').slice(0, 2000)}` + (instruction ? `\n\nApply this instruction: ${instruction}` : ''),
+      schema: bodySchema,
+      maxTokens: 3000,
+    });
+    req.usageInfo = result.__meta;
+    const { data: saved } = await supabase.from('email_assets')
+      .update({ headline: result.headline, body_copy: result.body_copy, cta: result.cta })
+      .eq('id', email.id).select().single();
+    res.json({ ok: true, email: saved, usage: await usageFor(req.workspace.id, req.userPlan, req.userEmail, req.userId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const variantsSchema = {
+  type: 'object',
+  properties: {
+    variants: {
+      type: 'array', minItems: 3, maxItems: 3,
+      items: {
+        type: 'object',
+        properties: { subject_line: { type: 'string' }, preheader: { type: 'string' }, body_copy: { type: 'string' } },
+        required: ['subject_line', 'preheader', 'body_copy'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['variants'],
+  additionalProperties: false,
+};
+
+// POST /api/ai/email/:id/variants — 3 alternative versions (not saved).
+router.post('/email/:id/variants', planGate('regenerate_section'), async (req, res, next) => {
+  try {
+    const email = await ownedEmail(req.workspace, req.params.id, res);
+    if (!email) return;
+    const brand = await brandContextFor(req.workspace.id);
+    const result = await generateJson({
+      system: EMAIL_FLOW_SYSTEM,
+      prompt: brand.text + `Produce 3 distinct variants (different angle each) of this email — subject, preheader and body.\nObjective: ${email.objective || ''}\nCurrent subject: ${email.subject_line || ''}\nCurrent body:\n${(email.body_copy || '').slice(0, 1500)}`,
+      schema: variantsSchema,
+      maxTokens: 4000,
+    });
+    req.usageInfo = result.__meta;
+    res.json({ ok: true, variants: result.variants, usage: await usageFor(req.workspace.id, req.userPlan, req.userEmail, req.userId) });
   } catch (err) {
     next(err);
   }
