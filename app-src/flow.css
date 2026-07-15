@@ -875,3 +875,9 @@
   cursor: pointer;
 }
 .btn-danger:disabled { opacity: 0.6; cursor: default; }
+
+/* Account/billing extras (Prompt 8) */
+.account-section .muted { color: #6b7280; }
+.account-section .warn { color: #b45309; }
+.btn-primary.inline, .btn-secondary.inline { display: inline-block; text-decoration: none; }
+.account-section .btn-secondary { margin-top: 6px; }

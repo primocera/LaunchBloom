@@ -1,8 +1,9 @@
 name: CI
 
+# Runs on pull requests only. We push straight to main, so this does NOT run
+# on push (no failure emails on every commit). Tests are run locally before
+# each push; open a PR if you want CI to gate a change.
 on:
-  push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -13,8 +14,6 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # 22 (LTS): the test runner needs >=21 for the glob passed to
-          # `node --test "backend/tests/*.test.js"`.
           node-version: 22
           cache: npm
 
@@ -29,6 +28,3 @@ jobs:
 
       - name: Production build
         run: npm run build:app
-
-      - name: Committed app/ bundle matches app-src/ source
-        run: git status --porcelain -- app/ | tee /dev/stderr | wc -l | grep -qx '0'

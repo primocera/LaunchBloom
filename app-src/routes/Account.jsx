@@ -1,24 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { BRAND } from '../brand';
 
-// Prompt 14: minimal account page — profile summary, data export and account
-// deletion. Billing/usage detail is expanded in Prompt 8.
+// Prompts 8 + 14: account page — profile, billing (plan, trial countdown, next
+// charge, billing portal), usage, data export and account deletion.
+function fmtDate(iso) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return null;
+  }
+}
+
+function daysLeft(iso) {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+}
+
 export default function Account() {
   const { account, logout } = useAuth();
+  const [billing, setBilling] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  async function exportData() {
+  useEffect(() => {
+    let cancelled = false;
+    api.billing().then((b) => !cancelled && setBilling(b)).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  async function openPortal() {
     setError(null);
     try {
-      await api.exportData();
+      const { url } = await api.billingPortal();
+      window.location.href = url;
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  async function exportData() {
+    setError(null);
+    try { await api.exportData(); } catch (err) { setError(err.message); }
   }
 
   async function deleteAccount() {
@@ -34,6 +62,8 @@ export default function Account() {
     }
   }
 
+  const sub = billing?.subscription;
+
   return (
     <div className="account-page">
       <h1>Account</h1>
@@ -41,7 +71,59 @@ export default function Account() {
       <section className="account-section">
         <h2>Profile</h2>
         <p><strong>Email:</strong> {account?.email}</p>
-        <p><strong>Plan:</strong> {account?.plan_label || 'Free'}</p>
+      </section>
+
+      <section className="account-section">
+        <h2>Billing</h2>
+        <p><strong>Plan:</strong> {billing?.plan_label || account?.plan_label || 'Free'}</p>
+
+        {!billing && <p className="muted">Loading billing…</p>}
+
+        {billing && !sub && billing.plan === 'free' && (
+          <>
+            <p className="muted">You're on the free plan.</p>
+            <a className="btn-primary inline" href="/#pricing">Start a plan</a>
+          </>
+        )}
+
+        {sub && sub.status === 'trialing' && (
+          <p>
+            Free trial — <strong>{daysLeft(sub.trial_end)} day(s) left</strong>. You'll be charged on{' '}
+            <strong>{fmtDate(sub.next_charge_at)}</strong> unless you cancel.
+          </p>
+        )}
+        {sub && sub.status === 'active' && !sub.cancel_at_period_end && (
+          <p>Renews on <strong>{fmtDate(sub.current_period_end)}</strong>{sub.interval ? ` (${sub.interval})` : ''}.</p>
+        )}
+        {sub && sub.cancel_at_period_end && (
+          <p>Your plan ends on <strong>{fmtDate(sub.current_period_end)}</strong>. You can reactivate from the billing portal.</p>
+        )}
+        {sub && sub.status === 'past_due' && (
+          <p className="warn">Your last payment failed. Update your card to keep access.</p>
+        )}
+
+        {billing?.has_billing && (
+          <button className="btn-secondary" onClick={openPortal}>Manage billing</button>
+        )}
+        {sub && (
+          <a className="btn-secondary inline" href="/#pricing" style={{ marginLeft: 8 }}>Change plan</a>
+        )}
+      </section>
+
+      <section className="account-section">
+        <h2>Usage</h2>
+        {billing ? (
+          <>
+            <p>
+              <strong>{billing.usage?.ai_actions ?? 0}{billing.limits?.ai_actions != null ? `/${billing.limits.ai_actions}` : ''}</strong>{' '}
+              AI actions {billing.limits?.monthly ? 'this billing period' : 'used'}
+            </p>
+            <p>
+              <strong>{billing.usage?.launch_kits ?? 0}{billing.limits?.launch_kits != null ? `/${billing.limits.launch_kits}` : ''}</strong>{' '}
+              launch kits
+            </p>
+          </>
+        ) : <p className="muted">Loading…</p>}
       </section>
 
       <section className="account-section">

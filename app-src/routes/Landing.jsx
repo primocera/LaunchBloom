@@ -439,7 +439,7 @@ export default function Landing() {
                   {p.cta}
                 </button>
                 <div className="lp-price-micro">
-                  3-day free trial · cancel anytime
+                  3 days free · card required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'} · cancel anytime before day 3
                 </div>
               </Reveal>
             ))}

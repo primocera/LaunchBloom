@@ -34,7 +34,9 @@ export const api = {
   resetPassword: (password) => request('/api/auth/reset-password', { method: 'POST', body: { password } }),
   resendVerification: (email) => request('/api/auth/resend-verification', { method: 'POST', body: { email } }),
 
-  // Account data controls (Prompt 14)
+  // Account & billing (Prompts 8 + 14)
+  billing: () => request('/api/account/billing'),
+  billingPortal: () => request('/api/account/billing-portal', { method: 'POST' }),
   deleteAccount: () => request('/api/account/delete', { method: 'POST' }),
   exportData: async () => {
     const res = await fetch('/api/account/export', { credentials: 'include' });

@@ -67,3 +67,19 @@ test('delete requires auth', async () => {
   assert.equal(r.status, 401);
   state.user = { id: 'user-1', email: 'me@app.com' };
 });
+
+test('billing returns plan + usage for the signed-in user', async () => {
+  const r = await request(app).get('/api/account/billing').set(...AUTHED);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.email, 'me@app.com');
+  assert.ok('plan' in r.body);
+  assert.ok('usage' in r.body);
+  assert.ok('limits' in r.body);
+});
+
+test('billing requires auth', async () => {
+  state.user = null;
+  const r = await request(app).get('/api/account/billing');
+  assert.equal(r.status, 401);
+  state.user = { id: 'user-1', email: 'me@app.com' };
+});
