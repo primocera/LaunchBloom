@@ -16,6 +16,8 @@ const CLIENT_EVENTS = new Set([
   'onboarding_started',
   'onboarding_step_completed',
   'onboarding_completed',
+  // Beta feedback prompt (audit Prompt 18) — short user-typed message allowed.
+  'feedback_submitted',
 ]);
 
 async function track(event, { userId = null, workspaceId = null, properties = {} } = {}) {

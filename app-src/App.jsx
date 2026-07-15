@@ -12,6 +12,8 @@ import Signup from './routes/Signup';
 import ForgotPassword from './routes/ForgotPassword';
 import ResetPassword from './routes/ResetPassword';
 import Legal from './routes/Legal';
+import NotFound from './routes/NotFound';
+import FeedbackWidget from './components/FeedbackWidget';
 import Account from './routes/Account';
 import BrandProfile from './routes/BrandProfile';
 import Campaigns from './routes/Campaigns';
@@ -41,7 +43,7 @@ export default function App() {
       <Route path="/app/reset-password" element={<ResetPassword />} />
       <Route path="/legal/:slug" element={<Legal />} />
       <Route path="/app/*" element={<AppShell />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
@@ -59,9 +61,10 @@ function AppShell() {
 
   return (
     <div className={collapsed ? 'shell is-collapsed' : 'shell'}>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       {!collapsed && <Sidebar onCollapse={() => setCollapsed(true)} />}
 
-      <main className="main">
+      <main className="main" id="main-content">
         {collapsed && (
           <button
             className="icon-btn rail"
@@ -92,9 +95,11 @@ function AppShell() {
           <Route path="/email-studio" element={<EmailFlowStudio />} />
           <Route path="/social" element={<SocialStudio />} />
           <Route path="/creative" element={<CreativeStudio />} />
-          <Route path="*" element={<Navigate to="/app" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+
+      <FeedbackWidget />
     </div>
   );
 }

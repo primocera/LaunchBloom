@@ -5,9 +5,11 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { BRAND } = require('./lib/brand');
+const { requestLogger, logError } = require('./lib/logger');
 
 const app = express();
 app.set('trust proxy', 1);
+app.use(requestLogger);
 const PORT = process.env.PORT || 3002;
 
 // ---------------------------------------------------------------------------
@@ -104,6 +106,10 @@ app.use(apiLimiter, accountRouter);
 const eventsRouter = require('./routes/events');
 app.use(apiLimiter, eventsRouter);
 
+// Admin support view (Prompt 16) — read-only, ADMIN_EMAILS allowlist.
+const adminRouter = require('./routes/admin');
+app.use(apiLimiter, adminRouter);
+
 // Campaign Studio (Prompt 12) — brings its own JSON parser.
 const campaignsRouter = require('./routes/campaigns');
 app.use(apiLimiter, campaignsRouter);
@@ -131,10 +137,13 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
+app.use((err, req, res, _next) => {
+  logError('unhandled_error', { req_id: req.id, path: req.path, message: err.message, stack: err.stack });
   const status = err.status || err.statusCode || 500;
-  res.status(status).json({ error: err.message || 'Internal server error' });
+  res.status(status).json({
+    error: status >= 500 ? 'Internal server error' : err.message,
+    req_id: req.id,
+  });
 });
 
 // ---------------------------------------------------------------------------
