@@ -64,6 +64,19 @@ export default function Campaigns() {
         ads and landing copy from it in the studios — they'll stay consistent on offer, dates and CTA.
       </p>
 
+      {/* v5 Prompt 3: the full launch workflow is a campaign template, not a
+          competing top-level product. */}
+      <div className="account-section campaign-template">
+        <h2>Full launch campaign</h2>
+        <p className="muted" style={{ marginTop: 4 }}>
+          The guided template: positioning → 3 offers → a complete launch kit (landing copy, content
+          plan, emails, ads, SEO and a weekly plan).
+        </p>
+        <a className="btn-primary" href="/app/flow" style={{ display: 'inline-block', marginTop: 8 }}>
+          Start full launch campaign
+        </a>
+      </div>
+
       {form && (
         <form className="account-section" onSubmit={create}>
           <h2>New campaign</h2>

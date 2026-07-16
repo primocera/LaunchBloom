@@ -10,25 +10,25 @@ import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 // Launch Flow, the six studios), and the account block with plan + usage.
 // ---------------------------------------------------------------------------
 
+// v5 Prompt 3: canonical navigation — Home, Brand, Campaigns, Create, Library,
+// Account. One asset model, no duplicate generator destinations. The full
+// launch workflow lives inside Campaigns as the "Full launch campaign"
+// template; the old "Launch Kit: …" routes redirect to their studio.
 const MAIN_NAV = [
-  { to: '/app', label: 'Marketing Workspace', Icon: PagesIcon, end: true },
-  { to: '/app/brand', label: 'Brand Profile', Icon: SavedIcon },
+  { to: '/app', label: 'Home', Icon: PagesIcon, end: true },
+  { to: '/app/brand', label: 'Brand', Icon: SavedIcon },
   { to: '/app/campaigns', label: 'Campaigns', Icon: TrendsIcon },
-  { to: '/app/assets', label: 'Asset Library', Icon: PagesIcon },
-  { to: '/app/flow', label: 'Full Launch Kit', Icon: TrendsIcon },
+  { to: '/app/create', label: 'Create', Icon: TrendsIcon },
+  { to: '/app/assets', label: 'Library', Icon: PagesIcon },
+  { to: '/app/account', label: 'Account', Icon: SavedIcon },
 ];
 
 const STUDIO_NAV = [
-  { to: '/app/website', label: 'Website Studio' },
-  { to: '/app/email-studio', label: 'Email Studio' },
-  { to: '/app/social', label: 'Captions Studio' },
-  { to: '/app/creative', label: 'Creative Studio' },
-  { to: '/app/seo', label: 'SEO Studio' },
-  { to: '/app/landing-page', label: 'Launch Kit: Landing' },
-  { to: '/app/content-plan', label: 'Launch Kit: Content' },
-  { to: '/app/email-sequence', label: 'Launch Kit: Emails' },
-  { to: '/app/ads', label: 'Launch Kit: Ads' },
-  { to: '/app/weekly-plan', label: 'Action Plan' },
+  { to: '/app/website', label: 'Website' },
+  { to: '/app/email-studio', label: 'Email' },
+  { to: '/app/social', label: 'Social' },
+  { to: '/app/creative', label: 'Ads & Creative' },
+  { to: '/app/seo', label: 'SEO' },
 ];
 
 function AccountBlock() {
@@ -113,7 +113,7 @@ export default function Sidebar({ onCollapse }) {
 
       <div className="sidebar-section">
         <div className="section-head">
-          <span className="section-title">Studios</span>
+          <span className="section-title">Create</span>
         </div>
         <nav className="sidebar-nav is-sub">
           {STUDIO_NAV.map(({ to, label }) => (

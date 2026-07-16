@@ -1050,3 +1050,8 @@ button {
 }
 .shell-notice.is-warn { background: #fffbeb; color: #92400e; border-bottom-color: #fde68a; }
 .shell-notice a { color: inherit; font-weight: 600; }
+
+/* v5 Prompt 3: Create landing page cards */
+.create-card { text-decoration: none; color: inherit; display: block; }
+.create-card:hover { border-color: #2563eb; }
+.create-card h3 { margin: 0 0 6px; }

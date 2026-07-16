@@ -19,10 +19,7 @@ import Account from './routes/Account';
 import BrandProfile from './routes/BrandProfile';
 import Campaigns from './routes/Campaigns';
 import AssetLibrary from './routes/AssetLibrary';
-import AdsStudio from './routes/studios/AdsStudio';
-import ContentStudio from './routes/studios/ContentStudio';
-import EmailStudio from './routes/studios/EmailStudio';
-import LandingStudio from './routes/studios/LandingStudio';
+import Create from './routes/Create';
 import SeoStudio from './routes/studios/SeoStudio';
 import WeeklyPlan from './routes/studios/WeeklyPlan';
 // Upgrade prompts 16-18: marketing-asset generator studios
@@ -140,22 +137,25 @@ function AppShell() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/brand" element={<BrandProfile />} />
           <Route path="/campaigns" element={<Campaigns />} />
+          <Route path="/create" element={<Create />} />
           <Route path="/assets" element={<AssetLibrary />} />
           <Route path="/account" element={<Account />} />
+          {/* Full launch workflow — a campaign template inside Campaigns (v5 P3) */}
           <Route path="/flow" element={<Flow />} />
           <Route path="/kits/:id" element={<KitDetail />} />
-          {/* Studios, Prompts 18-23 */}
-          <Route path="/landing-page" element={<LandingStudio />} />
-          <Route path="/content-plan" element={<ContentStudio />} />
-          <Route path="/email-sequence" element={<EmailStudio />} />
-          <Route path="/ads" element={<AdsStudio />} />
-          <Route path="/seo" element={<SeoStudio />} />
           <Route path="/weekly-plan" element={<WeeklyPlan />} />
-          {/* Marketing-asset generator studios (Upgrade prompts 16-18) */}
+          {/* The five canonical studios */}
           <Route path="/website" element={<WebsiteStudio />} />
           <Route path="/email-studio" element={<EmailFlowStudio />} />
           <Route path="/social" element={<SocialStudio />} />
           <Route path="/creative" element={<CreativeStudio />} />
+          <Route path="/seo" element={<SeoStudio />} />
+          {/* v5 P3: legacy "Launch Kit: …" routes redirect to their studio.
+              Existing kit data stays reachable via /app/flow and /app/kits/:id. */}
+          <Route path="/landing-page" element={<Navigate to="/app/website" replace />} />
+          <Route path="/content-plan" element={<Navigate to="/app/social" replace />} />
+          <Route path="/email-sequence" element={<Navigate to="/app/email-studio" replace />} />
+          <Route path="/ads" element={<Navigate to="/app/creative" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
