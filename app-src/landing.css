@@ -909,6 +909,15 @@
   text-align: center;
 }
 
+/* v5 Prompt 1: one shared definition of an "AI action" under the price grid. */
+.lp-price-definition {
+  margin: 28px auto 0;
+  max-width: 560px;
+  font-size: 13px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
 /* ── Coverage stats ───────────────────────────────────────────────────── */
 
 .lp-coverage {

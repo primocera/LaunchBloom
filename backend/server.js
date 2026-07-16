@@ -94,6 +94,10 @@ app.use('/api/ai', apiLimiter, aiLimiter, assetsRouter);
 // ---------------------------------------------------------------------------
 app.use(express.json({ limit: '10kb' }));
 
+// Public commercial catalog (v5 Prompt 1) — read-only, no auth.
+const plansRouter = require('./routes/plans');
+app.use(apiLimiter, plansRouter);
+
 const paymentRouter = require('./routes/payments');
 const customerRouter = require('./routes/customers');
 

@@ -114,7 +114,13 @@ async function planFor(email) {
     // Stripe flips the status to 'active'.
     if (sub) {
       if (sub.status === 'trialing') return 'trial';
-      return pricePlans()[sub.stripe_price_id] || 'pro';
+      const mapped = pricePlans()[sub.stripe_price_id];
+      if (!mapped) {
+        // Never silently grant a plan for an unmapped price (v5 Prompt 1).
+        console.error(`[planFor] active subscription with unknown price id "${sub.stripe_price_id}" for ${email} — check STRIPE_PRICE_* env vars`);
+        return null;
+      }
+      return mapped;
     }
 
     // Succeeded one-time payment = lifetime access

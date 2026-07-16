@@ -47,57 +47,27 @@ const MODULES = [
   { n: '6', title: 'Improve SEO', body: 'Long-tail keywords, meta titles, blog ideas, FAQ and internal links.' },
 ];
 
-// Upgrade Prompt 3/4 pricing — a 3-day free trial then a paid plan. Checkout
-// resolves the plan name + interval to STRIPE_PRICE_<PLAN>_<INTERVAL> env vars
-// on the backend, so no price IDs live in client code.
-const PLANS = [
-  {
-    name: 'Starter',
-    plan: 'starter',
-    price: { monthly: '€12.99', yearly: '€99' },
-    note: 'Freelancers, creators, solo starters',
-    sub: '3 full kits + 25 asset generations / month',
+// v5 Prompt 1: pricing renders from GET /api/plans — the backend catalog is
+// the single commercial source of truth. No plan limits or prices live here.
+function planCard(p) {
+  return {
+    name: p.label,
+    plan: p.plan,
+    price: p.price.display,
+    badge: p.badge || undefined,
+    note: p.note,
+    sub: `${p.launch_kits} full kits + ${p.ai_actions} AI actions / month`,
     features: [
-      '1 workspace',
-      '3 full launch kits / month',
-      '25 asset generations / month',
-      '30-day content plan',
+      `${p.workspaces} workspace${p.workspaces === 1 ? '' : 's'}`,
+      `${p.launch_kits} full launch kits / month`,
+      `${p.ai_actions} AI actions / month`,
+      'Website, email, campaign & creative studios',
       'Exports included',
     ],
     cta: 'Start 3-day free trial',
-  },
-  {
-    name: 'Pro',
-    plan: 'pro',
-    price: { monthly: '€24.99', yearly: '€199' },
-    badge: 'Most popular',
-    note: 'Small ecommerce brands and serious creators',
-    sub: '10 full kits + 100 asset generations / month',
-    features: [
-      '3 workspaces',
-      '10 full launch kits / month',
-      '100 asset generations / month',
-      'Website, email, campaign & creative studios',
-      'Priority exports',
-    ],
-    cta: 'Start 3-day free trial',
-  },
-  {
-    name: 'Studio',
-    plan: 'studio',
-    price: { monthly: '€59', yearly: '€499' },
-    note: 'Agencies and multi-brand users',
-    sub: '30 full kits + 300 asset generations / month',
-    features: [
-      '10 workspaces',
-      '30 full launch kits / month',
-      '300 asset generations / month',
-      'Client-ready exports',
-      'Advanced brand voice',
-    ],
-    cta: 'Start 3-day free trial',
-  },
-];
+    savings: p.yearly_savings,
+  };
+}
 
 const OUTPUTS = [
   'Positioning',
@@ -154,7 +124,7 @@ const FAQ = [
   },
   {
     q: 'How does the free trial work?',
-    a: 'Every plan starts with a 3-day free trial. You add a payment method, get one full launch kit and 20 asset generations to try the whole workspace, and you can cancel anytime before the trial ends without being charged.',
+    a: 'Every plan starts with a 3-day free trial. You add a payment method, get 20 AI actions and 1 full launch kit during the 3-day trial, and you can cancel anytime before the trial ends without being charged.',
   },
   {
     q: 'Will it promise me revenue?',
@@ -186,7 +156,18 @@ export default function Landing() {
   const navigate = useNavigate();
   const { account } = useAuth();
   const [interval, setInterval] = useState('monthly');
+  const [catalog, setCatalog] = useState(null);
   const pricingRef = useRef(null);
+
+  // Load the canonical plan catalog — the backend is the source of truth.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/plans')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data?.plans) setCatalog(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Fire once when the pricing section first scrolls into view.
   useEffect(() => {
@@ -242,7 +223,7 @@ export default function Landing() {
             {BRAND.name}
           </div>
           <Link className="lp-header-cta" to="/app">
-            Create my launch kit
+            Build my marketing campaign
           </Link>
         </header>
 
@@ -263,7 +244,7 @@ export default function Landing() {
 
           <div className="lp-hero-actions">
             <Link className="lp-cta" to="/app">
-              Create my launch kit
+              Build my marketing campaign
             </Link>
             <a className="lp-cta-ghost" href="#example">
               See example
@@ -411,9 +392,11 @@ export default function Landing() {
       <section className="lp-pricing" id="pricing" ref={pricingRef}>
         <div className="lp-pricing-inner">
           <Reveal>
-            <div className="lp-eyebrow">Pricing plans</div>
+            <div className="lp-eyebrow">{catalog?.trial?.eyebrow || 'Start with 3 days free'}</div>
             <h2 className="lp-h2">Start with a 3-day free trial</h2>
-            <p className="lp-h2-sub">Try any plan free for 3 days. Cancel anytime before it ends.</p>
+            <p className="lp-h2-sub">
+              {catalog?.trial?.disclosure || "Payment method required. Cancel before your trial ends and you won't be charged."}
+            </p>
           </Reveal>
 
           <div className="lp-billing-toggle" role="group" aria-label="Billing interval">
@@ -429,12 +412,12 @@ export default function Landing() {
               onClick={() => setInterval('yearly')}
               type="button"
             >
-              Yearly <span className="lp-billing-save">Save up to 35%</span>
+              Yearly <span className="lp-billing-save">{catalog?.yearly_badge || 'Save up to 36%'}</span>
             </button>
           </div>
 
           <div className="lp-price-grid">
-            {PLANS.map((p, i) => (
+            {(catalog?.plans || []).map(planCard).map((p, i) => (
               <Reveal className="lp-price-card" key={p.name} delay={i * 90}>
                 <div className="lp-price-top">
                   <span className="lp-price-name">{p.name}</span>
@@ -457,11 +440,17 @@ export default function Landing() {
                   {p.cta}
                 </button>
                 <div className="lp-price-micro">
-                  3 days free · card required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'} · cancel anytime before day 3
+                  3 days free · payment method required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'} · cancel anytime before day 3
+                  {interval === 'yearly' && p.savings ? ` · save ${p.savings.display} (${p.savings.pct}%)` : ''}
                 </div>
               </Reveal>
             ))}
           </div>
+          {catalog?.ai_action_definition && (
+            <p className="lp-price-definition" title={catalog.ai_action_definition}>
+              {catalog.ai_action_definition}
+            </p>
+          )}
         </div>
       </section>
 
@@ -494,7 +483,7 @@ export default function Landing() {
           <h2>Stop planning. Start launching.</h2>
           <p>Answer a few questions and build your marketing workspace today — free for 3 days.</p>
           <Link className="lp-cta" to="/app">
-            Create my launch kit
+            Build my marketing campaign
           </Link>
         </Reveal>
       </section>
@@ -532,3 +521,4 @@ export default function Landing() {
     </div>
   );
 }
+
