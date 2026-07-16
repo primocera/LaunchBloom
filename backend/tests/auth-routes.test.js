@@ -115,14 +115,14 @@ test('callback with a stale link redirects to login with an error', async () => 
   assert.match(r.headers.location, /\/app\/login\?error=expired_link/);
 });
 
-test('callback with a valid link sets cookies and redirects to the app', async () => {
+test('callback with a valid signup link sets cookies and redirects to onboarding (v5 P2)', async () => {
   authState.verifyOtp = {
     data: { session: { access_token: 'AAA', refresh_token: 'RRR' } },
     error: null,
   };
   const r = await request(app).get('/api/auth/callback?token_hash=ok&type=signup');
   assert.equal(r.status, 302);
-  assert.match(r.headers.location, /\/app$/);
+  assert.match(r.headers.location, /\/app\/brand\?welcome=1$/);
   const cookies = r.headers['set-cookie'] || [];
   assert.ok(cookies.some((c) => c.startsWith('sb_access=')));
 });

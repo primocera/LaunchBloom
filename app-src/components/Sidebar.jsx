@@ -38,7 +38,7 @@ function AccountBlock() {
     return (
       <div className="account">
         <Link className="account-signin" to="/app/login">Sign in</Link>
-        <div className="account-hint">Try it free, no card needed.</div>
+        <div className="account-hint">Create your account free. Start a 3-day trial when you're ready to generate.</div>
       </div>
     );
   }

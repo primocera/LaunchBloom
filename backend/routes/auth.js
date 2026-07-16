@@ -262,7 +262,11 @@ router.get('/api/auth/callback', async (req, res) => {
     if (!isRecovery && type === 'signup') {
       track('verified', { userId: session.user && session.user.id });
     }
-    return res.redirect(isRecovery ? `${appUrl()}/app/reset-password` : `${appUrl()}/app`);
+    // New signups land on Brand Profile onboarding (v5 Prompt 2) — account and
+    // profile first; the Stripe trial starts only at the first generation.
+    if (isRecovery) return res.redirect(`${appUrl()}/app/reset-password`);
+    if (type === 'signup') return res.redirect(`${appUrl()}/app/brand?welcome=1`);
+    return res.redirect(`${appUrl()}/app`);
   } catch (e) {
     return res.redirect(loginErr);
   }

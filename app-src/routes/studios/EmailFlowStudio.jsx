@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
+import TrialPaywall from '../../components/TrialPaywall';
 import { CopyBtn } from './common';
 import { AssetField, FormField, StatusPill } from './generator';
 import '../../flow.css';
@@ -89,21 +91,27 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [upgrade, setUpgrade] = useState(false);
+  const [paywall, setPaywall] = useState(false);
   const [warnings, setWarnings] = useState([]);
+  const { account } = useAuth();
+  const isFreePlan = !account || account.plan === 'free' || !account.plan;
 
   const missing = fields.some(
     (f) => f.required && (values[f.name] == null || values[f.name] === '' || (Array.isArray(values[f.name]) && !values[f.name].length))
   );
 
   async function run() {
+    if (isFreePlan) { setPaywall(true); return; } // v5 Prompt 2: trial paywall
     setBusy(true); setError(null); setUpgrade(false); setWarnings([]);
     try {
       const res = await generate(values);
       setWarnings(res.quality_warnings || []);
       onGenerated(res.emails || []);
     } catch (e) {
-      if (e.status === 402 || e.code === 'UPGRADE') setUpgrade(true);
-      else setError(e.message);
+      if (e.status === 402 || e.code === 'UPGRADE') {
+        if (isFreePlan || e.plan === 'free') setPaywall(true);
+        else setUpgrade(true);
+      } else setError(e.message);
     } finally {
       setBusy(false);
     }
@@ -131,6 +139,7 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
           <ul>{warnings.map((wm, i) => <li key={i}>{wm}</li>)}</ul>
         </div>
       )}
+      <TrialPaywall open={paywall} onClose={() => setPaywall(false)} />
     </div>
   );
 }

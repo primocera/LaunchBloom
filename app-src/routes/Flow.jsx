@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import TrialPaywall from '../components/TrialPaywall';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -29,6 +30,7 @@ export default function Flow() {
   const [kit, setKit] = useState(null);
   const [busy, setBusy] = useState(null); // which action is running
   const [error, setError] = useState(null);
+  const [paywall, setPaywall] = useState(false); // v5 Prompt 2: free → trial
 
   async function refresh() {
     const [ws, of, lk] = await Promise.all([api.workspace(), api.offers(), api.launchKits()]);
@@ -52,7 +54,10 @@ export default function Flow() {
     try {
       await fn();
     } catch (e) {
-      setError(e.message);
+      // A free account can't generate yet — open the trial paywall instead of
+      // showing a dead-end error. Onboarding answers are already saved.
+      if ((e.status === 402 || e.code === 'UPGRADE') && (e.plan === 'free' || !e.plan)) setPaywall(true);
+      else setError(e.message);
     } finally {
       setBusy(null);
     }
@@ -66,6 +71,7 @@ export default function Flow() {
   return (
     <Shell step={step}>
       {error && <p className="flow-err">{error}</p>}
+      <TrialPaywall open={paywall} onClose={() => setPaywall(false)} />
 
       {/* ── Step 1: onboarding ── */}
       {step === 1 && (

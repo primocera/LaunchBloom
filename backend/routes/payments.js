@@ -188,8 +188,10 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
         metadata: { app_user_id: userId || '' },
         ...(giveTrial ? { trial_period_days: 3 } : {}),
       },
-      success_url: `${baseUrl}/?payment=success&plan=${planName}&interval=${interval}`,
-      cancel_url: `${baseUrl}/?payment=cancelled`,
+      // Return into the signed-in app so the user's prepared work is right
+      // there; AppShell shows the matching success/cancel notice (v5 Prompt 2).
+      success_url: `${baseUrl}/app?checkout=success&plan=${planName}&interval=${interval}`,
+      cancel_url: `${baseUrl}/app?checkout=cancelled`,
     });
 
     if (!session || !session.url) {

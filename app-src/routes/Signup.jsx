@@ -83,7 +83,7 @@ export default function Signup() {
       <form className="login-card" onSubmit={submit}>
         <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
         <h1>Create your account</h1>
-        <p>Free to start — your first launch kit is on us.</p>
+        <p>Create your account free. No payment method yet.</p>
 
         <input
           type="email"

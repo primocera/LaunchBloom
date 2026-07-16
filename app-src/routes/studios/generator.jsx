@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 import { download } from '../../lib/export';
+import TrialPaywall from '../../components/TrialPaywall';
 import { CopyBtn } from './common';
 import '../../flow.css';
 
@@ -123,12 +125,25 @@ export default function GeneratorStudio({
   renderItem, // (item, { table, onChange }) => JSX
   fullCopy, // (item) => string  — "copy full asset"
 }) {
-  const [values, setValues] = useState(initial);
+  // v5 Prompt 2: the completed brief survives auth, paywall and Stripe
+  // redirects — restore any local draft, and save on every change.
+  const draftKey = `lb-draft-${table || title}`;
+  const [values, setValues] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
+      return saved && typeof saved === 'object' ? { ...initial, ...saved } : initial;
+    } catch {
+      return initial;
+    }
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [upgrade, setUpgrade] = useState(false);
+  const [paywall, setPaywall] = useState(false);
   const [warnings, setWarnings] = useState([]);
   const [items, setItems] = useState(null); // saved assets
+  const { account } = useAuth();
+  const isFreePlan = !account || account.plan === 'free' || !account.plan;
 
   useEffect(() => {
     if (!table) return;
@@ -136,10 +151,20 @@ export default function GeneratorStudio({
   }, [table]);
 
   function set(name, v) {
-    setValues((prev) => ({ ...prev, [name]: v }));
+    setValues((prev) => {
+      const next = { ...prev, [name]: v };
+      try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch { /* private mode */ }
+      return next;
+    });
   }
 
   async function onGenerate() {
+    // A free account can't generate yet: open the trial paywall instead of
+    // burning the request. The draft is already saved locally.
+    if (isFreePlan) {
+      setPaywall(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     setUpgrade(false);
@@ -150,9 +175,12 @@ export default function GeneratorStudio({
       setWarnings(res.quality_warnings || []);
       // Newest first, prepended to any previously-saved assets.
       setItems((prev) => [...fresh, ...(prev || [])]);
+      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
     } catch (e) {
-      if (e.status === 402 || e.code === 'UPGRADE') setUpgrade(true);
-      else setError(e.message);
+      if (e.status === 402 || e.code === 'UPGRADE') {
+        if (isFreePlan || e.plan === 'free') setPaywall(true);
+        else setUpgrade(true);
+      } else setError(e.message);
     } finally {
       setBusy(false);
     }
@@ -190,6 +218,7 @@ export default function GeneratorStudio({
               {busy ? 'Generating…' : `Generate ${title.replace(/ Studio$/, '')}`}
             </button>
           </div>
+          <p className="flow-muted gen-cost-note">Generating uses 1 AI action. Editing, copying and exporting are free.</p>
           {error && <p className="flow-err">{error}</p>}
           {upgrade && (
             <p className="flow-err">
@@ -233,6 +262,8 @@ export default function GeneratorStudio({
           </div>
         )}
       </main>
+
+      <TrialPaywall open={paywall} onClose={() => setPaywall(false)} />
     </div>
   );
 }

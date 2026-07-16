@@ -41,7 +41,7 @@ export default function AskBox({ prompts }) {
       </div>
 
       <div className="lp-ask-foot">
-        <span className="lp-ask-chip">Try it Free</span>
+        <span className="lp-ask-chip">Free account · 3-day trial</span>
         <button className="lp-ask-btn" type="submit">
           Build my offer
         </button>

@@ -29,6 +29,8 @@ async function request(path, { method = 'GET', body, signal } = {}) {
     throw Object.assign(new Error(data.error || `Request failed (${res.status})`), {
       status: res.status,
       code: data.code,
+      plan: data.plan,
+      feature: data.feature,
     });
   }
   return data;
