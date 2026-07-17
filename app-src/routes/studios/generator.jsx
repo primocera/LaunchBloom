@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { download } from '../../lib/export';
@@ -144,6 +144,10 @@ export default function GeneratorStudio({
   const [items, setItems] = useState(null); // saved assets
   const { account } = useAuth();
   const isFreePlan = !account || account.plan === 'free' || !account.plan;
+  // v5 Prompt 6: launched from a campaign (?campaign=<id>) the generation
+  // inherits its brief — campaign_id rides along with every generate call.
+  const [searchParams] = useSearchParams();
+  const campaignId = searchParams.get('campaign') || values.campaign_id || null;
 
   useEffect(() => {
     if (!table) return;
@@ -170,7 +174,7 @@ export default function GeneratorStudio({
     setUpgrade(false);
     setWarnings([]);
     try {
-      const res = await generate(values);
+      const res = await generate(campaignId ? { ...values, campaign_id: campaignId } : values);
       const fresh = res[resultKey] || [];
       setWarnings(res.quality_warnings || []);
       // Newest first, prepended to any previously-saved assets.
@@ -210,6 +214,11 @@ export default function GeneratorStudio({
         </div>
 
         <div className="flow-card gen-form">
+          {campaignId && (
+            <p className="flow-muted" role="status">
+              Generating inside a campaign — the brief (offer, dates, CTA) is applied automatically.
+            </p>
+          )}
           {fields.map((f) => (
             <FormField key={f.name} field={f} value={values[f.name]} onChange={(v) => set(f.name, v)} />
           ))}

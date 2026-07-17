@@ -6,7 +6,21 @@ import { api } from '../lib/api';
 // studios (they pick up campaign_id so everything stays consistent).
 const CHANNELS = ['email', 'social', 'ads', 'landing'];
 
-const EMPTY = { name: '', objective: '', audience: '', offer_summary: '', promo_terms: '', start_date: '', end_date: '', channels: ['email', 'social'] };
+const EMPTY = {
+  name: '', objective: '', audience: '', offer_summary: '', promo_terms: '',
+  key_message: '', proof: '', restrictions: '', markets: '', language: '',
+  start_date: '', end_date: '', deadline: '', channels: ['email', 'social'],
+};
+
+// v5 Prompt 6: campaign templates prefill the brief. "Full launch campaign"
+// is the guided flow (positioning → offers → launch kit).
+const TEMPLATES = [
+  { key: 'launch', label: 'Product launch', brief: { objective: 'Launch a new product and drive first sales', channels: ['email', 'social', 'ads', 'landing'] } },
+  { key: 'promo', label: 'Promotion', brief: { objective: 'Run a limited-time promotion', channels: ['email', 'social', 'ads'] } },
+  { key: 'evergreen', label: 'Evergreen sales', brief: { objective: 'Steady sales content for the core offer', channels: ['email', 'social'] } },
+  { key: 'leadgen', label: 'Lead generation', brief: { objective: 'Grow the email list with a lead magnet', channels: ['landing', 'social', 'ads'] } },
+  { key: 'content', label: 'Content month', brief: { objective: 'A month of consistent audience-building content', channels: ['social', 'email'] } },
+];
 
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
@@ -46,7 +60,26 @@ export default function Campaigns() {
 
   async function remove(c) {
     if (!window.confirm(`Delete campaign "${c.name}"? Generated assets are kept.`)) return;
-    try { await api.deleteCampaign(c.id); load(); } catch (err) { setError(err.message); }
+    try {
+      await api.deleteCampaign(c.id);
+      load();
+    } catch (err) {
+      // v5 P6: the backend refuses when linked assets exist unless confirmed.
+      if (err.code === 'CONFIRM_DELETE') {
+        if (window.confirm(`${err.message}\n\nDelete anyway?`)) {
+          try { await api.deleteCampaign(c.id, true); load(); } catch (e2) { setError(e2.message); }
+        }
+      } else setError(err.message);
+    }
+  }
+
+  async function archive(c) {
+    try { await api.updateCampaign(c.id, { archived: !c.archived }); load(); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function duplicate(c) {
+    try { await api.duplicateCampaign(c.id); load(); } catch (err) { setError(err.message); }
   }
 
   const totalAssets = (c) => Object.values(c.asset_counts || {}).reduce((a, b) => a + b, 0);
@@ -81,6 +114,21 @@ export default function Campaigns() {
         <form className="account-section" onSubmit={create}>
           <h2>New campaign</h2>
           <div className="brand-field">
+            <label>Template</label>
+            <div className="campaign-channels">
+              {TEMPLATES.map((t) => (
+                <button
+                  type="button"
+                  key={t.key}
+                  className="gen-chip"
+                  onClick={() => setForm({ ...form, ...t.brief })}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="brand-field">
             <label>Name</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Summer Sale 2026" required />
           </div>
@@ -100,11 +148,32 @@ export default function Campaigns() {
             <label>Promo terms</label>
             <input value={form.promo_terms} onChange={(e) => setForm({ ...form, promo_terms: e.target.value })} placeholder='e.g. "20% off with code SUMMER20, ends July 31"' />
           </div>
+          <div className="brand-field">
+            <label>Key message</label>
+            <input value={form.key_message} onChange={(e) => setForm({ ...form, key_message: e.target.value })} placeholder="The one thing every asset should say" />
+          </div>
+          <div className="brand-field">
+            <label>Proof</label>
+            <input value={form.proof} onChange={(e) => setForm({ ...form, proof: e.target.value })} placeholder="Real reviews, numbers or results to use" />
+          </div>
+          <div className="brand-field">
+            <label>Restrictions</label>
+            <input value={form.restrictions} onChange={(e) => setForm({ ...form, restrictions: e.target.value })} placeholder="Claims to avoid, compliance rules" />
+          </div>
+          <div className="brand-field campaign-dates">
+            <label>Markets / language</label>
+            <input value={form.markets} onChange={(e) => setForm({ ...form, markets: e.target.value })} placeholder="e.g. US" />
+            <input value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} placeholder="e.g. English" />
+          </div>
           <div className="brand-field campaign-dates">
             <label>Dates</label>
             <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
             <span> → </span>
             <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+          </div>
+          <div className="brand-field campaign-dates">
+            <label>Real deadline</label>
+            <input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
           </div>
           <div className="brand-field">
             <label>Channels</label>
@@ -135,7 +204,7 @@ export default function Campaigns() {
         <div className="account-section"><p className="muted">No campaigns yet. Create your first one.</p></div>
       )}
 
-      {(campaigns || []).map((c) => (
+      {(campaigns || []).filter((c) => !c.archived).map((c) => (
         <div className="account-section" key={c.id}>
           <div className="campaign-row-head">
             <h2>{c.name}</h2>
@@ -173,10 +242,25 @@ export default function Campaigns() {
                 {c.brief_approved ? 'Unapprove' : 'Approve brief'}
               </button>
             )}
+            <a className="btn-secondary" href={`/app/create?campaign=${c.id}`}>Create assets</a>
+            <button className="btn-secondary" onClick={() => duplicate(c)}>Duplicate</button>
+            <button className="btn-secondary" onClick={() => archive(c)}>{c.archived ? 'Unarchive' : 'Archive'}</button>
             <button className="btn-secondary" onClick={() => remove(c)}>Delete</button>
           </div>
         </div>
       ))}
+
+      {(campaigns || []).some((c) => c.archived) && (
+        <div className="account-section">
+          <h2>Archived</h2>
+          {(campaigns || []).filter((c) => c.archived).map((c) => (
+            <p className="muted" key={c.id}>
+              {c.name} · {totalAssets(c)} asset{totalAssets(c) === 1 ? '' : 's'} preserved{' '}
+              <button className="account-link" onClick={() => archive(c)}>Unarchive</button>
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

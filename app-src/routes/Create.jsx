@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,10 @@ const NOTICE_KEY = 'lb-nav-migration-notice';
 
 export default function Create() {
   const [showNotice, setShowNotice] = useState(false);
+  // v5 Prompt 6: arriving from a campaign carries its id into every studio.
+  const [params] = useSearchParams();
+  const campaign = params.get('campaign');
+  const withCampaign = (to) => (campaign ? `${to}?campaign=${campaign}` : to);
 
   // One-time notice for users who knew the old "Launch Kit: …" menu.
   useEffect(() => {
@@ -75,7 +79,7 @@ export default function Create() {
 
         <div className="gen-results">
           {CATEGORIES.map((c) => (
-            <Link key={c.to} to={c.to} className="flow-card gen-card create-card">
+            <Link key={c.to} to={withCampaign(c.to)} className="flow-card gen-card create-card">
               <h3>{c.title}</h3>
               <p className="flow-muted">{c.body}</p>
             </Link>

@@ -18,7 +18,7 @@ const express = require('express');
 const crypto = require('crypto');
 const supabase = require('../lib/supabase');
 const { planGate, usageFor } = require('../lib/plan-limits');
-const { generateJson } = require('../lib/ai');
+const { generateJson, AI_PROMPT_VERSION } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
 const { buildSequence } = require('../lib/email-blueprints');
 const { campaignContext } = require('./campaigns');
@@ -231,6 +231,8 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      brief_snapshot: camp.snapshot || null,
+      prompt_version: AI_PROMPT_VERSION,
       generation_run_id: runId,
       page_type: p.page_type,
       title: p.h1 || p.hero_headline || p.page_type,
@@ -324,6 +326,8 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      brief_snapshot: camp.snapshot || null,
+      prompt_version: AI_PROMPT_VERSION,
       generation_run_id: runId,
       flow_type: e.flow_type || (seq.emails[i] && seq.emails[i].flow_type),
       email_order: e.email_order || (seq.emails[i] && seq.emails[i].email_order),
@@ -527,6 +531,8 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      brief_snapshot: camp.snapshot || null,
+      prompt_version: AI_PROMPT_VERSION,
       generation_run_id: runId,
       flow_type: 'campaign',
       email_order: i + 1,
@@ -614,6 +620,8 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      brief_snapshot: camp.snapshot || null,
+      prompt_version: AI_PROMPT_VERSION,
       generation_run_id: runId,
       platform: s.platform,
       content_type: s.content_type,
@@ -696,6 +704,8 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       launch_kit_id: launch_kit_id || null,
       offer_id: offer_id || null,
       campaign_id: camp.campaign ? camp.campaign.id : null,
+      brief_snapshot: camp.snapshot || null,
+      prompt_version: AI_PROMPT_VERSION,
       generation_run_id: runId,
       platform: c.platform,
       creative_type: c.creative_type,

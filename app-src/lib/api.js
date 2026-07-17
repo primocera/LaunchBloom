@@ -84,7 +84,9 @@ export const api = {
   campaigns: () => request('/api/campaigns'),
   createCampaign: (brief) => request('/api/campaigns', { method: 'POST', body: brief }),
   updateCampaign: (id, patch) => request(`/api/campaigns/${id}`, { method: 'PATCH', body: patch }),
-  deleteCampaign: (id) => request(`/api/campaigns/${id}`, { method: 'DELETE' }),
+  deleteCampaign: (id, confirm = false) =>
+    request(`/api/campaigns/${id}${confirm ? '?confirm=1' : ''}`, { method: 'DELETE' }),
+  duplicateCampaign: (id) => request(`/api/campaigns/${id}/duplicate`, { method: 'POST' }),
   generateCampaignStrategy: (id) => request(`/api/campaigns/${id}/strategy`, { method: 'POST', body: {} }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),

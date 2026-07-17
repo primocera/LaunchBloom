@@ -29,11 +29,15 @@ async function ownedCampaign(ws, id) {
 function briefPatch(body) {
   const patch = {};
   const b = body || {};
-  const strings = ['name', 'objective', 'audience', 'offer_summary', 'products', 'promo_terms', 'status'];
+  // v5 Prompt 6: the full brief — goal, offer, audience, markets, language,
+  // key message, proof, restrictions, promotion, dates and a real deadline.
+  const strings = ['name', 'objective', 'audience', 'offer_summary', 'products', 'promo_terms', 'status',
+    'markets', 'language', 'key_message', 'proof', 'restrictions'];
   for (const k of strings) if (typeof b[k] === 'string') patch[k] = b[k].trim().slice(0, k === 'name' ? 120 : 4000);
-  for (const k of ['start_date', 'end_date']) if (typeof b[k] === 'string') patch[k] = b[k] || null;
+  for (const k of ['start_date', 'end_date', 'deadline']) if (typeof b[k] === 'string') patch[k] = b[k] || null;
   if (Array.isArray(b.channels)) patch.channels = b.channels.map(String).slice(0, 8);
   if (typeof b.brief_approved === 'boolean') patch.brief_approved = b.brief_approved;
+  if (typeof b.archived === 'boolean') patch.archived = b.archived;
   if (typeof b.offer_id === 'string' || b.offer_id === null) patch.offer_id = b.offer_id;
   return patch;
 }
@@ -119,13 +123,53 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
 });
 
 // DELETE /api/campaigns/:id — assets keep existing (campaign_id set null by FK).
+// v5 Prompt 6: when the campaign still has assets, deletion needs explicit
+// ?confirm=1 — archiving is the default suggestion.
 router.delete('/api/campaigns/:id', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
     const campaign = await ownedCampaign(ws, req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    if (req.query.confirm !== '1') {
+      let assetCount = 0;
+      for (const t of ASSET_TABLES) {
+        const { count } = await supabase
+          .from(t).select('id', { count: 'exact', head: true })
+          .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+        assetCount += count || 0;
+      }
+      if (assetCount > 0) {
+        return res.status(409).json({
+          error: `This campaign has ${assetCount} linked asset${assetCount === 1 ? '' : 's'}. Archive it instead, or confirm deletion (assets are kept but unlinked).`,
+          code: 'CONFIRM_DELETE',
+          assets: assetCount,
+        });
+      }
+    }
+
     await supabase.from('campaigns').delete().eq('id', campaign.id);
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/campaigns/:id/duplicate — copy the brief (not assets/strategy).
+router.post('/api/campaigns/:id/duplicate', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { id, created_at, updated_at, strategy, brief_approved, archived, asset_counts, workspace_id, ...brief } = campaign;
+    const { data, error } = await supabase
+      .from('campaigns')
+      .insert({ ...brief, name: `${campaign.name} (copy)`, workspace_id: ws.id, status: 'draft' })
+      .select()
+      .single();
+    if (error) throw new Error('Failed to duplicate campaign: ' + error.message);
+    res.status(201).json({ campaign: data });
   } catch (err) {
     next(err);
   }
@@ -242,13 +286,36 @@ async function campaignContext(ws, campaignId) {
       campaign.audience ? `Audience: ${campaign.audience}` : null,
       campaign.offer_summary ? `Offer: ${campaign.offer_summary}` : null,
       campaign.promo_terms ? `Promo terms: ${campaign.promo_terms}` : null,
+      campaign.markets ? `Markets: ${campaign.markets}` : null,
+      campaign.language ? `Language: ${campaign.language}` : null,
+      campaign.key_message ? `Key message: ${campaign.key_message}` : null,
+      campaign.proof ? `Proof: ${campaign.proof}` : null,
+      campaign.restrictions ? `Restrictions: ${campaign.restrictions}` : null,
       campaign.start_date ? `Dates: ${campaign.start_date} → ${campaign.end_date || 'open'}` : null,
+      campaign.deadline ? `Hard deadline: ${campaign.deadline}` : null,
       s.core_message ? `Core message: ${s.core_message}` : null,
       s.message_hierarchy ? `Message hierarchy: ${s.message_hierarchy.join(' | ')}` : null,
       s.cta ? `Primary CTA: ${s.cta}` : null,
     ].filter(Boolean).join('\n') + '\n\n';
 
-  return { text, campaign };
+  // v5 Prompt 6: brief snapshot stored on every generated asset so its
+  // context is traceable even after the campaign changes.
+  const snapshot = {
+    campaign_id: campaign.id,
+    name: campaign.name,
+    objective: campaign.objective || null,
+    audience: campaign.audience || null,
+    offer_summary: campaign.offer_summary || null,
+    promo_terms: campaign.promo_terms || null,
+    key_message: campaign.key_message || null,
+    restrictions: campaign.restrictions || null,
+    start_date: campaign.start_date || null,
+    end_date: campaign.end_date || null,
+    deadline: campaign.deadline || null,
+    snapshot_at: new Date().toISOString(),
+  };
+
+  return { text, campaign, snapshot };
 }
 
 module.exports = router;

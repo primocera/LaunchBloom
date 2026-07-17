@@ -147,6 +147,15 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     if (typeof b.favourite === 'boolean') patch.favourite = b.favourite;
     if (typeof b.archived === 'boolean') patch.archived = b.archived;
     if (typeof b.status === 'string') patch.status = b.status.slice(0, 30);
+    // v5 Prompt 6: attach/detach an existing asset to a campaign — the
+    // campaign must belong to this workspace.
+    if (b.campaign_id === null) patch.campaign_id = null;
+    else if (typeof b.campaign_id === 'string') {
+      const { data: camp } = await supabase.from('campaigns')
+        .select('id').eq('id', b.campaign_id).eq('workspace_id', ws.id).single();
+      if (!camp) return res.status(404).json({ error: 'Campaign not found' });
+      patch.campaign_id = camp.id;
+    }
     // Content edits: any rewriteFields are editable text
     let contentEdit = false;
     for (const f of cfg.rewriteFields) {
