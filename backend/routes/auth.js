@@ -261,6 +261,11 @@ router.get('/api/auth/callback', async (req, res) => {
     const isRecovery = flow === 'recovery' || type === 'recovery';
     if (!isRecovery && type === 'signup') {
       track('verified', { userId: session.user && session.user.id });
+      // Idempotent welcome email (v5 Prompt 14) — never blocks the redirect.
+      if (session.user && session.user.email) {
+        const { sendLifecycleEmail } = require('../lib/lifecycle-email');
+        sendLifecycleEmail('welcome', session.user.id, session.user.email).catch(() => {});
+      }
     }
     // New signups land on Brand Profile onboarding (v5 Prompt 2) — account and
     // profile first; the Stripe trial starts only at the first generation.

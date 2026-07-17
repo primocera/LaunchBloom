@@ -8,14 +8,19 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
-const { BRAND, emailFrom } = require('../lib/brand');
 const { track } = require('../lib/analytics');
+// v5 Prompt 14: idempotent lifecycle emails (no-ops without RESEND_API_KEY).
+const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 
-// Resend is optional — welcome emails are skipped without a key.
-let resend = null;
-if (process.env.RESEND_API_KEY) {
-  const { Resend } = require('resend');
-  resend = new Resend(process.env.RESEND_API_KEY);
+/** Customer email for a Stripe customer id (null when unknown). */
+async function emailForStripeCustomer(stripeCustomerId) {
+  if (!stripeCustomerId) return null;
+  const { data } = await supabase
+    .from('customers')
+    .select('email')
+    .eq('stripe_customer_id', stripeCustomerId)
+    .single();
+  return data?.email || null;
 }
 
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -133,7 +138,7 @@ async function handleEvent(event) {
       break;
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      await onSubscriptionUpdated(data, eventAt, event.type);
+      await onSubscriptionUpdated(data, eventAt, event.type, event.data.previous_attributes || {});
       break;
     case 'customer.subscription.deleted':
       await onSubscriptionDeleted(data, eventAt);
@@ -200,19 +205,11 @@ async function onCheckoutSessionCompleted(session) {
     console.log(`Checkout subscription linked: ${session.subscription} → customer ${customer.id}`);
   }
 
-  if (resend) {
-    resend.emails.send({
-      from: emailFrom(),
-      to: email,
-      subject: `Welcome to ${BRAND.name}`,
-      html: `<h1>Welcome aboard!</h1><p>Your subscription is active. Head to your dashboard and let's take your idea from offer to launch.</p>`,
-    }).catch((emailErr) => {
-      console.error('[checkout.session.completed] failed to send welcome email', emailErr);
-    });
-  }
+  // v5 Prompt 14: no "subscription active" email here — entitlement is only
+  // durable once the subscription events land (trial_started covers welcome).
 }
 
-async function onSubscriptionUpdated(subscription, eventAt, eventType) {
+async function onSubscriptionUpdated(subscription, eventAt, eventType, previous = {}) {
   // Out-of-order guard: a newer event already wrote this row.
   if (await isStaleSubscriptionEvent(subscription.id, eventAt)) {
     console.log(`Skipping stale subscription event for ${subscription.id}`);
@@ -262,6 +259,30 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType) {
   }
 
   console.log(`Subscription ${subscription.status}: ${subscription.id}`);
+
+  // Lifecycle emails — AFTER the durable upsert, idempotent by dedupe key,
+  // and never allowed to fail billing processing (v5 Prompt 14).
+  const email = await emailForStripeCustomer(subscription.customer);
+  if (email) {
+    const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null;
+    const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
+
+    if (subscription.status === 'trialing') {
+      await sendLifecycleEmail('trial_started', subscription.id, email, { chargeAt: trialEnd });
+    }
+    if (subscription.cancel_at_period_end && previous.cancel_at_period_end === false) {
+      await sendLifecycleEmail('cancellation_scheduled', `${subscription.id}:${subscription.current_period_end || ''}`, email, { periodEnd });
+    }
+    const prevPrice = previous.items?.data?.[0]?.price?.id;
+    const newPrice = subscription.items?.data?.[0]?.price?.id;
+    if (prevPrice && newPrice && prevPrice !== newPrice) {
+      const { pricePlans } = require('./customers');
+      const plan = pricePlans()[newPrice];
+      await sendLifecycleEmail('plan_changed', `${subscription.id}:${newPrice}`, email, {
+        planLabel: plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : null,
+      });
+    }
+  }
 }
 
 async function onSubscriptionDeleted(subscription, eventAt) {
@@ -281,12 +302,20 @@ async function onSubscriptionDeleted(subscription, eventAt) {
 
   track('subscription_canceled', { userId: (subscription.metadata && subscription.metadata.app_user_id) || null });
   console.log(`Subscription canceled: ${subscription.id}`);
+
+  const email = await emailForStripeCustomer(subscription.customer);
+  if (email) await sendLifecycleEmail('cancellation_completed', subscription.id, email);
 }
 
 async function onTrialWillEnd(subscription) {
-  // Stripe fires this ~3 days before a trial converts. The account/billing UX
-  // (Prompt 8) surfaces the countdown; here we just log for observability.
+  // Stripe fires this before a trial converts: send the trial-ending email
+  // with the exact charge date and a billing link (v5 Prompt 14).
   console.log(`Trial ending soon for subscription ${subscription.id} (trial_end ${subscription.trial_end}).`);
+  const email = await emailForStripeCustomer(subscription.customer);
+  if (email) {
+    const chargeAt = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null;
+    await sendLifecycleEmail('trial_ending', subscription.id, email, { chargeAt });
+  }
 }
 
 async function onInvoicePaid(invoice, eventAt) {
@@ -314,6 +343,15 @@ async function onInvoicePaid(invoice, eventAt) {
   if (error) {
     throw new Error(`Supabase update failed for invoice.paid: ${error.message}`);
   }
+
+  // Real charges only — the €0/$0 trial-start invoice is not a "payment".
+  if (invoice.total > 0) {
+    const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));
+    if (email) {
+      const periodEnd = invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null;
+      await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd });
+    }
+  }
 }
 
 async function onInvoicePaymentFailed(invoice) {
@@ -327,6 +365,9 @@ async function onInvoicePaymentFailed(invoice) {
   if (error) {
     throw new Error(`Supabase update failed for invoice.payment_failed: ${error.message}`);
   }
+
+  const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));
+  if (email) await sendLifecycleEmail('payment_failed', invoice.id, email);
 }
 
 async function onCustomerUpdated(stripeCustomer) {
