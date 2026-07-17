@@ -72,6 +72,30 @@ function formatBrandContext(profile) {
       summary.push(label);
     }
   }
+
+  // v5 Prompt 5: structured Products/Audience records (guided Brand setup).
+  const products = Array.isArray(profile.products_list) ? profile.products_list.filter((p) => p && p.name) : [];
+  if (products.length) {
+    lines.push('Products (structured):');
+    for (const p of products) {
+      const parts = ['name', 'category', 'description', 'price', 'differentiators', 'proof', 'url', 'claim_restrictions']
+        .filter((k) => p[k]).map((k) => `${k}: ${p[k]}`);
+      lines.push(`  - ${parts.join('; ')}${p.primary ? ' (PRIMARY)' : ''}`);
+    }
+    summary.push('Products (structured)');
+  }
+  const audiences = Array.isArray(profile.audiences) ? profile.audiences.filter((a) => a && (a.name || a.description)) : [];
+  if (audiences.length) {
+    lines.push('Audience segments (structured):');
+    for (const a of audiences) {
+      lines.push(`  - ${[a.name, a.description].filter(Boolean).join(': ')}${a.primary ? ' (PRIMARY)' : ''}`);
+    }
+    summary.push('Audiences (structured)');
+  }
+  if (profile.main_goal) {
+    lines.push(`Main goal: ${valToText(profile.main_goal)}`);
+    summary.push('Main goal');
+  }
   if (lines.length === 0) return { text: '', summary: [], hasProfile: false };
 
   const text =
