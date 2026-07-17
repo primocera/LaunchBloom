@@ -12,6 +12,7 @@ const { requireAuth } = require('../lib/auth');
 const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
+const { creativeReadyGate } = require('../lib/quality-checks');
 const { resolveWorkspace } = require('./workspaces');
 
 router.use(express.json({ limit: '32kb' }));
@@ -146,7 +147,19 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     // Library metadata
     if (typeof b.favourite === 'boolean') patch.favourite = b.favourite;
     if (typeof b.archived === 'boolean') patch.archived = b.archived;
-    if (typeof b.status === 'string') patch.status = b.status.slice(0, 30);
+    // v5 Prompt 11: record a compliance acknowledgement for high-risk creatives.
+    if (b.compliance_ack === true) patch.compliance_ack = { acknowledged: true, at: new Date().toISOString() };
+    else if (b.compliance_ack === false) patch.compliance_ack = { acknowledged: false, at: new Date().toISOString() };
+    if (typeof b.status === 'string') {
+      const nextStatus = b.status.slice(0, 30);
+      // Block unsupported proof / fake scarcity from reaching "ready"/"published".
+      if (req.params.table === 'creative_assets' && (nextStatus === 'ready' || nextStatus === 'published')) {
+        const merged = { ...row, ...patch }; // include an ack applied in the same request
+        const gate = creativeReadyGate(merged);
+        if (!gate.ok) return res.status(409).json({ error: gate.reason, code: 'COMPLIANCE_ACK' });
+      }
+      patch.status = nextStatus;
+    }
     // v5 Prompt 10: social calendar — plan an item on a date (or clear it)
     // without exporting. Scheduling metadata, so it never snapshots a version.
     if (b.planned_date === null) patch.planned_date = null;

@@ -494,18 +494,100 @@ const creativeIdeasSchema = {
         properties: {
           platform: { type: 'string', enum: ['meta', 'tiktok', 'google', 'pinterest'] },
           creative_type: { type: 'string', enum: ['static', 'video', 'ugc', 'carousel', 'search_ad'] },
+          angle: { type: 'string', description: 'The distinct concept angle + mechanism (not a headline variant).' },
           hook: { type: 'string' },
           headline: { type: 'string' },
           primary_text: { type: 'string' },
           visual_direction: { type: 'string' },
+          designer_notes: { type: 'string', description: 'Composition, overlay and design notes for a static/carousel.' },
           shot_list: { type: 'array', maxItems: 12, items: { type: 'string' } },
           text_overlays: { type: 'array', maxItems: 12, items: { type: 'string' } },
+          // Video / UGC — timed, shootable. Empty for non-video formats.
+          video_timeline: {
+            type: 'object',
+            properties: {
+              first_frame_hook: { type: 'string' },
+              duration_seconds: { type: 'integer' },
+              scenes: {
+                type: 'array', maxItems: 12,
+                items: {
+                  type: 'object',
+                  properties: {
+                    timecode: { type: 'string' },
+                    visual: { type: 'string' },
+                    spoken_script: { type: 'string' },
+                    on_screen_text: { type: 'string' },
+                  },
+                  required: ['timecode', 'visual', 'spoken_script', 'on_screen_text'],
+                  additionalProperties: false,
+                },
+              },
+              b_roll: { type: 'array', maxItems: 12, items: { type: 'string' } },
+              product_moments: { type: 'array', maxItems: 12, items: { type: 'string' } },
+              audio_direction: { type: 'string' },
+              cta_end_card: { type: 'string' },
+            },
+            required: ['first_frame_hook', 'duration_seconds', 'scenes', 'b_roll', 'product_moments', 'audio_direction', 'cta_end_card'],
+            additionalProperties: false,
+          },
+          // Carousel — cover + slide-by-slide + CTA slide. Empty for non-carousel.
+          slides: {
+            type: 'array', maxItems: 12,
+            items: {
+              type: 'object',
+              properties: {
+                slide_number: { type: 'integer' },
+                role: { type: 'string', description: 'cover, story or cta' },
+                heading: { type: 'string' },
+                body: { type: 'string' },
+                visual: { type: 'string' },
+              },
+              required: ['slide_number', 'role', 'heading', 'body', 'visual'],
+              additionalProperties: false,
+            },
+          },
+          // Search ad — platform char limits, keywords grouped by intent. Empty otherwise.
+          search_ad: {
+            type: 'object',
+            properties: {
+              headlines: { type: 'array', maxItems: 15, items: { type: 'string' }, description: 'Each ≤30 characters.' },
+              descriptions: { type: 'array', maxItems: 4, items: { type: 'string' }, description: 'Each ≤90 characters.' },
+              keyword_groups: {
+                type: 'array', maxItems: 8,
+                items: {
+                  type: 'object',
+                  properties: {
+                    intent: { type: 'string' },
+                    keywords: { type: 'array', maxItems: 15, items: { type: 'string' } },
+                  },
+                  required: ['intent', 'keywords'],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ['headlines', 'descriptions', 'keyword_groups'],
+            additionalProperties: false,
+          },
           cta: { type: 'string' },
           testing_angle: { type: 'string' },
+          // Test matrix — one major variable per test.
+          test: {
+            type: 'object',
+            properties: {
+              variable: { type: 'string' },
+              hypothesis: { type: 'string' },
+              control: { type: 'string' },
+              success_metric: { type: 'string' },
+            },
+            required: ['variable', 'hypothesis', 'control', 'success_metric'],
+            additionalProperties: false,
+          },
+          compliance_flags: { type: 'array', maxItems: 8, items: { type: 'string' }, description: 'High-risk claims needing user proof/acknowledgement; empty if none.' },
         },
         required: [
-          'platform', 'creative_type', 'hook', 'headline', 'primary_text',
-          'visual_direction', 'shot_list', 'text_overlays', 'cta', 'testing_angle',
+          'platform', 'creative_type', 'angle', 'hook', 'headline', 'primary_text',
+          'visual_direction', 'designer_notes', 'shot_list', 'text_overlays', 'video_timeline',
+          'slides', 'search_ad', 'cta', 'testing_angle', 'test', 'compliance_flags',
         ],
         additionalProperties: false,
       },

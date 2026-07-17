@@ -219,7 +219,54 @@ function checkSocial(items = []) {
   return w;
 }
 
-/** Ads: hook, visual direction, CTA, no unrealistic claim, video needs a shot list. */
+// Search-ad platform character limits (Google-style): headline ≤30, description ≤90.
+const SEARCH_HEADLINE_MAX = 30;
+const SEARCH_DESC_MAX = 90;
+
+/** Search-ad character-limit warnings for one creative. */
+function searchAdCharWarnings(c = {}, label = 'search ad') {
+  const w = [];
+  const sa = c.search_ad || {};
+  (sa.headlines || []).forEach((h, i) => {
+    if (typeof h === 'string' && h.length > SEARCH_HEADLINE_MAX) w.push(`${label}: headline ${i + 1} is ${h.length} chars (max ${SEARCH_HEADLINE_MAX}).`);
+  });
+  (sa.descriptions || []).forEach((d, i) => {
+    if (typeof d === 'string' && d.length > SEARCH_DESC_MAX) w.push(`${label}: description ${i + 1} is ${d.length} chars (max ${SEARCH_DESC_MAX}).`);
+  });
+  return w;
+}
+
+/** High-risk claims in a creative that need proof/acknowledgement before "ready". */
+function creativeComplianceFlags(c = {}) {
+  const flags = Array.isArray(c.compliance_flags) ? [...c.compliance_flags] : [];
+  const text = `${c.hook || ''} ${c.headline || ''} ${c.primary_text || ''}`;
+  if (GUARANTEE.test(text)) flags.push('Mentions a guarantee, testimonial or review — needs real proof.');
+  if (FAKE_SCARCITY.test(text)) flags.push('Uses urgency/scarcity — must reflect a real deadline or stock level.');
+  if (UNREALISTIC.test(text)) flags.push('Contains a strong/unrealistic claim — verify before running.');
+  return [...new Set(flags)];
+}
+
+/**
+ * Whether a creative may move to "ready"/"published". Blocked when it has
+ * compliance flags the user has not acknowledged (unsupported proof / fake
+ * scarcity). Returns { ok, reason }.
+ */
+function creativeReadyGate(row = {}) {
+  const flags = creativeComplianceFlags(row);
+  if (flags.length === 0) return { ok: true };
+  const ack = row.compliance_ack && row.compliance_ack.acknowledged;
+  if (ack) return { ok: true };
+  return { ok: false, reason: 'Acknowledge the compliance warnings (real proof, honest urgency) before marking this creative ready.' };
+}
+
+/** True when concepts are genuinely distinct (differ by angle/mechanism). */
+function conceptsDistinct(items = []) {
+  const angles = items.map((c) => String(c.angle || c.testing_angle || '').trim().toLowerCase()).filter(Boolean);
+  if (angles.length < 2) return true;
+  return new Set(angles).size === angles.length;
+}
+
+/** Ads: hook, visual direction, CTA, distinctness, timed video, search limits, compliance. */
 function checkCreative(items = []) {
   const w = [];
   items.forEach((c, i) => {
@@ -227,9 +274,18 @@ function checkCreative(items = []) {
     if (!has(c.hook, 3)) w.push(`${label}: missing hook.`);
     if (!has(c.visual_direction, 5)) w.push(`${label}: missing visual direction.`);
     if (!has(c.cta, 2)) w.push(`${label}: missing CTA.`);
-    if (UNREALISTIC.test(`${c.hook} ${c.headline} ${c.primary_text}`)) w.push(`${label}: may contain an unrealistic claim.`);
-    if (c.creative_type === 'video' && !list(c.shot_list, 1)) w.push(`${label}: video idea has no shot list.`);
+    if (UNREALISTIC.test(`${c.hook} ${c.headline} ${c.primary_text}`)) w.push(`${label}: may contain an unrealistic claim — verify before "ready".`);
+    if ((c.creative_type === 'video' || c.creative_type === 'ugc')) {
+      const tl = c.video_timeline || {};
+      if (!list(tl.scenes, 1)) w.push(`${label}: video idea has no scene-by-scene timeline.`);
+      if (!tl.duration_seconds) w.push(`${label}: video idea has no duration.`);
+    }
+    if (c.creative_type === 'search_ad') w.push(...searchAdCharWarnings(c, label));
+    if (creativeComplianceFlags(c).length && !(c.compliance_ack && c.compliance_ack.acknowledged)) {
+      w.push(`${label}: has compliance flags — acknowledge before marking ready.`);
+    }
   });
+  if (!conceptsDistinct(items)) w.push('Some concepts share the same angle — make each test a distinct mechanism, not a headline variant.');
   return w;
 }
 
@@ -272,4 +328,9 @@ module.exports = {
   checkCreative,
   checkSeo,
   qualityWarnings,
+  // Prompt 11 — creative-specific helpers
+  searchAdCharWarnings,
+  creativeComplianceFlags,
+  creativeReadyGate,
+  conceptsDistinct,
 };

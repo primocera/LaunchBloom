@@ -470,6 +470,7 @@ const {
   scoreLandingPageQuality,
   scoreContentPlanQuality,
   scoreEmailSequenceQuality,
+  creativeReadyGate,
 } = require('../lib/quality-checks');
 const { safetyCheck } = require('../lib/safety-check');
 
@@ -553,7 +554,7 @@ const ITEM_TABLES = {
   },
   creative_assets: {
     order: 'created_at',
-    editable: ['platform', 'creative_type', 'hook', 'headline', 'primary_text', 'visual_direction', 'shot_list', 'text_overlays', 'cta', 'testing_angle', 'status'],
+    editable: ['platform', 'creative_type', 'angle', 'hook', 'headline', 'primary_text', 'visual_direction', 'designer_notes', 'shot_list', 'text_overlays', 'cta', 'testing_angle', 'compliance_ack', 'status'],
   },
   seo_assets: {
     order: 'created_at',
@@ -594,8 +595,22 @@ router.patch(
       for (const k of cfg.editable) {
         if (k in (req.body || {})) updates[k] = req.body[k];
       }
+      // v5 Prompt 11: normalise a boolean compliance_ack into the stored shape.
+      if (typeof updates.compliance_ack === 'boolean') {
+        updates.compliance_ack = { acknowledged: updates.compliance_ack, at: new Date().toISOString() };
+      }
       if (!Object.keys(updates).length) {
         return res.status(400).json({ error: 'No editable fields provided' });
+      }
+
+      // v5 Prompt 11: block unsupported proof / fake scarcity from "ready".
+      if (req.params.table === 'creative_assets' && (updates.status === 'ready' || updates.status === 'published')) {
+        const { data: row } = await supabase.from('creative_assets')
+          .select('*').eq('id', req.params.id).eq('workspace_id', ws.id).single();
+        if (row) {
+          const gate = creativeReadyGate({ ...row, ...updates });
+          if (!gate.ok) return res.status(409).json({ error: gate.reason, code: 'COMPLIANCE_ACK' });
+        }
       }
 
       const { data, error } = await supabase

@@ -736,16 +736,24 @@ const CREATIVE_SYSTEM =
   'You are a senior paid social creative strategist. Generate ad ideas for Meta, TikTok, Google and ' +
   'Pinterest that a solo founder or small brand can realistically create. Focus on hooks, image ideas, ' +
   'video ideas, UGC briefs, text overlays, primary text, headlines and testing angles.\n\n' +
-  'For each creative, include platform, creative_type, hook, headline, primary_text, visual_direction, ' +
-  'shot_list, text_overlays, cta and testing_angle.\n\n' +
+  'Generate genuinely DISTINCT concepts — each must differ by angle AND mechanism, never a minor headline ' +
+  'variant. Set the angle field to that distinct mechanism.\n\n' +
+  'Fill only the fields each format needs:\n' +
+  '- static: angle, hook, headline, primary_text, visual_direction, designer_notes, text_overlays, cta.\n' +
+  '- video / ugc: fill video_timeline (first_frame_hook, duration_seconds, scene-by-scene scenes with ' +
+  'timecode/visual/spoken_script/on_screen_text, b_roll, product_moments, audio_direction, cta_end_card).\n' +
+  '- carousel: fill slides (a cover slide, story slides, and a final CTA slide via the role field).\n' +
+  '- search_ad: fill search_ad with headlines (each ≤30 characters), descriptions (each ≤90 characters) ' +
+  'and keyword_groups grouped by search intent.\n' +
+  'Every creative includes a test object: one major variable, hypothesis, control and success_metric — ' +
+  'change ONE major variable per test.\n' +
+  'Populate compliance_flags with any high-risk claims (guarantees, proof, urgency) that the user must ' +
+  'verify; empty array if none.\n\n' +
   'Creative rules:\n' +
-  '- Visual ideas must be shootable with a phone, simple props and real products/screens.\n' +
-  '- Do not require expensive production.\n' +
-  '- Use clear before/after or problem/solution angles without unrealistic claims.\n' +
-  '- For ecommerce, include product-focused static, lifestyle, comparison, bundle and social-proof angles.\n' +
-  '- For services/digital products, include problem-aware, founder-led, screen-recording, ' +
-  'testimonial-placeholder and educational angles.\n' +
-  '- For video, include first 3-second hook, scene-by-scene shots, on-screen text and CTA.';
+  '- Visual ideas must be shootable with the stated production constraints and props.\n' +
+  '- Respect mandatory elements and never use prohibited claims.\n' +
+  '- Use clear before/after or problem/solution angles without unrealistic claims or invented proof.\n' +
+  '- Match funnel stage and audience temperature (cold vs warm vs hot).';
 
 router.post('/generate-creative-assets', planGate('asset_generations'), async (req, res, next) => {
   try {
@@ -753,6 +761,8 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
     const {
       offer_id, launch_kit_id, target_language, platforms,
       creative_goal, formats, budget_level, extra_context,
+      objective, funnel_stage, audience_temperature, placement, offer, proof,
+      mandatory_elements, prohibited_claims, production_constraints,
     } = req.body || {};
 
     if (!Array.isArray(platforms) || platforms.length === 0) {
@@ -767,11 +777,20 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       brandBlock(ctx),
       line('Platforms', platforms),
       line('Creative goal', creative_goal),
+      line('Objective', objective),
+      line('Funnel stage', funnel_stage),
+      line('Audience temperature', audience_temperature),
+      line('Placement', placement),
       line('Formats', formats),
+      line('Offer', offer),
+      line('Proof available (use only this — never invent)', proof),
+      line('Mandatory elements', mandatory_elements),
+      line('Prohibited claims', prohibited_claims),
+      line('Production constraints', production_constraints),
       line('Budget level', budget_level),
       line('Target language', target_language || 'English'),
       line('Extra context', extra_context),
-      'Return a JSON items array. For video ideas include the first 3-second hook, scenes, text overlays and CTA.',
+      'Return a JSON items array of genuinely distinct concepts, each with its format-specific fields, a test object and compliance_flags.',
     ].filter(Boolean).join('\n\n');
 
     const camp = await campaignContext(ws, (req.body || {}).campaign_id);
@@ -791,14 +810,21 @@ router.post('/generate-creative-assets', planGate('asset_generations'), async (r
       generation_run_id: runId,
       platform: c.platform,
       creative_type: c.creative_type,
+      angle: c.angle || null,
       hook: c.hook,
       headline: c.headline,
       primary_text: c.primary_text,
       visual_direction: c.visual_direction,
+      designer_notes: c.designer_notes || null,
       shot_list: c.shot_list,
       text_overlays: c.text_overlays,
+      video_timeline: c.video_timeline && c.video_timeline.first_frame_hook ? c.video_timeline : null,
+      slides: Array.isArray(c.slides) && c.slides.length ? c.slides : null,
+      search_ad: c.search_ad && Array.isArray(c.search_ad.headlines) && c.search_ad.headlines.length ? c.search_ad : null,
       cta: c.cta,
       testing_angle: c.testing_angle,
+      test_matrix: c.test && c.test.variable ? c.test : null,
+      compliance_flags: Array.isArray(c.compliance_flags) && c.compliance_flags.length ? c.compliance_flags : null,
       status: 'draft',
     }));
     const { data: saved, error } = await supabase.from('creative_assets').insert(rows).select();
