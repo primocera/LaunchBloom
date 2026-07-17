@@ -5,3 +5,8 @@ node_modules/
 OfferFlow_AI_Claude_Code_Prompts.docx
 test-results/
 playwright-report/
+
+# stray local screenshots / audit docx (not part of the app)
+*.PNG
+*.png
+LaunchBloom_*.docx

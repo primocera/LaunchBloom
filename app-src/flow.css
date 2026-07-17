@@ -807,6 +807,84 @@
   padding-left: 18px;
 }
 
+/* ── Prompt 7: generator shell (context chips, tabs, regenerate) ─────────── */
+.gen-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.gen-context-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f9fafb;
+  font-size: 12px;
+  color: #111827;
+}
+.gen-context-label { color: #6b7280; font-weight: 600; }
+.gen-context-chip.is-missing {
+  border-style: dashed;
+  border-color: #f59e0b;
+  color: #92400e;
+  background: #fffbeb;
+  text-decoration: none;
+}
+.gen-context-edit { margin-left: auto; font-size: 12px; color: #2563eb; }
+
+.gen-field-warn {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.gen-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.gen-tab {
+  border: none;
+  background: none;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.gen-tab.is-on { color: #111827; font-weight: 600; border-bottom-color: #2563eb; }
+
+.gen-regen { margin-top: 14px; border-top: 1px dashed #e5e7eb; padding-top: 12px; }
+.gen-regen-modes { flex-wrap: wrap; gap: 6px; }
+.gen-regen-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.gen-versions, .gen-brief { margin: 0; font-size: 13px; }
+.gen-versions { list-style: none; padding: 0; }
+.gen-versions li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.gen-brief div { display: flex; gap: 8px; padding: 4px 0; }
+.gen-brief dt { min-width: 120px; color: #6b7280; text-transform: capitalize; }
+.gen-brief dd { margin: 0; color: #111827; }
+
 /* ── Legal pages + Account (Prompt 14) ──────────────────────────────────── */
 .legal {
   min-height: 100vh;

@@ -83,6 +83,7 @@ export const api = {
   // Campaigns (Prompt 12)
   campaigns: () => request('/api/campaigns'),
   createCampaign: (brief) => request('/api/campaigns', { method: 'POST', body: brief }),
+  campaign: (id) => request(`/api/campaigns/${id}`),
   updateCampaign: (id, patch) => request(`/api/campaigns/${id}`, { method: 'PATCH', body: patch }),
   deleteCampaign: (id, confirm = false) =>
     request(`/api/campaigns/${id}${confirm ? '?confirm=1' : ''}`, { method: 'DELETE' }),
