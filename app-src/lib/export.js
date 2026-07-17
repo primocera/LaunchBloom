@@ -36,6 +36,61 @@ export function landingPageMarkdown(lp = {}) {
   ].filter(Boolean).join('\n\n');
 }
 
+// ── Prompt 8: Website Studio exports (Markdown + Word) ──────────────────────
+
+/** One saved website page (row) → clean Markdown. Pure + snapshot-tested. */
+export function websitePageMarkdown(item = {}) {
+  const p = item.sections || {};
+  const sections = Array.isArray(p.sections) ? p.sections : [];
+  const heroDirs = Array.isArray(p.hero_directions) ? p.hero_directions : [];
+  return [
+    `# ${(p.page_type || item.page_type || 'page').replace(/_/g, ' ').toUpperCase()}`,
+    p.page_goal ? `_Goal: ${p.page_goal}_` : '',
+    `**SEO title:** ${item.seo_title || p.seo_title || ''}`,
+    `**Meta description:** ${item.meta_description || p.meta_description || ''}`,
+    `## ${p.h1 || ''}`,
+    `**Hero:** ${p.hero_headline || ''}`,
+    p.hero_subheadline || '',
+    heroDirs.length ? `### Hero directions\n${heroDirs.map((h) => `- **${(h.approach || '').replace(/_/g, ' ')}:** ${h.headline} — ${h.subheadline}`).join('\n')}` : '',
+    `**Primary CTA:** ${item.cta || p.primary_cta || ''}`,
+    p.secondary_cta ? `**Secondary CTA:** ${p.secondary_cta}` : '',
+    ...sections.map((s) => [
+      `### ${s.section_name || ''}`,
+      s.headline || '',
+      s.body || '',
+      mdList(s.bullets),
+      s.cta ? `_CTA: ${s.cta}_` : '',
+    ].filter(Boolean).join('\n\n')),
+    Array.isArray(p.faq) && p.faq.length ? `### FAQ\n${p.faq.map((f) => `**${f.question}**\n${f.answer}`).join('\n\n')}` : '',
+    p.design_notes ? `### Design notes\n${p.design_notes}` : '',
+  ].filter(Boolean).join('\n\n');
+}
+
+/** Many pages → one Markdown document. */
+export function websitePagesMarkdown(items = []) {
+  return (items || []).map(websitePageMarkdown).join('\n\n---\n\n');
+}
+
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * Word-openable HTML document (.doc). Dependency-free and CSP-safe — no OOXML
+ * zip library, but Word opens this cleanly with real headings and lists.
+ */
+export function websitePagesDoc(items = []) {
+  const md = websitePagesMarkdown(items);
+  const bodyHtml = md.split('\n').map((ln) => {
+    if (ln.startsWith('### ')) return `<h3>${esc(ln.slice(4))}</h3>`;
+    if (ln.startsWith('## ')) return `<h2>${esc(ln.slice(3))}</h2>`;
+    if (ln.startsWith('# ')) return `<h1>${esc(ln.slice(2))}</h1>`;
+    if (ln.startsWith('- ')) return `<li>${esc(ln.slice(2))}</li>`;
+    if (ln === '---') return '<hr/>';
+    if (ln.trim() === '') return '';
+    return `<p>${esc(ln)}</p>`;
+  }).join('\n');
+  return `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Website copy</title></head><body>${bodyHtml}</body></html>`;
+}
+
 export function emailSequenceMarkdown(items = []) {
   return [
     '## Email Sequence',

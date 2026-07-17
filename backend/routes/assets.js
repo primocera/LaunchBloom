@@ -158,6 +158,13 @@ const WEBSITE_SYSTEM =
   '- About us: human story, mission, values, why this brand exists, trust without hype.\n' +
   '- FAQ: practical buying objections and answers.\n' +
   '- Thank-you page: next step, expectation setting, email reminder, social follow CTA.\n' +
+  '- Collection/category page: category promise, what is inside, buying guidance, filters/sorting hints, SEO intro.\n' +
+  '- Contact page: how to reach the brand, what to expect, response time, form field suggestions.\n' +
+  'For every page, first produce three distinct hero directions — direct_response (offer/benefit-led), ' +
+  'brand_led (story/identity-led) and problem_aware (starts from the reader\'s pain) — then write the ' +
+  'full page using the strongest one for hero_headline/hero_subheadline. Write natively in the target ' +
+  'language and keep product and brand names exactly as given — never translate or alter them. Only give ' +
+  'a secondary CTA when a second action genuinely helps; otherwise return an empty string.\n' +
   'If information is missing, use a clear placeholder in brackets instead of inventing facts.';
 
 // Prompts 12-14: page-type-specific section guidance. Each requested page type
@@ -183,7 +190,22 @@ const PAGE_GUIDANCE = {
     'mission, values, why we started, who we serve, trust, final CTA, and image suggestions. Do not ' +
     'invent founder facts — use only provided details and use fill-in placeholders where missing. ' +
     'Keep it warm and human, and remind the user to add real photos and founder details before publishing.',
+  collection:
+    'For the collection/category page, produce sections covering: category headline, short intro that ' +
+    'sets expectations, what is in the collection, how to choose (buying guidance), and an SEO intro ' +
+    'paragraph. Do not invent product counts or prices.',
+  contact:
+    'For the contact page, produce sections covering: contact headline, ways to reach the brand, what ' +
+    'to expect and typical response time, and suggested form fields. Use placeholders for real email/' +
+    'phone/hours instead of inventing them.',
+  landing:
+    'For the landing page, produce a single-goal, conversion-focused page: one hero, problem, solution, ' +
+    'benefits, proof/reassurance, objection handling, and one repeated primary CTA. Keep it to one goal.',
 };
+
+// P8: ecommerce product-page facts the user can supply so the AI never invents
+// variants, shipping terms or proof. All optional; missing → bracket placeholder.
+const ECOM_FIELDS = ['product_facts', 'benefits', 'objections', 'usage', 'variants', 'shipping_returns', 'proof', 'free_shipping_threshold'];
 
 router.post('/generate-website-kit', planGate('asset_generations'), async (req, res, next) => {
   try {
@@ -214,6 +236,14 @@ router.post('/generate-website-kit', planGate('asset_generations'), async (req, 
       line('Page types needed', page_types),
       line('Website goal', website_goal),
       products ? `Product details (use only these facts; bracket anything missing):\n${JSON.stringify(products).slice(0, 3000)}` : null,
+      (() => {
+        const ecom = ECOM_FIELDS
+          .map((k) => ((req.body || {})[k] ? line(k.replace(/_/g, ' '), (req.body || {})[k]) : null))
+          .filter(Boolean);
+        return ecom.length
+          ? `Ecommerce product facts (use verbatim; never invent variants, shipping terms, discounts or proof — bracket what is missing):\n${ecom.join('\n')}`
+          : null;
+      })(),
       guidance ? `Page-specific requirements:\n${guidance}` : null,
       line('Extra context', extra_context),
       'Return structured JSON with a pages array covering the requested page types.',

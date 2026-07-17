@@ -172,8 +172,12 @@ function checkWebsitePages(pages = []) {
   pages.forEach((p, i) => {
     const label = p.page_type || `page ${i + 1}`;
     if (!has(p.h1, 1)) w.push(`${label}: missing H1.`);
+    if (!has(p.page_goal, 3)) w.push(`${label}: no clear conversion goal.`);
     if (!has(p.primary_cta, 1)) w.push(`${label}: missing primary CTA.`);
+    if (!has(p.seo_title, 1)) w.push(`${label}: missing SEO title.`);
+    else if (p.seo_title.length > 60) w.push(`${label}: SEO title is over 60 characters.`);
     if (!has(p.meta_description, 1)) w.push(`${label}: missing meta description.`);
+    else if (p.meta_description.length < 50) w.push(`${label}: meta description is under 50 characters.`);
     else if (p.meta_description.length > 160) w.push(`${label}: meta description is over 160 characters.`);
     const bullets = (p.sections || []).reduce((n, s) => n + ((s.bullets || []).length), 0);
     if (bullets < 3) w.push(`${label}: fewer than 3 benefit bullets.`);

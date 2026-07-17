@@ -1,10 +1,13 @@
 import { api } from '../../lib/api';
+import { download, websitePageMarkdown, websitePagesDoc } from '../../lib/export';
 import GeneratorStudio, { AssetField } from './generator';
 
 // ---------------------------------------------------------------------------
-// Upgrade Prompt 16: Website & Page Studio — generate home/product/cart/about/
-// FAQ/landing page copy from the offer. Full structured page is stored in the
-// row's `sections` jsonb; render it here with per-section copy buttons.
+// Website & Page Studio (v5 Prompt 8): generate home/product/collection/cart/
+// about/FAQ/contact/thank-you/landing copy from the offer. Each page ships
+// three hero directions, structured sections, meta-length checks and clean
+// Markdown / Word export. The full structured page lives in the row's
+// `sections` jsonb; render it here with per-section copy buttons.
 // ---------------------------------------------------------------------------
 
 const FIELDS = [
@@ -24,31 +27,63 @@ const FIELDS = [
     options: [
       { value: 'home', label: 'Home' },
       { value: 'product', label: 'Product' },
-      { value: 'collection', label: 'Collection' },
-      { value: 'cart', label: 'Cart' },
+      { value: 'collection', label: 'Collection / Category' },
+      { value: 'landing', label: 'Landing Page' },
       { value: 'about', label: 'About' },
       { value: 'faq', label: 'FAQ' },
-      { value: 'thank_you', label: 'Thank You' },
+      { value: 'cart', label: 'Cart' },
       { value: 'contact', label: 'Contact' },
-      { value: 'landing', label: 'Landing Page' },
+      { value: 'thank_you', label: 'Thank You' },
     ],
   },
   { name: 'website_goal', label: 'Website goal', type: 'text', placeholder: 'e.g. book discovery calls' },
+  // Ecommerce product facts — used verbatim for product/cart pages, so the AI
+  // never invents variants, shipping terms, discounts or proof.
+  { name: 'product_facts', label: 'Product facts (ecommerce)', type: 'textarea', placeholder: 'Materials, dimensions, what it is, what it does…' },
+  { name: 'benefits', label: 'Key benefits', type: 'textarea', placeholder: 'The outcomes a buyer cares about' },
+  { name: 'objections', label: 'Common objections', type: 'textarea', placeholder: 'Doubts buyers have before purchasing' },
+  { name: 'usage', label: 'How it is used', type: 'textarea', placeholder: 'How the customer uses / applies it' },
+  { name: 'variants', label: 'Variants', type: 'text', placeholder: 'e.g. sizes, colours, bundles (leave blank if none)' },
+  { name: 'shipping_returns', label: 'Shipping & returns', type: 'text', placeholder: 'Real policy — leave blank to use placeholders' },
+  { name: 'proof', label: 'Verified proof', type: 'textarea', placeholder: 'Only real reviews / numbers / results — never invented' },
+  { name: 'free_shipping_threshold', label: 'Free-shipping threshold', type: 'text', placeholder: 'e.g. $50 (only if you actually offer it)' },
   { name: 'extra_context', label: 'Extra context', type: 'textarea' },
 ];
+
+const APPROACH_LABELS = {
+  direct_response: 'Direct response',
+  brand_led: 'Brand-led',
+  problem_aware: 'Problem-aware',
+};
 
 function renderPage(item) {
   const page = item.sections || {};
   const sections = Array.isArray(page.sections) ? page.sections : [];
+  const heroDirs = Array.isArray(page.hero_directions) ? page.hero_directions : [];
   return (
     <>
       <div className="gen-card-title">{(page.page_type || item.page_type || 'page').replace(/_/g, ' ')}</div>
+      <AssetField label="Conversion goal" value={page.page_goal} />
       <AssetField label="SEO title" value={item.seo_title || page.seo_title} copy />
       <AssetField label="Meta description" value={item.meta_description || page.meta_description} copy />
       <AssetField label="H1" value={page.h1} copy />
-      <AssetField label="Hero headline" value={page.hero_headline} copy />
-      <AssetField label="Hero subheadline" value={page.hero_subheadline} copy />
+
+      {heroDirs.length > 0 && (
+        <div className="gen-subsection">
+          <span className="gen-field-label">Hero directions (pick one)</span>
+          {heroDirs.map((h, i) => (
+            <div className="gen-subsection" key={i}>
+              <AssetField label={APPROACH_LABELS[h.approach] || h.approach} value={h.headline} copy />
+              <AssetField label="Subheadline" value={h.subheadline} copy />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AssetField label="Hero headline (chosen)" value={page.hero_headline} copy />
+      <AssetField label="Hero subheadline (chosen)" value={page.hero_subheadline} copy />
       <AssetField label="Primary CTA" value={item.cta || page.primary_cta} copy />
+      <AssetField label="Secondary CTA" value={page.secondary_cta} copy />
       {sections.map((s, i) => (
         <div className="gen-subsection" key={i}>
           <AssetField label={s.section_name || `Section ${i + 1}`} value={s.headline} copy />
@@ -62,30 +97,28 @@ function renderPage(item) {
         <AssetField label="FAQ" value={page.faq.map((f) => `${f.question}\n${f.answer}`)} copy />
       )}
       <AssetField label="Design notes" value={page.design_notes} />
+
+      <div className="flow-row" style={{ marginTop: 10 }}>
+        <button className="btn-secondary" onClick={() => download(`${page.page_type || 'page'}.md`, websitePageMarkdown(item), 'text/markdown')}>
+          Export Markdown
+        </button>
+        <button className="btn-secondary" onClick={() => download(`${page.page_type || 'page'}.doc`, websitePagesDoc([item]), 'application/msword')}>
+          Export Word
+        </button>
+      </div>
     </>
   );
 }
 
 function fullCopy(item) {
-  const page = item.sections || {};
-  const sections = Array.isArray(page.sections) ? page.sections : [];
-  return [
-    `# ${(page.page_type || item.page_type || 'page').toUpperCase()}`,
-    `SEO title: ${item.seo_title || page.seo_title || ''}`,
-    `Meta description: ${item.meta_description || page.meta_description || ''}`,
-    `H1: ${page.h1 || ''}`,
-    `Hero: ${page.hero_headline || ''} — ${page.hero_subheadline || ''}`,
-    `CTA: ${item.cta || page.primary_cta || ''}`,
-    '',
-    ...sections.map((s) => `## ${s.section_name || ''}\n${s.headline || ''}\n${s.body || ''}\n${(s.bullets || []).map((b) => `- ${b}`).join('\n')}`),
-  ].join('\n');
+  return websitePageMarkdown(item);
 }
 
 export default function WebsiteStudio() {
   return (
     <GeneratorStudio
       title="Website & Page Studio"
-      blurb="Generate homepage, product page, cart page, about page, FAQ and landing page copy from your offer."
+      blurb="Generate home, product, collection, cart, about, FAQ, contact, thank-you and landing page copy from your offer — with three hero directions per page."
       fields={FIELDS}
       initial={{ target_language: 'English', page_types: ['home'] }}
       generate={(v) => api.generateWebsiteKit(v)}

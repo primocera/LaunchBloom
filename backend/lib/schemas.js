@@ -314,7 +314,24 @@ const websiteKitSchema = {
           h1: { type: 'string' },
           hero_headline: { type: 'string' },
           hero_subheadline: { type: 'string' },
+          // P8: three hero directions to choose from before committing to one.
+          hero_directions: {
+            type: 'array',
+            minItems: 3,
+            maxItems: 3,
+            items: {
+              type: 'object',
+              properties: {
+                approach: { type: 'string', enum: ['direct_response', 'brand_led', 'problem_aware'] },
+                headline: { type: 'string' },
+                subheadline: { type: 'string' },
+              },
+              required: ['approach', 'headline', 'subheadline'],
+              additionalProperties: false,
+            },
+          },
           primary_cta: { type: 'string' },
+          secondary_cta: { type: 'string', description: 'Only when a second action is genuinely useful, else empty string.' },
           sections: {
             type: 'array',
             minItems: 2,
@@ -347,7 +364,8 @@ const websiteKitSchema = {
         },
         required: [
           'page_type', 'page_goal', 'seo_title', 'meta_description', 'h1', 'hero_headline',
-          'hero_subheadline', 'primary_cta', 'sections', 'trust_elements', 'faq', 'design_notes',
+          'hero_subheadline', 'hero_directions', 'primary_cta', 'secondary_cta', 'sections',
+          'trust_elements', 'faq', 'design_notes',
         ],
         additionalProperties: false,
       },
