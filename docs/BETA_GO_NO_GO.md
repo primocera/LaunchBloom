@@ -63,20 +63,26 @@ gap. E2E is run locally against a credential-blanked server.
 - **Public copy:** landing/features reviewed — no ranking guarantees, no "priority
   exports", no unlimited/white-label/team-collab claims. ✅
 
-## 4. Launch-blocking operational tasks (NOT code — must be done in prod)
+## 4. Launch config — now OPTIONAL by default (deferred until domain is known)
 
-These are the gate between "GO" and actually charging customers:
+Migrations 015–023 have been run. ✅
 
-1. **Run migrations 015–023** on the production Supabase project (email events,
-   marketing consent, campaign brief, email/social/creative studio fields, SEO
-   ideas, version provenance, admin audit).
-2. **Set env vars:** `BRAND_LEGAL_NAME`, `BRAND_LEGAL_ADDRESS`, `BRAND_GOVERNING_LAW`
-   (checkout stays disabled until these are real), plus `STRIPE_PRICE_*`,
-   `STRIPE_WEBHOOK_SECRET`, `SESSION_SECRET`, `ANTHROPIC_API_KEY`; optional
-   `BRAND_PRIVACY_EMAIL`, `RESEND_API_KEY`, `ADMIN_EMAILS`.
-3. **Stripe/email config:** verify the webhook endpoint + signing secret, the
-   Customer Portal (cancel/update payment) is enabled, success/cancel redirect
-   URLs point at `/app?checkout=…`, and the Resend sending domain is verified.
+The legal + Stripe config gates are **optional by default** so the app can be
+deployed/previewed and tested with **sandbox (test-mode) Stripe** before a real
+domain or legal entity exists. To hard-enforce them for the real, money-taking
+launch, set **`ENFORCE_LAUNCH_CONFIG=1`** — then missing legal values block real
+checkout and missing Stripe prices 500 `/api/plans`, exactly as before.
+
+**Before charging REAL customers** (set `ENFORCE_LAUNCH_CONFIG=1` and provide):
+
+1. **Legal:** `BRAND_LEGAL_NAME`, `BRAND_LEGAL_ADDRESS`, `BRAND_GOVERNING_LAW`
+   (optional `BRAND_PRIVACY_EMAIL`).
+2. **Core:** `STRIPE_SECRET_KEY` + `STRIPE_PRICE_*`, `STRIPE_WEBHOOK_SECRET`,
+   `SESSION_SECRET`, `ANTHROPIC_API_KEY` (optional `RESEND_API_KEY`, `ADMIN_EMAILS`).
+3. **Domain-dependent (deferred):** Customer Portal enabled, webhook endpoint +
+   signing secret, success/cancel redirect URLs at `<your-domain>/app?checkout=…`,
+   Resend sending domain verified. Do a **sandbox Stripe** trial→charge + webhook
+   replay first; then repeat on the real domain.
 
 ## 5. Findings (this audit)
 

@@ -162,13 +162,18 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       return res.status(400).json({ error: `Plan "${planName}" (${interval}) is not configured (missing STRIPE_PRICE_* env var).` });
     }
 
-    // v5 Prompt 15: never take money while legal placeholders remain live.
+    // v5 Prompt 15: never take real money while legal placeholders remain live.
+    // Optional by default (so test-mode Stripe / preview deploys work before the
+    // legal entity + domain are known); set ENFORCE_LAUNCH_CONFIG=1 to hard-block
+    // real checkout once you go live.
     if (process.env.NODE_ENV === 'production') {
       const { legalPlaceholders } = require('../lib/brand');
       const missing = legalPlaceholders();
       if (missing.length) {
-        console.error('[checkout] blocked: legal config incomplete:', missing.join(', '));
-        return res.status(500).json({ error: 'Checkout is temporarily unavailable.', code: 'CONFIG' });
+        console.warn('[checkout] legal config incomplete:', missing.join(', '));
+        if (process.env.ENFORCE_LAUNCH_CONFIG === '1') {
+          return res.status(500).json({ error: 'Checkout is temporarily unavailable.', code: 'CONFIG' });
+        }
       }
     }
 

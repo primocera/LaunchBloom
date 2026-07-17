@@ -11,9 +11,13 @@ const { publicCatalog, missingStripeEnv } = require('../lib/plan-catalog');
 
 function plansHandler(_req, res) {
   const missing = missingStripeEnv();
-  if (missing.length && process.env.NODE_ENV === 'production') {
-    console.error('[plans] missing Stripe price env vars:', missing.join(', '));
-    return res.status(500).json({ error: 'Pricing is not configured.', code: 'CONFIG' });
+  if (missing.length) {
+    // Optional by default so the app runs before Stripe prices / a real domain
+    // exist. Set ENFORCE_LAUNCH_CONFIG=1 for the real launch to hard-fail instead.
+    console.warn('[plans] missing Stripe price env vars:', missing.join(', '));
+    if (process.env.ENFORCE_LAUNCH_CONFIG === '1') {
+      return res.status(500).json({ error: 'Pricing is not configured.', code: 'CONFIG' });
+    }
   }
   res.set('Cache-Control', 'public, max-age=300');
   res.json(publicCatalog());

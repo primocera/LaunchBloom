@@ -7,7 +7,8 @@ const helmet = require('helmet');
   const { legalPlaceholders } = require('./lib/brand');
   const missing = legalPlaceholders();
   if (missing.length && process.env.NODE_ENV === 'production') {
-    console.error(`[legal] PRODUCTION LEGAL CONFIG INCOMPLETE — checkout is blocked until these env vars are set: ${missing.join(', ')}`);
+    const enforced = process.env.ENFORCE_LAUNCH_CONFIG === '1';
+    console.warn(`[legal] legal config incomplete (${missing.join(', ')}) — ${enforced ? 'real checkout is BLOCKED (ENFORCE_LAUNCH_CONFIG=1)' : 'checkout allowed; set these + ENFORCE_LAUNCH_CONFIG=1 before charging real customers'}`);
   }
 }
 const cors = require('cors');
