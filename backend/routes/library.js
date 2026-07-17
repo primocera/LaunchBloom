@@ -147,6 +147,12 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     if (typeof b.favourite === 'boolean') patch.favourite = b.favourite;
     if (typeof b.archived === 'boolean') patch.archived = b.archived;
     if (typeof b.status === 'string') patch.status = b.status.slice(0, 30);
+    // v5 Prompt 10: social calendar — plan an item on a date (or clear it)
+    // without exporting. Scheduling metadata, so it never snapshots a version.
+    if (b.planned_date === null) patch.planned_date = null;
+    else if (typeof b.planned_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.planned_date)) {
+      patch.planned_date = b.planned_date;
+    }
     // v5 Prompt 6: attach/detach an existing asset to a campaign — the
     // campaign must belong to this workspace.
     if (b.campaign_id === null) patch.campaign_id = null;

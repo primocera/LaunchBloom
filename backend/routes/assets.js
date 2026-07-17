@@ -632,22 +632,31 @@ const SOCIAL_SYSTEM =
   'brands. Create captions and content ideas that connect to the user\'s offer and help move followers ' +
   'toward trust, leads or sales. Avoid generic captions. Every caption must have a specific hook, body ' +
   'angle, CTA and visual direction.\n\n' +
-  'Include a mix of: educational, myth-busting, personal/story, proof/trust, offer/sales, ' +
-  'objection-handling and behind-the-scenes captions, plus carousel outlines, reel/TikTok scripts and ' +
-  'story sequences.\n\n' +
-  'Special caption rules:\n' +
-  '- Write like a real human, not corporate marketing.\n' +
-  '- Keep hooks short and scroll-stopping.\n' +
+  'Produce a balanced mix across five content pillars — education, proof, objection-handling, community ' +
+  'and sales — weighted toward the stated goal.\n\n' +
+  'Channel-aware format rules (use only the fields each format needs):\n' +
+  '- carousel: fill the slides array slide-by-slide (heading + body + visual per slide); keep video_script empty.\n' +
+  '- reel / short_video / TikTok video: fill video_script (hook, spoken_script, on_screen_text, shot_list, ' +
+  'b_roll, cta); keep slides empty.\n' +
+  '- caption / story / post / pin: hook + caption + visual_direction; slides empty and video_script fields empty.\n' +
+  'Set each item\'s pillar field to the pillar it serves.\n\n' +
+  'Special rules:\n' +
+  '- Write like a real human, not corporate marketing. Keep hooks short and scroll-stopping.\n' +
   '- CTA should match the goal: comment, save, DM, click, join waitlist, shop, book call.\n' +
-  '- If target_language is Slovenian, Croatian, German or English, write natively in that language.\n' +
+  '- Respect the awareness stage, creator/product availability, filming location and production level given — ' +
+  'never propose shoots the user cannot realistically produce.\n' +
+  '- Write natively in the target language.\n' +
+  '- Hashtags are optional and platform-appropriate; never imply they guarantee growth. An empty list is fine.\n' +
   '- Do not use exaggerated promises.';
 
 router.post('/generate-social-assets', planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
-      offer_id, launch_kit_id, target_language, platforms,
+      offer_id, launch_kit_id, target_language, platforms, formats,
       content_goal, content_style, number_of_items, extra_context,
+      content_pillars, awareness_stage, creator_available, product_available,
+      filming_location, production_level,
     } = req.body || {};
 
     if (!Array.isArray(platforms) || platforms.length === 0) {
@@ -662,12 +671,20 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       'Create social content assets.',
       brandBlock(ctx),
       line('Platforms', platforms),
+      line('Formats to include', formats),
       line('Content goal', content_goal),
       line('Content style', content_style),
+      line('Content pillars', content_pillars),
+      line('Audience awareness stage', awareness_stage),
+      line('Creator available on camera', creator_available),
+      line('Product available to show', product_available),
+      line('Filming location', filming_location),
+      line('Production level', production_level),
       line('Target language', target_language || 'English'),
       `Number of items: ${count}`,
       line('Extra context', extra_context),
-      'Return a JSON items array with a mix of educational, story, proof, objection, soft-sell and offer posts.',
+      'Return a JSON items array with a balanced mix across education, proof, objection, community and sales, ' +
+      'each in the format that fits its platform (fill slides for carousels, video_script for reels/short video).',
     ].filter(Boolean).join('\n\n');
 
     const camp = await campaignContext(ws, (req.body || {}).campaign_id);
@@ -687,10 +704,13 @@ router.post('/generate-social-assets', planGate('asset_generations'), async (req
       generation_run_id: runId,
       platform: s.platform,
       content_type: s.content_type,
+      pillar: s.pillar || null,
       hook: s.hook,
       caption: s.caption,
       cta: s.cta,
       visual_direction: s.visual_direction,
+      slides: Array.isArray(s.slides) && s.slides.length ? s.slides : null,
+      video_script: s.video_script && s.video_script.spoken_script ? s.video_script : null,
       hashtags: s.hashtags,
       status: 'draft',
     }));

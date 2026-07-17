@@ -434,15 +434,45 @@ const socialCaptionSchema = {
         type: 'object',
         properties: {
           platform: { type: 'string', enum: ['instagram', 'tiktok', 'linkedin', 'pinterest', 'facebook'] },
-          content_type: { type: 'string', enum: ['caption', 'carousel', 'reel', 'story', 'short_video'] },
+          content_type: { type: 'string', enum: ['caption', 'carousel', 'reel', 'story', 'short_video', 'pin', 'post'] },
+          pillar: { type: 'string', description: 'Which content pillar / angle this belongs to (education, proof, objection, community, sales).' },
           hook: { type: 'string' },
           caption: { type: 'string' },
           cta: { type: 'string' },
           visual_direction: { type: 'string' },
-          hashtags: { type: 'array', maxItems: 12, items: { type: 'string' } },
+          // Carousel: slide-by-slide copy. Empty array for non-carousel formats.
+          slides: {
+            type: 'array', minItems: 0, maxItems: 12,
+            items: {
+              type: 'object',
+              properties: {
+                slide_number: { type: 'integer' },
+                heading: { type: 'string' },
+                body: { type: 'string' },
+                visual: { type: 'string' },
+              },
+              required: ['slide_number', 'heading', 'body', 'visual'],
+              additionalProperties: false,
+            },
+          },
+          // Short video / reel / TikTok. Empty strings/arrays for non-video formats.
+          video_script: {
+            type: 'object',
+            properties: {
+              hook: { type: 'string' },
+              spoken_script: { type: 'string' },
+              on_screen_text: { type: 'array', maxItems: 12, items: { type: 'string' } },
+              shot_list: { type: 'array', maxItems: 12, items: { type: 'string' } },
+              b_roll: { type: 'array', maxItems: 12, items: { type: 'string' } },
+              cta: { type: 'string' },
+            },
+            required: ['hook', 'spoken_script', 'on_screen_text', 'shot_list', 'b_roll', 'cta'],
+            additionalProperties: false,
+          },
+          hashtags: { type: 'array', maxItems: 12, items: { type: 'string' }, description: 'Optional and platform-appropriate. Never a growth guarantee; empty array is fine.' },
           goal: { type: 'string' },
         },
-        required: ['platform', 'content_type', 'hook', 'caption', 'cta', 'visual_direction', 'hashtags', 'goal'],
+        required: ['platform', 'content_type', 'pillar', 'hook', 'caption', 'cta', 'visual_direction', 'slides', 'video_script', 'hashtags', 'goal'],
         additionalProperties: false,
       },
     },

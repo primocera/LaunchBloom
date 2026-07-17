@@ -919,6 +919,23 @@
   overflow-x: auto;
 }
 
+/* ── Prompt 10: social calendar rows ────────────────────────────────────── */
+.calendar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+}
+.calendar-row > span { flex: 1; min-width: 180px; }
+.calendar-row input[type="date"] {
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
 /* ── Legal pages + Account (Prompt 14) ──────────────────────────────────── */
 .legal {
   min-height: 100vh;
