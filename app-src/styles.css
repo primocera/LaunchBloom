@@ -1055,3 +1055,10 @@ button {
 .create-card { text-decoration: none; color: inherit; display: block; }
 .create-card:hover { border-color: #2563eb; }
 .create-card h3 { margin: 0 0 6px; }
+
+/* v5 Prompt 4: Home action dashboard */
+.dash-hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.dash-hero .flow-h2 { margin: 0; }
+.dash-primary { min-height: 44px; }
+.dash-usage-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.dash-usage-warn a { color: inherit; font-weight: 600; }
