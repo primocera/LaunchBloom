@@ -143,6 +143,20 @@ app.get('/health', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Optional static frontend (v5 Prompt 16): SERVE_APP=1 serves the committed
+// app/ build with the same SPA fallback Vercel's rewrites provide. Used by
+// the local Playwright E2E suite and prod-like local runs — not on Vercel.
+// ---------------------------------------------------------------------------
+if (process.env.SERVE_APP === '1') {
+  const path = require('path');
+  const appDir = path.join(__dirname, '..', 'app');
+  app.use(express.static(appDir));
+  app.get(/^\/(app(?!\/assets\/)|legal)(\/.*)?$/, (_req, res) => {
+    res.sendFile(path.join(appDir, 'index.html'));
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 404 + global error handler
 // ---------------------------------------------------------------------------
 app.use((_req, res) => {

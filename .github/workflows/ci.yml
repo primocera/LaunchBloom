@@ -28,3 +28,7 @@ jobs:
 
       - name: Production build
         run: npm run build:app
+
+      # Fails when app/ was not rebuilt after app-src/ changes (stale bundle).
+      - name: Stale-build detection
+        run: npm run check:app-fresh
