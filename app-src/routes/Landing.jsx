@@ -228,7 +228,7 @@ export default function Landing() {
           </Link>
         </header>
 
-        <section className="lp-hero">
+        <main className="lp-hero" id="main-content">
           <h1>
             Your idea turned into a
             <br />
@@ -262,7 +262,7 @@ export default function Landing() {
 
             <AskBox prompts={PROMPTS} />
           </div>
-        </section>
+        </main>
       </div>
 
       <StepPopups />

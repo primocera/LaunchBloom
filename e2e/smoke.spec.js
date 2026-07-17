@@ -126,4 +126,45 @@ test.describe('keyboard access', () => {
     const focused = await page.evaluate(() => document.activeElement?.textContent || '');
     expect(focused.length).toBeGreaterThan(0);
   });
+
+});
+
+// v5 Prompt 19: structural accessibility checks that need no extra dependency.
+test.describe('accessibility structure', () => {
+  test('landing has one main landmark and exactly one h1', async ({ page }) => {
+    await page.goto('/');
+    expect(await page.locator('main, [role="main"]').count()).toBeGreaterThanOrEqual(1);
+    expect(await page.locator('h1').count()).toBe(1);
+  });
+
+  test('no positive tabindex (tab order is natural)', async ({ page }) => {
+    await page.goto('/');
+    const positive = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('[tabindex]'))
+        .filter((el) => Number(el.getAttribute('tabindex')) > 0).length
+    );
+    expect(positive).toBe(0);
+  });
+
+  test('every button exposes an accessible name', async ({ page }) => {
+    await page.goto('/');
+    const unnamed = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('button')).filter((b) => {
+        const name = (b.getAttribute('aria-label') || b.textContent || b.title || '').trim();
+        return name.length === 0;
+      }).length
+    );
+    expect(unnamed).toBe(0);
+  });
+
+  test('a keyboard-focused control shows a visible focus outline', async ({ page }) => {
+    await page.goto('/');
+    await page.keyboard.press('Tab');
+    const outline = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el) return '';
+      return getComputedStyle(el).outlineStyle;
+    });
+    expect(outline).not.toBe('none');
+  });
 });

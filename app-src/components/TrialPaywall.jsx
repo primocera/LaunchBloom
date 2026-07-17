@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { useFocusTrap } from '../lib/use-focus-trap';
 
 // ---------------------------------------------------------------------------
 // v5 Prompt 2: contextual trial paywall. Shown when a free account attempts
@@ -24,7 +25,8 @@ export default function TrialPaywall({ open, onClose }) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const cardRef = useRef(null);
+  // v5 Prompt 19: trap focus inside the dialog, Escape closes, focus returns.
+  const cardRef = useFocusTrap(open, () => onClose?.());
 
   useEffect(() => {
     if (!open) return;
@@ -36,15 +38,6 @@ export default function TrialPaywall({ open, onClose }) {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [open]);
-
-  // Focus the dialog on open; Escape closes it.
-  useEffect(() => {
-    if (!open) return;
-    cardRef.current?.focus();
-    function onKey(e) { if (e.key === 'Escape') onClose?.(); }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
 
   if (!open) return null;
 

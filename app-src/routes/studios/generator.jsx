@@ -300,6 +300,7 @@ export default function GeneratorStudio({
   const [upgrade, setUpgrade] = useState(false);
   const [paywall, setPaywall] = useState(false);
   const [warnings, setWarnings] = useState([]);
+  const [announce, setAnnounce] = useState(''); // v5 Prompt 19: SR live region
   const [items, setItems] = useState(null); // saved assets
   const [profile, setProfile] = useState({}); // brand context for chips
   const [campaign, setCampaign] = useState(null);
@@ -347,6 +348,7 @@ export default function GeneratorStudio({
     setError(null);
     setUpgrade(false);
     setWarnings([]);
+    setAnnounce('Generating… this uses one AI action.');
     try {
       const res = await generate(campaignId ? { ...values, campaign_id: campaignId } : values);
       const fresh = res[resultKey] || [];
@@ -354,11 +356,12 @@ export default function GeneratorStudio({
       // Newest first, prepended to any previously-saved assets.
       setItems((prev) => [...fresh, ...(prev || [])]);
       try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+      setAnnounce(`Generated ${fresh.length} item${fresh.length === 1 ? '' : 's'}.`);
     } catch (e) {
       if (e.status === 402 || e.code === 'UPGRADE') {
-        if (isFreePlan || e.plan === 'free') setPaywall(true);
-        else setUpgrade(true);
-      } else setError(e.message);
+        if (isFreePlan || e.plan === 'free') { setPaywall(true); setAnnounce('Start your trial to generate.'); }
+        else { setUpgrade(true); setAnnounce('Plan limit reached.'); }
+      } else { setError(e.message); setAnnounce('Generation failed. You can retry.'); }
     } finally {
       setBusy(false);
     }
@@ -385,7 +388,10 @@ export default function GeneratorStudio({
           </div>
         </div>
 
-        <div className="flow-card gen-form">
+        {/* v5 Prompt 19: screen-reader announcements for generation state. */}
+        <p className="sr-only" role="status" aria-live="polite">{announce}</p>
+
+        <div className="flow-card gen-form" aria-busy={busy}>
           {/* v5 Prompt 7: editable context — the exact brand, product, audience,
               campaign, language and goal this generation will use. */}
           <div className="gen-context" aria-label="Generation context">
