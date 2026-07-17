@@ -296,7 +296,9 @@ const EMAIL_FLOW_SYSTEM =
   'objective, timing and segment). Fill copy into that structure — do NOT add, remove or reorder emails.\n\n' +
   'Per-email rules:\n' +
   '- subject_line: under 50 characters where the language allows; specific, not clickbait.\n' +
+  '- subject_options: 2-3 distinct, honest subject lines (include subject_line); never deceptive (no fake "Re:", no false "you won").\n' +
   '- preheader: under 90 characters; completes the subject line, never repeats it.\n' +
+  '- body_copy: complete, send-ready copy — never an outline or bullet skeleton.\n' +
   '- objective: restate the email\'s single purpose from the blueprint.\n' +
   '- body_copy: scannable — short paragraphs or bullets, one idea per block.\n' +
   '- cta: one specific primary CTA (not always "Shop now"); secondary_cta only if useful, else "".\n' +
@@ -363,6 +365,7 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       email_order: e.email_order || (seq.emails[i] && seq.emails[i].email_order),
       objective: e.objective || (seq.emails[i] && seq.emails[i].objective),
       subject_line: e.subject_line,
+      subject_options: Array.isArray(e.subject_options) ? e.subject_options : null,
       preheader: e.preheader,
       headline: e.headline,
       body_copy: e.body_copy,
@@ -373,6 +376,8 @@ router.post('/generate-email-flow', planGate('asset_generations'), async (req, r
       segment: e.segment || (seq.emails[i] && seq.emails[i].segment),
       exclusions: e.exclusions || null,
       design_notes: e.design_notes,
+      email_length: email_length || null,
+      tone: tone || null,
       status: 'draft',
     }));
     const { data: saved, error } = await supabase.from('email_assets').insert(rows).select();
@@ -504,22 +509,27 @@ const CAMPAIGN_SYSTEM =
   'You are an ecommerce and creator-brand campaign email strategist. Create a complete campaign email ' +
   'sequence that can be used for a launch, seasonal promotion, product focus, bundle push, sale, ' +
   'newsletter or last-chance campaign.\n\n' +
-  'Each email must include email_type, send_day, subject_line, preheader, body_copy, cta and design_notes.\n\n' +
+  'Each email must include email_type, send_day, objective, subject_line, subject_options (2-3 distinct, ' +
+  'non-deceptive), preheader, headline, full send-ready body_copy (never an outline), cta, secondary_cta ' +
+  '(only when justified, else ""), segment, exclusions and design_notes.\n\n' +
   'Campaign sequence logic:\n' +
   '- Start with value or problem awareness, not immediate pressure.\n' +
   '- Introduce the offer/product clearly.\n' +
   '- Include one education/problem email.\n' +
   '- Include one proof/trust angle, but do not invent testimonials.\n' +
   '- Include one objection/FAQ email.\n' +
-  '- Include one reminder or last-chance email if the campaign has an end date.\n' +
-  '- Keep copy clear and mobile-first. Avoid fake scarcity.';
+  '- Include one reminder or last-chance email ONLY if the campaign has a real end date from the brief.\n' +
+  '- Every date/deadline you reference must come from the provided promotion window — never invent urgency.\n' +
+  '- Use the real discount, code, minimum spend and exclusions exactly as given; bracket anything missing.\n' +
+  '- Keep copy clear and mobile-first. Avoid fake scarcity and deceptive subject lines.';
 
 router.post('/generate-campaign-emails', planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
-      offer_id, launch_kit_id, campaign_theme, campaign_goal, target_language,
-      start_date, end_date, discount_or_offer, products, tone, extra_context,
+      offer_id, launch_kit_id, campaign_theme, campaign_goal, campaign_type, target_language,
+      start_date, end_date, timezone, discount_or_offer, discount_code, minimum_spend,
+      promo_exclusions, products, tone, email_length, extra_context,
     } = req.body || {};
 
     if (!campaign_theme || !campaign_goal) {
@@ -530,20 +540,32 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
     if (ctx.error) return res.status(ctx.status).json({ error: ctx.error });
 
     const hasDeadline = Boolean(end_date);
+    const promoDetails = {
+      discount: discount_or_offer || null, code: discount_code || null,
+      minimum_spend: minimum_spend || null, exclusions: promo_exclusions || null,
+      start_date: start_date || null, end_date: end_date || null, timezone: timezone || null,
+    };
     const prompt = [
       'Create a campaign email sequence.',
       brandBlock(ctx),
       line('Campaign theme', campaign_theme),
       line('Campaign goal', campaign_goal),
-      line('Start date', start_date),
-      line('End date', end_date),
-      line('Discount/offer', discount_or_offer),
+      line('Campaign type', campaign_type),
       line('Tone', tone),
+      line('Email length', email_length),
       line('Target language', target_language || 'English'),
+      'Promotion details (use verbatim; never invent any of these):',
+      line('  Discount / offer', discount_or_offer),
+      line('  Discount code', discount_code),
+      line('  Minimum spend', minimum_spend),
+      line('  Exclusions', promo_exclusions),
+      line('  Start date', start_date),
+      line('  End date', end_date),
+      line('  Timezone', timezone),
       products ? `Products:\n${JSON.stringify(products).slice(0, 2000)}` : null,
       line('Extra context', extra_context),
       hasDeadline
-        ? 'This campaign has an end date, so include a reminder or last-chance email.'
+        ? `This campaign ends on ${end_date}${timezone ? ` (${timezone})` : ''}, so include a reminder or last-chance email tied to that exact date.`
         : 'This campaign has no end date, so do not invent a deadline or fake scarcity.',
     ].filter(Boolean).join('\n\n');
 
@@ -565,14 +587,23 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       prompt_version: AI_PROMPT_VERSION,
       generation_run_id: runId,
       flow_type: 'campaign',
+      campaign_type: result.campaign_type || campaign_type || null,
       email_order: i + 1,
+      objective: e.objective || null,
       subject_line: e.subject_line,
+      subject_options: Array.isArray(e.subject_options) ? e.subject_options : null,
       preheader: e.preheader,
+      headline: e.headline || null,
       body_copy: e.body_copy,
       cta: e.cta,
+      secondary_cta: e.secondary_cta || null,
       send_timing: e.send_day,
-      segment: e.email_type,
+      segment: e.segment || e.email_type,
+      exclusions: e.exclusions || null,
       design_notes: e.design_notes,
+      promo_details: promoDetails,
+      email_length: email_length || null,
+      tone: tone || null,
       status: 'draft',
     }));
     const { data: saved, error } = await supabase.from('email_assets').insert(rows).select();
@@ -582,6 +613,7 @@ router.post('/generate-campaign-emails', planGate('asset_generations'), async (r
       ok: true,
       campaign_theme: result.campaign_theme,
       campaign_goal: result.campaign_goal,
+      campaign_type: result.campaign_type,
       emails: saved,
       quality_warnings: qualityWarnings('email', result, { hasDeadline }),
       plan: req.userPlan,

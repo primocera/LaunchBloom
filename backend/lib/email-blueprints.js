@@ -59,6 +59,20 @@ const FLOW_BLUEPRINTS = {
       { objective: 'Last honest chance before reducing email frequency', send_timing: 'Day 12', segment: 'Lapsed customers (still inactive)' },
     ],
   },
+  back_in_stock: {
+    label: 'Back-in-stock',
+    steps: [
+      { objective: 'The product they wanted is available again — clear next step', send_timing: 'Immediately on restock', segment: 'Back-in-stock waitlist' },
+      { objective: 'Honest reminder while stock lasts (only real scarcity)', send_timing: '24 hours after restock', segment: 'Back-in-stock waitlist (not purchased)' },
+    ],
+  },
+  sunset: {
+    label: 'Sunset / re-engagement',
+    steps: [
+      { objective: 'Ask if they still want to hear from you — easy opt-in to stay', send_timing: 'Day 0 of sunset', segment: 'Unengaged (90+ days no opens/clicks)' },
+      { objective: 'Final email before removing them from the active list', send_timing: 'Day 7', segment: 'Unengaged (still no response)' },
+    ],
+  },
 };
 
 const FLOW_TYPES = Object.keys(FLOW_BLUEPRINTS);

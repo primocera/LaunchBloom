@@ -388,11 +388,16 @@ const emailFlowSchema = {
         properties: {
           flow_type: {
             type: 'string',
-            enum: ['welcome', 'abandon_cart', 'browse_abandon', 'post_purchase', 'review_request', 'winback', 'campaign', 'launch', 'last_chance'],
+            enum: ['welcome', 'abandon_cart', 'browse_abandon', 'post_purchase', 'review_request', 'winback', 'back_in_stock', 'sunset', 'campaign', 'launch', 'last_chance'],
           },
           email_order: { type: 'integer' },
           objective: { type: 'string', description: 'This email\'s single purpose (from the provided blueprint).' },
-          subject_line: { type: 'string', description: 'Under 50 characters where the language allows.' },
+          subject_line: { type: 'string', description: 'The recommended subject; under 50 characters where the language allows.' },
+          subject_options: {
+            type: 'array', minItems: 2, maxItems: 3,
+            items: { type: 'string' },
+            description: 'Two or three distinct subject-line options (including subject_line). No deceptive lines.',
+          },
           preheader: { type: 'string', description: 'Under 90 characters; complements the subject, never repeats it.' },
           headline: { type: 'string' },
           body_copy: { type: 'string', description: 'Scannable: short paragraphs / bullets, one idea per block.' },
@@ -405,7 +410,7 @@ const emailFlowSchema = {
           design_notes: { type: 'string' },
         },
         required: [
-          'flow_type', 'email_order', 'objective', 'subject_line', 'preheader', 'headline',
+          'flow_type', 'email_order', 'objective', 'subject_line', 'subject_options', 'preheader', 'headline',
           'body_copy', 'cta', 'secondary_cta', 'personalization_tokens', 'send_timing',
           'segment', 'exclusions', 'design_notes',
         ],
@@ -486,6 +491,10 @@ const campaignEmailSchema = {
   properties: {
     campaign_theme: { type: 'string' },
     campaign_goal: { type: 'string' },
+    campaign_type: {
+      type: 'string',
+      enum: ['promotion', 'product_launch', 'educational', 'seasonal', 'newsletter', 'flash_offer', 'last_chance', 'restock', 'announcement'],
+    },
     items: {
       type: 'array',
       minItems: 3,
@@ -495,21 +504,33 @@ const campaignEmailSchema = {
         properties: {
           email_type: {
             type: 'string',
-            enum: ['teaser', 'educational', 'product_focus', 'social_proof', 'offer', 'last_chance', 'reminder', 'newsletter'],
+            enum: ['teaser', 'educational', 'product_focus', 'social_proof', 'offer', 'last_chance', 'reminder', 'newsletter', 'announcement'],
           },
-          send_day: { type: 'string' },
+          send_day: { type: 'string', description: 'Timing/day, sourced from the brief window — never an invented deadline.' },
+          objective: { type: 'string' },
           subject_line: { type: 'string' },
+          subject_options: {
+            type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' },
+            description: 'Two or three distinct, non-deceptive subject options.',
+          },
           preheader: { type: 'string' },
-          body_copy: { type: 'string' },
+          headline: { type: 'string' },
+          body_copy: { type: 'string', description: 'Full send-ready body copy, not an outline.' },
           cta: { type: 'string' },
+          secondary_cta: { type: 'string', description: 'Only when justified; empty string otherwise.' },
+          segment: { type: 'string' },
+          exclusions: { type: 'string', description: 'Who to exclude; empty string if none.' },
           design_notes: { type: 'string' },
         },
-        required: ['email_type', 'send_day', 'subject_line', 'preheader', 'body_copy', 'cta', 'design_notes'],
+        required: [
+          'email_type', 'send_day', 'objective', 'subject_line', 'subject_options', 'preheader',
+          'headline', 'body_copy', 'cta', 'secondary_cta', 'segment', 'exclusions', 'design_notes',
+        ],
         additionalProperties: false,
       },
     },
   },
-  required: ['campaign_theme', 'campaign_goal', 'items'],
+  required: ['campaign_theme', 'campaign_goal', 'campaign_type', 'items'],
   additionalProperties: false,
 };
 

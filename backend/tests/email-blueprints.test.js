@@ -9,6 +9,8 @@ test('flow types map to the audit\'s exact email counts', () => {
   assert.equal(buildSequence(['review_request']).total, 2);
   assert.equal(buildSequence(['winback']).total, 3);
   assert.equal(buildSequence(['browse_abandon']).total, 3);
+  assert.equal(buildSequence(['back_in_stock']).total, 2);
+  assert.equal(buildSequence(['sunset']).total, 2);
   const welcome = buildSequence(['welcome']).total;
   assert.ok(welcome >= 4 && welcome <= 6, `welcome should be 4-6, got ${welcome}`);
 });
@@ -46,7 +48,7 @@ test('structureText lists the emails for the prompt', () => {
 });
 
 test('blueprints cover the required flow types', () => {
-  for (const f of ['welcome', 'abandon_cart', 'browse_abandon', 'post_purchase', 'review_request', 'winback']) {
+  for (const f of ['welcome', 'abandon_cart', 'browse_abandon', 'post_purchase', 'review_request', 'winback', 'back_in_stock', 'sunset']) {
     assert.ok(FLOW_BLUEPRINTS[f], `missing blueprint: ${f}`);
   }
 });
