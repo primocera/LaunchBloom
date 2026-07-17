@@ -43,8 +43,8 @@ export const api = {
 
   // Auth
   login: (email, password) => request('/api/auth/login', { method: 'POST', body: { email, password } }),
-  signup: (email, password, acceptTerms) =>
-    request('/api/auth/signup', { method: 'POST', body: { email, password, acceptTerms } }),
+  signup: (email, password, acceptTerms, marketingOptIn = false) =>
+    request('/api/auth/signup', { method: 'POST', body: { email, password, acceptTerms, marketingOptIn } }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/auth/me'),
   forgotPassword: (email) => request('/api/auth/forgot-password', { method: 'POST', body: { email } }),

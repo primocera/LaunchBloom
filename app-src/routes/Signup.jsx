@@ -16,6 +16,7 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [accept, setAccept] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(false);
@@ -45,7 +46,7 @@ export default function Signup() {
 
     const address = email.trim();
     try {
-      const data = await signup(address, password, accept);
+      const data = await signup(address, password, accept, marketing);
       // Email confirmation required: show a "check your inbox" notice and stop.
       if (data && data.requiresVerification) {
         setDone(true);
@@ -120,6 +121,10 @@ export default function Signup() {
             I agree to the <Link to="/legal/terms">Terms</Link> and{' '}
             <Link to="/legal/privacy">Privacy Policy</Link>.
           </span>
+        </label>
+        <label className="consent">
+          <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
+          <span>Send me occasional product tips and updates (optional).</span>
         </label>
         <button
           className="btn-primary"

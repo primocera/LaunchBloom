@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
   // Returns { requiresVerification } so the UI can show a "check your inbox"
   // notice. Only sets the account when the server logged us straight in
   // (email confirmation disabled).
-  const signup = useCallback(async (email, password, acceptTerms) => {
-    const data = await api.signup(email, password, acceptTerms);
+  const signup = useCallback(async (email, password, acceptTerms, marketingOptIn) => {
+    const data = await api.signup(email, password, acceptTerms, marketingOptIn);
     if (data && data.requiresVerification === false) setAccount(data);
     return data;
   }, []);

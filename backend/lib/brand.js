@@ -23,9 +23,26 @@ const BRAND = {
   senderName: process.env.BRAND_SENDER_NAME || 'LaunchBloom',
   senderEmail: process.env.BRAND_SENDER_EMAIL || 'hello@launchbloom.app',
 
-  // Legal entity — PLACEHOLDER for legal review before public launch (Prompt 14)
+  // Legal configuration (v5 Prompt 15) — env-backed; defaults are explicit
+  // placeholders that BLOCK paid checkout in production until real values are
+  // supplied (see legalPlaceholders()).
   legalName: process.env.BRAND_LEGAL_NAME || 'LaunchBloom (legal entity TBD)',
+  legalAddress: process.env.BRAND_LEGAL_ADDRESS || '', // e.g. "123 Main St, Austin, TX 78701, USA"
+  privacyEmail: process.env.BRAND_PRIVACY_EMAIL || process.env.BRAND_SUPPORT_EMAIL || 'support@launchbloom.app',
+  governingLaw: process.env.BRAND_GOVERNING_LAW || '', // e.g. "the State of Delaware, USA"
 };
+
+/**
+ * Legal values still missing or placeholder — production must not sell until
+ * this is empty (v5 Prompt 15).
+ */
+function legalPlaceholders() {
+  const missing = [];
+  if (!BRAND.legalName || /TBD|placeholder/i.test(BRAND.legalName)) missing.push('BRAND_LEGAL_NAME');
+  if (!BRAND.legalAddress) missing.push('BRAND_LEGAL_ADDRESS');
+  if (!BRAND.governingLaw) missing.push('BRAND_GOVERNING_LAW');
+  return missing;
+}
 
 // Bump when Terms/Privacy change materially; signup records the accepted
 // version so consent is auditable (Prompt 14).
@@ -36,4 +53,4 @@ function emailFrom() {
   return `${BRAND.senderName} <${BRAND.senderEmail}>`;
 }
 
-module.exports = { BRAND, emailFrom, LEGAL_VERSION };
+module.exports = { BRAND, emailFrom, LEGAL_VERSION, legalPlaceholders };

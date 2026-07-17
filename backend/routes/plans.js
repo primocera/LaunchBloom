@@ -21,5 +21,25 @@ function plansHandler(_req, res) {
 
 router.get('/api/plans', plansHandler);
 
+// v5 Prompt 15: public legal configuration so the legal pages always show the
+// deployed entity values (env-backed) instead of anything hardcoded.
+const { BRAND, LEGAL_VERSION, legalPlaceholders } = require('../lib/brand');
+
+function legalHandler(_req, res) {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({
+    legal_name: BRAND.legalName,
+    legal_address: BRAND.legalAddress,
+    support_email: BRAND.supportEmail,
+    privacy_email: BRAND.privacyEmail,
+    governing_law: BRAND.governingLaw,
+    version: LEGAL_VERSION,
+    configured: legalPlaceholders().length === 0,
+  });
+}
+
+router.get('/api/legal', legalHandler);
+
 module.exports = router;
 module.exports.plansHandler = plansHandler;
+module.exports.legalHandler = legalHandler;

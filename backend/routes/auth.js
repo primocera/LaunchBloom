@@ -110,14 +110,18 @@ router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
       return res.status(429).json({ error: 'Too many attempts - try again in a few minutes.' });
     }
 
-    // Log consent (best-effort; never blocks signup).
+    // Log consent (best-effort; never blocks signup). Marketing consent is
+    // optional and versioned separately from required Terms/Privacy (v5 P15).
     if (data && data.user) {
+      const marketingOptIn = (req.body || {}).marketingOptIn === true;
       supabase
         .from('legal_consents')
         .insert({
           user_id: data.user.id,
           email: creds.email,
           terms_version: LEGAL_VERSION,
+          marketing_opt_in: marketingOptIn,
+          marketing_version: marketingOptIn ? LEGAL_VERSION : null,
           ip: (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || null,
         })
         .then(() => {}, () => {});

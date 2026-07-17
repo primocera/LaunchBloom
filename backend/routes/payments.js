@@ -162,6 +162,16 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       return res.status(400).json({ error: `Plan "${planName}" (${interval}) is not configured (missing STRIPE_PRICE_* env var).` });
     }
 
+    // v5 Prompt 15: never take money while legal placeholders remain live.
+    if (process.env.NODE_ENV === 'production') {
+      const { legalPlaceholders } = require('../lib/brand');
+      const missing = legalPlaceholders();
+      if (missing.length) {
+        console.error('[checkout] blocked: legal config incomplete:', missing.join(', '));
+        return res.status(500).json({ error: 'Checkout is temporarily unavailable.', code: 'CONFIG' });
+      }
+    }
+
     // Block duplicate concurrent subscriptions — send existing subscribers to
     // the billing portal to change plans instead of stacking a second one.
     const currentPlan = await planFor(email);

@@ -1,21 +1,28 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BRAND, LEGAL_VERSION } from '../brand';
 
-// Prompt 14: legal pages. Content is a reviewed-by-counsel PLACEHOLDER — the
-// bracketed items must be confirmed before a public launch.
+// v5 Prompt 15: legal pages. Entity values come from GET /api/legal
+// (env-backed on the server) so nothing legal is hardcoded in the bundle.
+// Final wording should still be reviewed by qualified counsel before launch.
 const SUPPORT = BRAND.supportEmail;
 
-const DOCS = {
+const buildDocs = (cfg) => {
+  const entity = cfg?.legal_name || BRAND.legalName;
+  const address = cfg?.legal_address ? ` Registered address: ${cfg.legal_address}.` : '';
+  const law = cfg?.governing_law ? ` These Terms are governed by the laws of ${cfg.governing_law}.` : '';
+  const privacyContact = cfg?.privacy_email || SUPPORT;
+  return {
   terms: {
     title: 'Terms of Service',
     body: [
-      ['Agreement', `By using ${BRAND.name} you agree to these Terms. If you do not agree, do not use the service. ${BRAND.name} is operated by ${BRAND.legalName}.`],
+      ['Agreement', `By using ${BRAND.name} you agree to these Terms. If you do not agree, do not use the service. ${BRAND.name} is operated by ${entity}.${address}${law}`],
       ['The service', `${BRAND.name} is an AI marketing workspace that generates positioning, offers and marketing assets from the information you provide. Output is AI-generated and provided "as is" — see the AI Disclaimer.`],
       ['Your account', 'You are responsible for keeping your login secure and for activity under your account. You must provide a valid email and accept these Terms and the Privacy Policy at signup.'],
       ['Acceptable use', 'Do not use the service to generate unlawful, misleading, or harmful content, to infringe others’ rights, or to attempt to break, overload or reverse-engineer the service.'],
       ['Plans & billing', 'Paid plans start with a 3-day free trial that requires a payment method; you are charged when the trial ends unless you cancel. See the Refund & Cancellation Policy.'],
       ['Termination', 'You may delete your account at any time from Account → Data. We may suspend accounts that violate these Terms.'],
-      ['Liability', `[PLACEHOLDER — counsel to confirm limitation of liability and warranty disclaimers.] To the extent permitted by law, ${BRAND.name} is not liable for indirect or consequential damages, or for business decisions made based on AI output.`],
+      ['Liability', `The service is provided "as is" and "as available", without warranties of any kind, express or implied. To the maximum extent permitted by law, ${entity} is not liable for indirect, incidental, special or consequential damages, lost profits, or business decisions made based on AI output, and our total liability for any claim is limited to the amounts you paid us in the 12 months before the claim.`],
       ['Changes', `We may update these Terms; material changes will be posted here with a new version date. Current version: ${LEGAL_VERSION}.`],
       ['Contact', `Questions: ${SUPPORT}.`],
     ],
@@ -27,9 +34,9 @@ const DOCS = {
       ['How we use it', 'To provide the service (generate and store your assets), enforce plan limits, process payments, send transactional email, and improve reliability.'],
       ['AI processing', `The information you enter is sent to our AI provider (Anthropic) to generate output. Do not enter data you are not permitted to share.`],
       ['Subprocessors', 'We rely on: Vercel (hosting), Supabase (database & authentication), Anthropic (AI generation), Stripe (payments), and Resend (transactional email). Each processes data only to provide their part of the service.'],
-      ['Your rights', 'You can export all of your data or delete your account and its data at any time from Account → Data. [PLACEHOLDER — counsel to confirm GDPR/CCPA-specific rights and data-retention periods.]'],
+      ['Your rights', `You can export all of your data or delete your account and its data at any time from Account → Data. Depending on where you live (including under GDPR and the CCPA/CPRA), you may also have rights to access, correct, delete, or receive a copy of your personal data, and to object to or restrict certain processing. To exercise any of these rights, email ${privacyContact} — we respond within 30 days and never discriminate against you for exercising them.`],
       ['Data retention', 'We keep your data while your account is active. On deletion we remove your workspace data and authentication record; we retain only records legally required (e.g. payment records held by Stripe).'],
-      ['Contact', `Privacy questions: ${SUPPORT}. Current version: ${LEGAL_VERSION}.`],
+      ['Contact', `Privacy questions: ${privacyContact}. Current version: ${LEGAL_VERSION}.`],
     ],
   },
   cookies: {
@@ -55,15 +62,27 @@ const DOCS = {
       ['Free trial', 'Paid plans begin with a 3-day free trial. You can cancel any time during the trial from Account → Billing and you will not be charged.'],
       ['After the trial', 'When the trial ends your card is charged for the plan you chose. Subscriptions renew automatically until cancelled.'],
       ['Cancelling', 'Cancel any time; your plan stays active until the end of the current billing period. You keep access to your data.'],
-      ['Refunds', '[PLACEHOLDER — counsel to confirm refund terms and any statutory cooling-off rights.] Contact us and we will review refund requests case by case.'],
+      ['Refunds', `Charges are generally non-refundable because the trial lets you evaluate the full product before paying. If something went wrong — you were charged after cancelling, or a billing error occurred — contact ${SUPPORT} within 14 days of the charge and we will make it right. Statutory rights that cannot be waived in your jurisdiction are unaffected.`],
       ['Contact', `Billing questions: ${SUPPORT}.`],
     ],
   },
+  };
 };
 
 export default function Legal() {
   const { slug } = useParams();
-  const doc = DOCS[slug];
+  const [cfg, setCfg] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/legal')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data) setCfg(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const doc = buildDocs(cfg)[slug];
 
   if (!doc) {
     return (
@@ -82,7 +101,7 @@ export default function Legal() {
       <div className="legal-card">
         <p className="legal-back"><Link to="/">&larr; {BRAND.name}</Link></p>
         <h1>{doc.title}</h1>
-        <p className="legal-meta">Version {LEGAL_VERSION}</p>
+        <p className="legal-meta">Version {cfg?.version || LEGAL_VERSION}</p>
         {doc.body.map(([heading, text]) => (
           <section key={heading}>
             <h2>{heading}</h2>

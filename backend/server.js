@@ -2,6 +2,14 @@ require('dotenv').config();
 
 const express = require('express');
 const helmet = require('helmet');
+// v5 Prompt 15: loud deploy-time warning while legal placeholders remain.
+{
+  const { legalPlaceholders } = require('./lib/brand');
+  const missing = legalPlaceholders();
+  if (missing.length && process.env.NODE_ENV === 'production') {
+    console.error(`[legal] PRODUCTION LEGAL CONFIG INCOMPLETE — checkout is blocked until these env vars are set: ${missing.join(', ')}`);
+  }
+}
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { BRAND } = require('./lib/brand');
