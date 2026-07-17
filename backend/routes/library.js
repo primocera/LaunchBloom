@@ -66,12 +66,18 @@ async function ownedAsset(ws, table, id) {
   return data || null;
 }
 
-/** Snapshot the current row into asset_versions (immutable history). */
-async function snapshot(ws, table, row) {
+/**
+ * Snapshot the current row into asset_versions (immutable history), recording
+ * the source (edit | rewrite | restore | delete | generation) and author so
+ * history is traceable. The brief snapshot already lives inside the row.
+ */
+async function snapshot(ws, table, row, { source = 'edit', author = null } = {}) {
   await supabase.from('asset_versions').insert({
     workspace_id: ws.id,
     asset_table: table,
     asset_id: row.id,
+    source,
+    author_email: author,
     // Deep copy so later in-process mutation can't alter the snapshot.
     snapshot: JSON.parse(JSON.stringify(row)),
   }).then(() => {}, () => {});
@@ -91,6 +97,10 @@ function normalize(table, cfg, row) {
     campaign_id: row.campaign_id || null,
     launch_kit_id: row.launch_kit_id || null,
     generation_run_id: row.generation_run_id || null,
+    // v5 Prompt 13: filterable facets (best-effort — not every table has each).
+    platform: row.platform || null,
+    language: row.target_language || row.language || (row.brief_snapshot && row.brief_snapshot.language) || null,
+    product: (row.brief_snapshot && row.brief_snapshot.offer) || row.product || null,
     created_at: row.created_at,
   };
 }
@@ -118,7 +128,18 @@ router.get('/api/assets/library', requireAuth, async (req, res, next) => {
         if (q.favourite === 'true' && !n.favourite) continue;
         // archived hidden unless explicitly requested
         if (q.archived === 'true' ? !n.archived : n.archived) continue;
-        if (search && !(`${n.title} ${n.snippet}`.toLowerCase().includes(search))) continue;
+        // v5 Prompt 13: channel / language / product / date facets (JS-side so a
+        // missing column never drops an entire table).
+        if (q.platform && n.platform !== q.platform) continue;
+        if (q.language && String(n.language || '').toLowerCase() !== String(q.language).toLowerCase()) continue;
+        if (q.product && !String(n.product || '').toLowerCase().includes(String(q.product).toLowerCase())) continue;
+        if (q.date_from && new Date(n.created_at) < new Date(q.date_from)) continue;
+        if (q.date_to && new Date(n.created_at) > new Date(`${q.date_to}T23:59:59`)) continue;
+        // Search title + full searchable content (not just the snippet).
+        if (search) {
+          const hay = `${n.title} ${cfg.searchFields.map((f) => row[f]).filter((v) => typeof v === 'string').join(' ')}`.toLowerCase();
+          if (!hay.includes(search)) continue;
+        }
         items.push(n);
       }
     }
@@ -183,7 +204,7 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     if (typeof b.title === 'string' && cfg.titleField !== 'title') { patch[cfg.titleField] = b.title; contentEdit = true; }
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Nothing to update.' });
 
-    if (contentEdit) await snapshot(ws, req.params.table, row); // versions on content changes only
+    if (contentEdit) await snapshot(ws, req.params.table, row, { source: 'edit', author: req.userEmail }); // versions on content changes only
 
     const { data, error } = await supabase.from(req.params.table)
       .update({ ...patch, updated_at: new Date().toISOString() })
@@ -227,7 +248,7 @@ router.delete('/api/assets/library/:table/:id', requireAuth, async (req, res, ne
     const ws = await resolveWorkspace(req);
     const row = await ownedAsset(ws, req.params.table, req.params.id);
     if (!row) return res.status(404).json({ error: 'Asset not found' });
-    await snapshot(ws, req.params.table, row); // keep a last snapshot
+    await snapshot(ws, req.params.table, row, { source: 'delete', author: req.userEmail }); // keep a last snapshot
     await supabase.from(req.params.table).delete().eq('id', row.id);
     res.json({ ok: true });
   } catch (err) {
@@ -235,20 +256,51 @@ router.delete('/api/assets/library/:table/:id', requireAuth, async (req, res, ne
   }
 });
 
-// POST /api/assets/library/bulk — { action: 'archive'|'unarchive', items: [{table,id}] }
+// POST /api/assets/library/bulk
+//   { action: 'archive'|'unarchive'|'status'|'campaign'|'delete', items: [{table,id}],
+//     value?, campaign_id?, confirm? }
+// Bulk permanent delete requires an explicit second confirmation (confirm: true).
 router.post('/api/assets/library/bulk', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
-    const { action, items } = req.body || {};
-    if (!['archive', 'unarchive'].includes(action) || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'action (archive|unarchive) and items are required.' });
+    const { action, items, value, campaign_id, confirm } = req.body || {};
+    const ALLOWED = ['archive', 'unarchive', 'status', 'campaign', 'delete'];
+    if (!ALLOWED.includes(action) || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: `action (${ALLOWED.join('|')}) and items are required.` });
     }
+
+    // Permanent delete is destructive — never without an explicit confirmation.
+    if (action === 'delete' && confirm !== true) {
+      return res.status(409).json({
+        error: `Permanently delete ${items.length} asset(s)? This cannot be undone.`,
+        code: 'CONFIRM_DELETE',
+      });
+    }
+
+    // Validate a campaign belongs to this workspace before bulk-attaching.
+    let campId = null;
+    if (action === 'campaign' && campaign_id) {
+      const { data: camp } = await supabase.from('campaigns')
+        .select('id').eq('id', campaign_id).eq('workspace_id', ws.id).single();
+      if (!camp) return res.status(404).json({ error: 'Campaign not found' });
+      campId = camp.id;
+    }
+
     let done = 0;
     for (const it of items.slice(0, 100)) {
       if (!TABLES[it.table]) continue;
       const row = await ownedAsset(ws, it.table, it.id);
       if (!row) continue;
-      await supabase.from(it.table).update({ archived: action === 'archive' }).eq('id', row.id);
+      if (action === 'archive' || action === 'unarchive') {
+        await supabase.from(it.table).update({ archived: action === 'archive' }).eq('id', row.id);
+      } else if (action === 'status') {
+        await supabase.from(it.table).update({ status: String(value || 'draft').slice(0, 30) }).eq('id', row.id);
+      } else if (action === 'campaign') {
+        await supabase.from(it.table).update({ campaign_id: campId }).eq('id', row.id);
+      } else if (action === 'delete') {
+        await snapshot(ws, it.table, row, { source: 'delete', author: req.userEmail });
+        await supabase.from(it.table).delete().eq('id', row.id);
+      }
       done++;
     }
     res.json({ ok: true, updated: done });
@@ -265,7 +317,7 @@ router.get('/api/assets/library/:table/:id/versions', requireAuth, async (req, r
     const row = await ownedAsset(ws, req.params.table, req.params.id);
     if (!row) return res.status(404).json({ error: 'Asset not found' });
     const { data } = await supabase
-      .from('asset_versions').select('id, created_at, snapshot')
+      .from('asset_versions').select('id, created_at, snapshot, source, author_email')
       .eq('workspace_id', ws.id).eq('asset_table', req.params.table).eq('asset_id', row.id)
       .order('created_at', { ascending: false }).limit(30);
     res.json({ versions: data || [] });
@@ -290,7 +342,7 @@ router.post('/api/assets/library/:table/:id/restore', requireAuth, async (req, r
       .single();
     if (!version) return res.status(404).json({ error: 'Version not found' });
 
-    await snapshot(ws, req.params.table, row); // current state becomes a version too
+    await snapshot(ws, req.params.table, row, { source: 'restore', author: req.userEmail }); // current state becomes a version too
     const restore = { ...version.snapshot };
     delete restore.id;
     delete restore.created_at;
@@ -349,7 +401,7 @@ router.post('/api/ai/asset/:table/:id/rewrite', planGate('regenerate_section'), 
     });
     req.usageInfo = result.__meta;
 
-    await snapshot(ws, req.params.table, row);
+    await snapshot(ws, req.params.table, row, { source: 'rewrite', author: req.userEmail });
     const { data: saved, error } = await supabase.from(req.params.table)
       .update({ ...result, updated_at: new Date().toISOString() })
       .eq('id', row.id).select().single();

@@ -4,6 +4,43 @@
 // browser download helper. No PDF (spec: skip unless simple).
 // ---------------------------------------------------------------------------
 
+// ── Prompt 13: library exports + unresolved-placeholder / safety warnings ───
+
+// Bracketed fill-in tokens the AI leaves when a real fact is missing.
+const PLACEHOLDER_RE = /\[[^\]\n]{2,80}\]/g;
+
+/** Unique unresolved [PLACEHOLDER] tokens found in any stringifiable value. */
+export function findPlaceholders(value) {
+  const text = typeof value === 'string' ? value : JSON.stringify(value ?? '');
+  const found = text.match(PLACEHOLDER_RE) || [];
+  // Ignore markdown links like [label](url) — those aren't fill-ins.
+  const real = found.filter((m) => !text.includes(`${m}(`));
+  return [...new Set(real)];
+}
+
+/** One library row → plain text for TXT export and search. */
+export function assetPlainText(item = {}) {
+  const skip = new Set(['id', 'workspace_id', 'launch_kit_id', 'offer_id', 'campaign_id', 'created_at', 'updated_at', 'generation_run_id']);
+  return Object.entries(item)
+    .filter(([k, v]) => !skip.has(k) && v != null && v !== '' && (typeof v !== 'object' || Array.isArray(v)))
+    .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${Array.isArray(v) ? v.join('; ') : v}`)
+    .join('\n');
+}
+
+/** Library rows → CSV with a stable column set. */
+export function assetsCsv(items = []) {
+  const cols = ['type_label', 'title', 'status', 'platform', 'language', 'campaign_id', 'created_at'];
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  return [cols.join(','), ...(items || []).map((i) => cols.map((c) => esc(i[c])).join(','))].join('\n');
+}
+
+/** Any string/array/object → Word-openable HTML (.doc). */
+export function toWordDoc(title, text) {
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const body = String(text).split('\n').map((ln) => (ln.trim() ? `<p>${esc(ln)}</p>` : '')).join('\n');
+  return `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${esc(title)}</title></head><body>${body}</body></html>`;
+}
+
 export function download(filename, content, mime = 'text/plain') {
   const blob = new Blob([content], { type: mime + ';charset=utf-8' });
   const url = URL.createObjectURL(blob);

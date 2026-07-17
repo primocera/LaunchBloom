@@ -94,7 +94,7 @@ export const api = {
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),
   duplicateAsset: (table, id) => request(`/api/assets/library/${table}/${id}/duplicate`, { method: 'POST' }),
   deleteAsset: (table, id) => request(`/api/assets/library/${table}/${id}`, { method: 'DELETE' }),
-  bulkAssets: (action, items) => request('/api/assets/library/bulk', { method: 'POST', body: { action, items } }),
+  bulkAssets: (action, items, extra = {}) => request('/api/assets/library/bulk', { method: 'POST', body: { action, items, ...extra } }),
   assetVersions: (table, id) => request(`/api/assets/library/${table}/${id}/versions`),
   restoreAsset: (table, id, versionId) =>
     request(`/api/assets/library/${table}/${id}/restore`, { method: 'POST', body: { version_id: versionId } }),

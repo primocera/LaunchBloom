@@ -185,3 +185,39 @@ test('bulk archive updates owned items only', async () => {
   assert.equal(a.archived, true);
   assert.equal(b.archived, false);
 });
+
+test('bulk status sets status on owned items', async () => {
+  db._store.social_assets.length = 0;
+  const a = seedAsset();
+  const r = await request(app).post('/api/assets/library/bulk').set(...AUTHED)
+    .send({ action: 'status', value: 'ready', items: [{ table: 'social_assets', id: a.id }] });
+  assert.equal(r.status, 200);
+  assert.equal(a.status, 'ready');
+});
+
+test('bulk permanent delete requires a second confirmation', async () => {
+  db._store.social_assets.length = 0;
+  const a = seedAsset();
+  // Without confirm → 409, nothing deleted.
+  const blocked = await request(app).post('/api/assets/library/bulk').set(...AUTHED)
+    .send({ action: 'delete', items: [{ table: 'social_assets', id: a.id }] });
+  assert.equal(blocked.status, 409);
+  assert.equal(blocked.body.code, 'CONFIRM_DELETE');
+  assert.equal(db._store.social_assets.length, 1);
+  // With confirm → deleted (and a snapshot kept).
+  const ok = await request(app).post('/api/assets/library/bulk').set(...AUTHED)
+    .send({ action: 'delete', confirm: true, items: [{ table: 'social_assets', id: a.id }] });
+  assert.equal(ok.status, 200);
+  assert.equal(db._store.social_assets.length, 0);
+});
+
+test('version snapshot records source and author', async () => {
+  db._store.social_assets.length = 0;
+  db._store.asset_versions.length = 0;
+  const row = seedAsset({ caption: 'v1' });
+  await request(app).patch(`/api/assets/library/social_assets/${row.id}`)
+    .set(...AUTHED).send({ caption: 'v2' });
+  assert.equal(db._store.asset_versions.length, 1);
+  assert.equal(db._store.asset_versions[0].source, 'edit');
+  assert.equal(db._store.asset_versions[0].author_email, 'me@app.com');
+});

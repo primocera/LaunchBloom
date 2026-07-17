@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { download, findPlaceholders, assetPlainText, assetsCsv, toWordDoc } from '../lib/export';
 
 // Prompt 13: one searchable library for everything the studios generate.
 const TYPES = [
@@ -11,6 +12,8 @@ const TYPES = [
   ['seo_assets', 'SEO assets'],
 ];
 
+const STATUSES = [['', 'Any status'], ['draft', 'Draft'], ['edited', 'Edited'], ['ready', 'Ready'], ['published', 'Published']];
+
 const REWRITES = [
   ['shorter', 'Shorter'],
   ['longer', 'Longer'],
@@ -20,7 +23,7 @@ const REWRITES = [
 ];
 
 export default function AssetLibrary() {
-  const [filters, setFilters] = useState({ type: '', q: '', favourite: '', archived: '' });
+  const [filters, setFilters] = useState({ type: '', q: '', favourite: '', archived: '', status: '', platform: '', language: '' });
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [selected, setSelected] = useState({});
@@ -33,6 +36,9 @@ export default function AssetLibrary() {
     if (filters.q) params.q = filters.q;
     if (filters.favourite) params.favourite = filters.favourite;
     if (filters.archived) params.archived = filters.archived;
+    if (filters.status) params.status = filters.status;
+    if (filters.platform) params.platform = filters.platform;
+    if (filters.language) params.language = filters.language;
     api.library(params).then(setData).catch((e) => setError(e.message));
   }
 
@@ -58,6 +64,36 @@ export default function AssetLibrary() {
     load();
   }
 
+  async function bulkDelete() {
+    if (selItems.length === 0) return;
+    // Two explicit confirmations for a permanent, irreversible bulk delete.
+    if (!window.confirm(`Permanently delete ${selItems.length} asset(s)? This cannot be undone.`)) return;
+    try {
+      await api.bulkAssets('delete', selItems); // server 409s without confirm
+    } catch (e) {
+      if (e.code === 'CONFIRM_DELETE') {
+        if (!window.confirm(`${e.message}\n\nType-check: really delete ${selItems.length}?`)) return;
+        await api.bulkAssets('delete', selItems, { confirm: true });
+      } else { setError(e.message); return; }
+    }
+    setSelected({});
+    load();
+  }
+
+  function exportItem(item, fmt) {
+    const text = assetPlainText(item);
+    const warn = findPlaceholders(item);
+    if (warn.length && !window.confirm(`This asset still has unresolved placeholders:\n${warn.join(', ')}\n\nExport anyway?`)) return;
+    const base = (item.title || 'asset').replace(/[^\w-]+/g, '_').slice(0, 40);
+    if (fmt === 'txt') download(`${base}.txt`, text, 'text/plain');
+    else if (fmt === 'md') download(`${base}.md`, `# ${item.title}\n\n${text}`, 'text/markdown');
+    else if (fmt === 'doc') download(`${base}.doc`, toWordDoc(item.title, text), 'application/msword');
+  }
+
+  function exportCsv() {
+    download('library.csv', assetsCsv(data?.items || []), 'text/csv');
+  }
+
   async function rewrite(item, mode) {
     let instruction = '';
     if (mode === 'instruction') {
@@ -72,7 +108,7 @@ export default function AssetLibrary() {
     if (!versions.length) { window.alert('No previous versions yet.'); return; }
     const pick = window.prompt(
       `${versions.length} version(s):\n` +
-      versions.map((v, i) => `${i + 1}. ${new Date(v.created_at).toLocaleString()}`).join('\n') +
+      versions.map((v, i) => `${i + 1}. ${new Date(v.created_at).toLocaleString()} — ${v.source || 'edit'}${v.author_email ? ` by ${v.author_email}` : ''}`).join('\n') +
       '\n\nEnter a number to restore, or cancel:'
     );
     const idx = parseInt(pick, 10) - 1;
@@ -105,10 +141,19 @@ export default function AssetLibrary() {
             onChange={(e) => setFilters({ ...filters, archived: e.target.checked ? 'true' : '' })} />
           <span>Archived</span>
         </label>
+        <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+          {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <input placeholder="Platform…" value={filters.platform} onChange={(e) => setFilters({ ...filters, platform: e.target.value })} style={{ maxWidth: 120 }} />
+        <input placeholder="Language…" value={filters.language} onChange={(e) => setFilters({ ...filters, language: e.target.value })} style={{ maxWidth: 120 }} />
+        <button className="btn-secondary" onClick={exportCsv}>Export CSV</button>
         {selItems.length > 0 && (
-          <button className="btn-secondary" onClick={bulkArchive}>
-            {filters.archived ? 'Unarchive' : 'Archive'} {selItems.length} selected
-          </button>
+          <>
+            <button className="btn-secondary" onClick={bulkArchive}>
+              {filters.archived ? 'Unarchive' : 'Archive'} {selItems.length}
+            </button>
+            <button className="btn-secondary" onClick={bulkDelete}>Delete {selItems.length}</button>
+          </>
         )}
       </div>
 
@@ -140,6 +185,12 @@ export default function AssetLibrary() {
               }}>Rename</button>
               <button onClick={() => act(() => api.duplicateAsset(item.table, item.id), item.id)}>Duplicate</button>
               <button onClick={() => showVersions(item)}>History</button>
+              <select defaultValue="" onChange={(e) => { if (e.target.value) { exportItem(item, e.target.value); e.target.value = ''; } }}>
+                <option value="" disabled>Export…</option>
+                <option value="txt">TXT</option>
+                <option value="md">Markdown</option>
+                <option value="doc">Word</option>
+              </select>
               <button onClick={() => act(() => api.updateAsset(item.table, item.id, { archived: !item.archived }), item.id)}>
                 {item.archived ? 'Unarchive' : 'Archive'}
               </button>
