@@ -429,7 +429,7 @@ export default function GeneratorStudio({
               {error}{' '}
               <button className="account-link" onClick={onGenerate}>Retry</button>
             </p>
-          )}}
+          )}
           {upgrade && (
             <p className="flow-err">
               You've hit your plan limit for generations.{' '}
