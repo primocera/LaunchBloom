@@ -10,7 +10,26 @@ import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate } from './common';
 // ---------------------------------------------------------------------------
 
 const GUIDANCE =
-  'SEO is a long-term channel. Start with one landing page, one helpful blog post, and one FAQ section tied to the offer.';
+  'SEO is a long-term channel. These are content ideas to research — not verified keyword data. Start with one landing page, one helpful blog post, and one FAQ section tied to the offer.';
+
+// v5 Prompt 12: SEO output is ideation until a data provider is integrated.
+const RESEARCH_CHECKLIST = [
+  'Search the primary keyword in Google and read the top 10 results — match the dominant intent.',
+  'Check Google autocomplete and "People also ask" for real related phrases.',
+  'Use a keyword tool for volume and difficulty — record the source and date.',
+  'Confirm you can create genuinely better content than what ranks now.',
+  'Check the target page does not compete with an existing page for the same keyword.',
+];
+
+/** Client-side cannibalization check: same primary keyword used twice. */
+function duplicateKeywords(items = []) {
+  const seen = new Map();
+  for (const i of items) {
+    const k = String(i.keyword || '').trim().toLowerCase();
+    if (k) seen.set(k, (seen.get(k) || 0) + 1);
+  }
+  return [...seen.entries()].filter(([, n]) => n > 1).map(([k]) => k);
+}
 
 const EDIT_FIELDS = ['keyword', 'page_type', 'title', 'meta_description', 'content_angle', 'priority'];
 
@@ -69,10 +88,18 @@ export default function SeoStudio() {
       <div className={`kit-item ${i.status === 'planned-next' ? 'is-ready' : ''}`} key={i.id}>
         <span className="kit-badge">{i.priority}</span>
         <div style={{ flex: 1 }}>
-          <div className="kit-item-title">{i.keyword}</div>
-          <div className="kit-item-meta">{i.page_type}</div>
+          <div className="kit-item-title">
+            {i.keyword}{' '}
+            <span className="seo-badge" title="This is an AI content idea, not researched keyword data.">Not researched</span>
+          </div>
+          <div className="kit-item-meta">
+            {i.page_type}{i.search_intent ? ` · ${i.search_intent}` : ''}{i.topic_cluster ? ` · ${i.topic_cluster}` : ''}
+          </div>
           <div className="flow-muted">Title: {i.title}</div>
           <div className="flow-muted">Meta: {i.meta_description}</div>
+          {Array.isArray(i.secondary_keywords) && i.secondary_keywords.length > 0 && (
+            <div className="flow-muted">Related ideas: {i.secondary_keywords.join(', ')}</div>
+          )}
           {i.content_angle && <div className="flow-muted">Angle: {i.content_angle}</div>}
         </div>
         <div className="studio-item-actions">
@@ -90,8 +117,8 @@ export default function SeoStudio() {
 
   return (
     <StudioShell
-      title="SEO Starter Kit"
-      blurb="Keywords, page titles and meta descriptions a small new site can actually rank with."
+      title="SEO content ideas"
+      blurb="Practical SEO content ideas for your next pages and articles."
       kits={kits}
       kitId={kitId}
       onSelectKit={setKitId}
@@ -107,6 +134,27 @@ export default function SeoStudio() {
             <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
               {regenBusy ? 'Regenerating…' : 'Regenerate SEO section'}
             </button>
+          </div>
+
+          {duplicateKeywords(all).length > 0 && (
+            <div className="gen-warnings" role="alert">
+              <strong>Possible keyword overlap</strong>
+              <p style={{ margin: '4px 0 0' }}>
+                These keywords are targeted more than once — split the intent or merge the pages to avoid
+                cannibalization: {duplicateKeywords(all).join(', ')}.
+              </p>
+            </div>
+          )}
+
+          <div className="flow-card">
+            <h3>Turn an idea into a researched keyword</h3>
+            <p className="flow-muted" style={{ marginTop: 0 }}>
+              We don't have a keyword-data provider connected, so every idea is marked <em>Not researched</em>.
+              Use this checklist before you commit to a page:
+            </p>
+            <ul className="kit-checklist">
+              {RESEARCH_CHECKLIST.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
           </div>
 
           <div className="flow-card">

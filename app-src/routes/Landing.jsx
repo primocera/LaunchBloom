@@ -44,7 +44,7 @@ const MODULES = [
   { n: '3', title: 'Create email flows', body: 'Welcome, abandon cart, post-purchase, review, winback and campaign emails.' },
   { n: '4', title: 'Plan captions and campaigns', body: 'Captions, hooks, carousels, reels and full seasonal campaign plans.' },
   { n: '5', title: 'Generate ad hooks, video ideas and image briefs', body: 'Meta, TikTok, Google and Pinterest creative you can shoot with a phone.' },
-  { n: '6', title: 'Improve SEO', body: 'Long-tail keywords, meta titles, blog ideas, FAQ and internal links.' },
+  { n: '6', title: 'Plan SEO content', body: 'Practical SEO content ideas for your next pages and articles — topic clusters, titles, meta and FAQ.' },
 ];
 
 // v5 Prompt 1: pricing renders from GET /api/plans — the backend catalog is
@@ -76,7 +76,7 @@ const OUTPUTS = [
   '30-day content plan',
   '7-email sequence',
   'Meta ad ideas',
-  'SEO starter plan',
+  'SEO content ideas',
   'Weekly action plan',
 ];
 
@@ -104,7 +104,7 @@ const FEATURES = [
   { title: 'Content Plan', body: '30 days of posts with hooks, angles and CTAs, all promoting the offer you picked.' },
   { title: 'Email Sequence', body: 'A 7-email launch arc: story, problem, transformation, reveal, objections, proof, last call.' },
   { title: 'Ads Starter Kit', body: 'Meta ad hooks, primary text and visual directions you can shoot with a phone.' },
-  { title: 'SEO Starter Kit', body: 'Realistic long-tail keywords with page-ready titles and meta descriptions.' },
+  { title: 'SEO content ideas', body: 'Practical SEO content ideas for your next pages and articles, with page-ready titles and meta descriptions.' },
   { title: 'Weekly Action Plan', body: 'Concrete tasks sized to your available hours — highest-leverage first.' },
 ];
 

@@ -185,8 +185,11 @@ const SECTION_SYSTEMS = {
     'Hooks stop the scroll without clickbait. Primary text follows hook → empathy → mechanism → CTA. ' +
     'Visual directions must be shootable by one person with a phone.',
   seo_kit:
-    'Create an SEO starter plan for this offer: realistic long-tail keywords a small new site can rank for, ' +
-    'with page-ready titles and meta descriptions (under 160 chars).',
+    'Create practical SEO content IDEAS for this offer — topic clusters, likely search intent, target page ' +
+    'type, a primary keyword idea, secondary keyword ideas, page-ready titles and meta descriptions (under ' +
+    '160 chars) and a content angle. These are ideas to research, NOT verified keyword data: never state or ' +
+    'imply search volume, keyword difficulty, CPC, SERP features or that a page "will rank". Do not invent ' +
+    'any numeric SEO metric. Prefer natural, native phrasing over keyword stuffing.',
   weekly_plan:
     'Create the first weekly action plan to launch this offer, sized to the user\'s stated weekly time. ' +
     'Concrete tasks with clear outcomes, highest-leverage first.',
