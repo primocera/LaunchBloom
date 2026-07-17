@@ -701,29 +701,6 @@
   color: #fff;
 }
 
-.gen-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-}
-
-.gen-tab {
-  padding: 9px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fff;
-  font-weight: 600;
-  color: #6b7280;
-  cursor: pointer;
-}
-
-.gen-tab.is-on {
-  background: #111827;
-  border-color: #111827;
-  color: #fff;
-}
-
 .gen-results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -830,7 +807,7 @@
 }
 .gen-context-label { color: #6b7280; font-weight: 600; }
 .gen-context-chip.is-missing {
-  border-style: dashed;
+  border-style: solid;
   border-color: #f59e0b;
   color: #92400e;
   background: #fffbeb;
@@ -859,7 +836,9 @@
   color: #6b7280;
   cursor: pointer;
   border-bottom: 2px solid transparent;
+  -webkit-tap-highlight-color: transparent; /* no black flash on mobile tap */
 }
+.gen-tab:hover { color: #2563eb; }
 .gen-tab.is-on { color: #111827; font-weight: 600; border-bottom-color: #2563eb; }
 
 .gen-regen { margin-top: 14px; border-top: 1px dashed #e5e7eb; padding-top: 12px; }
@@ -1114,6 +1093,14 @@ textarea:focus-visible,
 
 /* Campaign Studio (Prompt 12) */
 .campaigns-page { max-width: 720px; padding: 8px 4px 40px; }
+/* Match the studios' blue accent instead of the inherited brown --accent. */
+.campaigns-page .btn-primary { background: #2563eb; }
+.campaigns-page .btn-primary:hover { background: #1d4ed8; }
+.campaigns-page a.btn-primary { text-decoration: none; text-align: center; }
+.campaigns-page .btn-secondary {
+  background: #fff; color: #2563eb; border: 1px solid #d1d9f5;
+}
+.campaigns-page .btn-secondary:hover { background: #f5f8ff; }
 .campaign-row-head { display: flex; align-items: center; gap: 10px; }
 .campaign-row-head h2 { margin: 0; }
 .campaign-badge {
