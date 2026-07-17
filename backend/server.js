@@ -26,10 +26,13 @@ const PORT = process.env.PORT || 3002;
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
+// Local E2E fires hundreds of requests from one IP — don't throttle tests.
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 // General API rate limit — 100 req / 15 min per IP
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isTestEnv ? 100000 : 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
@@ -38,7 +41,7 @@ const apiLimiter = rateLimit({
 // Tighter limit for payment creation endpoints
 const paymentLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: isTestEnv ? 100000 : 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many payment requests, please slow down.' },
@@ -47,7 +50,7 @@ const paymentLimiter = rateLimit({
 // AI generation costs real money per call — cap per IP
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 30,
+  max: isTestEnv ? 100000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'AI generation limit reached, please try again later.' },
@@ -150,8 +153,9 @@ app.get('/health', (_req, res) => {
 if (process.env.SERVE_APP === '1') {
   const path = require('path');
   const appDir = path.join(__dirname, '..', 'app');
-  app.use(express.static(appDir));
-  app.get(/^\/(app(?!\/assets\/)|legal)(\/.*)?$/, (_req, res) => {
+  // Vite base is /app/ — assets live under /app/assets/ (see vercel.json).
+  app.use('/app', express.static(appDir));
+  app.get(/^\/(app(?!\/assets\/)(\/.*)?|legal(\/.*)?)?$/, (_req, res) => {
     res.sendFile(path.join(appDir, 'index.html'));
   });
 }
