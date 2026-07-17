@@ -161,6 +161,7 @@ export default function Landing() {
 
   // Load the canonical plan catalog — the backend is the source of truth.
   useEffect(() => {
+    api.trackEvent('landing_viewed'); // v5 Prompt 18: top of funnel
     let cancelled = false;
     fetch('/api/plans')
       .then((r) => (r.ok ? r.json() : null))

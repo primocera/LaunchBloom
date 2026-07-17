@@ -29,6 +29,7 @@ export default function TrialPaywall({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    api.trackEvent('paywall_viewed'); // v5 Prompt 18: funnel instrumentation
     fetch('/api/plans')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (!cancelled && data?.plans) setCatalog(data); })
