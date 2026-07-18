@@ -649,6 +649,49 @@ const campaignEmailSchema = {
   additionalProperties: false,
 };
 
+// ---------------------------------------------------------------------------
+// v6 Prompt 14: SEO Ideas as a first-class generator studio. Mirrors the
+// seo_assets table 1:1. Deliberately NO volume/difficulty/CPC fields — output
+// is content ideation to research, never fabricated keyword data.
+// ---------------------------------------------------------------------------
+const seoIdeasSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      minItems: 5,
+      maxItems: 10,
+      items: {
+        type: 'object',
+        properties: {
+          page_type: { type: 'string', enum: ['landing page', 'product page', 'blog post', 'guide', 'comparison page', 'FAQ page'] },
+          keyword: { type: 'string' },
+          keyword_intent: { type: 'string', enum: ['informational', 'commercial', 'transactional', 'navigational'] },
+          seo_title: { type: 'string' },
+          meta_description: { type: 'string' },
+          h1: { type: 'string' },
+          h2s: { type: 'array', minItems: 3, maxItems: 8, items: { type: 'string' } },
+          faq: {
+            type: 'array', minItems: 2, maxItems: 5,
+            items: {
+              type: 'object',
+              properties: { question: { type: 'string' }, answer: { type: 'string' } },
+              required: ['question', 'answer'],
+              additionalProperties: false,
+            },
+          },
+          internal_links: { type: 'array', minItems: 1, maxItems: 5, items: { type: 'string' } },
+          priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+        },
+        required: ['page_type', 'keyword', 'keyword_intent', 'seo_title', 'meta_description', 'h1', 'h2s', 'faq', 'internal_links', 'priority'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['items'],
+  additionalProperties: false,
+};
+
 // Section name → schema, used by generate-launch-kit and regenerate-section.
 const SECTION_SCHEMAS = {
   landing_page: landingPageSchema,
@@ -676,4 +719,5 @@ module.exports = {
   socialCaptionSchema,
   creativeIdeasSchema,
   campaignEmailSchema,
+  seoIdeasSchema,
 };

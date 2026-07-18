@@ -393,7 +393,7 @@ export default function GeneratorStudio({
 
   return (
     <div className="flow">
-      <main className="flow-main is-wide">
+      <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
             <h2>{title}</h2>
@@ -484,7 +484,7 @@ export default function GeneratorStudio({
             ))}
           </div>
         )}
-      </main>
+      </section>
 
       <TrialPaywall open={paywall} onClose={() => setPaywall(false)} />
     </div>

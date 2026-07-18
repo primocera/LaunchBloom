@@ -30,7 +30,9 @@ const {
   campaignEmailSchema,
   socialCaptionSchema,
   creativeIdeasSchema,
+  seoIdeasSchema,
 } = require('../lib/schemas');
+const { rejectFabricatedMetrics, findKeywordCannibalization } = require('../lib/seo-provider');
 
 const router = express.Router();
 router.use(express.json({ limit: '16kb' }));
@@ -835,6 +837,92 @@ router.post('/generate-creative-assets', idempotent('generate-creative-assets'),
       ok: true,
       items: saved,
       quality_warnings: qualityWarnings('creative', result),
+      plan: req.userPlan,
+      context_used: brand.summary,
+      usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── SEO Ideas (v6 Prompt 14): campaign-aware generator parity ────────────────
+// Honest by design: content ideas + research checklist only. No volume, KD,
+// CPC or ranking claims — fabricated metrics are rejected before saving.
+
+const SEO_SYSTEM =
+  'You generate SEO CONTENT IDEAS to research — never keyword data. You have no access to search volume, keyword difficulty, CPC or ranking information and must never state or imply any. Each idea targets ONE primary keyword with a clear search intent, a page type suited to that intent, an exact seo_title (under 60 characters), meta_description (under 155 characters), h1, an h2 outline, FAQ pairs answering real buyer questions, and internal link ideas to other pages this business would have. Never promise rankings or traffic. Every idea must be distinct — no two ideas may target the same primary keyword.';
+
+router.post('/generate-seo-ideas', idempotent('generate-seo-ideas'), planGate('asset_generations'), async (req, res, next) => {
+  try {
+    const ws = req.workspace;
+    const { offer_id, launch_kit_id, target_language, site_focus, page_types, extra_context } = req.body || {};
+
+    const ctx = await loadScopedContext(ws, { offer_id, launch_kit_id });
+    if (ctx.error) return res.status(ctx.status).json({ error: ctx.error });
+
+    const prompt = [
+      'Create SEO content ideas (research-ready, no keyword metrics).',
+      brandBlock(ctx),
+      line('Site focus', site_focus),
+      line('Preferred page types', page_types),
+      line('Target language', target_language || 'English'),
+      line('Extra context', extra_context),
+      'Return a JSON items array of distinct SEO content ideas.',
+    ].filter(Boolean).join('\n\n');
+
+    const camp = await campaignContext(ws, (req.body || {}).campaign_id);
+    if (camp.error) return res.status(camp.status).json({ error: camp.error });
+    const brand = await brandContextFor(ws.id);
+    const result = await generateJson({ system: SEO_SYSTEM, prompt: brand.text + camp.text + prompt, schema: seoIdeasSchema, maxTokens: 9000 });
+    req.usageInfo = result.__meta;
+    const runId = crypto.randomUUID();
+
+    // Honesty gate: never save fabricated metrics or ranking promises.
+    const violations = rejectFabricatedMetrics(
+      (result.items || []).map((i) => ({ keyword: i.keyword, title: i.seo_title, meta_description: i.meta_description }))
+    );
+    if (violations.length) {
+      return res.status(502).json({ error: 'Generation produced unsupported SEO claims and was rejected. No AI action was charged.', details: violations });
+    }
+
+    const rows = (result.items || []).map((i) => ({
+      workspace_id: ws.id,
+      launch_kit_id: launch_kit_id || null,
+      offer_id: offer_id || null,
+      campaign_id: camp.campaign ? camp.campaign.id : null,
+      brief_snapshot: camp.snapshot || null,
+      prompt_version: AI_PROMPT_VERSION,
+      generation_run_id: runId,
+      page_type: i.page_type,
+      keyword: i.keyword,
+      keyword_intent: i.keyword_intent,
+      seo_title: i.seo_title,
+      meta_description: i.meta_description,
+      h1: i.h1,
+      h2s: i.h2s,
+      faq: i.faq,
+      internal_links: i.internal_links,
+      priority: i.priority,
+      status: 'draft',
+    }));
+    const { data: saved, error } = await supabase.from('seo_assets').insert(rows).select();
+    if (error) throw new Error('Failed to save SEO ideas: ' + error.message);
+
+    // Cannibalization check across the whole workspace (new + existing ideas).
+    const { data: existing } = await supabase
+      .from('seo_assets').select('keyword').eq('workspace_id', ws.id);
+    const collisions = findKeywordCannibalization(existing || []);
+    const warnings = qualityWarnings('seo', { items: (result.items || []).map((i) => ({ ...i, title: i.seo_title })) });
+    for (const c of collisions) {
+      warnings.push(`"${c.keyword}" is targeted by ${c.count} ideas in this workspace — merge or split the intent to avoid cannibalization.`);
+    }
+
+    res.json({
+      ok: true,
+      items: saved,
+      quality_warnings: warnings,
+      researched: false, // no keyword-data provider connected
       plan: req.userPlan,
       context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),

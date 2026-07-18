@@ -28,7 +28,7 @@ const STUDIO_NAV = [
   { to: '/app/email-studio', label: 'Email' },
   { to: '/app/social', label: 'Social' },
   { to: '/app/creative', label: 'Ads & Creative' },
-  { to: '/app/seo', label: 'SEO' },
+  { to: '/app/seo', label: 'SEO Ideas' },
 ];
 
 function AccountBlock() {

@@ -31,8 +31,8 @@ const CATEGORIES = [
   },
   {
     to: '/app/seo',
-    title: 'SEO',
-    body: 'SEO content ideas: topics, titles, meta descriptions and outlines.',
+    title: 'SEO Ideas',
+    body: 'Content topics, page titles, metadata and outlines to research before publishing.',
   },
 ];
 
@@ -59,7 +59,7 @@ export default function Create() {
 
   return (
     <div className="flow">
-      <main className="flow-main is-wide">
+      <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
             <h2>Create</h2>
@@ -85,7 +85,7 @@ export default function Create() {
             </Link>
           ))}
         </div>
-      </main>
+      </section>
     </div>
   );
 }

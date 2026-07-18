@@ -198,14 +198,14 @@ export default function Flow() {
 function Shell({ step, children }) {
   return (
     <div className="flow">
-      <main className="flow-main">
+      <section className="flow-main">
         {step != null && (
           <div className="flow-steps-bar">
             <Steps current={step} />
           </div>
         )}
         {children}
-      </main>
+      </section>
     </div>
   );
 }

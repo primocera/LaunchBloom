@@ -102,8 +102,8 @@ export default function Campaigns() {
       <div className="account-section campaign-template">
         <h2>Full launch campaign</h2>
         <p className="muted" style={{ marginTop: 4 }}>
-          The guided template: positioning → 3 offers → a complete launch kit (landing copy, content
-          plan, emails, ads, SEO and a weekly plan).
+          The guided template: positioning → 3 offer options → a full campaign asset set (website
+          copy, a 30-day content plan, emails, ad ideas, SEO ideas and a weekly action plan).
         </p>
         <a className="btn-primary" href="/app/flow" style={{ display: 'inline-block', marginTop: 8 }}>
           Start full launch campaign

@@ -13,7 +13,7 @@ import '../../flow.css';
 export function StudioShell({ title, blurb, kits, kitId, onSelectKit, children }) {
   return (
     <div className="flow">
-      <main className="flow-main is-wide">
+      <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
             <h2>{title}</h2>
@@ -28,7 +28,7 @@ export function StudioShell({ title, blurb, kits, kitId, onSelectKit, children }
           )}
         </div>
         {children}
-      </main>
+      </section>
     </div>
   );
 }

@@ -135,6 +135,7 @@ export const api = {
   generateCampaignEmails: (body, opts) => request('/api/ai/generate-campaign-emails', { method: 'POST', body, ...opts }),
   generateSocialAssets: (body, opts) => request('/api/ai/generate-social-assets', { method: 'POST', body, ...opts }),
   generateCreativeAssets: (body, opts) => request('/api/ai/generate-creative-assets', { method: 'POST', body, ...opts }),
+  generateSeoIdeas: (body, opts) => request('/api/ai/generate-seo-ideas', { method: 'POST', body, ...opts }),
   // List saved assets for the whole workspace (no launch-kit filter).
   assets: (table) => request(`/api/workspace/items/${table}`),
 

@@ -167,13 +167,13 @@ export default function SocialStudio() {
   const [tab, setTab] = useState(0);
   return (
     <div className="flow">
-      <main className="flow-main is-wide" style={{ paddingBottom: 0 }}>
+      <section className="flow-main is-wide" style={{ paddingBottom: 0 }}>
         <div className="gen-tabs" role="tablist">
           {TABS.map((t, i) => (
             <button key={t} role="tab" aria-selected={tab === i} className={tab === i ? 'gen-tab is-on' : 'gen-tab'} onClick={() => setTab(i)}>{t}</button>
           ))}
         </div>
-      </main>
+      </section>
       {tab === 0 ? (
         <GeneratorStudio
           title="Social Studio"
@@ -187,7 +187,7 @@ export default function SocialStudio() {
           fullCopy={fullCopy}
         />
       ) : (
-        <div className="flow"><main className="flow-main is-wide"><Calendar /></main></div>
+        <div className="flow"><section className="flow-main is-wide"><Calendar /></section></div>
       )}
     </div>
   );

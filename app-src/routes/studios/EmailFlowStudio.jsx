@@ -231,7 +231,7 @@ export default function EmailFlowStudio() {
 
   return (
     <div className="flow">
-      <main className="flow-main is-wide">
+      <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
             <h2>Email Studio</h2>
@@ -289,7 +289,7 @@ export default function EmailFlowStudio() {
             {items.map((i) => <EmailCard key={i.id} item={i} onChange={updateItem} />)}
           </div>
         )}
-      </main>
+      </section>
     </div>
   );
 }

@@ -74,7 +74,7 @@ export default function KitDetail() {
 
   return (
     <div className="flow">
-      <main className="flow-main">
+      <section className="flow-main">
         <div className="flow-row" style={{ marginBottom: 14 }}>
           {[['/app/landing-page', 'Landing Page Studio'], ['/app/content-plan', 'Content Studio'], ['/app/email-sequence', 'Email Studio'], ['/app/ads', 'Ads Studio'], ['/app/seo', 'SEO Studio'], ['/app/weekly-plan', 'Weekly Plan']].map(([to, label]) => (
             <Link key={to} to={to} className="kit-tab" style={{ textDecoration: 'none' }}>{label}</Link>
@@ -134,7 +134,7 @@ export default function KitDetail() {
             )}
           </>
         )}
-      </main>
+      </section>
     </div>
   );
 }
