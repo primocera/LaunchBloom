@@ -19,7 +19,7 @@ const TEXT_EXT = new Set(['.html', '.js', '.mjs', '.css', '.svg', '.json', '.txt
 function normalizedHash(buf, file) {
   let b = buf;
   if (TEXT_EXT.has(path.extname(file).toLowerCase())) {
-    b = Buffer.from(b.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+    b = Buffer.from(b.toString('utf8').replace(/\r/g, ''), 'utf8');
   }
   return createHash('sha256').update(b).digest('hex');
 }
