@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
+const { processEmailOutbox, replayDeadLetter } = require('../lib/lifecycle-email');
 
 function requireAdmin(req, res, next) {
   const admins = (process.env.ADMIN_EMAILS || '')
@@ -186,6 +187,48 @@ router.get('/api/admin/scorecard', requireAuth, requireAdmin, async (req, res) =
   } catch (err) {
     res.status(500).json({ error: 'Scorecard failed', req_id: req.id });
   }
+});
+
+// ── Email outbox (playbook v6, Prompt 6) ────────────────────────────────────
+
+// Dead letters and failing emails, so delivery problems are visible.
+router.get('/api/admin/email-outbox', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await audit(req, 'email_outbox_view');
+    const { data } = await supabase.from('email_events')
+      .select('id, email_type, recipient, status, attempts, next_attempt_at, last_error, created_at')
+      .in('status', ['failed', 'dead_letter', 'pending'])
+      .order('created_at', { ascending: false })
+      .limit(100);
+    res.json({ items: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: 'Lookup failed', req_id: req.id });
+  }
+});
+
+// Run one outbox pass now (also reachable via the cron endpoint below).
+router.post('/api/admin/email-outbox/process', requireAuth, requireAdmin, async (req, res) => {
+  await audit(req, 'email_outbox_process');
+  res.json(await processEmailOutbox({ limit: 50 }));
+});
+
+// Put a dead-letter row back in the queue.
+router.post('/api/admin/email-outbox/replay/:id', requireAuth, requireAdmin, async (req, res) => {
+  await audit(req, 'email_outbox_replay', req.params.id);
+  const ok = await replayDeadLetter(req.params.id);
+  if (!ok) return res.status(404).json({ error: 'No dead-letter row with that id' });
+  res.json({ ok: true });
+});
+
+// Cron entry point (Vercel cron sends `Authorization: Bearer ${CRON_SECRET}`).
+// No session — authenticated by the shared secret only.
+router.get('/api/cron/email-outbox', async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  const auth = req.get('authorization') || '';
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  res.json(await processEmailOutbox({ limit: 50 }));
 });
 
 module.exports = router;

@@ -48,12 +48,19 @@ const paymentLimiter = rateLimit({
   message: { error: 'Too many payment requests, please slow down.' },
 });
 
-// AI generation costs real money per call — cap per IP
+// AI generation costs real money per call — key by the signed-in session when
+// present (playbook v6, Prompt 9: IP alone is a weak cost boundary — one user
+// behind rotating IPs, or a whole office behind one NAT). MemoryStore is
+// per-instance on serverless; the durable cost boundary remains the plan gate.
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: isTestEnv ? 100000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const m = (req.headers.cookie || '').match(/sb_access=([^;]+)/);
+    return m ? `u:${m[1].slice(0, 64)}` : `ip:${req.ip}`;
+  },
   message: { error: 'AI generation limit reached, please try again later.' },
 });
 
@@ -64,15 +71,21 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
   : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002'];
 
+// Exact-origin allowlist only (playbook v6, Prompt 9). The old `.vercel.app`
+// suffix trust let ANY Vercel-hosted site make credentialed requests. Preview
+// deployments must now be listed explicitly in ALLOWED_PREVIEW_ORIGINS.
+const previewOrigins = (process.env.ALLOWED_PREVIEW_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // server-to-server, curl
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      // Any Vercel deployment of this app (production + preview URLs) is us.
-      let host = '';
-      try { host = new URL(origin).hostname; } catch { /* malformed */ }
-      if (host.endsWith('.vercel.app')) return callback(null, true);
+      if (allowedOrigins.includes(origin) || previewOrigins.includes(origin)) {
+        return callback(null, true);
+      }
       callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
@@ -93,13 +106,17 @@ app.use(authRouter);
 const workspacesRouter = require('./routes/workspaces');
 app.use(workspacesRouter);
 
+// Fail-closed launch config (v6 Prompt 1): in real production (live Stripe
+// key) missing legal/origin/secret config hard-disables generation + checkout.
+const { requireLaunchReady } = require('./lib/launch-config');
+
 const aiRouter = require('./routes/ai');
-app.use('/api/ai', apiLimiter, aiLimiter, aiRouter);
+app.use('/api/ai', apiLimiter, aiLimiter, requireLaunchReady('generation'), aiRouter);
 
 // Marketing-asset studios (website/email/campaign/social/creative) — same
 // base path and limiters as the core AI routes.
 const assetsRouter = require('./routes/assets');
-app.use('/api/ai', apiLimiter, aiLimiter, assetsRouter);
+app.use('/api/ai', apiLimiter, aiLimiter, requireLaunchReady('generation'), assetsRouter);
 
 // ---------------------------------------------------------------------------
 // Body parsing for all remaining routes
@@ -113,7 +130,7 @@ app.use(apiLimiter, plansRouter);
 const paymentRouter = require('./routes/payments');
 const customerRouter = require('./routes/customers');
 
-app.use('/api/payments', apiLimiter, paymentLimiter, paymentRouter);
+app.use('/api/payments', apiLimiter, paymentLimiter, requireLaunchReady('checkout'), paymentRouter);
 app.use('/api/customers', apiLimiter, customerRouter);
 
 const accountRouter = require('./routes/account');

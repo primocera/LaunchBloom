@@ -47,7 +47,10 @@ test('export returns a JSON attachment of the workspace data', async () => {
   assert.match(r.headers['content-disposition'] || '', /attachment/);
   const body = JSON.parse(r.text);
   assert.equal(body.account.email, 'me@app.com');
-  assert.ok(body.workspace);
+  assert.equal(body.export_version, 2);
+  assert.ok(Array.isArray(body.workspaces) && body.workspaces.length >= 1);
+  assert.ok(body.workspaces[0].workspace);
+  assert.ok('data' in body.workspaces[0]);
 });
 
 test('delete cancels billing, wipes data and deletes the auth user', async () => {
@@ -55,6 +58,9 @@ test('delete cancels billing, wipes data and deletes the auth user', async () =>
   const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
+  assert.equal(r.body.receipt.completed, true);
+  assert.ok(Array.isArray(r.body.receipt.steps));
+  assert.ok(r.body.receipt.steps.some((s) => s.name === 'retained_records'));
   assert.equal(deletedUser, 'user-1');
   // session cookies cleared
   const cookies = r.headers['set-cookie'] || [];

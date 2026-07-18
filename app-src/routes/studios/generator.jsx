@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -337,6 +337,11 @@ export default function GeneratorStudio({
     });
   }
 
+  // One idempotency key per generation INTENT (v6 Prompt 11): created on the
+  // first attempt, reused on retry after a failure, discarded on success — so
+  // double clicks and network timeouts can't create duplicate assets/charges.
+  const intentKeyRef = useRef(null);
+
   async function onGenerate() {
     // A free account can't generate yet: open the trial paywall instead of
     // burning the request. The draft is already saved locally.
@@ -344,13 +349,21 @@ export default function GeneratorStudio({
       setPaywall(true);
       return;
     }
+    if (busy) return; // double-click guard; the server key check is the backstop
     setBusy(true);
     setError(null);
     setUpgrade(false);
     setWarnings([]);
     setAnnounce('Generating… this uses one AI action.');
+    if (!intentKeyRef.current) {
+      intentKeyRef.current = (crypto.randomUUID && crypto.randomUUID()) || `k-${Date.now()}-${Math.random()}`;
+    }
     try {
-      const res = await generate(campaignId ? { ...values, campaign_id: campaignId } : values);
+      const res = await generate(
+        campaignId ? { ...values, campaign_id: campaignId } : values,
+        { idempotencyKey: intentKeyRef.current }
+      );
+      intentKeyRef.current = null;
       const fresh = res[resultKey] || [];
       setWarnings(res.quality_warnings || []);
       // Newest first, prepended to any previously-saved assets.

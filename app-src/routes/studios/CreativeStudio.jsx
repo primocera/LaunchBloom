@@ -163,7 +163,7 @@ export default function CreativeStudio() {
       blurb="Production-ready static, carousel, video/UGC and search-ad briefs — distinct concepts, timed video scripts, a test matrix and compliance checks before you run them."
       fields={FIELDS}
       initial={{ target_language: 'English', platforms: ['meta'], formats: ['static', 'video'] }}
-      generate={(v) => api.generateCreativeAssets(v)}
+      generate={(v, opts) => api.generateCreativeAssets(v, opts)}
       resultKey="items"
       table="creative_assets"
       renderItem={renderItem}

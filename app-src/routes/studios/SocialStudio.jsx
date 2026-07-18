@@ -180,7 +180,7 @@ export default function SocialStudio() {
           blurb="Channel-aware content: carousels slide-by-slide, reels with full scripts, captions and pins — a balanced mix across your content pillars."
           fields={FIELDS}
           initial={{ target_language: 'English', number_of_items: 12, platforms: ['instagram'], formats: ['caption', 'carousel', 'reel'] }}
-          generate={(v) => api.generateSocialAssets(v)}
+          generate={(v, opts) => api.generateSocialAssets(v, opts)}
           resultKey="items"
           table="social_assets"
           renderItem={renderItem}

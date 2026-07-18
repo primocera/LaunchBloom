@@ -18,6 +18,7 @@ const express = require('express');
 const crypto = require('crypto');
 const supabase = require('../lib/supabase');
 const { planGate, usageFor } = require('../lib/plan-limits');
+const { idempotent } = require('../lib/idempotency');
 const { generateJson, AI_PROMPT_VERSION } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
 const { buildSequence } = require('../lib/email-blueprints');
@@ -207,7 +208,7 @@ const PAGE_GUIDANCE = {
 // variants, shipping terms or proof. All optional; missing → bracket placeholder.
 const ECOM_FIELDS = ['product_facts', 'benefits', 'objections', 'usage', 'variants', 'shipping_returns', 'proof', 'free_shipping_threshold'];
 
-router.post('/generate-website-kit', planGate('asset_generations'), async (req, res, next) => {
+router.post('/generate-website-kit', idempotent('generate-website-kit'), planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
@@ -307,7 +308,7 @@ const EMAIL_FLOW_SYSTEM =
   '- design_notes: hero image idea, product block idea, or plain-text style.\n' +
   'Never invent testimonials, statistics or fake urgency. Honour any incentive/deadline/compliance notes given.';
 
-router.post('/generate-email-flow', planGate('asset_generations'), async (req, res, next) => {
+router.post('/generate-email-flow', idempotent('generate-email-flow'), planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
@@ -523,7 +524,7 @@ const CAMPAIGN_SYSTEM =
   '- Use the real discount, code, minimum spend and exclusions exactly as given; bracket anything missing.\n' +
   '- Keep copy clear and mobile-first. Avoid fake scarcity and deceptive subject lines.';
 
-router.post('/generate-campaign-emails', planGate('asset_generations'), async (req, res, next) => {
+router.post('/generate-campaign-emails', idempotent('generate-campaign-emails'), planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
@@ -649,7 +650,7 @@ const SOCIAL_SYSTEM =
   '- Hashtags are optional and platform-appropriate; never imply they guarantee growth. An empty list is fine.\n' +
   '- Do not use exaggerated promises.';
 
-router.post('/generate-social-assets', planGate('asset_generations'), async (req, res, next) => {
+router.post('/generate-social-assets', idempotent('generate-social-assets'), planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {
@@ -755,7 +756,7 @@ const CREATIVE_SYSTEM =
   '- Use clear before/after or problem/solution angles without unrealistic claims or invented proof.\n' +
   '- Match funnel stage and audience temperature (cold vs warm vs hot).';
 
-router.post('/generate-creative-assets', planGate('asset_generations'), async (req, res, next) => {
+router.post('/generate-creative-assets', idempotent('generate-creative-assets'), planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const {

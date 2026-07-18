@@ -39,6 +39,14 @@ function makeFakeSupabase(results = {}) {
   }
   return {
     from: (table) => builderFor(table),
+    // rpc(name, args): looked up in results.__rpc by function name. Default is
+    // a "missing function" error so code under test exercises its fallback.
+    rpc: async (name, args) => {
+      const handler = results.__rpc && results.__rpc[name];
+      if (typeof handler === 'function') return handler(args);
+      if (handler) return handler;
+      return { data: null, error: { code: 'PGRST202', message: `Could not find the function ${name}` } };
+    },
     storage: {
       from: () => ({
         download: async () => null,

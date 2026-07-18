@@ -17,6 +17,7 @@
 const express = require('express');
 const supabase = require('../lib/supabase');
 const { planGate, limitsFor, usageFor } = require('../lib/plan-limits');
+const { idempotent } = require('../lib/idempotency');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
 const {
@@ -96,7 +97,7 @@ function offerContext(offer) {
 
 // ── 1. Positioning ─────────────────────────────────────────────────────────
 
-router.post('/generate-positioning', planGate('positioning'), async (req, res, next) => {
+router.post('/generate-positioning', idempotent('generate-positioning'), planGate('positioning'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const onboarding = await latestOnboarding(ws.id);
@@ -132,7 +133,7 @@ router.post('/generate-positioning', planGate('positioning'), async (req, res, n
 
 // ── 2. Offers (3 options) ──────────────────────────────────────────────────
 
-router.post('/generate-offers', planGate('offer_generations'), async (req, res, next) => {
+router.post('/generate-offers', idempotent('generate-offers'), planGate('offer_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const [onboarding, positioning] = await Promise.all([
@@ -244,7 +245,7 @@ async function explodeItems(section, data, launchKitId, workspaceId) {
   if (error) console.error(`explodeItems(${section}) failed:`, error.message);
 }
 
-router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, next) => {
+router.post('/generate-launch-kit', idempotent('generate-launch-kit'), planGate('launch_kits'), async (req, res, next) => {
   try {
     const { offer_id } = req.body || {};
     if (!offer_id) return res.status(400).json({ error: 'offer_id is required' });
@@ -322,7 +323,7 @@ router.post('/generate-launch-kit', planGate('launch_kits'), async (req, res, ne
 
 // ── 4. Regenerate one section ──────────────────────────────────────────────
 
-router.post('/regenerate-section', planGate('regenerate_section'), async (req, res, next) => {
+router.post('/regenerate-section', idempotent('regenerate-section'), planGate('regenerate_section'), async (req, res, next) => {
   try {
     const { launch_kit_id, section, feedback } = req.body || {};
     if (!launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });

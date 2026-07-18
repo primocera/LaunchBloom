@@ -16,6 +16,7 @@ const { ensureWorkspace } = require('./workspaces');
 const { planFor, pricePlans } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
+const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 const { track } = require('../lib/analytics');
 
 function appUrl() {
@@ -110,16 +111,31 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
   }
 });
 
-// GET /api/account/export
+// GET /api/account/export — every owned workspace, not just the active one
+// (playbook v6, Prompt 8). Versioned archive shape so future importers can
+// tell what they're reading.
 router.get('/api/account/export', requireAuth, async (req, res, next) => {
   try {
-    const ws = await ensureWorkspace(req.userEmail, req.userId);
-    const data = await collectWorkspaceData(ws.id);
+    const { data: owned } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('user_id', req.userId);
+    const ownedList = Array.isArray(owned) ? owned : [];
+    const workspaces = ownedList.length
+      ? ownedList
+      : [await ensureWorkspace(req.userEmail, req.userId)];
+
+    const archives = [];
+    for (const ws of workspaces) {
+      archives.push({ workspace: ws, data: await collectWorkspaceData(ws.id) });
+    }
+
     const payload = {
+      export_version: 2,
       exported_at: new Date().toISOString(),
       account: { email: req.userEmail, user_id: req.userId },
-      workspace: ws,
-      data,
+      workspace_count: archives.length,
+      workspaces: archives,
     };
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', 'attachment; filename="launchbloom-export.json"');
@@ -129,13 +145,18 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/account/delete
+// POST /api/account/delete — step-tracked deletion with a receipt (playbook
+// v6, Prompt 8). Each external side effect records ok/failed instead of being
+// swallowed; the response is an honest receipt the user (and support) can act
+// on. Idempotent: re-running skips already-deleted resources.
 router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), async (req, res, next) => {
   try {
     const email = req.userEmail;
     const userId = req.userId;
+    const steps = [];
+    const step = (name, status, detail) => steps.push({ name, status, ...(detail ? { detail } : {}) });
 
-    // 1. Cancel any active Stripe subscriptions and detach the customer.
+    // 1. Cancel any active Stripe subscriptions.
     try {
       const { data: customer } = await supabase
         .from('customers')
@@ -144,37 +165,81 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
         .single();
       if (customer && customer.stripe_customer_id) {
         const subs = await stripe.subscriptions.list({ customer: customer.stripe_customer_id, status: 'all', limit: 100 });
+        let canceled = 0;
+        let failures = 0;
         for (const sub of subs.data) {
           if (['active', 'trialing', 'past_due', 'unpaid'].includes(sub.status)) {
-            await stripe.subscriptions.cancel(sub.id).catch(() => {});
+            try {
+              await stripe.subscriptions.cancel(sub.id);
+              canceled++;
+            } catch (e) {
+              failures++;
+            }
           }
         }
+        if (failures > 0) step('stripe_cancellation', 'failed', `${failures} subscription(s) could not be canceled — contact support`);
+        else step('stripe_cancellation', 'ok', canceled ? `${canceled} subscription(s) canceled` : 'no active subscriptions');
+      } else {
+        step('stripe_cancellation', 'ok', 'no billing account');
       }
     } catch (e) {
-      /* billing cleanup is best-effort; continue with data deletion */
+      step('stripe_cancellation', 'failed', 'billing lookup failed — cancellation not confirmed');
     }
 
     // 2. Delete every workspace the user owns and all of its data.
-    const { data: workspaces } = await supabase
-      .from('workspaces')
-      .select('id')
-      .eq('user_id', userId);
-    const owned = workspaces && workspaces.length ? workspaces : [await ensureWorkspace(email, userId)];
-    for (const ws of owned) {
-      await deleteWorkspaceData(ws.id);
-      await supabase.from('workspaces').delete().eq('id', ws.id).then(() => {}, () => {});
+    try {
+      const { data: workspaces } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('user_id', userId);
+      const owned = Array.isArray(workspaces) ? workspaces : (workspaces ? [workspaces] : []);
+      let wsFailures = 0;
+      for (const ws of owned) {
+        try {
+          await deleteWorkspaceData(ws.id);
+          await supabase.from('workspaces').delete().eq('id', ws.id);
+        } catch (e) {
+          wsFailures++;
+        }
+      }
+      if (wsFailures > 0) step('workspace_data', 'failed', `${wsFailures} of ${owned.length} workspace(s) could not be fully deleted`);
+      else step('workspace_data', 'ok', `${owned.length} workspace(s) deleted`);
+    } catch (e) {
+      step('workspace_data', 'failed', 'workspace lookup failed');
     }
 
-    // 3. Delete the Supabase Auth user (revokes all sessions) and clear cookies.
+    // 3. Delete the Supabase Auth user (revokes all sessions).
     try {
-      await supabase.adminClient().auth.admin.deleteUser(userId);
+      const { error } = await supabase.adminClient().auth.admin.deleteUser(userId);
+      if (error) throw error;
+      step('auth_user', 'ok');
     } catch (e) {
-      /* if this fails the account still has no data; surface a soft error */
+      const already = /not.*found/i.test(String(e && e.message));
+      step('auth_user', already ? 'ok' : 'failed', already ? 'already deleted' : 'sign-in account could not be deleted — contact support');
     }
+
+    // 4. Retained records, stated explicitly (playbook: no silent retention).
+    step('retained_records', 'ok', 'Billing/invoice records are retained by Stripe for legal reasons; anonymized analytics events are retained.');
+
     clearSessionCookies(res);
     track('account_deleted', { userId });
 
-    res.json({ ok: true });
+    const failed = steps.filter((s) => s.status === 'failed');
+    const receipt = {
+      completed: failed.length === 0,
+      requested_at: new Date().toISOString(),
+      steps,
+      ...(failed.length ? { support_note: 'Some steps did not complete. Re-run deletion or contact support with this receipt.' } : {}),
+    };
+
+    // Deletion-record email through the outbox (best-effort; the receipt in
+    // this response is the source of truth).
+    sendLifecycleEmail('deletion_completed', `${userId}:${Date.now()}`, email, {
+      completed: receipt.completed,
+      failedSteps: failed.map((s) => s.name),
+    }).catch(() => {});
+
+    res.json({ ok: failed.length === 0, receipt });
   } catch (err) {
     next(err);
   }

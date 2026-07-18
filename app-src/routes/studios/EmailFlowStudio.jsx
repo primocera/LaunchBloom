@@ -250,7 +250,7 @@ export default function EmailFlowStudio() {
             <EmailForm
               fields={LIFECYCLE_FIELDS}
               initial={{ target_language: 'English', flow_types: ['welcome'] }}
-              generate={(v) => api.generateEmailFlow(v)}
+              generate={(v, opts) => api.generateEmailFlow(v, opts)}
               onGenerated={prepend}
             />
             {lifecycleEmails.length > 0 && (
@@ -269,7 +269,7 @@ export default function EmailFlowStudio() {
             <EmailForm
               fields={CAMPAIGN_FIELDS}
               initial={{ target_language: 'English' }}
-              generate={(v) => api.generateCampaignEmails(v)}
+              generate={(v, opts) => api.generateCampaignEmails(v, opts)}
               onGenerated={prepend}
             />
             {campaignEmails.length > 0 && (

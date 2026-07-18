@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------------
 
 const Anthropic = require('@anthropic-ai/sdk');
-const { reserveAiCall } = require('./spend-guard');
+const { reserveAiCall, finalizeAiCall, releaseAiCall } = require('./spend-guard');
 const { BRAND } = require('./brand');
 
 // Model is env-configurable so you can trade cost vs quality without a code
@@ -293,8 +293,9 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
     return mockFromSchema(schema);
   }
 
-  // Global daily spend ceiling (live mode only).
-  await reserveAiCall();
+  // Global daily spend ceiling (live mode only). Atomic ledger: reserve now,
+  // finalize real tokens on success, release the reservation on failure.
+  const reservation = await reserveAiCall();
 
   const client = new Anthropic();
   const useModel = model || MODEL;
@@ -363,6 +364,11 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
         },
         enumerable: false,
       });
+      await finalizeAiCall(reservation.day, {
+        inputTokens: usage.input_tokens,
+        outputTokens: usage.output_tokens,
+        estimatedCost: parsed.__meta.estimated_cost,
+      });
       return parsed;
     } catch (err) {
       lastErr = err;
@@ -373,6 +379,9 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
   }
 
   logGeneration({ model: useModel, promptVersion, attempt: AI_MAX_ATTEMPTS, ms: Date.now() - started, status: 'error', code: lastErr && lastErr.code });
+
+  // The provider call failed — give the reservation back to today's budget.
+  await releaseAiCall(reservation.day);
 
   // Normalize to a consistent, non-leaky error.
   if (lastErr && lastErr.code) throw lastErr;

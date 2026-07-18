@@ -121,7 +121,7 @@ export default function WebsiteStudio() {
       blurb="Generate home, product, collection, cart, about, FAQ, contact, thank-you and landing page copy from your offer — with three hero directions per page."
       fields={FIELDS}
       initial={{ target_language: 'English', page_types: ['home'] }}
-      generate={(v) => api.generateWebsiteKit(v)}
+      generate={(v, opts) => api.generateWebsiteKit(v, opts)}
       resultKey="pages"
       table="website_pages"
       renderItem={renderPage}

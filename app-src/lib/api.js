@@ -11,7 +11,7 @@ export function setActiveWorkspace(id) {
   else localStorage.removeItem(WORKSPACE_KEY);
 }
 
-async function request(path, { method = 'GET', body, signal } = {}) {
+async function request(path, { method = 'GET', body, signal, idempotencyKey } = {}) {
   const ws = getActiveWorkspace();
   const res = await fetch(path, {
     method,
@@ -20,6 +20,7 @@ async function request(path, { method = 'GET', body, signal } = {}) {
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(ws ? { 'X-Workspace-Id': ws } : {}),
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -125,12 +126,15 @@ export const api = {
       body: { launch_kit_id: launchKitId, section, feedback },
     }),
 
-  // Marketing-asset studios (Upgrade prompts 7-11 / 16-18)
-  generateWebsiteKit: (body) => request('/api/ai/generate-website-kit', { method: 'POST', body }),
-  generateEmailFlow: (body) => request('/api/ai/generate-email-flow', { method: 'POST', body }),
-  generateCampaignEmails: (body) => request('/api/ai/generate-campaign-emails', { method: 'POST', body }),
-  generateSocialAssets: (body) => request('/api/ai/generate-social-assets', { method: 'POST', body }),
-  generateCreativeAssets: (body) => request('/api/ai/generate-creative-assets', { method: 'POST', body }),
+  // Marketing-asset studios (Upgrade prompts 7-11 / 16-18). Each call carries
+  // an Idempotency-Key (v6 Prompt 11): pass opts.idempotencyKey — a UUID per
+  // generation intent, reused on retry — so double clicks and timeouts can't
+  // duplicate assets or charges.
+  generateWebsiteKit: (body, opts) => request('/api/ai/generate-website-kit', { method: 'POST', body, ...opts }),
+  generateEmailFlow: (body, opts) => request('/api/ai/generate-email-flow', { method: 'POST', body, ...opts }),
+  generateCampaignEmails: (body, opts) => request('/api/ai/generate-campaign-emails', { method: 'POST', body, ...opts }),
+  generateSocialAssets: (body, opts) => request('/api/ai/generate-social-assets', { method: 'POST', body, ...opts }),
+  generateCreativeAssets: (body, opts) => request('/api/ai/generate-creative-assets', { method: 'POST', body, ...opts }),
   // List saved assets for the whole workspace (no launch-kit filter).
   assets: (table) => request(`/api/workspace/items/${table}`),
 
