@@ -146,42 +146,134 @@ router.get('/api/admin/stuck-reservations', requireAuth, requireAdmin, async (re
 // derived from the analytics ledger + subscriptions; no customer content.
 const SCORECARD_DEFINITIONS = {
   acquisition: 'Distinct users who fired signup_started in the window.',
-  activation: 'Verified account + minimum Brand Profile + first saved generation (see ACTIVATION).',
-  time_to_first_value: 'Median time from signup_completed to first_asset_saved.',
-  trial_conversion: 'trial_started that became subscription_activated in the window.',
-  retention: 'Activated users with any event in the last 7 days.',
-  generation_success: 'succeeded / (succeeded + released) usage_events.',
-  cost_per_action: 'Reported separately from the AI cost ledger; not fabricated here.',
-  cancellation_reasons: 'Grouped reasons from subscription_canceled feedback.',
+  signups_completed: 'Distinct users who fired signup_completed in the window.',
+  activation: 'signup_completed users whose first_asset_saved happened within 24h of signup. Beta gate: ≥45%.',
+  time_to_first_value_minutes: 'Median minutes from signup_completed to first_asset_saved for activated users. Beta gate: ≤15.',
+  trial_conversion: 'trial_started users who also fired subscription_activated in the window. Beta gate: ≥20%.',
+  d7_retention: 'Signups ≥9 days old with any event on days 5–9 after signup. Beta gate: ≥30%.',
+  generation_success: 'succeeded / (succeeded + released) usage_events. Beta gate: ≥97%.',
+  limit_reached_users: 'Distinct users who hit a plan limit in the window.',
+  cancellation_reasons: 'Grouped redacted reasons from subscription_canceled events.',
+  cost_per_action: 'From the ai_spend_ledger table (input/output tokens + estimated USD per day); never fabricated here.',
 };
+
+// v6 Prompt 10: computed cohorts — every metric returns numerator,
+// denominator, value and the exact date window, so numbers are decision-ready
+// and reconcilable to the source tables. Computation happens in JS over the
+// windowed event rows (beta-scale volumes; no content is ever read).
+function metric(numerator, denominator, unit = 'ratio') {
+  return {
+    numerator,
+    denominator,
+    value: denominator > 0 ? +((numerator / denominator) * 100).toFixed(1) : null,
+    unit: denominator > 0 ? 'percent' : unit,
+  };
+}
+
+function median(values) {
+  if (!values.length) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/** userId → earliest timestamp of each event type within the window. */
+function firstByUser(rows, event) {
+  const out = new Map();
+  for (const r of rows) {
+    if (r.event !== event || !r.user_id) continue;
+    const t = new Date(r.created_at).getTime();
+    if (!out.has(r.user_id) || t < out.get(r.user_id)) out.set(r.user_id, t);
+  }
+  return out;
+}
 
 router.get('/api/admin/scorecard', requireAuth, requireAdmin, async (req, res) => {
   try {
     await audit(req, 'scorecard');
-    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
-    const count = async (event) => {
-      const { count: c } = await supabase.from('analytics_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('event', event).gte('created_at', since);
-      return c || 0;
-    };
+    const days = Math.min(Number(req.query.days) || 7, 90);
+    const sinceMs = Date.now() - days * 24 * 3600 * 1000;
+    const since = new Date(sinceMs).toISOString();
+
+    // One windowed pull of the events we compute from (ids + timestamps only).
+    const EVENTS = [
+      'signup_started', 'signup_completed', 'trial_started', 'subscription_activated',
+      'first_generation', 'first_asset_saved', 'limit_reached', 'subscription_canceled',
+    ];
+    const { data: eventRows } = await supabase
+      .from('analytics_events')
+      .select('event, user_id, created_at, properties')
+      .in('event', EVENTS)
+      .gte('created_at', since)
+      .order('created_at', { ascending: true })
+      .limit(10000);
+    const rows = Array.isArray(eventRows) ? eventRows : [];
+
+    const distinct = (event) => firstByUser(rows, event).size;
+
+    // Activation: verified signup that saved a first asset within 24h of signup.
+    const signups = firstByUser(rows, 'signup_completed');
+    const firstSaves = firstByUser(rows, 'first_asset_saved');
+    let activated = 0;
+    const ttfvMinutes = [];
+    for (const [userId, signupAt] of signups) {
+      const savedAt = firstSaves.get(userId);
+      if (savedAt != null && savedAt - signupAt <= 24 * 3600 * 1000) {
+        activated++;
+        ttfvMinutes.push(Math.max(0, (savedAt - signupAt) / 60000));
+      }
+    }
+
+    // D7 retention: users who signed up 7+ days into the past edge of the
+    // window and had any event on days 5–9 after signup.
+    let d7Eligible = 0;
+    let d7Retained = 0;
+    for (const [userId, signupAt] of signups) {
+      if (Date.now() - signupAt < 9 * 24 * 3600 * 1000) continue; // window not elapsed
+      d7Eligible++;
+      const retained = rows.some((r) => {
+        if (r.user_id !== userId) return false;
+        const dt = (new Date(r.created_at).getTime() - signupAt) / (24 * 3600 * 1000);
+        return dt >= 5 && dt <= 9;
+      });
+      if (retained) d7Retained++;
+    }
+
+    // Trial → paid within the window.
+    const trials = firstByUser(rows, 'trial_started');
+    const paid = firstByUser(rows, 'subscription_activated');
+    let converted = 0;
+    for (const userId of trials.keys()) if (paid.has(userId)) converted++;
+
+    // Generation success from the usage ledger.
     const [succeeded, released] = await Promise.all([
       supabase.from('usage_events').select('id', { count: 'exact', head: true }).eq('status', 'succeeded').gte('created_at', since),
       supabase.from('usage_events').select('id', { count: 'exact', head: true }).eq('status', 'released').gte('created_at', since),
     ]);
     const s = succeeded.count || 0;
     const r = released.count || 0;
+
+    // Cancellation reasons (redacted properties only).
+    const cancelReasons = {};
+    for (const row of rows) {
+      if (row.event !== 'subscription_canceled') continue;
+      const reason = (row.properties && row.properties.reason) || 'unspecified';
+      cancelReasons[reason] = (cancelReasons[reason] || 0) + 1;
+    }
+
     res.json({
-      window: '7d',
+      window: { days, since, until: new Date().toISOString() },
       definitions: SCORECARD_DEFINITIONS,
       metrics: {
-        acquisition: await count('signup_started'),
-        trials_started: await count('trial_started'),
-        subscriptions_activated: await count('subscription_activated'),
-        first_generations: await count('first_generation'),
-        first_assets_saved: await count('first_asset_saved'),
-        limit_reached: await count('limit_reached'),
-        generation_success_rate: s + r > 0 ? Math.round((s / (s + r)) * 100) : null,
+        acquisition: { numerator: distinct('signup_started'), denominator: null, value: distinct('signup_started'), unit: 'users' },
+        signups_completed: { numerator: signups.size, denominator: null, value: signups.size, unit: 'users' },
+        activation: metric(activated, signups.size),
+        time_to_first_value_minutes: { numerator: activated, denominator: null, value: median(ttfvMinutes) != null ? +median(ttfvMinutes).toFixed(1) : null, unit: 'median_minutes' },
+        trial_conversion: metric(converted, trials.size),
+        d7_retention: metric(d7Retained, d7Eligible),
+        generation_success: metric(s, s + r),
+        limit_reached_users: { numerator: distinct('limit_reached'), denominator: null, value: distinct('limit_reached'), unit: 'users' },
+        cancellation_reasons: cancelReasons,
       },
     });
   } catch (err) {

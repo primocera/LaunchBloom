@@ -1,0 +1,37 @@
+# Browser E2E (playbook v6, Prompt 4 — lean free-tier variant).
+#
+# Deliberately NOT a required PR check: main CI stays fast and non-flaky
+# (free GitHub Actions minutes). Runs on demand (workflow_dispatch) and once
+# a week; installs the exact Playwright Chromium so no test can silently
+# "pass" without a browser. Traces/screenshots are uploaded on failure.
+name: e2e
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright Chromium (declared prerequisite)
+        run: npx playwright install --with-deps chromium
+      - name: Run browser + API E2E against mock-mode server
+        run: npx playwright test
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -12,7 +12,7 @@ const CATEGORIES = [
   {
     to: '/app/website',
     title: 'Website',
-    body: 'Home, product, landing, about, FAQ and cart copy — structured and ready to paste.',
+    body: 'Home, product, landing, about, FAQ and cart copy — structured and ready for your review.',
   },
   {
     to: '/app/email-studio',

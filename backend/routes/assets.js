@@ -149,7 +149,7 @@ function line(label, value) {
 
 const WEBSITE_SYSTEM =
   'You are a senior conversion copywriter and ecommerce website strategist. Create website copy ' +
-  'that is clear, practical, trustworthy and ready to paste into a website builder. You write for ' +
+  'that is clear, practical, trustworthy and ready for human review before publishing. You write for ' +
   'solo founders, creators, freelancers, small ecommerce brands and service providers. Do not invent ' +
   'testimonials, statistics, certifications or guarantees. Do not write legal terms, medical claims or ' +
   'unrealistic income promises. Every page must have a clear goal, clear CTA and copy that connects to ' +

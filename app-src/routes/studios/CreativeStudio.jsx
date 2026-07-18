@@ -3,7 +3,7 @@ import { api } from '../../lib/api';
 import GeneratorStudio, { AssetField } from './generator';
 
 // ---------------------------------------------------------------------------
-// Ads & Creative Studio (v5 Prompt 11): production-ready static, carousel,
+// Ads & Creative Studio (v5 Prompt 11): review-ready static, carousel,
 // video/UGC and search-ad briefs with funnel/awareness intake, a per-concept
 // test matrix and compliance acknowledgement for high-risk claims.
 // ---------------------------------------------------------------------------

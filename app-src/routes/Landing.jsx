@@ -40,7 +40,7 @@ const PROMPTS = [
 // The six things you can create — each maps to a studio in the app.
 const MODULES = [
   { n: '1', title: 'Build your offer', body: 'Positioning, ideal customer and three offer options to choose from.' },
-  { n: '2', title: 'Write your website', body: 'Home, product, cart, about, FAQ and landing page copy — ready to paste.' },
+  { n: '2', title: 'Write your website', body: 'Home, product, cart, about, FAQ and landing page copy — review-ready drafts.' },
   { n: '3', title: 'Create email flows', body: 'Welcome, abandon cart, post-purchase, review, winback and campaign emails.' },
   { n: '4', title: 'Plan captions and campaigns', body: 'Captions, hooks, carousels, reels and full seasonal campaign plans.' },
   { n: '5', title: 'Generate ad hooks, video ideas and image briefs', body: 'Meta, TikTok, Google and Pinterest creative you can shoot with a phone.' },
@@ -100,7 +100,7 @@ const HOW_IT_WORKS = [
 const FEATURES = [
   { title: 'Positioning Generator', body: 'A specific niche and ideal customer, grounded in what you already know and enjoy.' },
   { title: 'Offer Builder', body: 'Three monetizable offer options with pricing suggestions, bonuses and objection answers.' },
-  { title: 'Landing Page Writer', body: 'Benefit-led page copy with problem, transformation, FAQ and clear CTAs — ready to paste.' },
+  { title: 'Landing Page Writer', body: 'Benefit-led page copy with problem, transformation, FAQ and clear CTAs — ready for review.' },
   { title: 'Content Plan', body: '30 days of posts with hooks, angles and CTAs, all promoting the offer you picked.' },
   { title: 'Email Sequence', body: 'A 7-email launch arc: story, problem, transformation, reveal, objections, proof, last call.' },
   { title: 'Ads Starter Kit', body: 'Meta ad hooks, primary text and visual directions you can shoot with a phone.' },

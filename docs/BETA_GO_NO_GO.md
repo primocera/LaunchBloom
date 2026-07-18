@@ -107,3 +107,48 @@ and retention first): real-time team collaboration, direct multi-channel
 publishing, unlimited plans, "advanced brand voice" claims, priority exports,
 white-label/agency portals, broad third-party integrations, and live SEO metrics
 without a licensed data source.
+
+
+---
+
+# v6 Addendum — Playbook v6 execution status (branch `v6`, 2026-07-19)
+
+The v6 playbook (`LaunchBloom_Master_Launch_Scale_and_Content_Elevation_Playbook_v6.docx`)
+issued a CONDITIONAL GO gated on P0 prompts 1–10 + 30. Status at this commit:
+
+## Implemented in code (evidence = backend test suite, 210 passing)
+
+| Playbook prompt | Status | Evidence |
+|---|---|---|
+| 1 Fail-closed launch config | ✅ (mode-aware) | `lib/launch-config.js`: live-Stripe production + missing config → 503 on checkout/generation; test/preview permissive. `tests/launch-config.test.js` |
+| 3 Reproducible build check | ✅ | `.gitattributes` + `scripts/check-app-fresh.mjs` (normalized hashes vs git HEAD; passes twice; immune to CRLF and to pre-running build) |
+| 5 Atomic AI spend ledger | ✅ | migration `024_ai_spend_ledger.sql` (single-statement reserve, cap-safe under concurrency) + `lib/spend-guard.js` reserve/finalize/release, pause switch, budget alerts. `tests/spend-guard.test.js` |
+| 6 Email outbox + retry worker | ✅ | migration `025_email_outbox.sql` (SKIP LOCKED claim, lease), `processEmailOutbox()` backoff→dead-letter→replay, admin routes + daily Vercel cron (`CRON_SECRET`). `tests/email-outbox.test.js` |
+| 8 Export/deletion completeness | ✅ | all-workspace export (versioned archive), step-tracked deletion receipt, failures surfaced, deletion-record email. `tests/account-deletion-receipt.test.js` |
+| 9 CORS + limits | ✅ (partial) | exact-origin CORS (no `.vercel.app` suffix trust; `ALLOWED_PREVIEW_ORIGINS`), AI limiter keyed by session. Rate-limit store remains in-memory (free tier — plan gate is the durable boundary). |
+| 10 Computed scorecard | ✅ | `/api/admin/scorecard`: activation, median TTFV, D7 retention, trial conversion, generation success, cancel reasons — each with numerator/denominator/window. `tests/scorecard.test.js` |
+| 11 Generation idempotency | ✅ | migration `026_generation_jobs.sql` + `lib/idempotency.js` on all 9 generate routes; client sends per-intent keys. `tests/idempotency.test.js` |
+| 12 Prompt registry + eval gate | ✅ (structural) | `lib/prompt-registry.js` (immutable versions; unregistered env falls back) + `tests/golden-eval.test.js` (schema validity, claim safety, SEO honesty — mock-mode, no live calls) |
+| 13/14 Product model + SEO parity | ✅ | SEO Ideas is a generator-shell peer (`generate-seo-ideas`, fabricated-metric rejection, cannibalization warnings); nested `<main>` landmarks removed; kit vocabulary dropped from Campaigns |
+| 4 Browser E2E in CI | ⚠ lean variant | `.github/workflows/e2e.yml`: weekly + on-demand, installs Chromium, uploads traces. NOT a required PR check — deliberate free-tier/no-flake decision. |
+
+## Deliberately NOT done (infrastructure this deployment does not have)
+
+- **Prompt 2 (staging revenue E2E):** requires a third Supabase project (free
+  tier allows 2) + staging Stripe/Resend/Anthropic credentials. The full
+  signup→trial→checkout→webhook→generation journey remains proven only by
+  mocked tests and local E2E. **Must be run manually against the production
+  project in test mode before inviting paying users.**
+- **Prompt 7 (external observability/paging):** no paid APM. Structured logs +
+  admin health remain the only signals; a free Sentry tier is the recommended
+  first step when a real domain exists.
+- **Live-provider evidence (Prompt 30):** real-domain checkout, live-mode
+  transaction/refund, deliverability, load test — all blocked on: real domain,
+  live Stripe, verified Resend domain.
+
+## Bottom line
+
+Code-level P0s from the v6 playbook are closed. The remaining go/no-go risk is
+entirely **operational evidence on live providers**, which cannot be produced
+from this environment. Do not open paid capacity until the Prompt 2 journey has
+been exercised once end-to-end on the deployed test-mode environment.
