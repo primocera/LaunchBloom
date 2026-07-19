@@ -146,6 +146,30 @@ issued a CONDITIONAL GO gated on P0 prompts 1–10 + 30. Status at this commit:
   transaction/refund, deliverability, load test — all blocked on: real domain,
   live Stripe, verified Resend domain.
 
+## Phase C — content rewrite (prompts 15–20, 26–29) — DONE (commits eb9a02d + f40d39d)
+
+| Playbook prompt | Status | Evidence |
+|---|---|---|
+| 15 Landing rewrite | ✅ | One promise ("Turn one offer into a launch-ready campaign."), one CTA ("Create my campaign"), 4-step mechanism, real-estate example + trust line, campaign-entitlement pricing, 5-question FAQ. Rotating hero removed. Prices still from `/api/plans`. |
+| 16 Signup/verify/login + paywall | ✅ | Free-signup framing ("choose a plan only when you're ready to generate"), verification copy, TrialPaywall shows exact charge date **with timezone**; "kit" → "full launch campaign". |
+| 17 Brand Profile | ✅ | Ground-truth copy + `minimumViableProfile()` gate helper (`app-src/lib/next-actions.js`). |
+| 18 Campaign brief-as-contract | ✅ | Required-decisions count, `Brief v{n} approved {date}`, snapshot semantics note, no-dates urgency guard (`Campaigns.jsx`). |
+| 19 Home states | ✅ | State-based greeting/context/CTAs, usage warning "Editing and exporting are still free." |
+| 20 Create + generator shell | ✅ | "Create for {campaign}", "Using this context", "Generate {asset} · 1 AI action", failure copy "Generation didn't finish. No AI action was charged. Your brief is saved." Review-ready studio blurbs — last "Production-ready" removed. |
+| 26 Library | ✅ | Provenance line (campaign · brief vN · prompt vN · source), statuses Draft / Needs review / Blocked by unresolved claim / Ready to export, honest "Word-compatible file (.doc)" export. |
+| 27 Account | ✅ | Plan & billing / Data & privacy / Support sections, exact Stripe-state copy (trialing/active/cancel/past_due) with price+interval, deletion-receipt view. |
+| 28 Central microcopy | ✅ | `app-src/lib/microcopy.js` (exact system-state table, `{retry_after}`/`{req_id}` interpolation) wired into `api.js` — raw backend errors never surface. `tests/microcopy.test.js` |
+| 29 Lifecycle email content | ✅ | Exact subjects/bodies with plan/price/interval/charge datetime (UTC tz); webhooks derive price info from Stripe objects. `tests/lifecycle-content.test.js` |
+
+Verification: 227 backend tests, lint 0 errors, `npm run check` (incl. stale-bundle
+hash check) passes twice, Playwright 18/18, banned-copy greps clean
+("production-ready", "ready to paste", "no card needed", income promises).
+
+Still open, non-blocking for beta copy: prompts 21–25 (deeper studio *backend*
+generation quality — per-claim provenance, plain-text email parts in generation
+output, proof-gated Ready). Legacy `Flow.jsx`/`KitDetail.jsx` keep "launch kit"
+wording as the explicit "Full launch campaign" template destination.
+
 ## Bottom line
 
 Code-level P0s from the v6 playbook are closed. The remaining go/no-go risk is
