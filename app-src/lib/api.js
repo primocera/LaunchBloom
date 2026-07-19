@@ -2,6 +2,8 @@
 // cookies, so there is no token in JS/localStorage. Every request must send
 // cookies with `credentials: 'include'`.
 
+import { messageForError } from './microcopy';
+
 const WORKSPACE_KEY = 'active_workspace_id';
 export function getActiveWorkspace() {
   return localStorage.getItem(WORKSPACE_KEY);
@@ -27,12 +29,21 @@ async function request(path, { method = 'GET', body, signal, idempotencyKey } = 
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw Object.assign(new Error(data.error || `Request failed (${res.status})`), {
+    // Prompt 28: attach req_id / retry_after and a resolved user-facing message
+    // so no raw backend error text ever reaches the UI. Callers may show
+    // err.userMessage; err.message is kept for logs/back-compat.
+    const req_id = data.req_id || data.request_id || res.headers.get('X-Request-Id') || undefined;
+    const retry_after = data.retry_after != null ? data.retry_after : (res.headers.get('Retry-After') || undefined);
+    const err = Object.assign(new Error(data.error || `Request failed (${res.status})`), {
       status: res.status,
       code: data.code,
       plan: data.plan,
       feature: data.feature,
+      req_id,
+      retry_after,
     });
+    err.userMessage = messageForError(err);
+    throw err;
   }
   return data;
 }

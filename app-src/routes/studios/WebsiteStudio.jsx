@@ -117,8 +117,8 @@ function fullCopy(item) {
 export default function WebsiteStudio() {
   return (
     <GeneratorStudio
-      title="Website & Page Studio"
-      blurb="Generate home, product, collection, cart, about, FAQ, contact, thank-you and landing page copy from your offer — with three hero directions per page."
+      title="Website copy"
+      blurb="Create structured drafts for the page’s job — with one primary CTA, evidence-aware claims and metadata to review."
       fields={FIELDS}
       initial={{ target_language: 'English', page_types: ['home'] }}
       generate={(v, opts) => api.generateWebsiteKit(v, opts)}

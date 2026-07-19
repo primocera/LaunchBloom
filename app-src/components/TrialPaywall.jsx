@@ -12,7 +12,14 @@ import { useFocusTrap } from '../lib/use-focus-trap';
 
 function chargeDate() {
   const d = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-  return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+  const date = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+  // Prompt 16: show the timezone so the exact charge moment is unambiguous.
+  let tz = '';
+  try {
+    tz = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+      .formatToParts(d).find((p) => p.type === 'timeZoneName')?.value || '';
+  } catch { /* older engines: date alone is still clear */ }
+  return tz ? `${date} (${tz})` : date;
 }
 
 export default function TrialPaywall({ open, onClose }) {
@@ -76,7 +83,7 @@ export default function TrialPaywall({ open, onClose }) {
         <p className="paywall-sub">
           Your work is saved. During the trial you get{' '}
           <strong>
-            {catalog ? `${catalog.trial.ai_actions_total} AI actions and ${catalog.trial.launch_kits_total} full launch kit` : '20 AI actions and 1 full launch kit'}
+            {catalog ? `${catalog.trial.ai_actions_total} AI actions and ${catalog.trial.launch_kits_total} full launch campaign` : '20 AI actions and 1 full launch campaign'}
           </strong>{' '}
           to try the whole workspace.
         </p>

@@ -785,6 +785,14 @@
 }
 
 /* ── Prompt 7: generator shell (context chips, tabs, regenerate) ─────────── */
+.gen-context-head {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 .gen-context {
   display: flex;
   flex-wrap: wrap;
@@ -1134,6 +1142,7 @@ textarea:focus-visible,
 .library-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .library-star { background: none; border: none; cursor: pointer; font-size: 16px; color: #f59e0b; padding: 0; }
 .library-snippet { font-size: 13px; color: #6b7280; margin: 4px 0 8px; overflow: hidden; text-overflow: ellipsis; }
+.library-provenance { font-size: 12px; color: #9ca3af; margin: 2px 0 0; }
 .library-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .library-actions button, .library-actions select {
   font: inherit; font-size: 12px; padding: 4px 9px;

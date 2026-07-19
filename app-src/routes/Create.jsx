@@ -1,33 +1,35 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { api } from '../lib/api';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
-// v5 Prompt 3: the Create landing page — one place to start any generation,
-// organized into the five canonical categories. Replaces the old two-list
-// sidebar (new studios + "Launch Kit: …" routes).
+// v5 Prompt 3 / v6 Prompt 20: the Create landing page — choose the next asset
+// within campaign context. Create never presents a second navigation list
+// without a campaign: without one, it asks the user to select or create a
+// campaign first. Copy follows the playbook Create table verbatim.
 // ---------------------------------------------------------------------------
 
 const CATEGORIES = [
   {
     to: '/app/website',
     title: 'Website',
-    body: 'Home, product, landing, about, FAQ and cart copy — structured and ready for your review.',
+    body: 'Page-ready website and landing-page copy, including titles, metadata, FAQs and CTA structure.',
   },
   {
     to: '/app/email-studio',
     title: 'Email',
-    body: 'Lifecycle flows, campaign emails and launch sequences with full body copy.',
+    body: 'Lifecycle flows and campaign sequences with subjects, preheaders, full body copy and audience rules.',
   },
   {
     to: '/app/social',
     title: 'Social',
-    body: 'Captions, hooks, carousels and reels tied to your campaigns.',
+    body: 'Captions, carousels and video scripts adapted to the channels and dates you choose.',
   },
   {
     to: '/app/creative',
     title: 'Ads & Creative',
-    body: 'Static, video and UGC ad concepts with briefs you can shoot from.',
+    body: 'Static, carousel, UGC, video and search-ad briefs with testing and claim checks.',
   },
   {
     to: '/app/seo',
@@ -36,43 +38,46 @@ const CATEGORIES = [
   },
 ];
 
-const NOTICE_KEY = 'lb-nav-migration-notice';
-
 export default function Create() {
-  const [showNotice, setShowNotice] = useState(false);
   // v5 Prompt 6: arriving from a campaign carries its id into every studio.
   const [params] = useSearchParams();
   const campaign = params.get('campaign');
   const withCampaign = (to) => (campaign ? `${to}?campaign=${campaign}` : to);
+  const [campaignName, setCampaignName] = useState(null);
 
-  // One-time notice for users who knew the old "Launch Kit: …" menu.
+  // Resolve the campaign name for the heading (Prompt 20: "Create for {name}").
   useEffect(() => {
-    try {
-      if (!localStorage.getItem(NOTICE_KEY)) setShowNotice(true);
-    } catch { /* private mode */ }
-  }, []);
-
-  function dismiss() {
-    try { localStorage.setItem(NOTICE_KEY, '1'); } catch { /* ignore */ }
-    setShowNotice(false);
-  }
+    if (!campaign) { setCampaignName(null); return; }
+    let cancelled = false;
+    api.campaigns()
+      .then((r) => {
+        if (cancelled) return;
+        const found = (r.campaigns || []).find((c) => String(c.id) === String(campaign));
+        setCampaignName(found?.name || '');
+      })
+      .catch(() => { if (!cancelled) setCampaignName(''); });
+    return () => { cancelled = true; };
+  }, [campaign]);
 
   return (
     <div className="flow">
       <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
-            <h2>Create</h2>
-            <p className="flow-muted">Pick what you want to make. Everything stays tied to your brand and campaigns.</p>
+            <h2>{campaign ? `Create for ${campaignName || 'your campaign'}` : 'Create'}</h2>
+            <p className="flow-muted">
+              {campaign
+                ? 'Choose the next asset. Every generation uses this campaign’s approved brief and your Brand Profile.'
+                : 'Choose the next asset. Every generation uses your campaign’s approved brief and your Brand Profile.'}
+            </p>
           </div>
         </div>
 
-        {showNotice && (
+        {!campaign && (
           <div className="flow-card" role="status">
             <p style={{ margin: 0 }}>
-              The studios have a new home. The old “Launch Kit” pages now live here and in{' '}
-              <Link to="/app/campaigns">Campaigns</Link> — your existing kits and assets are untouched.{' '}
-              <button className="account-link" onClick={dismiss}>Got it</button>
+              Select or create a campaign first so every asset has a clear purpose.{' '}
+              <Link to="/app/campaigns">Go to Campaigns →</Link>
             </p>
           </div>
         )}

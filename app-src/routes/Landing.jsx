@@ -4,51 +4,41 @@ import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { BRAND } from '../brand';
 import { resumePendingCheckout } from './Login';
-import AskBox from '../components/AskBox';
 import BloomMark from '../components/BloomMark';
 import Marquee from '../components/Marquee';
 import Meteors from '../components/Meteors';
 import Reveal from '../components/Reveal';
-import RotatingWord from '../components/RotatingWord';
-import StepPopups from '../components/StepPopups';
 import '../landing.css';
 
 // ---------------------------------------------------------------------------
-// Prompt 24: the public landing page. Copy and section order follow the
-// playbook spec verbatim (hero, problem, solution, how it works, features,
-// example kit, who it's for, pricing, FAQ, final CTA). The animated hero sky
-// is kept from the ConversionForge design system.
+// Playbook v6 Prompt 15 — rebuild the landing story around ONE campaign.
+// The copy below is the playbook's page-by-page rewrite verbatim: one stable
+// promise (no rotating hero), a single four-step mechanism (no six-studios /
+// eight-deliverables contradiction), the real-estate example, honest trust
+// lines and FAQ. All commercial values come from GET /api/plans.
 // ---------------------------------------------------------------------------
 
-// The rotating half of the hero headline — each is a launch kit deliverable.
-const ROTATING = [
-  'clear offer.',
-  'landing page.',
-  'launch plan.',
-  'content plan.',
-  'email sequence.',
-  'weekly system.',
+// The single four-step mechanism used everywhere — never alternate between a
+// four-step flow, six studios and eight deliverables.
+const MECHANISM = [
+  { n: '1', title: 'Set the facts', body: 'Add your products, audience, voice, proof and claim restrictions to Brand Profile.' },
+  { n: '2', title: 'Brief the campaign', body: 'Choose the offer, audience, goal, dates, channels and primary CTA.' },
+  { n: '3', title: 'Create connected assets', body: 'Generate website copy, emails, social content, ads and SEO ideas inside that campaign.' },
+  { n: '4', title: 'Review and ship', body: 'Resolve unsupported claims, compare versions, edit and export from Library.' },
 ];
 
-const PROMPTS = [
-  'I can edit videos but have no idea what to sell',
-  'Turn my yoga classes into an online offer',
-  'I want to coach but who would pay me?',
-  'I have a skill, zero audience, and 5 hours a week',
+// "What one campaign can include" — deliverables as one connected set.
+const VALUE_LIST = [
+  'Website pages',
+  'Lifecycle and campaign emails',
+  'Social captions, carousels and scripts',
+  'Static, UGC and search-ad briefs',
+  'SEO content ideas',
 ];
 
-// The six things you can create — each maps to a studio in the app.
-const MODULES = [
-  { n: '1', title: 'Build your offer', body: 'Positioning, ideal customer and three offer options to choose from.' },
-  { n: '2', title: 'Write your website', body: 'Home, product, cart, about, FAQ and landing page copy — review-ready drafts.' },
-  { n: '3', title: 'Create email flows', body: 'Welcome, abandon cart, post-purchase, review, winback and campaign emails.' },
-  { n: '4', title: 'Plan captions and campaigns', body: 'Captions, hooks, carousels, reels and full seasonal campaign plans.' },
-  { n: '5', title: 'Generate ad hooks, video ideas and image briefs', body: 'Meta, TikTok, Google and Pinterest creative you can shoot with a phone.' },
-  { n: '6', title: 'Plan SEO content', body: 'Practical SEO content ideas for your next pages and articles — topic clusters, titles, meta and FAQ.' },
-];
-
-// v5 Prompt 1: pricing renders from GET /api/plans — the backend catalog is
-// the single commercial source of truth. No plan limits or prices live here.
+// v5 Prompt 1 / v6: pricing renders from GET /api/plans — the backend catalog
+// is the single commercial source of truth. Entitlement label is "full launch
+// campaigns" (migrated together with the data model).
 function planCard(p) {
   return {
     name: p.label,
@@ -56,79 +46,39 @@ function planCard(p) {
     price: p.price.display,
     badge: p.badge || undefined,
     note: p.note,
-    sub: `${p.launch_kits} full kits + ${p.ai_actions} AI actions / month`,
+    sub: `${p.launch_kits} full launch campaigns + ${p.ai_actions} AI actions / month`,
     features: [
       `${p.workspaces} workspace${p.workspaces === 1 ? '' : 's'}`,
-      `${p.launch_kits} full launch kits / month`,
+      `${p.launch_kits} full launch campaigns / month`,
       `${p.ai_actions} AI actions / month`,
-      'Website, email, campaign & creative studios',
-      'Exports included',
+      'Website, email, social, ads and SEO ideas',
+      'Edit, compare versions and export',
     ],
-    cta: 'Start 3-day free trial',
+    cta: 'Start 3-day trial',
     savings: p.yearly_savings,
   };
 }
 
-const OUTPUTS = [
-  'Positioning',
-  'Offer',
-  'Landing page copy',
-  '30-day content plan',
-  '7-email sequence',
-  'Meta ad ideas',
-  'SEO content ideas',
-  'Weekly action plan',
-];
-
-// Prompt 24 problem bullets, verbatim.
-const PROBLEM_BULLETS = [
-  'You are not sure what to sell.',
-  'You do not know how to explain your offer.',
-  'You post content, but it does not lead to sales.',
-  'You do not have a landing page or email sequence.',
-  'You feel busy, but not strategic.',
-];
-
-const HOW_IT_WORKS = [
-  { n: '1', title: 'Answer a few questions', body: 'Your skills, audience ideas, goals and the hours you actually have.' },
-  { n: '2', title: 'Get your positioning', body: 'A specific niche, an ideal customer and a clear one-line promise.' },
-  { n: '3', title: 'Pick one of 3 offers', body: 'Genuinely different options — format, depth and price point.' },
-  { n: '4', title: 'Launch with a full kit', body: 'Landing page, content plan, emails, ads, SEO and a weekly plan.' },
-];
-
-// Prompt 24 feature cards, verbatim names.
-const FEATURES = [
-  { title: 'Positioning Generator', body: 'A specific niche and ideal customer, grounded in what you already know and enjoy.' },
-  { title: 'Offer Builder', body: 'Three monetizable offer options with pricing suggestions, bonuses and objection answers.' },
-  { title: 'Landing Page Writer', body: 'Benefit-led page copy with problem, transformation, FAQ and clear CTAs — ready for review.' },
-  { title: 'Content Plan', body: '30 days of posts with hooks, angles and CTAs, all promoting the offer you picked.' },
-  { title: 'Email Sequence', body: 'A 7-email launch arc: story, problem, transformation, reveal, objections, proof, last call.' },
-  { title: 'Ads Starter Kit', body: 'Meta ad hooks, primary text and visual directions you can shoot with a phone.' },
-  { title: 'SEO content ideas', body: 'Practical SEO content ideas for your next pages and articles, with page-ready titles and meta descriptions.' },
-  { title: 'Weekly Action Plan', body: 'Concrete tasks sized to your available hours — highest-leverage first.' },
-];
-
-const WHO_FOR = [
-  'Freelancers', 'Creators', 'Coaches', 'Consultants',
-  'Solopreneurs', 'Service providers', 'Digital product makers', 'E-commerce beginners',
-];
-
 const FAQ = [
   {
-    q: 'How is this different from asking ChatGPT for a business plan?',
-    a: 'A chat gives you a wall of text you still have to turn into assets. This is a workflow: onboarding → positioning → three offers → a launch kit where every piece (landing copy, content calendar, emails, ads, SEO) is structured, editable and tied to the offer you picked.',
+    q: 'How is this different from a general AI chat?',
+    a: 'A chat answers one prompt at a time. LaunchBloom keeps your approved brand facts and campaign brief attached to every asset, then saves outputs with version history and review checks.',
   },
   {
-    q: 'I have no audience yet. Does this still work?',
-    a: 'That is exactly who it is for. The positioning step picks a niche you can realistically reach with the platforms and hours you actually have, and the weekly plan starts from zero — not from "post to your list".',
+    q: 'Do I need a finished brand strategy?',
+    a: 'No. Start with the facts you know. LaunchBloom marks missing proof, prices or restrictions for review instead of inventing them.',
   },
   {
-    q: 'How does the free trial work?',
-    a: 'Every plan starts with a 3-day free trial. You add a payment method, get 20 AI actions and 1 full launch kit during the 3-day trial, and you can cancel anytime before the trial ends without being charged.',
+    q: 'What does the free account include?',
+    a: 'You can create your account and prepare your Brand Profile and Campaign Brief without a payment method. Generation starts when you choose a plan and begin the 3-day trial.',
   },
   {
-    q: 'Will it promise me revenue?',
-    a: 'No. Price suggestions are ranges, results language is honest, and testimonial slots are placeholders for real proof. Anything that overpromises hurts you at launch — so the kit refuses to.',
+    q: 'Will LaunchBloom publish for me?',
+    a: 'No. It creates, organizes and exports review-ready drafts. You remain responsible for checking and publishing them.',
+  },
+  {
+    q: 'Does the SEO Studio provide keyword volume or ranking data?',
+    a: 'Not currently. It creates content ideas and a research checklist. Any metric must include a real source and date.',
   },
 ];
 
@@ -223,86 +173,66 @@ export default function Landing() {
             </span>
             {BRAND.name}
           </div>
+          <nav className="lp-nav" aria-label="Primary">
+            <a href="#product">Product</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#example">Example campaign</a>
+            <a href="#pricing">Pricing</a>
+            <Link to="/app/login">Sign in</Link>
+          </nav>
           <Link className="lp-header-cta" to="/app">
-            Build my marketing campaign
+            Create my campaign
           </Link>
         </header>
 
         <main className="lp-hero" id="main-content">
-          <h1>
-            Your idea turned into a
-            <br />
-            <span className="lp-serif">
-              <RotatingWord words={ROTATING} />
-            </span>
-          </h1>
+          <div className="lp-eyebrow lp-hero-eyebrow">FROM ONE BRIEF TO ONE CONNECTED CAMPAIGN</div>
+          <h1>Turn one offer into a launch-ready campaign.</h1>
           <p className="lp-sub">
-            {BRAND.name} is an AI marketing workspace for solo founders, creators, freelancers and
-            small ecommerce brands. Create your offer strategy, website copy, product pages, email
-            flows, campaign emails, captions, ads, SEO and weekly action plans — all from one clear
-            offer.
+            {BRAND.name} helps solo founders and small teams create connected website copy, emails,
+            social posts and ads from one approved Brand Profile and Campaign Brief.
           </p>
 
           <div className="lp-hero-actions">
             <Link className="lp-cta" to="/app">
-              Build my marketing campaign
+              Create my campaign
             </Link>
             <a className="lp-cta-ghost" href="#example">
-              See example
+              See a real example
             </a>
           </div>
 
-          <div className="lp-ask">
-            <div className="lp-ask-head">
-              <div className="lp-ask-title">
-                <span className="lp-ask-spark">✦</span> Tell {BRAND.name} your idea
-              </div>
-              <span className="lp-ask-pill">Guided workflow</span>
-            </div>
-
-            <AskBox prompts={PROMPTS} />
-          </div>
+          <p className="lp-cta-note">
+            Create an account free. Start a 3-day trial only when you’re ready to generate. Payment
+            method required for the trial.
+          </p>
         </main>
       </div>
 
-      <StepPopups />
-
       {/* ── 2. Problem ─────────────────────────────────────────────────── */}
-      <section className="lp-problem">
+      <section className="lp-problem" id="product">
         <div className="lp-problem-inner">
           <Reveal>
             <div className="lp-eyebrow">The problem</div>
-            <h2 className="lp-h2">Ideas are easy. Turning them into sales is where it breaks.</h2>
+            <h2 className="lp-h2">Your campaign should sound like one idea — not five separate AI chats.</h2>
             <p className="lp-h2-sub">
-              You have ideas. Maybe even skills, content or a small audience. But turning that into
-              a clear offer, landing page, emails and weekly plan is where most people get stuck.
+              When website copy, emails, social posts and ads are created separately, the offer
+              drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
+              the same approved brand facts and campaign brief.
             </p>
           </Reveal>
-          <div className="lp-problem-grid">
-            {PROBLEM_BULLETS.map((b, i) => (
-              <Reveal className="lp-problem-item" key={b} delay={i * 70}>
-                <span className="lp-problem-x">✕</span> {b}
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ── 3. Solution ────────────────────────────────────────────────── */}
-      <Reveal as="section" className="lp-trusted">
-        <div className="lp-trusted-label">The solution: one launch kit, eight deliverables</div>
-        <Marquee items={OUTPUTS} />
-      </Reveal>
-
-      {/* ── 4. How it works ────────────────────────────────────────────── */}
-      <section className="lp-how">
+      {/* ── 3. Mechanism (one four-step model, used everywhere) ────────── */}
+      <section className="lp-how" id="how-it-works">
         <div className="lp-how-inner">
           <Reveal>
             <div className="lp-eyebrow">How it works</div>
-            <h2 className="lp-h2">From idea to launch in four steps</h2>
+            <h2 className="lp-h2">Approve the strategy once. Build every asset from it.</h2>
           </Reveal>
           <div className="lp-how-grid">
-            {HOW_IT_WORKS.map((s, i) => (
+            {MECHANISM.map((s, i) => (
               <Reveal className="lp-how-step" key={s.n} delay={i * 90}>
                 <div className="lp-how-n">{s.n}</div>
                 <h3>{s.title}</h3>
@@ -313,90 +243,63 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 4b. What you can create (six modules) ──────────────────────── */}
-      <section className="lp-how">
-        <div className="lp-how-inner">
-          <Reveal>
-            <div className="lp-eyebrow">What you can create</div>
-            <h2 className="lp-h2">Six studios, one clear offer</h2>
-          </Reveal>
-          <div className="lp-how-grid">
-            {MODULES.map((m, i) => (
-              <Reveal className="lp-how-step" key={m.n} delay={i * 70}>
-                <div className="lp-how-n">{m.n}</div>
-                <h3>{m.title}</h3>
-                <p>{m.body}</p>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── 4. Value — what one campaign can include ───────────────────── */}
+      <Reveal as="section" className="lp-trusted">
+        <div className="lp-trusted-label">What one campaign can include</div>
+        <Marquee items={VALUE_LIST} />
+      </Reveal>
 
-      {/* ── 5. Features (8 cards, spec names) ──────────────────────────── */}
-      <section className="lp-features">
-        <div className="lp-feature-grid">
-          {FEATURES.map((f, i) => (
-            <Reveal as="article" className="lp-feature" key={f.title} delay={(i % 4) * 80}>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 6. Example Launch Kit ──────────────────────────────────────── */}
+      {/* ── 5. Example campaign ────────────────────────────────────────── */}
       <section className="lp-example" id="example">
         <div className="lp-example-inner">
           <Reveal>
-            <div className="lp-eyebrow">Example launch kit</div>
-            <h2 className="lp-h2">What "video editor with no plan" turns into</h2>
+            <div className="lp-eyebrow">Example campaign</div>
+            <h2 className="lp-h2">See how one brief becomes a coherent campaign.</h2>
+            <p className="lp-h2-sub">
+              Offer: monthly listing-video package · Audience: independent real-estate agents ·
+              Goal: booked discovery calls · CTA: Book a 15-minute fit call
+            </p>
           </Reveal>
           <div className="lp-example-grid">
             <Reveal className="lp-feature">
-              <h3>Positioning</h3>
-              <p className="lp-ex-quote">"Listing videos for busy real-estate agents — edited and posted within 24 hours."</p>
+              <h3>Website</h3>
+              <p className="lp-ex-quote">
+                Listing videos edited, captioned and ready to post within 24 hours — for agents who
+                need each property launch to move quickly.
+              </p>
             </Reveal>
             <Reveal className="lp-feature" delay={90}>
-              <h3>Offer</h3>
-              <p className="lp-ex-quote">"The Listing Launch Pack — 4 edited videos + captions, monthly."</p>
+              <h3>Email</h3>
+              <p className="lp-ex-quote">Subject: Your next listing already has a content plan</p>
             </Reveal>
             <Reveal className="lp-feature" delay={180}>
-              <h3>Day 14 content</h3>
-              <p className="lp-ex-quote">Hook: "Your listing sat for 40 days. The video was why." · CTA: Book the Starter edit →</p>
+              <h3>Social</h3>
+              <p className="lp-ex-quote">Hook: One listing should give you more than one post.</p>
             </Reveal>
             <Reveal className="lp-feature" delay={270}>
-              <h3>Email 4 of 7</h3>
-              <p className="lp-ex-quote">Subject: "The 3 listing videos that actually get DMs" · reveal + soft CTA</p>
+              <h3>Ad</h3>
+              <p className="lp-ex-quote">
+                Angle: Turnaround speed, backed only by the delivery time entered in Brand Profile.
+              </p>
             </Reveal>
           </div>
-        </div>
-      </section>
-
-      {/* ── 7. Who it is for ───────────────────────────────────────────── */}
-      <section className="lp-who">
-        <div className="lp-who-inner">
           <Reveal>
-            <div className="lp-eyebrow">Who it is for</div>
-            <h2 className="lp-h2">Built for people selling themselves, not a warehouse</h2>
+            <p className="lp-trust-line">
+              Every claim stays tied to facts you approve. Missing proof remains clearly marked for
+              review.
+            </p>
           </Reveal>
-          <div className="lp-who-grid">
-            {WHO_FOR.map((w, i) => (
-              <Reveal className="lp-who-chip" key={w} delay={i * 50}>
-                {w}
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ── 8. Pricing preview ─────────────────────────────────────────── */}
+      {/* ── 6. Pricing ─────────────────────────────────────────────────── */}
       <section className="lp-pricing" id="pricing" ref={pricingRef}>
         <div className="lp-pricing-inner">
           <Reveal>
             <div className="lp-eyebrow">{catalog?.trial?.eyebrow || 'Start with 3 days free'}</div>
-            <h2 className="lp-h2">Start with a 3-day free trial</h2>
+            <h2 className="lp-h2">Choose the amount of campaign work you need.</h2>
             <p className="lp-h2-sub">
-              {catalog?.trial?.disclosure || "Payment method required. Cancel before your trial ends and you won't be charged."}
+              {catalog?.trial?.disclosure || '3 days free · 20 AI actions · 1 full launch campaign · payment method required · cancel before the displayed charge date to avoid the charge.'}
             </p>
           </Reveal>
 
@@ -441,35 +344,33 @@ export default function Landing() {
                   {p.cta}
                 </button>
                 <div className="lp-price-micro">
-                  3 days free · payment method required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'} · cancel anytime before day 3
+                  3 days free · payment method required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'} · cancel before the displayed charge date
                   {interval === 'yearly' && p.savings ? ` · save ${p.savings.display} (${p.savings.pct}%)` : ''}
                 </div>
               </Reveal>
             ))}
           </div>
-          {catalog?.ai_action_definition && (
-            <p className="lp-price-definition" title={catalog.ai_action_definition}>
-              {catalog.ai_action_definition}
-            </p>
-          )}
+          <p className="lp-price-definition">
+            {catalog?.ai_action_definition || 'One AI action is one successful generation or regeneration. Failed generations, editing, copying and exporting do not count.'}
+          </p>
         </div>
       </section>
 
-      {/* ── 9. FAQ ─────────────────────────────────────────────────────── */}
+      {/* ── 7. FAQ ─────────────────────────────────────────────────────── */}
       <section className="lp-faq">
         <div className="lp-faq-inner">
           <Reveal className="lp-faq-left">
             <div className="lp-eyebrow">Got questions?</div>
             <h2 className="lp-h2 is-left">
-              Everything You
+              Everything you
               <br />
-              Need to Know, All in
+              need to know, all in
               <br />
-              One Place
+              one place
             </h2>
             <p className="lp-faq-blurb">
-              Quick answers about how the workflow guides you, how the free trial works, and what
-              the kit will never do.
+              Direct answers about how the campaign model works, how the free trial works, and where
+              the product’s honest boundaries are.
             </p>
           </Reveal>
           <Reveal className="lp-faq-right" delay={120}>
@@ -478,13 +379,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 10. Final CTA ──────────────────────────────────────────────── */}
+      {/* ── 8. Final CTA ───────────────────────────────────────────────── */}
       <section className="lp-final">
         <Reveal className="lp-final-inner">
-          <h2>Stop planning. Start launching.</h2>
-          <p>Answer a few questions and build your marketing workspace today — free for 3 days.</p>
+          <h2>Turn one offer into a launch-ready campaign.</h2>
+          <p>Set up your Brand Profile and Campaign Brief free. Start the 3-day trial when you’re ready to generate.</p>
           <Link className="lp-cta" to="/app">
-            Build my marketing campaign
+            Create my campaign
           </Link>
         </Reveal>
       </section>
@@ -505,8 +406,8 @@ export default function Landing() {
           </div>
           <div className="lp-footer-col">
             <div className="lp-footer-head">Resources</div>
-            <a href="#example">Example kit</a>
-            <a href="#pricing">Plans</a>
+            <a href="#example">Example campaign</a>
+            <a href="#how-it-works">How it works</a>
           </div>
           <div className="lp-footer-col">
             <div className="lp-footer-head">Legal</div>
@@ -522,4 +423,3 @@ export default function Landing() {
     </div>
   );
 }
-

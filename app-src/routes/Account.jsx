@@ -28,6 +28,7 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [workspaces, setWorkspaces] = useState([]);
+  const [receipt, setReceipt] = useState(null); // Prompt 27: deletion receipt
 
   function loadWorkspaces() {
     api.workspaces().then(({ workspaces: list }) => setWorkspaces(list)).catch(() => {});
@@ -75,9 +76,11 @@ export default function Account() {
     setBusy(true);
     setError(null);
     try {
-      await api.deleteAccount();
-      await logout();
-      window.location.href = '/';
+      // Prompt 27: the backend returns a step-by-step deletion receipt. Show it
+      // (with any failed steps) instead of promising a clean {ok:true}.
+      const r = await api.deleteAccount();
+      setReceipt(r || { ok: true });
+      setBusy(false);
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -85,6 +88,50 @@ export default function Account() {
   }
 
   const sub = billing?.subscription;
+  // Exact price/interval for billing copy — from the subscription when present.
+  const priceStr = sub && (sub.price_display || (sub.amount != null ? `$${(sub.amount / 100).toFixed(2)}` : null));
+  const per = sub && (sub.interval === 'year' || sub.interval === 'yearly') ? 'year' : 'month';
+  const planName = billing?.plan_label || account?.plan_label || 'your plan';
+  const priceClause = priceStr ? ` at ${priceStr}/${per}` : '';
+
+  // Deletion receipt view (Prompt 27): honest about what was and wasn't deleted.
+  if (receipt) {
+    const steps = Array.isArray(receipt.steps) ? receipt.steps : [];
+    const failed = steps.filter((s) => s.status === 'failed');
+    return (
+      <div className="account-page">
+        <h1>Account deletion</h1>
+        <section className="account-section">
+          <p>
+            Deletion request completed. We’ve emailed a record of what was deleted and any records
+            retained for legal reasons.
+          </p>
+          {steps.length > 0 && (
+            <ul className="kit-outline">
+              {steps.map((s) => (
+                <li key={s.step || s.name}>
+                  {(s.step || s.name || '').replace(/_/g, ' ')} — <strong>{s.status}</strong>
+                  {s.detail ? ` (${s.detail})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+          {failed.length > 0 && (
+            <p className="warn">
+              {failed.length} step{failed.length === 1 ? '' : 's'} could not be completed automatically.
+              Contact {BRAND.supportEmail} and we’ll finish them for you.
+            </p>
+          )}
+          <button
+            className="btn-secondary"
+            onClick={async () => { await logout(); window.location.href = '/'; }}
+          >
+            Return to home
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="account-page">
@@ -96,8 +143,8 @@ export default function Account() {
       </section>
 
       <section className="account-section">
-        <h2>Billing</h2>
-        <p><strong>Plan:</strong> {billing?.plan_label || account?.plan_label || 'Free'}</p>
+        <h2>Plan &amp; billing</h2>
+        <p><strong>Plan:</strong> {planName}</p>
 
         {!billing && <p className="muted">Loading billing…</p>}
 
@@ -110,18 +157,24 @@ export default function Account() {
 
         {sub && sub.status === 'trialing' && (
           <p>
-            Free trial — <strong>{daysLeft(sub.trial_end)} day(s) left</strong>. You'll be charged on{' '}
-            <strong>{fmtDate(sub.next_charge_at)}</strong> unless you cancel.
+            Trial ends <strong>{fmtDate(sub.trial_end || sub.next_charge_at)}</strong>. Your {planName}{' '}
+            subscription starts{priceClause} unless you cancel before then.
           </p>
         )}
         {sub && sub.status === 'active' && !sub.cancel_at_period_end && (
-          <p>Renews on <strong>{fmtDate(sub.current_period_end)}</strong>{sub.interval ? ` (${sub.interval})` : ''}.</p>
+          <p>{planName} renews on <strong>{fmtDate(sub.current_period_end)}</strong>{priceClause}.</p>
         )}
         {sub && sub.cancel_at_period_end && (
-          <p>Your plan ends on <strong>{fmtDate(sub.current_period_end)}</strong>. You can reactivate from the billing portal.</p>
+          <p>
+            Generation access ends <strong>{fmtDate(sub.current_period_end)}</strong>. Your existing
+            assets remain available according to the retention policy.
+          </p>
         )}
         {sub && sub.status === 'past_due' && (
-          <p className="warn">Your last payment failed. Update your card to keep access.</p>
+          <p className="warn">
+            We couldn’t process the latest payment. Update your payment method to avoid losing
+            generation access.
+          </p>
         )}
 
         {billing?.has_billing && (
@@ -134,7 +187,7 @@ export default function Account() {
 
       <section className="account-section">
         <h2>Workspaces</h2>
-        <p className="muted">Each workspace is a separate brand or client with its own assets.</p>
+        <p className="muted">Each workspace keeps a separate Brand Profile, campaigns and Library.</p>
         {workspaces.map((w) => (
           <div className="ws-row" key={w.id}>
             <span className="ws-name">{w.name}{w.archived ? ' (archived)' : ''}</span>
@@ -149,31 +202,39 @@ export default function Account() {
         {billing ? (
           <>
             <p>
-              <strong>{billing.usage?.ai_actions ?? 0}{billing.limits?.ai_actions != null ? `/${billing.limits.ai_actions}` : ''}</strong>{' '}
-              AI actions {billing.limits?.monthly ? 'this billing period' : 'used'}
+              <strong>{billing.usage?.ai_actions ?? 0} of {billing.limits?.ai_actions ?? '—'}</strong>{' '}
+              AI actions used
+              {fmtDate(billing.usage?.resets_at || sub?.current_period_end)
+                ? ` · resets ${fmtDate(billing.usage?.resets_at || sub?.current_period_end)}`
+                : ''}
             </p>
             <p>
-              <strong>{billing.usage?.launch_kits ?? 0}{billing.limits?.launch_kits != null ? `/${billing.limits.launch_kits}` : ''}</strong>{' '}
-              launch kits
+              <strong>{billing.usage?.launch_kits ?? 0} of {billing.limits?.launch_kits ?? '—'}</strong>{' '}
+              full launch campaigns used
             </p>
+            <p className="muted">Editing and exporting are always free.</p>
           </>
         ) : <p className="muted">Loading…</p>}
       </section>
 
       <section className="account-section">
-        <h2>Your data</h2>
-        <p>Download everything {BRAND.name} holds for your workspace as a JSON file.</p>
-        <button className="btn-secondary" onClick={exportData}>Export my data</button>
+        <h2>Data &amp; privacy</h2>
+        <p>Export all account data.</p>
+        <p className="muted">
+          Includes every workspace, Brand Profile, campaign, asset, version and account record in a
+          machine-readable archive.
+        </p>
+        <button className="btn-secondary" onClick={exportData}>Export all account data</button>
       </section>
 
       <section className="account-section danger">
         <h2>Delete account</h2>
         <p>
-          Permanently delete your account, workspace and all generated assets, and cancel any
-          active subscription. This cannot be undone.
+          Permanently delete your account, every workspace and all generated assets, and request
+          cancellation of any active subscription. This cannot be undone.
         </p>
         {!confirming ? (
-          <button className="btn-danger" onClick={() => setConfirming(true)}>Delete my account</button>
+          <button className="btn-danger" onClick={() => setConfirming(true)}>Delete account and request billing cancellation</button>
         ) : (
           <div className="confirm-row">
             <span>Are you sure?</span>
@@ -183,6 +244,15 @@ export default function Account() {
             <button className="btn-secondary" onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
           </div>
         )}
+      </section>
+
+      <section className="account-section">
+        <h2>Support</h2>
+        <p className="muted">
+          We typically reply within 1–2 business days. If you hit an error, include the request ID
+          shown in the message — it lets us diagnose without seeing your content.
+        </p>
+        <a className="btn-secondary inline" href={`mailto:${BRAND.supportEmail}`}>Contact support</a>
       </section>
 
       {error && <p className="login-err">{error}</p>}

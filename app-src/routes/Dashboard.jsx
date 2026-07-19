@@ -12,6 +12,11 @@ import '../flow.css';
 // in Account — Home only shows a compact warning at 80% / 100%.
 // ---------------------------------------------------------------------------
 
+const PLAN_LABELS = { free: 'Free', trial: '3-day trial', starter: 'Starter', pro: 'Pro', studio: 'Studio' };
+function planLabel(plan) {
+  return PLAN_LABELS[plan] || (plan ? plan[0].toUpperCase() + plan.slice(1) : '');
+}
+
 function relTime(iso) {
   if (!iso) return '';
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -41,7 +46,7 @@ export default function Dashboard() {
     return (
       <div className="flow dash">
         <div className="flow-main is-wide">
-          <h2 className="flow-h2">Your marketing workspace</h2>
+          <h2 className="flow-h2">Good to see you.</h2>
           <div className="dash-grid">
             {[...Array(4)].map((_, i) => <div className="flow-card dash-skeleton" key={i} />)}
           </div>
@@ -69,8 +74,11 @@ export default function Dashboard() {
         {/* ── Top: greeting, workspace context, ONE primary action ── */}
         <div className="dash-hero">
           <div>
-            <h2 className="flow-h2">Hi {name} — your marketing workspace</h2>
-            {account?.plan === 'trial' && <p className="flow-muted">You're on the 3-day trial.</p>}
+            <h2 className="flow-h2">Good to see you, {name}.</h2>
+            <p className="flow-muted">
+              {[account?.workspace_name || account?.workspace?.name, planLabel(account?.plan)]
+                .filter(Boolean).join(' · ')}
+            </p>
           </div>
           <Link className="flow-btn dash-primary" to={primary.to}>{primary.label}</Link>
         </div>
@@ -78,9 +86,9 @@ export default function Dashboard() {
         {/* Compact usage warning only at 80% / 100% — details live in Account */}
         {usageLevel !== 'ok' && (
           <p className={usageLevel === 'over' ? 'flow-err' : 'dash-usage-warn'} role="status">
-            {usageLevel === 'over'
-              ? "You've used all AI actions for this period. "
-              : "You've used over 80% of your AI actions. "}
+            {typeof account?.usage?.ai_actions === 'number' && account?.limits?.ai_actions
+              ? `You’ve used ${account.usage.ai_actions} of ${account.limits.ai_actions} AI actions this period. Editing and exporting are still free. `
+              : "You've used most of your AI actions this period. Editing and exporting are still free. "}
             <Link to="/app/account">See usage &amp; plan</Link>
           </p>
         )}
@@ -88,7 +96,7 @@ export default function Dashboard() {
         <div className="dash-grid">
           {/* ── Continue where you left off ── */}
           <div className="flow-card">
-            <div className="flow-eyebrow">Continue where you left off</div>
+            <div className="flow-eyebrow">Continue working</div>
             {latest ? (
               <>
                 <h3>{latest.title || latest.type || 'Recent asset'}</h3>
@@ -99,7 +107,7 @@ export default function Dashboard() {
               </>
             ) : (
               <>
-                <p className="flow-muted">Create your first campaign — everything you generate stays organized under it.</p>
+                <p className="flow-muted">Start with one offer, one audience and one primary CTA. Your asset drafts will stay attached to that brief.</p>
                 <Link className="flow-btn is-ghost" to="/app/campaigns">Create your first campaign</Link>
               </>
             )}
@@ -108,7 +116,7 @@ export default function Dashboard() {
           {/* ── Next best actions (max 3, derived — never static) ── */}
           {actions.length > 0 && (
             <div className="flow-card">
-              <div className="flow-eyebrow">Next best actions</div>
+              <div className="flow-eyebrow">Recommended next steps</div>
               <ul className="kit-outline dash-kit-links">
                 {actions.map((a) => (
                   <li key={a.label}>
@@ -164,7 +172,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                <p className="flow-muted">Generate your first asset — website copy, emails, captions or ads.</p>
+                <p className="flow-muted">No assets yet. Choose what this campaign needs first.</p>
                 <Link className="flow-link" to="/app/create">Open Create →</Link>
               </>
             )}

@@ -37,39 +37,67 @@ function fmtDate(iso) {
   }
 }
 
+// Prompt 29: trial/charge notices show the exact timestamp AND timezone. We
+// render in UTC server-side so the value is deterministic and unambiguous.
+function fmtDateTime(iso) {
+  if (!iso) return 'your charge date';
+  try {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
+    });
+  } catch {
+    return 'your charge date';
+  }
+}
+
+// Exact price/interval clause, e.g. "$24.99/month" — only shown when known.
+function priceClause({ price, interval } = {}) {
+  if (!price) return '';
+  const per = interval === 'year' || interval === 'yearly' ? 'year' : 'month';
+  return `${price}/${per}`;
+}
+
 const billingLink = () => `${(process.env.PUBLIC_URL || BRAND.siteUrl || '').replace(/\/$/, '')}/app/account`;
 
 /** type → ({...params}) => { subject, html, text } */
 const TEMPLATES = {
   welcome: () => ({
-    subject: `Welcome to ${BRAND.name}`,
-    html: template(`Welcome to ${BRAND.name}`, `<p>Your account is verified. Start with your Brand Profile — everything you generate is grounded in it.</p><p><a href="${billingLink().replace('/account', '/brand')}">Set up your brand</a></p>`),
-    text: `Your account is verified. Start with your Brand Profile at ${billingLink().replace('/account', '/brand')}`,
+    subject: `Your ${BRAND.name} workspace is ready`,
+    html: template(`Your ${BRAND.name} workspace is ready`, `<p>Your account is verified. Setup is free — return to your Brand Profile and add the facts that drive every generation.</p><p><a href="${billingLink().replace('/account', '/brand')}">Set up your Brand Profile</a></p>`),
+    text: `Your ${BRAND.name} workspace is ready. Setup is free — the facts in your Brand Profile drive every generation. Start at ${billingLink().replace('/account', '/brand')}`,
   }),
-  trial_started: ({ chargeAt }) => ({
-    subject: 'Your 3-day free trial has started',
-    html: template('Your 3-day free trial has started', `<p>You have 20 AI actions and 1 full launch kit to try the whole workspace.</p><p>You'll be charged on <strong>${fmtDate(chargeAt)}</strong> unless you cancel before then. Manage or cancel anytime: <a href="${billingLink()}">Account &amp; billing</a>.</p>`),
-    text: `Your 3-day trial started. You'll be charged on ${fmtDate(chargeAt)} unless you cancel before then. Manage: ${billingLink()}`,
-  }),
-  trial_ending: ({ chargeAt }) => ({
-    subject: 'Your trial ends soon',
-    html: template('Your trial ends soon', `<p>Your free trial ends and your subscription starts on <strong>${fmtDate(chargeAt)}</strong>.</p><p>Want to keep going? Do nothing. Want to cancel? <a href="${billingLink()}">Manage billing</a> before that date and you won't be charged.</p>`),
-    text: `Your trial ends on ${fmtDate(chargeAt)}. Cancel before then at ${billingLink()} and you won't be charged.`,
-  }),
-  payment_succeeded: ({ periodEnd }) => ({
-    subject: `Payment received — ${BRAND.name}`,
-    html: template('Payment received', `<p>Thanks — your payment went through and your plan is active until <strong>${fmtDate(periodEnd)}</strong>.</p><p><a href="${billingLink()}">View billing</a></p>`),
-    text: `Payment received. Your plan is active until ${fmtDate(periodEnd)}. Billing: ${billingLink()}`,
+  trial_started: ({ chargeAt, planLabel, price, interval } = {}) => {
+    const pc = priceClause({ price, interval });
+    const planStr = planLabel ? `the <strong>${planLabel}</strong> plan${pc ? ` at ${pc}` : ''}` : 'your subscription';
+    return {
+      subject: `Your trial started — first charge on ${fmtDate(chargeAt)}`,
+      html: template('Your trial started', `<p>You have 20 AI actions and 1 full launch campaign to try the whole workspace.</p><p>Your trial converts to ${planStr} — first charge on <strong>${fmtDateTime(chargeAt)}</strong> unless you cancel before then. Cancel anytime: <a href="${billingLink()}">Account &amp; billing</a>.</p>`),
+      text: `Your trial started. 20 AI actions and 1 full launch campaign included. First charge on ${fmtDateTime(chargeAt)}${planLabel ? ` for the ${planLabel} plan${pc ? ` at ${pc}` : ''}` : ''} unless you cancel before then. Cancel: ${billingLink()}`,
+    };
+  },
+  trial_ending: ({ chargeAt, planLabel, price, interval } = {}) => {
+    const pc = priceClause({ price, interval });
+    return {
+      subject: `Your ${BRAND.name} trial ends tomorrow`,
+      html: template(`Your ${BRAND.name} trial ends tomorrow`, `<p>Your trial ends and ${planLabel ? `the <strong>${planLabel}</strong> plan` : 'your subscription'} starts on <strong>${fmtDateTime(chargeAt)}</strong>${pc ? `, at <strong>${pc}</strong>` : ''}.</p><p>Want to keep going? Do nothing. Want to cancel? <a href="${billingLink()}">Cancel in Account &amp; billing</a> before that time and you won't be charged.</p>`),
+      text: `Your ${BRAND.name} trial ends on ${fmtDateTime(chargeAt)}${planLabel ? ` — ${planLabel} plan` : ''}${pc ? ` at ${pc}` : ''}. Cancel before then at ${billingLink()} and you won't be charged.`,
+    };
+  },
+  payment_succeeded: ({ periodEnd, planLabel, amount } = {}) => ({
+    subject: `Payment received — ${planLabel || BRAND.name} is active`,
+    html: template('Payment received', `<p>${amount ? `We received your payment of <strong>${amount}</strong>. ` : ''}${planLabel ? `Your <strong>${planLabel}</strong> plan` : 'Your plan'} is active for this billing period, through <strong>${fmtDate(periodEnd)}</strong>. Your AI actions reset for the new period.</p><p><a href="${billingLink()}">View invoice &amp; billing</a></p>`),
+    text: `Payment received${amount ? ` (${amount})` : ''}. ${planLabel || 'Your plan'} is active through ${fmtDate(periodEnd)}. Your AI actions reset for the new period. Billing: ${billingLink()}`,
   }),
   payment_failed: () => ({
-    subject: `Payment failed — action needed`,
-    html: template('Your payment failed', `<p>We couldn't process your payment. Your account stays accessible while we retry.</p><p>Please update your payment method: <a href="${billingLink()}">Account &amp; billing → Manage billing</a>.</p>`),
-    text: `Your payment failed. Update your payment method at ${billingLink()}`,
+    subject: `Action needed: update your payment method`,
+    html: template('Action needed: update your payment method', `<p>We couldn't process your latest payment. We'll retry automatically, and your account stays accessible during the retry window.</p><p>To avoid losing generation access, update your payment method: <a href="${billingLink()}">Account &amp; billing → Manage billing</a>.</p>`),
+    text: `We couldn't process your latest payment. We'll retry automatically; update your payment method to keep generation access: ${billingLink()}`,
   }),
-  cancellation_scheduled: ({ periodEnd }) => ({
-    subject: 'Your cancellation is scheduled',
-    html: template('Cancellation scheduled', `<p>Your subscription will end on <strong>${fmtDate(periodEnd)}</strong>. You keep full access until then, and your generated work stays available read-only afterwards.</p><p>Changed your mind? <a href="${billingLink()}">Resume from billing</a>.</p>`),
-    text: `Your subscription ends on ${fmtDate(periodEnd)}. Resume anytime before then: ${billingLink()}`,
+  cancellation_scheduled: ({ periodEnd } = {}) => ({
+    subject: `Your plan ends on ${fmtDate(periodEnd)}`,
+    html: template(`Your plan ends on ${fmtDate(periodEnd)}`, `<p>Generation access ends on <strong>${fmtDate(periodEnd)}</strong>. You keep full access until then, and your existing assets remain available according to the retention policy afterwards.</p><p>Changed your mind? <a href="${billingLink()}">Resume from Account &amp; billing</a>. Need help? Reply to this email.</p>`),
+    text: `Your plan ends on ${fmtDate(periodEnd)}. Generation access ends then; existing assets remain available per the retention policy. Resume anytime before then: ${billingLink()}`,
   }),
   cancellation_completed: () => ({
     subject: 'Your subscription has ended',

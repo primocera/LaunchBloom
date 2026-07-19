@@ -91,8 +91,8 @@ export default function Login() {
     <div className="login">
       <form className="login-card" onSubmit={submit}>
         <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
-        <h1>Welcome back</h1>
-        <p>Sign in to continue building your launch.</p>
+        <h1>Continue your campaign</h1>
+        <p>Sign in to return to your Brand Profile, campaigns and saved assets.</p>
 
         <input
           type="email"
@@ -129,7 +129,7 @@ export default function Login() {
           <Link to="/app/forgot-password">Forgot your password?</Link>
         </p>
         <p className="login-alt">
-          New here? <Link to="/app/signup">Create an account</Link>
+          New here? <Link to="/app/signup">Create your workspace</Link>
         </p>
       </form>
     </div>

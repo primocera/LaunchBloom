@@ -176,8 +176,8 @@ export default function SocialStudio() {
       </section>
       {tab === 0 ? (
         <GeneratorStudio
-          title="Social Studio"
-          blurb="Channel-aware content: carousels slide-by-slide, reels with full scripts, captions and pins — a balanced mix across your content pillars."
+          title="Social"
+          blurb="Create channel-aware posts and scripts, then assign dates without implying direct publishing — carousels slide-by-slide, reels with full scripts, captions and pins."
           fields={FIELDS}
           initial={{ target_language: 'English', number_of_items: 12, platforms: ['instagram'], formats: ['caption', 'carousel', 'reel'] }}
           generate={(v, opts) => api.generateSocialAssets(v, opts)}

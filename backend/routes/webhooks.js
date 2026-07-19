@@ -12,6 +12,33 @@ const { track } = require('../lib/analytics');
 // v5 Prompt 14: idempotent lifecycle emails (no-ops without RESEND_API_KEY).
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 
+/**
+ * Derive { planLabel, price, interval } from a Stripe subscription so lifecycle
+ * emails can state the exact plan and post-trial price (Prompt 29). Returns an
+ * empty object when the price can't be resolved — templates degrade gracefully.
+ */
+function priceInfo(subscription) {
+  try {
+    const item = subscription.items?.data?.[0];
+    const price = item?.price;
+    if (!price) return {};
+    const { pricePlans } = require('./customers');
+    const plan = pricePlans()[price.id];
+    const planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : null;
+    const interval = price.recurring?.interval || null;
+    let display = null;
+    if (price.unit_amount != null) {
+      const amount = price.unit_amount / 100;
+      const cur = (price.currency || 'usd').toUpperCase();
+      const sym = cur === 'USD' ? '$' : '';
+      display = sym ? `${sym}${amount.toFixed(2)}` : `${amount.toFixed(2)} ${cur}`;
+    }
+    return { planLabel, price: display, interval };
+  } catch {
+    return {};
+  }
+}
+
 /** Customer email for a Stripe customer id (null when unknown). */
 async function emailForStripeCustomer(stripeCustomerId) {
   if (!stripeCustomerId) return null;
@@ -268,7 +295,7 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
 
     if (subscription.status === 'trialing') {
-      await sendLifecycleEmail('trial_started', subscription.id, email, { chargeAt: trialEnd });
+      await sendLifecycleEmail('trial_started', subscription.id, email, { chargeAt: trialEnd, ...priceInfo(subscription) });
     }
     if (subscription.cancel_at_period_end && previous.cancel_at_period_end === false) {
       await sendLifecycleEmail('cancellation_scheduled', `${subscription.id}:${subscription.current_period_end || ''}`, email, { periodEnd });
@@ -314,7 +341,7 @@ async function onTrialWillEnd(subscription) {
   const email = await emailForStripeCustomer(subscription.customer);
   if (email) {
     const chargeAt = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null;
-    await sendLifecycleEmail('trial_ending', subscription.id, email, { chargeAt });
+    await sendLifecycleEmail('trial_ending', subscription.id, email, { chargeAt, ...priceInfo(subscription) });
   }
 }
 
@@ -349,7 +376,21 @@ async function onInvoicePaid(invoice, eventAt) {
     const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));
     if (email) {
       const periodEnd = invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null;
-      await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd });
+      // Exact amount + plan for the receipt (Prompt 29).
+      let amount = null;
+      if (invoice.total != null) {
+        const cur = (invoice.currency || 'usd').toUpperCase();
+        const val = (invoice.total / 100).toFixed(2);
+        amount = cur === 'USD' ? `$${val}` : `${val} ${cur}`;
+      }
+      const priceId = invoice.lines?.data?.[0]?.price?.id;
+      let planLabel = null;
+      if (priceId) {
+        const { pricePlans } = require('./customers');
+        const plan = pricePlans()[priceId];
+        planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : null;
+      }
+      await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd, amount, planLabel });
     }
   }
 }

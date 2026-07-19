@@ -12,7 +12,32 @@ const TYPES = [
   ['seo_assets', 'SEO assets'],
 ];
 
-const STATUSES = [['', 'Any status'], ['draft', 'Draft'], ['edited', 'Edited'], ['ready', 'Ready'], ['published', 'Published']];
+// Playbook v6 Prompt 26 status vocabulary. Underlying enum values are kept
+// (draft/edited/ready/published) so the item PATCH route and StatusPill cycle
+// stay valid; only the customer-facing labels change.
+const STATUSES = [['', 'Any status'], ['draft', 'Draft'], ['edited', 'Needs review'], ['ready', 'Ready to export'], ['published', 'Published']];
+const STATUS_LABEL = { draft: 'Draft', edited: 'Needs review', blocked: 'Blocked by unresolved claim', ready: 'Ready to export', published: 'Published' };
+
+/** Unresolved claims block "Ready to export" — surface that instead. */
+function statusLabel(item) {
+  const warnings = item.quality_warnings || item.warnings || [];
+  if ((item.status === 'ready' || item.status === 'published') && warnings.length) {
+    return STATUS_LABEL.blocked;
+  }
+  return STATUS_LABEL[item.status] || item.status || 'Draft';
+}
+
+/** Provenance shown on every row (Prompt 26): campaign, brief and prompt version, source. */
+function provenanceLine(item) {
+  const meta = item.__meta || item.meta || {};
+  const bits = [
+    item.campaign_name || meta.campaign_name,
+    (item.brief_version || meta.brief_version) ? `Brief v${item.brief_version || meta.brief_version}` : null,
+    (item.prompt_version || meta.prompt_version) ? `Prompt ${item.prompt_version || meta.prompt_version}` : null,
+    item.author_email || meta.source || (item.created_at ? 'AI-generated draft' : null),
+  ].filter(Boolean);
+  return bits.join(' · ');
+}
 
 const REWRITES = [
   ['shorter', 'Shorter'],
@@ -67,7 +92,7 @@ export default function AssetLibrary() {
   async function bulkDelete() {
     if (selItems.length === 0) return;
     // Two explicit confirmations for a permanent, irreversible bulk delete.
-    if (!window.confirm(`Permanently delete ${selItems.length} asset(s)? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${selItems.length} assets? Version history will also be removed. This cannot be undone.`)) return;
     try {
       await api.bulkAssets('delete', selItems); // server 409s without confirm
     } catch (e) {
@@ -119,15 +144,16 @@ export default function AssetLibrary() {
 
   return (
     <div className="library-page">
-      <h1>Asset library</h1>
-      <p className="muted">Everything your studios generate, in one searchable place.</p>
+      <h1>Library</h1>
+      <p className="muted">Review every asset with its campaign, brief version, generation source, status and edit history.</p>
 
       <div className="library-filters">
         <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
           {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
         <input
-          placeholder="Search…"
+          placeholder="Search titles and copy"
+          aria-label="Search titles and copy"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
         />
@@ -159,7 +185,7 @@ export default function AssetLibrary() {
 
       {error && <p className="login-err">{error}</p>}
       {!data && <p className="muted">Loading…</p>}
-      {data && data.items.length === 0 && <p className="muted">Nothing here yet — generate something in a studio.</p>}
+      {data && data.items.length === 0 && <p className="muted">No assets match these filters.</p>}
 
       {(data?.items || []).map((item) => (
         <div className="library-row" key={`${item.table}:${item.id}`}>
@@ -171,8 +197,9 @@ export default function AssetLibrary() {
               </button>
               <strong>{item.title}</strong>
               <span className="campaign-badge">{item.type_label}</span>
-              <span className="campaign-badge">{item.status}</span>
+              <span className="campaign-badge">{statusLabel(item)}</span>
             </div>
+            {provenanceLine(item) && <div className="library-provenance">{provenanceLine(item)}</div>}
             <div className="library-snippet">{item.snippet}</div>
             <div className="library-actions">
               <select defaultValue="" disabled={busyId === item.id} onChange={(e) => { if (e.target.value) { rewrite(item, e.target.value); e.target.value = ''; } }}>
@@ -187,9 +214,9 @@ export default function AssetLibrary() {
               <button onClick={() => showVersions(item)}>History</button>
               <select defaultValue="" onChange={(e) => { if (e.target.value) { exportItem(item, e.target.value); e.target.value = ''; } }}>
                 <option value="" disabled>Export…</option>
-                <option value="txt">TXT</option>
-                <option value="md">Markdown</option>
-                <option value="doc">Word</option>
+                <option value="txt">Plain text (.txt)</option>
+                <option value="md">Markdown (.md)</option>
+                <option value="doc">Word-compatible file (.doc)</option>
               </select>
               <button onClick={() => act(() => api.updateAsset(item.table, item.id, { archived: !item.archived }), item.id)}>
                 {item.archived ? 'Unarchive' : 'Archive'}

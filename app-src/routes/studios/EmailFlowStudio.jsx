@@ -234,8 +234,8 @@ export default function EmailFlowStudio() {
       <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
-            <h2>Email Studio</h2>
-            <p className="flow-muted">Lifecycle flows and campaign emails — every email ships full, send-ready body copy with subject options, preheader, CTA, timing and mobile/plain-text previews.</p>
+            <h2>Email</h2>
+            <p className="flow-muted">Build lifecycle flows or campaign sequences with audience, timing, exclusions and complete body copy — subject options, preheader, CTAs and a plain-text version to review.</p>
           </div>
         </div>
 

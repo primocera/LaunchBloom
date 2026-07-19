@@ -173,6 +173,31 @@
   transform: translateY(-1px);
 }
 
+/* Primary nav (Prompt 15): Product · How it works · Example campaign · Pricing · Sign in */
+.lp-nav {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+}
+
+.lp-nav a {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-nav a:hover {
+  color: #fff;
+}
+
+@media (max-width: 860px) {
+  .lp-nav {
+    display: none;
+  }
+}
+
 /* ── Hero ─────────────────────────────────────────────────────────────── */
 
 .lp-hero {
@@ -258,6 +283,30 @@
 
 .lp-cta-ghost:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hero eyebrow + CTA note + example trust line (Prompt 15) */
+.lp-hero-eyebrow {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.lp-cta-note {
+  max-width: 560px;
+  margin: 20px auto 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.lp-trust-line {
+  max-width: 720px;
+  margin: 34px auto 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
 }
 
 /* ── Glass "Ask AI" card ──────────────────────────────────────────────── */

@@ -354,7 +354,7 @@ export default function GeneratorStudio({
     setError(null);
     setUpgrade(false);
     setWarnings([]);
-    setAnnounce('Generating… this uses one AI action.');
+    setAnnounce('Creating drafts from your approved brief… this uses one AI action.');
     if (!intentKeyRef.current) {
       intentKeyRef.current = (crypto.randomUUID && crypto.randomUUID()) || `k-${Date.now()}-${Math.random()}`;
     }
@@ -369,7 +369,7 @@ export default function GeneratorStudio({
       // Newest first, prepended to any previously-saved assets.
       setItems((prev) => [...fresh, ...(prev || [])]);
       try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
-      setAnnounce(`Generated ${fresh.length} item${fresh.length === 1 ? '' : 's'}.`);
+      setAnnounce(`${fresh.length} draft${fresh.length === 1 ? '' : 's'} created and saved to Library.`);
     } catch (e) {
       if (e.status === 402 || e.code === 'UPGRADE') {
         if (isFreePlan || e.plan === 'free') { setPaywall(true); setAnnounce('Start your trial to generate.'); }
@@ -390,6 +390,7 @@ export default function GeneratorStudio({
   }
 
   const missingRequired = hasBlockingErrors(fields, values);
+  const assetType = title.replace(/ Studio$/, '');
 
   return (
     <div className="flow">
@@ -405,13 +406,15 @@ export default function GeneratorStudio({
         <p className="sr-only" role="status" aria-live="polite">{announce}</p>
 
         <div className="flow-card gen-form" aria-busy={busy}>
-          {/* v5 Prompt 7: editable context — the exact brand, product, audience,
-              campaign, language and goal this generation will use. */}
+          {/* v5 Prompt 7 / v6 Prompt 20: editable context — the exact brand,
+              product, audience, campaign, language and goal this generation
+              will use. Missing facts link to Brand Profile before generating. */}
+          <div className="gen-context-head">Using this context</div>
           <div className="gen-context" aria-label="Generation context">
             {chips.map((c) => (
               c.missing && c.editable ? (
                 <Link key={c.key} to="/app/brand" className="gen-context-chip is-missing">
-                  {c.label}: set in Brand →
+                  Add {c.label} to Brand Profile before generating →
                 </Link>
               ) : (
                 <span key={c.key} className="gen-context-chip">
@@ -424,8 +427,14 @@ export default function GeneratorStudio({
           </div>
 
           {campaignId && (
-            <p className="flow-muted" role="status">
-              Generating inside a campaign — the brief (offer, dates, CTA) is applied automatically.
+            <p className="flow-muted gen-brief-line" role="status">
+              {campaign
+                ? `Campaign brief v${campaign.brief_version || campaign.approved_version || 1}${
+                    campaign.brief_approved_at || campaign.approved_at
+                      ? `, approved ${new Date(campaign.brief_approved_at || campaign.approved_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                      : ''
+                  }`
+                : 'Generating inside a campaign — the approved brief is applied automatically.'}
             </p>
           )}
           {fields.map((f) => (
@@ -433,13 +442,13 @@ export default function GeneratorStudio({
           ))}
           <div className="flow-row">
             <button className="flow-btn" disabled={busy || missingRequired} onClick={onGenerate}>
-              {busy ? 'Generating…' : `Generate ${title.replace(/ Studio$/, '')}`}
+              {busy ? 'Creating drafts from your approved brief…' : `Generate ${assetType} · 1 AI action`}
             </button>
           </div>
           <p className="flow-muted gen-cost-note" role="status">{outputEstimate({ resultKey })}</p>
           {error && (
             <p className="flow-err" role="alert">
-              {error}{' '}
+              Generation didn’t finish. No AI action was charged. Your brief is saved.{' '}
               <button className="account-link" onClick={onGenerate}>Retry</button>
             </p>
           )}
@@ -449,12 +458,16 @@ export default function GeneratorStudio({
               <Link to="/#pricing">Upgrade your plan</Link> to keep going.
             </p>
           )}
-          {warnings.length > 0 && (
+          {warnings.length > 0 ? (
             <div className="gen-warnings">
-              <strong>Quality checks ({warnings.length})</strong>
+              <strong>Review {warnings.length} issue{warnings.length === 1 ? '' : 's'} before marking ready</strong>
               <ul>{warnings.map((wm, i) => <li key={i}>{wm}</li>)}</ul>
             </div>
-          )}
+          ) : items && items.length > 0 && !busy ? (
+            <p className="flow-muted gen-cost-note">
+              No automated issues found. Review facts and compliance before publishing.
+            </p>
+          ) : null}
         </div>
 
         {items && items.length > 0 && (

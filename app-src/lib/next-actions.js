@@ -17,6 +17,34 @@ export function profileMissing(profile) {
   });
 }
 
+// Playbook v6 Prompt 17: the minimum viable profile required before the first
+// generation — business, a primary product/offer, a primary audience and a
+// language. Returns the list of missing requirement labels (empty = ready).
+// Structured records (products_list / audiences) satisfy the product/audience
+// requirements; legacy flat fields are accepted as a fallback so no existing
+// profile is falsely blocked.
+const MIN_VIABLE = [
+  { label: 'a business or brand', ok: (p) => !!(p.business_type || p.brand_name) },
+  {
+    label: 'a primary product or offer',
+    ok: (p) => (Array.isArray(p.products_list) && p.products_list.some((r) => r && r.name)) || !!p.products,
+  },
+  {
+    label: 'a primary audience',
+    ok: (p) => (Array.isArray(p.audiences) && p.audiences.some((r) => r && r.name)) ||
+      (Array.isArray(p.audience_segments) && p.audience_segments.length > 0),
+  },
+  {
+    label: 'a language',
+    ok: (p) => (Array.isArray(p.languages) && p.languages.length > 0) || !!p.language,
+  },
+];
+
+export function minimumViableProfile(profile) {
+  const p = profile || {};
+  return MIN_VIABLE.filter((r) => !r.ok(p)).map((r) => r.label);
+}
+
 export function usageLevel(account) {
   const used = account?.usage?.ai_actions ?? 0;
   const limit = account?.limits?.ai_actions;
@@ -44,18 +72,18 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
   let primary;
   if (plan === 'free' || !plan) {
     primary = missing.length >= ESSENTIAL_PROFILE_FIELDS.length - 1
-      ? { to: '/app/brand', label: 'Set up your Brand Profile' }
+      ? { to: '/app/brand', label: 'Complete Brand Profile' }
       : { to: '/app/create', label: 'Start your 3-day trial and generate' };
   } else if (level === 'over') {
     primary = { to: '/app/account', label: 'Review your plan and usage' };
   } else if (missing.length >= ESSENTIAL_PROFILE_FIELDS.length - 1) {
-    primary = { to: '/app/brand', label: 'Set up your Brand Profile' };
+    primary = { to: '/app/brand', label: 'Complete Brand Profile' };
   } else if (unfinished) {
     primary = { to: '/app/assets', label: `Continue “${unfinished.title || unfinished.type || 'your draft'}”` };
   } else if (!activeCampaigns.length) {
     primary = { to: '/app/campaigns', label: 'Create your first campaign' };
   } else {
-    primary = { to: '/app/create', label: `Create assets for “${activeCampaigns[0].name}”` };
+    primary = { to: '/app/create', label: `Continue “${activeCampaigns[0].name}”` };
   }
 
   // ── up to three next best actions (never duplicating the primary) ──

@@ -33,7 +33,7 @@ const SECTIONS = [
   {
     id: 'products', label: 'Products & offers', records: 'products_list',
     fields: [['products', 'Products / services (free text)', 'textarea', 'Anything not captured in the records above…']],
-    why: 'Product facts stop the AI inventing materials, prices or claims.',
+    why: 'Add facts you can verify: what it is, price, materials or delivery, proof and any claim restrictions.',
   },
   {
     id: 'voice', label: 'Voice',
@@ -54,7 +54,7 @@ const SECTIONS = [
       ['proof_points', 'Proof points', 'textarea', 'Real numbers, results, credentials you can back up…'],
       ['competitors', 'Competitors', 'chips', 'e.g. BigCandleCo'],
     ],
-    why: 'Proof lets generated copy make claims that are actually true.',
+    why: 'Only add numbers, reviews, credentials or results you can support. Leave this blank if you do not have proof yet.',
   },
   {
     id: 'channels', label: 'Channels',
@@ -200,8 +200,11 @@ function Onboarding({ profile, onDone, save }) {
 
   return (
     <div className="brand-page">
-      <h1>Tell LaunchBloom what must stay true about your brand.</h1>
-      <p className="muted">Add what you know now. You can finish the rest later.</p>
+      <h1>Give every campaign the same ground truth.</h1>
+      <p className="muted">
+        Add the facts LaunchBloom should reuse — and the claims it must never invent. You can refine
+        this profile as your business changes.
+      </p>
       <div className="flow-card">
         <div className="brand-field">
           <label htmlFor="bp-onb">{current.label}</label>
@@ -217,13 +220,12 @@ function Onboarding({ profile, onDone, save }) {
         <div className="flow-row">
           {step > 0 && <button className="flow-btn is-ghost" onClick={() => setStep(step - 1)}>Back</button>}
           <button className="flow-btn" onClick={next}>
-            {step === ONBOARDING_STEPS.length - 1 ? 'Finish setup' : 'Next'}
+            {step === ONBOARDING_STEPS.length - 1 ? 'Save Brand Profile' : 'Next'}
           </button>
-          <button className="account-link" onClick={onDone}>Skip for now</button>
+          <button className="account-link" onClick={onDone}>Skip — I’ll add this before generating</button>
         </div>
         <p className="muted" style={{ marginTop: 10 }}>
-          Step {step + 1} of {ONBOARDING_STEPS.length} · Missing facts stay as placeholders. LaunchBloom never
-          invents proof, prices or claims.
+          Step {step + 1} of {ONBOARDING_STEPS.length} · About 2 minutes left
         </p>
       </div>
     </div>
@@ -256,7 +258,7 @@ export default function BrandProfile() {
     timer.current = setTimeout(async () => {
       try {
         await api.saveBrandProfile(next);
-        if (seq === saveSeq.current) setStatus('Saved');
+        if (seq === saveSeq.current) setStatus('Brand Profile saved. New generations will use these facts.');
       } catch {
         if (seq === saveSeq.current) setStatus('Could not save — retrying');
         setTimeout(() => { if (seq === saveSeq.current) persist(next); }, 4000);
@@ -286,12 +288,12 @@ export default function BrandProfile() {
   return (
     <div className="brand-page">
       <div className="brand-head">
-        <h1>Brand profile</h1>
+        <h1>Brand Profile</h1>
         <span className="brand-status" role="status" aria-live="polite">{status}</span>
       </div>
       <p className="muted">
-        Tell LaunchBloom what must stay true about your brand. Add what you know now — you can finish
-        the rest later. Missing facts stay as placeholders. LaunchBloom never invents proof, prices or claims.
+        Add the facts LaunchBloom should reuse — and the claims it must never invent. You can refine
+        this profile as your business changes.
       </p>
 
       {SECTIONS.map((section) => {

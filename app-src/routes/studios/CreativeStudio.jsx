@@ -159,8 +159,8 @@ const fullCopy = (i) =>
 export default function CreativeStudio() {
   return (
     <GeneratorStudio
-      title="Ads & Creative Studio"
-      blurb="Production-ready static, carousel, video/UGC and search-ad briefs — distinct concepts, timed video scripts, a test matrix and compliance checks before you run them."
+      title="Ads & Creative"
+      blurb="Generate distinct concepts, scripts and testing hypotheses. High-risk claims stay blocked until real proof is recorded — with timed video scripts, a test matrix and compliance checks to review before you run them."
       fields={FIELDS}
       initial={{ target_language: 'English', platforms: ['meta'], formats: ['static', 'video'] }}
       generate={(v, opts) => api.generateCreativeAssets(v, opts)}

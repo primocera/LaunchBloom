@@ -22,6 +22,30 @@ const TEMPLATES = [
   { key: 'content', label: 'Content month', brief: { objective: 'A month of consistent audience-building content', channels: ['social', 'email'] } },
 ];
 
+// Playbook v6 Prompt 18: the brief is a contract — these decisions must be
+// present before assets can inherit a coherent campaign. Missing ones surface
+// as human-readable "required decisions left".
+const REQUIRED_DECISIONS = [
+  ['objective', 'a goal'],
+  ['audience', 'an audience'],
+  ['offer_summary', 'an offer'],
+  ['key_message', 'a key message'],
+];
+function missingDecisions(c) {
+  return REQUIRED_DECISIONS.filter(([k]) => {
+    const v = c[k];
+    return v == null || (typeof v === 'string' && v.trim() === '');
+  });
+}
+function hasNoDates(c) {
+  return !c.start_date && !c.end_date && !c.deadline;
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }); }
+  catch { return ''; }
+}
+
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
   const [form, setForm] = useState(null); // null = closed, object = create form
@@ -89,12 +113,11 @@ export default function Campaigns() {
       <div className="brand-head">
         <h1>Campaigns</h1>
         <button className="btn-primary" onClick={() => setForm(form ? null : { ...EMPTY })}>
-          {form ? 'Cancel' : '+ New campaign'}
+          {form ? 'Cancel' : 'Create campaign'}
         </button>
       </div>
       <p className="muted">
-        One brief per campaign. Generate the strategy first, approve it, then create emails, captions,
-        ads and landing copy from it in the studios — they'll stay consistent on offer, dates and CTA.
+        Keep the offer, audience, goal, dates, channels and CTA consistent across every asset.
       </p>
 
       {/* v5 Prompt 3: the full launch workflow is a campaign template, not a
@@ -102,8 +125,8 @@ export default function Campaigns() {
       <div className="account-section campaign-template">
         <h2>Full launch campaign</h2>
         <p className="muted" style={{ marginTop: 4 }}>
-          The guided template: positioning → 3 offer options → a full campaign asset set (website
-          copy, a 30-day content plan, emails, ad ideas, SEO ideas and a weekly action plan).
+          Website, email, social, ads and SEO ideas from one brief — the guided template that starts
+          with positioning and three offer options.
         </p>
         <a className="btn-primary" href="/app/flow" style={{ display: 'inline-block', marginTop: 8 }}>
           Start full launch campaign
@@ -201,21 +224,39 @@ export default function Campaigns() {
 
       {campaigns === null && <p className="muted">Loading…</p>}
       {campaigns && campaigns.length === 0 && !form && (
-        <div className="account-section"><p className="muted">No campaigns yet. Create your first one.</p></div>
+        <div className="account-section"><p className="muted">No campaigns yet. Create one before generating so every asset has a clear purpose.</p></div>
       )}
 
-      {(campaigns || []).filter((c) => !c.archived).map((c) => (
+      {(campaigns || []).filter((c) => !c.archived).map((c) => {
+        const missing = missingDecisions(c);
+        return (
         <div className="account-section" key={c.id}>
           <div className="campaign-row-head">
             <h2>{c.name}</h2>
             <span className={`campaign-badge ${c.brief_approved ? 'is-ok' : ''}`}>
-              {c.brief_approved ? 'Brief approved' : 'Draft brief'}
+              {c.brief_approved
+                ? `Brief v${c.brief_version || 1} approved`
+                : missing.length
+                  ? `Brief incomplete · ${missing.length} required decision${missing.length === 1 ? '' : 's'} left`
+                  : 'Draft brief'}
             </span>
           </div>
           <p className="muted">
             {[c.objective, c.audience && `→ ${c.audience}`, c.start_date && `${c.start_date} → ${c.end_date || 'open'}`]
               .filter(Boolean).join(' · ') || 'No details yet.'}
           </p>
+          {missing.length > 0 && (
+            <p className="muted">Add {missing.map(([, label]) => label).join(', ')} to complete the brief.</p>
+          )}
+          {c.brief_approved && (
+            <p className="muted">
+              Brief approved{c.brief_approved_at ? ` on ${fmtDate(c.brief_approved_at)}` : ''}. Changes will
+              apply to new generations; existing assets keep their original snapshot.
+            </p>
+          )}
+          {hasNoDates(c) && (
+            <p className="muted">No fixed dates — do not generate urgency or deadline language.</p>
+          )}
 
           {c.strategy && (
             <div className="campaign-strategy">
@@ -239,7 +280,7 @@ export default function Campaigns() {
             </button>
             {c.strategy && (
               <button className="btn-secondary" onClick={() => approve(c)}>
-                {c.brief_approved ? 'Unapprove' : 'Approve brief'}
+                {c.brief_approved ? 'Unapprove' : 'Approve brief and start creating'}
               </button>
             )}
             <a className="btn-secondary" href={`/app/create?campaign=${c.id}`}>Create assets</a>
@@ -248,7 +289,8 @@ export default function Campaigns() {
             <button className="btn-secondary" onClick={() => remove(c)}>Delete</button>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {(campaigns || []).some((c) => c.archived) && (
         <div className="account-section">

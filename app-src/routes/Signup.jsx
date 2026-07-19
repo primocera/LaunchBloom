@@ -66,13 +66,13 @@ export default function Signup() {
       <div className="login">
         <div className="login-card">
           <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
-          <h1>Check your inbox</h1>
+          <h1>Verify your email to continue</h1>
           <p>
-            We sent a verification link to <strong>{email.trim()}</strong>. Click it to activate
-            your account, then sign in.
+            We sent a secure link to <strong>{email.trim()}</strong>. Open it on this device to
+            return to your saved setup.
           </p>
           <p className="login-alt">
-            <Link to="/app/login">Back to sign in</Link>
+            <Link to="/app/login">Send a new verification link</Link>
           </p>
         </div>
       </div>
@@ -83,8 +83,8 @@ export default function Signup() {
     <div className="login">
       <form className="login-card" onSubmit={submit}>
         <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
-        <h1>Create your account</h1>
-        <p>Create your account free. No payment method yet.</p>
+        <h1>Create your LaunchBloom workspace</h1>
+        <p>Set up your brand and campaign brief free. You’ll choose a plan only when you’re ready to generate.</p>
 
         <input
           type="email"
@@ -131,7 +131,7 @@ export default function Signup() {
           type="submit"
           disabled={busy || !email.trim() || password.length < 8 || !confirm || !accept}
         >
-          {busy ? 'Creating account...' : 'Create account'}
+          {busy ? 'Creating workspace...' : 'Create workspace'}
         </button>
 
         {error && <p className="login-err">{error}</p>}
