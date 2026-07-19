@@ -150,6 +150,39 @@ test('Brand Profile shows the minimum baseline and snapshot behavior', () => {
   assert.match(brand, /assets you.{0,8}ve already saved keep the context/i, 'snapshot semantics must be stated');
 });
 
+// ── Studio-level guarantees (LB-02, LB-06..LB-10) ───────────────────────────
+
+test('hero defines launch-ready and signup routes to first activation', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  assert.match(landing, /Launch-ready\s+means structured, connected and ready for your review/, 'launch-ready must be defined near the hero');
+  const signup = read(path.join(APP_SRC, 'routes', 'Signup.jsx'));
+  assert.match(signup, /navigate\('\/app\/brand\?welcome=1'\)/, 'fresh signups must land in Brand Profile first run');
+});
+
+test('Email studio discloses cost and says LaunchBloom does not send', () => {
+  const email = read(path.join(APP_SRC, 'routes', 'studios', 'EmailFlowStudio.jsx'));
+  assert.match(email, /Generate emails · 1 AI action/);
+  assert.match(email, /does not send emails/);
+});
+
+test('Social calendar plans and never claims to post or schedule', () => {
+  const social = read(path.join(APP_SRC, 'routes', 'studios', 'SocialStudio.jsx'));
+  assert.match(social, /does not post or schedule to any platform/);
+  assert.ok(!/Set a date to schedule/.test(social), 'calendar must not call planning "scheduling"');
+  assert.match(social, /never posts or schedules/);
+});
+
+test('Creative studio frames outputs as briefs, not media or launched ads', () => {
+  const creative = read(path.join(APP_SRC, 'routes', 'studios', 'CreativeStudio.jsx'));
+  assert.match(creative, /not rendered media, approved ads or launched campaigns/);
+});
+
+test('shared export note says review remains with the user and costs nothing', () => {
+  const generator = read(path.join(APP_SRC, 'routes', 'studios', 'generator.jsx'));
+  assert.match(generator, /Review facts, links, claims/);
+  assert.match(generator, /does not use AI actions/);
+});
+
 // ── Generation cost is disclosed before every guided-flow generation ────────
 
 test('guided flow discloses the 1-AI-action cost on each generation button', () => {

@@ -190,7 +190,8 @@ export default function Landing() {
           <h1>Turn one offer into a launch-ready campaign.</h1>
           <p className="lp-sub">
             {BRAND.name} helps solo founders and small teams create connected website copy, emails,
-            social posts and ads from one approved Brand Profile and Campaign Brief.
+            social posts and ads from one approved Brand Profile and Campaign Brief. Launch-ready
+            means structured, connected and ready for your review — publishing stays in your hands.
           </p>
 
           <div className="lp-hero-actions">

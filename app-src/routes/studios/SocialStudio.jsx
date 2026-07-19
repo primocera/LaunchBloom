@@ -132,7 +132,11 @@ function Calendar() {
 
   return (
     <div>
-      <p className="flow-muted">Plan posts on dates without exporting. Set a date to schedule; clear it to move back to unscheduled.</p>
+      <p className="flow-muted">
+        Dates here are planning suggestions — LaunchBloom does not post or schedule to any platform.
+        Transfer planned posts to your publishing tool. Setting a date plans a post; clearing it
+        moves it back to unplanned.
+      </p>
 
       {days.map(({ date, items: dayItems }) => (
         <div className="account-section" key={date}>
@@ -144,14 +148,14 @@ function Calendar() {
             <div className="calendar-row" key={it.id}>
               <span>{itemLabel(it)} — {it.hook}</span>
               <input type="date" value={it.planned_date || ''} disabled={busyId === it.id} onChange={(e) => plan(it, e.target.value)} />
-              <button className="account-link" disabled={busyId === it.id} onClick={() => plan(it, null)}>Unschedule</button>
+              <button className="account-link" disabled={busyId === it.id} onClick={() => plan(it, null)}>Clear date</button>
             </div>
           ))}
         </div>
       ))}
 
       <div className="account-section">
-        <h3>Unscheduled ({unscheduled.length})</h3>
+        <h3>Unplanned ({unscheduled.length})</h3>
         {unscheduled.length === 0 && <p className="flow-muted">Everything is planned.</p>}
         {unscheduled.map((it) => (
           <div className="calendar-row" key={it.id}>
@@ -180,7 +184,7 @@ export default function SocialStudio() {
       {tab === 0 ? (
         <GeneratorStudio
           title="Social"
-          blurb="Create channel-aware posts and scripts, then assign dates without implying direct publishing — carousels slide-by-slide, reels with full scripts, captions and pins."
+          blurb="Create channel-aware posts and scripts — carousels slide-by-slide, reels with full scripts, captions and pins — then plan them on dates. LaunchBloom plans; it never posts or schedules to platforms."
           fields={FIELDS}
           initial={{ target_language: 'English', number_of_items: 12, platforms: ['instagram'], formats: ['caption', 'carousel', 'reel'] }}
           generate={(v, opts) => api.generateSocialAssets(v, opts)}

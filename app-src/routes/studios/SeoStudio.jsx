@@ -95,7 +95,7 @@ function renderIdea(item, { navigate }) {
 function fullCopy(item) {
   const faq = Array.isArray(item.faq) ? item.faq : [];
   return [
-    `# ${item.keyword} (${item.page_type || 'page'} · ${item.keyword_intent || ''} · NOT RESEARCHED)`,
+    `# ${item.keyword} (${item.page_type || 'page'} · ${item.keyword_intent || ''} · ${item.metric_source && item.metric_date ? `researched: ${item.metric_source} ${item.metric_date}` : 'NOT RESEARCHED'})`,
     `SEO title: ${item.seo_title || ''}`,
     `Meta description: ${item.meta_description || ''}`,
     `H1: ${item.h1 || ''}`,

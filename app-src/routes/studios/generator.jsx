@@ -42,6 +42,7 @@ export function FormField({ field, value, onChange, warning }) {
                 type="button"
                 key={val}
                 className={on ? 'gen-chip is-on' : 'gen-chip'}
+                title={o.title || undefined}
                 onClick={() => onChange(on ? selected.filter((x) => x !== val) : [...selected, val])}
               >
                 {lbl}
@@ -472,8 +473,15 @@ export default function GeneratorStudio({
         </div>
 
         {items && items.length > 0 && (
-          <div className="flow-row" style={{ marginBottom: 12 }}>
-            <button className="kit-copy" onClick={exportAll}>Export all (Markdown)</button>
+          <div style={{ marginBottom: 12 }}>
+            <div className="flow-row">
+              <button className="kit-copy" onClick={exportAll}>Export all (Markdown)</button>
+            </div>
+            {/* v7 LB-06/LB-11: exports are drafts — say what remains for the user. */}
+            <p className="flow-muted gen-cost-note">
+              Exports a Markdown draft file. Review facts, links, claims and how it fits your
+              platform before publishing — exporting is free and does not use AI actions.
+            </p>
           </div>
         )}
 

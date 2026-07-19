@@ -54,7 +54,9 @@ export default function Signup() {
         return;
       }
       if (await resumePendingCheckout()) return;
-      navigate('/app');
+      // v7 LB-02: land new users in the 3-minute Brand Profile first run —
+      // the first activation step — not on a generic dashboard.
+      navigate('/app/brand?welcome=1');
     } catch (err) {
       setError(err.message);
       setBusy(false);

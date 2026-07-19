@@ -28,14 +28,14 @@ const LIFECYCLE_FIELDS = [
   {
     name: 'flow_types', label: 'Flow types', type: 'checkboxes', required: true,
     options: [
-      { value: 'welcome', label: 'Welcome (3–5)' },
-      { value: 'abandon_cart', label: 'Abandoned cart (3)' },
-      { value: 'browse_abandon', label: 'Browse abandonment (2)' },
-      { value: 'post_purchase', label: 'Post-purchase (3)' },
-      { value: 'winback', label: 'Win-back (3)' },
-      { value: 'review_request', label: 'Review request (2)' },
-      { value: 'back_in_stock', label: 'Back-in-stock (2)' },
-      { value: 'sunset', label: 'Sunset / re-engagement (2)' },
+      { value: 'welcome', label: 'Welcome (3–5)', title: 'New subscribers, triggered by signup — introduce the brand and first offer' },
+      { value: 'abandon_cart', label: 'Abandoned cart (3)', title: 'Shoppers who left items in the cart — recover the purchase without invented urgency' },
+      { value: 'browse_abandon', label: 'Browse abandonment (2)', title: 'Visitors who viewed products but didn’t add to cart' },
+      { value: 'post_purchase', label: 'Post-purchase (3)', title: 'Recent buyers — delivery expectations, usage help, next purchase' },
+      { value: 'winback', label: 'Win-back (3)', title: 'Customers who haven’t bought in a while' },
+      { value: 'review_request', label: 'Review request (2)', title: 'Buyers after delivery — ask for an honest review' },
+      { value: 'back_in_stock', label: 'Back-in-stock (2)', title: 'Subscribers waiting on a restocked product' },
+      { value: 'sunset', label: 'Sunset / re-engagement (2)', title: 'Inactive subscribers — re-engage or let them go cleanly' },
     ],
   },
   {
@@ -192,9 +192,12 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
       ))}
       <div className="flow-row">
         <button className="flow-btn" disabled={busy || missing} onClick={run}>
-          {busy ? 'Generating…' : 'Generate emails'}
+          {busy ? 'Generating…' : 'Generate emails · 1 AI action'}
         </button>
       </div>
+      <p className="flow-muted gen-cost-note" role="note">
+        Editing, copying and exporting are free. Failed generations are not charged.
+      </p>
       {error && <p className="flow-err">{error}</p>}
       {upgrade && (
         <p className="flow-err">
@@ -238,7 +241,12 @@ export default function EmailFlowStudio() {
         <div className="studio-head">
           <div>
             <h2>Email</h2>
-            <p className="flow-muted">Build lifecycle flows or campaign sequences with audience, timing, exclusions and complete body copy — subject options, preheader, CTAs and a plain-text version to review.</p>
+            <p className="flow-muted">
+              Build lifecycle flows or campaign sequences with audience, timing, exclusions and
+              complete body copy — subject options, preheader, CTAs and a plain-text version to
+              review. LaunchBloom does not send emails: export the drafts into your email tool and
+              review timing, links and compliance there.
+            </p>
           </div>
         </div>
 

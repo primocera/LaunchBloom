@@ -21,11 +21,11 @@ const FIELDS = [
   {
     name: 'formats', label: 'Formats', type: 'checkboxes',
     options: [
-      { value: 'static', label: 'Static' },
-      { value: 'video', label: 'Video' },
-      { value: 'ugc', label: 'UGC' },
-      { value: 'carousel', label: 'Carousel' },
-      { value: 'search_ad', label: 'Search ad' },
+      { value: 'static', label: 'Static', title: 'Single-image concept: hook, headline, primary text, visual direction' },
+      { value: 'video', label: 'Video', title: 'Timed script with scenes, on-screen text, b-roll and end card' },
+      { value: 'ugc', label: 'UGC', title: 'Creator-style script — you must have real creator consent and usage rights' },
+      { value: 'carousel', label: 'Carousel', title: 'Card-by-card structure with roles per slide' },
+      { value: 'search_ad', label: 'Search ad', title: 'Concise headlines (≤30 chars) and descriptions (≤90) with keyword intents' },
     ],
   },
   { name: 'objective', label: 'Objective', type: 'text', placeholder: 'e.g. drive first purchases' },
@@ -172,7 +172,7 @@ export default function CreativeStudio() {
   return (
     <GeneratorStudio
       title="Ads & Creative"
-      blurb="Generate distinct concepts, scripts and testing hypotheses. High-risk claims stay blocked until real proof is recorded — with timed video scripts, a test matrix and compliance checks to review before you run them."
+      blurb="Generate creative briefs a human design or media team can produce from — distinct concepts, scripts and testing hypotheses. These are drafts, not rendered media, approved ads or launched campaigns. High-risk claims stay blocked until real proof is recorded."
       fields={FIELDS}
       initial={{ target_language: 'English', platforms: ['meta'], formats: ['static', 'video'] }}
       generate={(v, opts) => api.generateCreativeAssets(v, opts)}
