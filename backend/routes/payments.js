@@ -297,3 +297,6 @@ router.get('/subscription/:subscriptionId', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+// v7 LB-12: account/billing uses this to switch paywall copy to pay-today for
+// users who already used their one trial.
+module.exports.hadTrialOrActiveSubscription = hadTrialOrActiveSubscription;

@@ -82,9 +82,17 @@ function ShellNotices() {
     : null;
 
   if (checkout === 'success') {
+    // v7 LB-12: only claim a trial when the subscription really is trialing —
+    // prior-trial users subscribe pay-today with no second trial.
     return (
       <div className="shell-notice" role="status">
-        Your 3-day free trial has started. {chargeDate ? `You'll be charged on ${chargeDate} unless you cancel before then. ` : ''}
+        {sub?.status === 'trialing' ? (
+          <>Your 3-day free trial has started. {chargeDate ? `You'll be charged on ${chargeDate} unless you cancel before then. ` : ''}</>
+        ) : sub ? (
+          <>Your subscription is active. {chargeDate ? `Next charge on ${chargeDate}. ` : ''}</>
+        ) : (
+          <>Checkout complete. Your plan may take a moment to activate — refresh if it doesn't appear. </>
+        )}
         <Link to="/app/account">Manage billing</Link>{' '}
         <button className="account-link" onClick={dismiss}>Dismiss</button>
       </div>

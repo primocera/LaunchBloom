@@ -176,3 +176,39 @@ Code-level P0s from the v6 playbook are closed. The remaining go/no-go risk is
 entirely **operational evidence on live providers**, which cannot be produced
 from this environment. Do not open paid capacity until the Prompt 2 journey has
 been exercised once end-to-end on the deployed test-mode environment.
+
+---
+
+# v7 addendum — LB-00 master pass + LB-12 billing pass (branch v7, July 2026)
+
+Pack: `LaunchBloom_Claude_Code_Prompt_Pack v7.docx` (LaunchBloom part).
+
+## Implemented (evidence = 236 backend tests + 18 Playwright, all passing)
+
+| v7 prompt | Status | Evidence |
+|---|---|---|
+| LB-00 status vocabulary (LB-11 scope) | ✅ | `app-src/lib/status-labels.js` shared by studio StatusPill and Library — "edited"/"ready" DB values always render as "Needs review"/"Ready to export". `tests/content-contract.test.js` |
+| LB-00/LB-01 retired vocabulary | ✅ | "launch kit" removed from every customer surface (Flow, KitDetail, StepPopups, studios/common, export title, next-actions); canonical nouns: campaign package / full launch campaign. Banned-claims sweep of all app-src sources is a failing test, not a manual grep. |
+| LB-05 guided-flow cost disclosure | ✅ | Every guided-flow generation button says "· 1 AI action"; Campaigns template explains per-step cost + launch-campaign allowance; NoKit empty state routes to /app/campaigns. |
+| LB-00 content-contract tests | ✅ | `tests/content-contract.test.js`: canonical promise (hero + metadata), exactly five Create paths (Create + Sidebar), trial disclosure from the canonical catalog, shared status vocab, cost disclosures, banned claims. |
+| LB-12 prior-trial pay-today copy | ✅ | `GET /api/account/billing` now returns `trial_eligible` (from `hadTrialOrActiveSubscription`); TrialPaywall switches to "Subscribe — charged today / No second trial"; checkout-success banner only claims a trial when the subscription is actually `trialing`, with a webhook-delay fallback. |
+| LB-12 backend invariants | ✅ (pre-existing, re-verified) | Allowlisted plan+interval only, server-derived email, unknown price fails closed, no double trial, webhook idempotency — `payments/customers-unknown-price/webhooks/idempotency` tests. |
+
+## Deltas vs the v7 docx (doc is wrong, code is right)
+
+- No `GET /api/plans/canonical` — the canonical endpoint is `GET /api/plans`; the catalog source of truth is `backend/lib/plan-catalog.js`.
+- Usage metering lives in `backend/lib/usage.js` (not "usage-ledger").
+
+## Still open from the v7 pack (non-blocking, candidates for next passes)
+
+- LB-03/LB-04 deep passes (Brand Profile helper copy per-section, brief reopen implications) — current surfaces meet the contract but were not rewritten field-by-field.
+- LB-13 external evidence remains identical to the v6 list: staging revenue E2E, live-provider checks, external APM. Same bottom line as v6.
+
+## Go / no-go
+
+| Area | Verdict |
+|---|---|
+| Code-level P0/P1 | ✅ none known open (prior-trial copy defect closed this pass) |
+| Automated checks | ✅ `npm run check` + 18/18 Playwright green |
+| External configuration | ⚠ unchanged: real domain, live Stripe prices, verified Resend domain, cron-job.org outbox trigger, legal entity |
+| Live-provider evidence | ⛔ still required before paid capacity (one manual end-to-end test-mode journey) |

@@ -35,6 +35,11 @@ export default function TrialPaywall({ open, onClose }) {
   // v5 Prompt 19: trap focus inside the dialog, Escape closes, focus returns.
   const cardRef = useFocusTrap(open, () => onClose?.());
 
+  // v7 LB-12: users who already used their one trial see pay-today copy —
+  // checkout will not include a second trial. Default to eligible only until
+  // the billing truth loads; null = unknown.
+  const [trialEligible, setTrialEligible] = useState(null);
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -43,6 +48,9 @@ export default function TrialPaywall({ open, onClose }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (!cancelled && data?.plans) setCatalog(data); })
       .catch(() => {});
+    api.billing()
+      .then((b) => { if (!cancelled) setTrialEligible(b?.trial_eligible !== false); })
+      .catch(() => { if (!cancelled) setTrialEligible(true); });
     return () => { cancelled = true; };
   }, [open]);
 
@@ -79,14 +87,26 @@ export default function TrialPaywall({ open, onClose }) {
         tabIndex={-1}
         ref={cardRef}
       >
-        <h2 id="paywall-title">Start your 3-day free trial to generate</h2>
-        <p className="paywall-sub">
-          Your work is saved. During the trial you get{' '}
-          <strong>
-            {catalog ? `${catalog.trial.ai_actions_total} AI actions and ${catalog.trial.launch_kits_total} full launch campaign` : '20 AI actions and 1 full launch campaign'}
-          </strong>{' '}
-          to try the whole workspace.
-        </p>
+        {trialEligible === false ? (
+          <>
+            <h2 id="paywall-title">Choose a plan to keep generating</h2>
+            <p className="paywall-sub">
+              Your work is saved. You've already used your 3-day trial, so your plan starts — and is
+              charged — today.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 id="paywall-title">Start your 3-day free trial to generate</h2>
+            <p className="paywall-sub">
+              Your work is saved. During the trial you get{' '}
+              <strong>
+                {catalog ? `${catalog.trial.ai_actions_total} AI actions and ${catalog.trial.launch_kits_total} full launch campaign` : '20 AI actions and 1 full launch campaign'}
+              </strong>{' '}
+              to try the whole workspace.
+            </p>
+          </>
+        )}
 
         <div className="paywall-plans" role="radiogroup" aria-label="Choose a plan">
           {(catalog?.plans || []).map((p) => (
@@ -113,15 +133,26 @@ export default function TrialPaywall({ open, onClose }) {
         </div>
 
         <button className="flow-btn paywall-cta" disabled={busy || !selected} onClick={start}>
-          {busy ? 'Opening secure checkout…' : 'Start my 3-day trial'}
+          {busy ? 'Opening secure checkout…'
+            : trialEligible === false ? 'Subscribe — charged today'
+            : 'Start my 3-day trial'}
         </button>
 
         {error && <p className="flow-err">{error}</p>}
 
         <p className="paywall-footer">
-          {price ? <>You'll be charged {price}{per} on {chargeDate()} unless you cancel before then. </> : null}
-          {catalog?.trial?.disclosure || "Payment method required. Cancel before your trial ends and you won't be charged."}{' '}
-          Cancel anytime from Account &amp; billing.
+          {trialEligible === false ? (
+            <>
+              {price ? <>You'll be charged {price}{per} today. </> : null}
+              No second trial — your earlier trial has been used. Cancel anytime from Account &amp; billing.
+            </>
+          ) : (
+            <>
+              {price ? <>You'll be charged {price}{per} on {chargeDate()} unless you cancel before then. </> : null}
+              {catalog?.trial?.disclosure || "Payment method required. Cancel before your trial ends and you won't be charged."}{' '}
+              Cancel anytime from Account &amp; billing.
+            </>
+          )}
         </p>
 
         <button type="button" className="paywall-close" onClick={onClose} aria-label="Close">×</button>

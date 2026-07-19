@@ -117,6 +117,19 @@ test('studio pills and Library share one customer-facing status vocabulary', asy
   assert.ok(!/Needs review/.test(generator), 'generator must not hard-code status labels');
 });
 
+// ── Prior-trial users get pay-today copy, never a promised second trial ─────
+
+test('paywall and checkout banner switch copy for prior-trial users', () => {
+  const paywall = read(path.join(APP_SRC, 'components', 'TrialPaywall.jsx'));
+  assert.match(paywall, /trial_eligible/, 'paywall must consult server trial eligibility');
+  assert.match(paywall, /charged today|charged .* today/i, 'pay-today branch must state the immediate charge');
+  assert.match(paywall, /No second trial/, 'pay-today branch must rule out a second trial');
+
+  const app = read(path.join(APP_SRC, 'App.jsx'));
+  assert.match(app, /status === 'trialing'/, 'success banner must only claim a trial when actually trialing');
+  assert.match(app, /Your subscription is active/, 'non-trial checkout success needs its own copy');
+});
+
 // ── Generation cost is disclosed before every guided-flow generation ────────
 
 test('guided flow discloses the 1-AI-action cost on each generation button', () => {

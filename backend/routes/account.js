@@ -43,6 +43,14 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
     const usage = await usageFor(ws.id, plan, email, req.userId);
 
     let subscription = null;
+    // v7 LB-12: whether a fresh checkout would include the 3-day trial. False
+    // once any prior trial or active subscription exists, so the paywall can
+    // show pay-today copy instead of promising a second trial.
+    let trialEligible = false;
+    if (plan === 'free') {
+      const { hadTrialOrActiveSubscription } = require('./payments');
+      trialEligible = !(await hadTrialOrActiveSubscription(email));
+    }
     const { data: customer } = await supabase
       .from('customers')
       .select('id')
@@ -76,6 +84,7 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
       plan,
       plan_label: limits.label,
       has_billing: !!customer,
+      trial_eligible: trialEligible,
       subscription,
       usage,
       limits: {
