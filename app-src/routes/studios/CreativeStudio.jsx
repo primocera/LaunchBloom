@@ -83,13 +83,15 @@ function SearchAd({ sa }) {
 
 function ComplianceBlock({ item, onChange }) {
   const [busy, setBusy] = useState(false);
+  const [proof, setProof] = useState('');
   const flags = Array.isArray(item.compliance_flags) ? item.compliance_flags : [];
-  const acked = item.compliance_ack && item.compliance_ack.acknowledged;
+  const ack = item.compliance_ack || {};
+  const recorded = ack.acknowledged && ack.proof_source;
   if (flags.length === 0) return null;
   async function acknowledge() {
     setBusy(true);
     try {
-      const r = await api.updateItem('creative_assets', item.id, { compliance_ack: true });
+      const r = await api.updateItem('creative_assets', item.id, { compliance_ack: true, compliance_proof: proof });
       onChange(r.item);
     } catch { /* non-blocking */ } finally { setBusy(false); }
   }
@@ -97,12 +99,22 @@ function ComplianceBlock({ item, onChange }) {
     <div className="gen-warnings" role="alert">
       <strong>Compliance ({flags.length})</strong>
       <ul>{flags.map((f, i) => <li key={i}>{f}</li>)}</ul>
-      {acked ? (
-        <p className="flow-muted">Acknowledged — you can mark this ready.</p>
+      {recorded ? (
+        <p className="flow-muted">Proof recorded: {ack.proof_source} — you can mark this ready.</p>
       ) : (
-        <button className="btn-secondary" disabled={busy} onClick={acknowledge}>
-          I have real proof for these claims — acknowledge
-        </button>
+        <>
+          <p className="flow-muted">Where does the proof for these claims live? A link or description is required — acknowledging alone can’t approve a claim.</p>
+          <input
+            className="flow-input"
+            placeholder="e.g. link to the review page, case-study doc, sales report"
+            value={proof}
+            onChange={(e) => setProof(e.target.value)}
+            aria-label="Proof source"
+          />
+          <button className="btn-secondary" disabled={busy || proof.trim().length < 5} onClick={acknowledge}>
+            Record proof source
+          </button>
+        </>
       )}
     </div>
   );

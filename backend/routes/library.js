@@ -168,9 +168,31 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     // Library metadata
     if (typeof b.favourite === 'boolean') patch.favourite = b.favourite;
     if (typeof b.archived === 'boolean') patch.archived = b.archived;
-    // v5 Prompt 11: record a compliance acknowledgement for high-risk creatives.
-    if (b.compliance_ack === true) patch.compliance_ack = { acknowledged: true, at: new Date().toISOString() };
-    else if (b.compliance_ack === false) patch.compliance_ack = { acknowledged: false, at: new Date().toISOString() };
+    // v6 Prompt 24: acknowledging high-risk claims requires the actual proof
+    // source (link or where the evidence lives) — a bare checkbox no longer
+    // unlocks "ready". compliance_proof travels with compliance_ack.
+    if (b.compliance_ack === true) {
+      patch.compliance_ack = {
+        acknowledged: true,
+        proof_source: typeof b.compliance_proof === 'string' ? b.compliance_proof.trim().slice(0, 500) : '',
+        at: new Date().toISOString(),
+      };
+    } else if (b.compliance_ack === false) patch.compliance_ack = { acknowledged: false, at: new Date().toISOString() };
+    // v6 Prompt 25: researched keyword metrics are only stored with their
+    // source AND date, recorded by the user — never by the generator.
+    if (req.params.table === 'seo_assets' && ('metric_source' in b || 'metric_date' in b || 'metric_notes' in b)) {
+      if (b.metric_source === null) { patch.metric_source = null; patch.metric_date = null; patch.metric_notes = null; }
+      else {
+        const src = typeof b.metric_source === 'string' ? b.metric_source.trim().slice(0, 300) : '';
+        const date = typeof b.metric_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.metric_date) ? b.metric_date : '';
+        if (!src || !date) {
+          return res.status(400).json({ error: 'Keyword metrics need both a source and the date you looked them up.' });
+        }
+        patch.metric_source = src;
+        patch.metric_date = date;
+        if (typeof b.metric_notes === 'string') patch.metric_notes = b.metric_notes.slice(0, 1000);
+      }
+    }
     if (typeof b.status === 'string') {
       const nextStatus = b.status.slice(0, 30);
       // Block unsupported proof / fake scarcity from reaching "ready"/"published".

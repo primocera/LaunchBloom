@@ -3,9 +3,6 @@
   "functions": {
     "api/index.js": { "maxDuration": 300 }
   },
-  "crons": [
-    { "path": "/api/cron/email-outbox", "schedule": "0 6 * * *" }
-  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },

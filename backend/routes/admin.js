@@ -312,7 +312,8 @@ router.post('/api/admin/email-outbox/replay/:id', requireAuth, requireAdmin, asy
   res.json({ ok: true });
 });
 
-// Cron entry point (Vercel cron sends `Authorization: Bearer ${CRON_SECRET}`).
+// Cron entry point. Called by an external scheduler (cron-job.org on the free
+// stack — configure it to send `Authorization: Bearer ${CRON_SECRET}`).
 // No session — authenticated by the shared secret only.
 router.get('/api/cron/email-outbox', async (req, res) => {
   const secret = process.env.CRON_SECRET;

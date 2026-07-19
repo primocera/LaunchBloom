@@ -595,9 +595,14 @@ router.patch(
       for (const k of cfg.editable) {
         if (k in (req.body || {})) updates[k] = req.body[k];
       }
-      // v5 Prompt 11: normalise a boolean compliance_ack into the stored shape.
+      // v6 Prompt 24: an acknowledgement carries its proof source — a bare
+      // checkbox cannot legalize a high-risk claim.
       if (typeof updates.compliance_ack === 'boolean') {
-        updates.compliance_ack = { acknowledged: updates.compliance_ack, at: new Date().toISOString() };
+        updates.compliance_ack = {
+          acknowledged: updates.compliance_ack,
+          proof_source: typeof (req.body || {}).compliance_proof === 'string' ? req.body.compliance_proof.trim().slice(0, 500) : '',
+          at: new Date().toISOString(),
+        };
       }
       if (!Object.keys(updates).length) {
         return res.status(400).json({ error: 'No editable fields provided' });

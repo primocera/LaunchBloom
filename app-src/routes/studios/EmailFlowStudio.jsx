@@ -82,6 +82,9 @@ const CAMPAIGN_FIELDS = [
   { name: 'start_date', label: 'Start date', type: 'text', placeholder: 'e.g. 2026-08-01' },
   { name: 'end_date', label: 'End date', type: 'text', placeholder: 'e.g. 2026-08-07' },
   { name: 'timezone', label: 'Timezone', type: 'text', placeholder: 'e.g. America/New_York' },
+  // v6 Prompt 22: operational metadata so every email is send-ready.
+  { name: 'sender_identity', label: 'Sender identity', type: 'text', placeholder: 'e.g. Sarah from BloomBox (founder voice)' },
+  { name: 'footer_requirements', label: 'Footer / unsubscribe requirements', type: 'text', placeholder: 'e.g. company address + unsubscribe link (required by law)' },
   { name: 'target_language', label: 'Target language', type: 'text', placeholder: 'English' },
   { name: 'extra_context', label: 'Products / context', type: 'textarea' },
 ];

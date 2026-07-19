@@ -137,6 +137,9 @@ function Calendar() {
       {days.map(({ date, items: dayItems }) => (
         <div className="account-section" key={date}>
           <h3>{date}</h3>
+          {dayItems.length > 2 && (
+            <p className="flow-muted" role="note">{dayItems.length} posts planned on one day — an unrealistic density for most solo teams. Consider spreading them out.</p>
+          )}
           {dayItems.map((it) => (
             <div className="calendar-row" key={it.id}>
               <span>{itemLabel(it)} — {it.hook}</span>

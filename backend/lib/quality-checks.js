@@ -166,8 +166,39 @@ const FAKE_SCARCITY = /only \d+ left|act now|expires (?:tonight|today)|last chan
 const UNREALISTIC = /guarantee|overnight|get rich|passive income|instant results|100%|effortless/i;
 const blob = (o) => JSON.stringify(o || {}).toLowerCase();
 
+// ── v6 Prompt 21: per-claim provenance + unresolved-fact placeholders ───────
+
+// Claims that must be backed by user-supplied proof: numbers/percentages tied
+// to results, review/customer counts, superlative results, certifications.
+const RISKY_CLAIM = /\b\d+(?:[.,]\d+)?\s*%|\b\d[\d,]*\+?\s*(?:customers|clients|reviews|users|sales|sold)\b|award.?winning|certified|clinically|best.?selling|#1\b|\bproven\b/gi;
+
+/**
+ * Risky claims found in the generated pages that do not appear in the proof
+ * the user actually supplied. Deterministic — the label is what the reviewer
+ * must verify or delete.
+ */
+function claimProvenanceWarnings(pages = [], proofText = '') {
+  const proof = String(proofText || '').toLowerCase();
+  const w = [];
+  pages.forEach((p, i) => {
+    const label = p.page_type || `page ${i + 1}`;
+    const found = blob(p).match(RISKY_CLAIM) || [];
+    for (const claim of new Set(found.map((c) => c.trim().toLowerCase()))) {
+      if (!proof.includes(claim)) {
+        w.push(`${label}: claim "${claim}" is not in your supplied proof — verify the source or remove it before publishing.`);
+      }
+    }
+  });
+  return w;
+}
+
+/** Count `[bracketed placeholder]` unresolved facts left in a page. */
+function unresolvedPlaceholderCount(page = {}) {
+  return (JSON.stringify(page).match(/\[[A-Za-z][^\]\n]{2,80}\]/g) || []).length;
+}
+
 /** Website pages: H1, CTA, meta description length, ≥3 benefits, no invented proof. */
-function checkWebsitePages(pages = []) {
+function checkWebsitePages(pages = [], { proof = '' } = {}) {
   const w = [];
   pages.forEach((p, i) => {
     const label = p.page_type || `page ${i + 1}`;
@@ -182,13 +213,20 @@ function checkWebsitePages(pages = []) {
     const bullets = (p.sections || []).reduce((n, s) => n + ((s.bullets || []).length), 0);
     if (bullets < 3) w.push(`${label}: fewer than 3 benefit bullets.`);
     if (GUARANTEE.test(blob(p))) w.push(`${label}: may contain invented testimonials or guarantees — verify before publishing.`);
+    const placeholders = unresolvedPlaceholderCount(p);
+    if (placeholders > 0) w.push(`${label}: ${placeholders} unresolved fact placeholder(s) in brackets — fill in the real details before publishing.`);
   });
+  w.push(...claimProvenanceWarnings(pages, proof));
   return w;
 }
 
 /** Emails: subject ≤70 chars, preheader ≠ subject, CTA + body present, honest urgency. */
-function checkEmails(items = [], { hasDeadline = false } = {}) {
+function checkEmails(items = [], { hasDeadline = false, timezone = null } = {}) {
   const w = [];
+  // v6 Prompt 22: a real deadline without a timezone is operationally ambiguous.
+  if (hasDeadline && !timezone) {
+    w.push('The campaign has an end date but no timezone — set one so send times and the deadline are unambiguous.');
+  }
   items.forEach((e, i) => {
     const label = `email ${e.email_order || i + 1}`;
     if (!has(e.subject_line, 1)) w.push(`${label}: missing subject line.`);
@@ -206,6 +244,27 @@ function checkEmails(items = [], { hasDeadline = false } = {}) {
   return w;
 }
 
+// ── v6 Prompt 23: distinct angles + realistic publishing density ────────────
+
+const tokens = (s) => new Set(String(s || '').toLowerCase().split(/\W+/).filter((t) => t.length > 3));
+
+/** Pairs of items whose hooks are near-duplicates (token overlap ≥ 60%). */
+function repeatedHookWarnings(items = []) {
+  const w = [];
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const a = tokens(items[i].hook);
+      const b = tokens(items[j].hook);
+      if (a.size < 3 || b.size < 3) continue;
+      const shared = [...a].filter((t) => b.has(t)).length;
+      if (shared / Math.min(a.size, b.size) >= 0.6) {
+        w.push(`items ${i + 1} and ${j + 1} share nearly the same hook — give each a distinct angle, not a rephrase.`);
+      }
+    }
+  }
+  return w;
+}
+
 /** Social: hook, CTA, non-generic caption, visual direction. */
 function checkSocial(items = []) {
   const w = [];
@@ -216,6 +275,15 @@ function checkSocial(items = []) {
     if (!has(s.caption, 15) || GENERIC_PHRASES.test(s.caption || '')) w.push(`${label}: caption looks generic.`);
     if (!has(s.visual_direction, 5)) w.push(`${label}: missing visual direction.`);
   });
+  w.push(...repeatedHookWarnings(items));
+  // Role/pillar mix: a campaign set that is all one pillar is not a system.
+  const pillars = new Set(items.map((s) => s.pillar).filter(Boolean));
+  if (items.length >= 5 && pillars.size === 1) {
+    w.push(`all ${items.length} items serve the "${[...pillars][0]}" pillar — balance the set across education, proof, objections, community and sales.`);
+  }
+  if (items.length > 21) {
+    w.push(`${items.length} items is more than one post per day for three weeks — an unrealistic publishing density for a solo founder. Plan the strongest ones first.`);
+  }
   return w;
 }
 
@@ -248,15 +316,23 @@ function creativeComplianceFlags(c = {}) {
 
 /**
  * Whether a creative may move to "ready"/"published". Blocked when it has
- * compliance flags the user has not acknowledged (unsupported proof / fake
- * scarcity). Returns { ok, reason }.
+ * compliance flags without a recorded proof source (v6 Prompt 24: a checkbox
+ * acknowledgement alone cannot legalize an unsupported claim — the user must
+ * say where the proof lives). Returns { ok, reason }.
  */
 function creativeReadyGate(row = {}) {
   const flags = creativeComplianceFlags(row);
   if (flags.length === 0) return { ok: true };
-  const ack = row.compliance_ack && row.compliance_ack.acknowledged;
-  if (ack) return { ok: true };
-  return { ok: false, reason: 'Acknowledge the compliance warnings (real proof, honest urgency) before marking this creative ready.' };
+  const ack = row.compliance_ack || {};
+  if (ack.acknowledged && typeof ack.proof_source === 'string' && ack.proof_source.trim().length >= 5) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    reason: ack.acknowledged
+      ? 'Attach the proof source (link or where the evidence lives) — acknowledgement alone cannot approve a high-risk claim.'
+      : 'This creative has high-risk claims. Record the real proof source before marking it ready.',
+  };
 }
 
 /** True when concepts are genuinely distinct (differ by angle/mechanism). */
@@ -282,7 +358,7 @@ function checkCreative(items = []) {
     }
     if (c.creative_type === 'search_ad') w.push(...searchAdCharWarnings(c, label));
     if (creativeComplianceFlags(c).length && !(c.compliance_ack && c.compliance_ack.acknowledged)) {
-      w.push(`${label}: has compliance flags — acknowledge before marking ready.`);
+      w.push(`${label}: has compliance flags — record the proof source before marking ready.`);
     }
   });
   if (!conceptsDistinct(items)) w.push('Some concepts share the same angle — make each test a distinct mechanism, not a headline variant.');
@@ -305,7 +381,7 @@ function checkSeo(items = []) {
 function qualityWarnings(kind, result = {}, opts = {}) {
   try {
     switch (kind) {
-      case 'website': return checkWebsitePages(result.pages || []);
+      case 'website': return checkWebsitePages(result.pages || [], opts);
       case 'email': return checkEmails(result.items || [], opts);
       case 'social': return checkSocial(result.items || []);
       case 'creative': return checkCreative(result.items || []);
@@ -333,4 +409,8 @@ module.exports = {
   creativeComplianceFlags,
   creativeReadyGate,
   conceptsDistinct,
+  // v6 Prompts 21/23 — provenance + distinctness helpers
+  claimProvenanceWarnings,
+  unresolvedPlaceholderCount,
+  repeatedHookWarnings,
 };

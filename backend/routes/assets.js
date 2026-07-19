@@ -278,10 +278,14 @@ router.post('/generate-website-kit', idempotent('generate-website-kit'), planGat
     const { data: saved, error } = await supabase.from('website_pages').insert(rows).select();
     if (error) throw new Error('Failed to save website pages: ' + error.message);
 
+    // v6 Prompt 21: claims are checked against the proof the user actually
+    // supplied — anything risky outside it gets a per-claim warning.
+    const suppliedProof = [req.body.proof, req.body.product_facts, products ? JSON.stringify(products) : '']
+      .filter(Boolean).join('\n');
     res.json({
       ok: true,
       pages: saved,
-      quality_warnings: qualityWarnings('website', result),
+      quality_warnings: qualityWarnings('website', result, { proof: suppliedProof }),
       plan: req.userPlan,
       context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),
@@ -317,6 +321,7 @@ router.post('/generate-email-flow', idempotent('generate-email-flow'), planGate(
       offer_id, launch_kit_id, flow_types, business_type,
       target_language, campaign_goal, campaign_count, products, extra_context,
       tone, email_length, incentive, deadline, compliance_notes,
+      sender_identity, footer_requirements,
     } = req.body || {};
 
     if (!Array.isArray(flow_types) || flow_types.length === 0) {
@@ -344,6 +349,8 @@ router.post('/generate-email-flow', idempotent('generate-email-flow'), planGate(
       line('Incentive', incentive),
       line('Deadline', deadline),
       line('Compliance / claims to avoid', compliance_notes),
+      line('Sender identity (write in this voice/from-name)', sender_identity),
+      line('Footer / unsubscribe requirements (reference in design_notes, never fake)', footer_requirements),
       products ? `Product facts (use only these; bracket anything missing):\n${JSON.stringify(products).slice(0, 2000)}` : null,
       line('Extra context', extra_context),
       `Return a JSON items array with exactly ${seq.total} emails matching the blueprint order and flow_type/email_order.`,
@@ -618,7 +625,7 @@ router.post('/generate-campaign-emails', idempotent('generate-campaign-emails'),
       campaign_goal: result.campaign_goal,
       campaign_type: result.campaign_type,
       emails: saved,
-      quality_warnings: qualityWarnings('email', result, { hasDeadline }),
+      quality_warnings: qualityWarnings('email', result, { hasDeadline, timezone }),
       plan: req.userPlan,
       context_used: brand.summary,
       usage: await usageFor(ws.id, req.userPlan, req.userEmail, req.userId),

@@ -60,9 +60,16 @@ function renderPage(item) {
   const page = item.sections || {};
   const sections = Array.isArray(page.sections) ? page.sections : [];
   const heroDirs = Array.isArray(page.hero_directions) ? page.hero_directions : [];
+  // v6 Prompt 21: unresolved [bracketed facts] must be filled before publish.
+  const placeholders = (JSON.stringify(page).match(/\[[A-Za-z][^\]\n]{2,80}\]/g) || []).length;
   return (
     <>
       <div className="gen-card-title">{(page.page_type || item.page_type || 'page').replace(/_/g, ' ')}</div>
+      {placeholders > 0 && (
+        <p className="flow-muted" role="note">
+          {placeholders} unresolved fact placeholder{placeholders === 1 ? '' : 's'} in brackets — replace with real details before this page is review-ready.
+        </p>
+      )}
       <AssetField label="Conversion goal" value={page.page_goal} />
       <AssetField label="SEO title" value={item.seo_title || page.seo_title} copy />
       <AssetField label="Meta description" value={item.meta_description || page.meta_description} copy />
@@ -115,12 +122,18 @@ function fullCopy(item) {
 }
 
 export default function WebsiteStudio() {
+  // v6 Prompt 25: an SEO idea can arrive as a ready-made page brief.
+  let brief = '';
+  try {
+    brief = localStorage.getItem('of-website-brief') || '';
+    if (brief) localStorage.removeItem('of-website-brief');
+  } catch { /* storage unavailable */ }
   return (
     <GeneratorStudio
       title="Website copy"
       blurb="Create structured drafts for the page’s job — with one primary CTA, evidence-aware claims and metadata to review."
       fields={FIELDS}
-      initial={{ target_language: 'English', page_types: ['home'] }}
+      initial={{ target_language: 'English', page_types: brief ? ['landing'] : ['home'], extra_context: brief || undefined }}
       generate={(v, opts) => api.generateWebsiteKit(v, opts)}
       resultKey="pages"
       table="website_pages"

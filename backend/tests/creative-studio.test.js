@@ -56,10 +56,17 @@ test('claim safety surfaces guarantees and fake scarcity as compliance flags', (
   assert.ok(flags.some((f) => /urgency|scarcity/i.test(f)));
 });
 
-test('ready gate blocks unacknowledged high-risk claims, allows after ack', () => {
+test('ready gate requires a recorded proof source, not just an acknowledgement (v6 P24)', () => {
   const risky = { primary_text: '100% guaranteed results overnight' };
   assert.equal(creativeReadyGate(risky).ok, false);
-  assert.equal(creativeReadyGate({ ...risky, compliance_ack: { acknowledged: true } }).ok, true);
+  // A bare checkbox acknowledgement can no longer legalize the claim.
+  const ackOnly = creativeReadyGate({ ...risky, compliance_ack: { acknowledged: true } });
+  assert.equal(ackOnly.ok, false);
+  assert.match(ackOnly.reason, /proof source/i);
+  // Proof source attached → allowed.
+  assert.equal(creativeReadyGate({ ...risky, compliance_ack: { acknowledged: true, proof_source: 'https://reviews.example.com/product' } }).ok, true);
+  // Whitespace-only proof does not count.
+  assert.equal(creativeReadyGate({ ...risky, compliance_ack: { acknowledged: true, proof_source: '   ' } }).ok, false);
   assert.equal(creativeReadyGate({ primary_text: 'A calm honest benefit line' }).ok, true);
 });
 

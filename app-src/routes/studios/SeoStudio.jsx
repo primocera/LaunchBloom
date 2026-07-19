@@ -1,5 +1,17 @@
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import GeneratorStudio, { AssetField } from './generator';
+
+/** v6 Prompt 25: seed the Website studio with this idea as a page brief. */
+export function ideaToPageBrief(item) {
+  return [
+    `Write this page for the primary keyword "${item.keyword}" (${item.keyword_intent || 'intent unknown'}).`,
+    `H1: ${item.h1 || ''}`,
+    `SEO title: ${item.seo_title || ''}`,
+    `Meta description: ${item.meta_description || ''}`,
+    Array.isArray(item.h2s) && item.h2s.length ? `Follow this outline:\n${item.h2s.map((h) => `- ${h}`).join('\n')}` : '',
+  ].filter(Boolean).join('\n');
+}
 
 // ---------------------------------------------------------------------------
 // SEO Ideas Studio (v6 Prompt 14): full generator-shell parity with the other
@@ -35,13 +47,18 @@ const RESEARCH_CHECKLIST = [
   'Check the target page does not compete with an existing page for the same keyword.',
 ];
 
-function renderIdea(item) {
+function renderIdea(item, { navigate }) {
   const faq = Array.isArray(item.faq) ? item.faq : [];
+  const researched = Boolean(item.metric_source && item.metric_date);
   return (
     <>
       <div className="gen-card-title">
         {item.keyword}{' '}
-        <span className="seo-badge" title="This is an AI content idea, not researched keyword data.">Not researched</span>
+        {researched ? (
+          <span className="seo-badge" title="Metrics recorded by you, with source and date.">Researched — {item.metric_source} ({item.metric_date})</span>
+        ) : (
+          <span className="seo-badge" title="This is an AI content idea, not researched keyword data.">Not researched</span>
+        )}
       </div>
       <AssetField label="Page type" value={item.page_type} />
       <AssetField label="Search intent" value={item.keyword_intent} />
@@ -59,6 +76,17 @@ function renderIdea(item) {
         <ul className="kit-checklist">
           {RESEARCH_CHECKLIST.map((s, i) => <li key={i}>{s}</li>)}
         </ul>
+      </div>
+      <div className="flow-row" style={{ marginTop: 10 }}>
+        <button
+          className="btn-secondary"
+          onClick={() => {
+            localStorage.setItem('of-website-brief', ideaToPageBrief(item));
+            navigate('/app/website');
+          }}
+        >
+          Use as a page brief in Website copy →
+        </button>
       </div>
     </>
   );
@@ -78,6 +106,7 @@ function fullCopy(item) {
 }
 
 export default function SeoStudio() {
+  const navigate = useNavigate();
   return (
     <GeneratorStudio
       title="SEO Ideas"
@@ -87,7 +116,7 @@ export default function SeoStudio() {
       generate={(v, opts) => api.generateSeoIdeas(v, opts)}
       resultKey="items"
       table="seo_assets"
-      renderItem={renderIdea}
+      renderItem={(item) => renderIdea(item, { navigate })}
       fullCopy={fullCopy}
     />
   );
