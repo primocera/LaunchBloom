@@ -83,8 +83,9 @@ test.describe('auth boundaries', () => {
 
   test('signup form requires terms consent and offers optional marketing consent', async ({ page }) => {
     await page.goto('/app/signup');
-    await expect(page.getByText('No payment method yet', { exact: false })).toBeVisible();
-    const submit = page.getByRole('button', { name: /create account/i });
+    // Prompt 16: signup is free; generation (and the trial) come later.
+    await expect(page.getByText('choose a plan only when you’re ready to generate', { exact: false })).toBeVisible();
+    const submit = page.getByRole('button', { name: /create workspace/i });
     await expect(submit).toBeDisabled();
     await page.getByLabel('Email address').fill('e2e@example.com');
     await page.getByLabel('Password', { exact: true }).fill('longpassword1');
@@ -110,7 +111,7 @@ test.describe('mobile smoke @mobile', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth
     );
     expect(overflow).toBeLessThanOrEqual(1);
-    await expect(page.getByRole('link', { name: /build my marketing campaign/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /create my campaign/i }).first()).toBeVisible();
   });
 
   test('login page is usable on a phone @mobile', async ({ page }) => {
