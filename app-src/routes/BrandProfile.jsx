@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { minimumViableProfile } from '../lib/next-actions';
 
 // ---------------------------------------------------------------------------
 // v5 Prompt 5: guided Brand setup with progressive disclosure.
@@ -260,7 +261,7 @@ export default function BrandProfile() {
         await api.saveBrandProfile(next);
         if (seq === saveSeq.current) setStatus('Brand Profile saved. New generations will use these facts.');
       } catch {
-        if (seq === saveSeq.current) setStatus('Could not save — retrying');
+        if (seq === saveSeq.current) setStatus('Could not save — retrying. Your changes are still on this device.');
         setTimeout(() => { if (seq === saveSeq.current) persist(next); }, 4000);
       }
     }, 700);
@@ -292,9 +293,26 @@ export default function BrandProfile() {
         <span className="brand-status" role="status" aria-live="polite">{status}</span>
       </div>
       <p className="muted">
-        Add the facts LaunchBloom should reuse — and the claims it must never invent. You can refine
-        this profile as your business changes.
+        Add the facts LaunchBloom should reuse — and the claims it must never invent. Changes apply
+        to future generations; assets you&rsquo;ve already saved keep the context they were generated
+        from.
       </p>
+
+      {/* v7 LB-03: the smallest credible baseline, stated — not a score. */}
+      {(() => {
+        const missing = minimumViableProfile(profile);
+        return missing.length ? (
+          <p className="muted bp-baseline" role="status">
+            Before your first generation, add {missing.join(', ')}. Everything else here improves
+            quality but is optional.
+          </p>
+        ) : (
+          <p className="muted bp-baseline" role="status">
+            Your baseline is complete — generators have what they need. Deeper proof and restriction
+            details improve review quality.
+          </p>
+        );
+      })()}
 
       {SECTIONS.map((section) => {
         const { done, total } = sectionCompleteness(profile, section);

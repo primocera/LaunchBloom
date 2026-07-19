@@ -78,6 +78,12 @@ export default function Campaigns() {
   }
 
   async function approve(c) {
+    // v7 LB-04: reopening is explicit about what changes downstream. Approval
+    // is a human decision — it does not mean legally approved or fact-checked.
+    if (c.brief_approved && !window.confirm(
+      'Reopen this brief? New generations will pause until you approve it again. ' +
+      'Assets you already generated keep the snapshot they were created from.'
+    )) return;
     try { await api.updateCampaign(c.id, { brief_approved: !c.brief_approved }); load(); }
     catch (err) { setError(err.message); }
   }
@@ -277,15 +283,22 @@ export default function Campaigns() {
 
           <div className="confirm-row">
             <button className="btn-secondary" onClick={() => strategy(c)} disabled={busyId === c.id}>
-              {busyId === c.id ? 'Generating…' : c.strategy ? 'Regenerate strategy (1 action)' : 'Generate strategy (1 action)'}
+              {busyId === c.id ? 'Generating…' : c.strategy ? 'Regenerate strategy · 1 AI action' : 'Generate strategy (optional) · 1 AI action'}
             </button>
-            {c.strategy && (
-              <button className="btn-secondary" onClick={() => approve(c)}>
-                {c.brief_approved ? 'Unapprove' : 'Approve brief and start creating'}
-              </button>
-            )}
+            {/* v7 LB-04: a complete manual brief can be approved without paying
+                for AI strategy — strategy is optional, approval is the gate. */}
+            <button
+              className="btn-secondary"
+              onClick={() => approve(c)}
+              disabled={!c.brief_approved && missing.length > 0}
+              title={!c.brief_approved && missing.length > 0
+                ? `Add ${missing.map(([, label]) => label).join(', ')} first`
+                : undefined}
+            >
+              {c.brief_approved ? 'Reopen brief' : 'Approve brief and start creating'}
+            </button>
             <a className="btn-secondary" href={`/app/create?campaign=${c.id}`}>Create assets</a>
-            <button className="btn-secondary" onClick={() => duplicate(c)}>Duplicate</button>
+            <button className="btn-secondary" onClick={() => duplicate(c)} title="Copies the brief as a new draft campaign — linked assets are not copied">Duplicate</button>
             <button className="btn-secondary" onClick={() => archive(c)}>{c.archived ? 'Unarchive' : 'Archive'}</button>
             <button className="btn-secondary" onClick={() => remove(c)}>Delete</button>
           </div>

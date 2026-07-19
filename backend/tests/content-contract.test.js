@@ -130,6 +130,26 @@ test('paywall and checkout banner switch copy for prior-trial users', () => {
   assert.match(app, /Your subscription is active/, 'non-trial checkout success needs its own copy');
 });
 
+// ── Brief approval is a human decision, not an AI-strategy purchase ─────────
+
+test('a complete manual brief can be approved without generating strategy', () => {
+  const campaigns = read(path.join(APP_SRC, 'routes', 'Campaigns.jsx'));
+  // The approve button must not be conditioned on c.strategy existing.
+  assert.ok(!/c\.strategy && \([\s\S]{0,200}approve\(c\)/.test(campaigns), 'approve must not require strategy');
+  assert.match(campaigns, /Generate strategy \(optional\) · 1 AI action/, 'strategy is optional and cost-disclosed');
+  assert.match(campaigns, /Reopen this brief\? New generations will pause/, 'reopen must explain downstream implications');
+  assert.match(campaigns, /keep the snapshot they were created from/, 'reopen must state snapshot semantics');
+});
+
+// ── Brand Profile states the minimum baseline and snapshot semantics ────────
+
+test('Brand Profile shows the minimum baseline and snapshot behavior', () => {
+  const brand = read(path.join(APP_SRC, 'routes', 'BrandProfile.jsx'));
+  assert.match(brand, /minimumViableProfile/, 'must reuse the shared baseline helper');
+  assert.match(brand, /Before your first generation, add/, 'missing baseline must be actionable, not a score');
+  assert.match(brand, /assets you.{0,8}ve already saved keep the context/i, 'snapshot semantics must be stated');
+});
+
 // ── Generation cost is disclosed before every guided-flow generation ────────
 
 test('guided flow discloses the 1-AI-action cost on each generation button', () => {
