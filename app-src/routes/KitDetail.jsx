@@ -6,7 +6,7 @@ import { contentPlanCsv, download, emailSequenceMarkdown, kitMarkdown } from '..
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
-// Prompt 17: the Launch Kit detail page. Tabs per section, structured
+// Prompt 17: the campaign-package detail page. Tabs per section, structured
 // rendering (never raw JSON), copy-to-clipboard everywhere, and a
 // regenerate button per section with a confirmation before replacing.
 // ---------------------------------------------------------------------------
@@ -81,12 +81,12 @@ export default function KitDetail() {
           ))}
         </div>
         {error && <p className="flow-err">{error}</p>}
-        {!kit && !error && <p className="flow-muted">Loading your launch kit…</p>}
+        {!kit && !error && <p className="flow-muted">Loading your campaign package…</p>}
 
         {kit && (
           <>
             <div className="flow-card">
-              <div className="flow-eyebrow">Launch kit</div>
+              <div className="flow-eyebrow">Campaign package</div>
               <h2>{kit.title}</h2>
               <p className="flow-muted">{kit.summary}</p>
             </div>
@@ -110,9 +110,9 @@ export default function KitDetail() {
                     <h3>Export</h3>
                     {!canExport && <span className="kit-badge">Upgrade to export</span>}
                   </div>
-                  <p className="flow-muted">Take the kit into Notion, Google Docs, your email tool or a scheduler.</p>
+                  <p className="flow-muted">Take this campaign package into Notion, Google Docs, your email tool or a scheduler. Review facts, links and claims before publishing anywhere.</p>
                   <div className="flow-row">
-                    <button className="kit-copy" disabled={!canExport} onClick={exportKit}>Export full kit (.md)</button>
+                    <button className="kit-copy" disabled={!canExport} onClick={exportKit}>Export full package (.md)</button>
                     <button className="kit-copy" disabled={!canExport} onClick={exportCsv}>Content plan (.csv)</button>
                     <button className="kit-copy" disabled={!canExport} onClick={exportEmails}>Email sequence (.md)</button>
                   </div>

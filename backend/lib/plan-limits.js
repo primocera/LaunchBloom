@@ -99,7 +99,7 @@ function upgradeMessage(plan, feature) {
   const limits = limitsFor(plan);
   const upgradeTo = NEXT_PLAN[PLAN_ALIASES[plan] || plan] || 'Pro';
   const perPeriod = limits.monthly ? "this month's" : 'your';
-  const label = feature === 'launch_kits' ? 'launch kit' : 'AI action';
+  const label = feature === 'launch_kits' ? 'full launch campaign' : 'AI action';
   if (plan === 'free') return `Start your free trial to generate.`;
   return `You've hit ${perPeriod} ${label} limit on ${limits.label}. Upgrade to ${upgradeTo} for more.`;
 }

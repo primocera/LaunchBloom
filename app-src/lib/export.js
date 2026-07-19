@@ -167,10 +167,10 @@ function itemsMarkdown(title, items, fields) {
   ].join('\n\n');
 }
 
-/** The full launch kit as one clean Markdown document. */
+/** The full campaign package as one clean Markdown document. */
 export function kitMarkdown(kit, items = {}) {
   const parts = [
-    `# ${kit.title || 'Launch Kit'}`,
+    `# ${kit.title || 'Campaign package'}`,
     kit.summary || '',
     kit.launch_checklist?.length ? `## Launch checklist\n${mdList(kit.launch_checklist)}` : '',
     landingPageMarkdown(kit.landing_page || {}),

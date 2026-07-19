@@ -5,7 +5,7 @@ import TrialPaywall from '../components/TrialPaywall';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
-// The guided flow, one page: onboarding → positioning → offers → launch kit.
+// The guided flow, one page: onboarding → positioning → offers → campaign package.
 // Which step you see is derived from what already exists in the workspace,
 // so refreshing (or coming back tomorrow) resumes where you left off.
 // ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ export default function Flow() {
             disabled={!!busy}
             onClick={() => run('positioning', async () => { await api.generatePositioning(); await refresh(); })}
           >
-            {busy === 'positioning' ? 'Working… (30–60s)' : 'Generate my positioning'}
+            {busy === 'positioning' ? 'Working… (30–60s)' : 'Generate my positioning · 1 AI action'}
           </button>
         </div>
       )}
@@ -114,7 +114,7 @@ export default function Flow() {
                 disabled={!!busy}
                 onClick={() => run('offers', async () => { await api.generateOffers(); await refresh(); })}
               >
-                {busy === 'offers' ? 'Designing… (30–60s)' : 'Design my 3 offers'}
+                {busy === 'offers' ? 'Designing… (30–60s)' : 'Design my 3 offers · 1 AI action'}
               </button>
               <button
                 className="flow-btn is-ghost"
@@ -151,7 +151,7 @@ export default function Flow() {
                     navigate(`/app/kits/${r.launch_kit.id}`);
                   })}
                 >
-                  {busy === 'kit' ? 'Building your kit… (1–2 min)' : 'Build launch kit'}
+                  {busy === 'kit' ? 'Building your package… (1–2 min)' : 'Build campaign package · 1 AI action'}
                 </button>
               </div>
             ))}
@@ -159,10 +159,10 @@ export default function Flow() {
         </>
       )}
 
-      {/* ── Step 4: launch kits exist — link to their detail pages ── */}
+      {/* ── Step 4: campaign packages exist — link to their detail pages ── */}
       {step === 4 && (
         <>
-          <h2 className="flow-h2">Your launch kits</h2>
+          <h2 className="flow-h2">Your campaign packages</h2>
           <div className="flow-row" style={{ marginBottom: 14 }}>
             {[['/app/landing-page', 'Landing Page'], ['/app/content-plan', 'Content Plan'], ['/app/email-sequence', 'Emails'], ['/app/ads', 'Ads'], ['/app/seo', 'SEO'], ['/app/weekly-plan', 'Weekly Plan']].map(([to, label]) => (
               <Link key={to} to={to} className="kit-tab" style={{ textDecoration: 'none' }}>{label}</Link>
@@ -171,7 +171,7 @@ export default function Flow() {
           {kits.map((k) => (
             <Link className="flow-card kit-link" to={`/app/kits/${k.id}`} key={k.id}>
               <div>
-                <div className="kit-item-title">{k.title || 'Launch kit'}</div>
+                <div className="kit-item-title">{k.title || 'Campaign package'}</div>
                 <div className="flow-muted">{k.summary}</div>
               </div>
               <span className="kit-open">Open →</span>
@@ -179,7 +179,7 @@ export default function Flow() {
           ))}
           <div className="flow-card">
             <h3>Want to launch something else?</h3>
-            <p className="flow-muted">Pick a different offer and build another kit.</p>
+            <p className="flow-muted">Pick a different offer and build another campaign package.</p>
             <button
               className="flow-btn is-ghost"
               onClick={() => { setKit(null); setKits([]); }}
@@ -211,7 +211,7 @@ function Shell({ step, children }) {
 }
 
 function Steps({ current }) {
-  const labels = ['About you', 'Positioning', 'Offers', 'Launch kit'];
+  const labels = ['About you', 'Positioning', 'Offers', 'Campaign package'];
   return (
     <div className="flow-steps">
       {labels.map((l, i) => (

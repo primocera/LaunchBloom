@@ -13,7 +13,7 @@ const EMPTY = {
 };
 
 // v5 Prompt 6: campaign templates prefill the brief. "Full launch campaign"
-// is the guided flow (positioning → offers → launch kit).
+// is the guided flow (positioning → offers → campaign package).
 const TEMPLATES = [
   { key: 'launch', label: 'Product launch', brief: { objective: 'Launch a new product and drive first sales', channels: ['email', 'social', 'ads', 'landing'] } },
   { key: 'promo', label: 'Promotion', brief: { objective: 'Run a limited-time promotion', channels: ['email', 'social', 'ads'] } },
@@ -126,7 +126,8 @@ export default function Campaigns() {
         <h2>Full launch campaign</h2>
         <p className="muted" style={{ marginTop: 4 }}>
           Website, email, social, ads and SEO ideas from one brief — the guided template that starts
-          with positioning and three offer options.
+          with positioning and three offer options. Each generation step (positioning, offers,
+          campaign package) uses 1 AI action, and the package counts as 1 full launch campaign.
         </p>
         <a className="btn-primary" href="/app/flow" style={{ display: 'inline-block', marginTop: 8 }}>
           Start full launch campaign

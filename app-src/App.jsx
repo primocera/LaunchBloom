@@ -150,7 +150,7 @@ function AppShell() {
           <Route path="/social" element={<SocialStudio />} />
           <Route path="/creative" element={<CreativeStudio />} />
           <Route path="/seo" element={<SeoStudio />} />
-          {/* v5 P3: legacy "Launch Kit: …" routes redirect to their studio.
+          {/* v5 P3: legacy per-section routes redirect to their studio.
               Existing kit data stays reachable via /app/flow and /app/kits/:id. */}
           <Route path="/landing-page" element={<Navigate to="/app/website" replace />} />
           <Route path="/content-plan" element={<Navigate to="/app/social" replace />} />

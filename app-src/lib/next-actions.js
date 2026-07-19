@@ -104,7 +104,7 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
     actions.push({ to: '/app/assets', label: `Finish “${unfinished.title || 'your draft'}”`, reason: 'Unfinished draft' });
   }
   if (!kit && actions.length < 3 && plan && plan !== 'free') {
-    actions.push({ to: '/app/campaigns', label: 'Run the Full launch campaign', reason: 'Positioning, offer and a complete launch kit' });
+    actions.push({ to: '/app/campaigns', label: 'Run the Full launch campaign', reason: 'Positioning, offer and a complete campaign package' });
   }
 
   return { primary, actions: actions.slice(0, 3), usageLevel: level };

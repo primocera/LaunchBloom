@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth';
 import { download } from '../../lib/export';
 import TrialPaywall from '../../components/TrialPaywall';
 import { CopyBtn } from './common';
+import { STATUS_VALUES, statusLabelFor } from '../../lib/status-labels';
 import {
   deriveContext,
   validateFields,
@@ -99,14 +100,14 @@ export function AssetField({ label, value, copy }) {
   );
 }
 
-export const STATUS_LABELS = ['draft', 'edited', 'ready', 'published'];
+export const STATUS_LABELS = STATUS_VALUES;
 
 /** Status pill + cycle button (Prompt 20). Persists via the items PATCH route. */
 export function StatusPill({ table, item, onChange }) {
   const [busy, setBusy] = useState(false);
   const status = item.status || 'draft';
   async function cycle() {
-    const next = STATUS_LABELS[(STATUS_LABELS.indexOf(status) + 1) % STATUS_LABELS.length];
+    const next = STATUS_VALUES[(STATUS_VALUES.indexOf(status) + 1) % STATUS_VALUES.length];
     setBusy(true);
     try {
       const r = await api.updateItem(table, item.id, { status: next });
@@ -119,7 +120,7 @@ export function StatusPill({ table, item, onChange }) {
   }
   return (
     <button className={`gen-status is-${status}`} disabled={busy} onClick={cycle} title="Click to change status">
-      {status}
+      {statusLabelFor(status)}
     </button>
   );
 }

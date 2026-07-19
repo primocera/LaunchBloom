@@ -5,8 +5,8 @@ import '../../flow.css';
 
 // ---------------------------------------------------------------------------
 // Shared scaffolding for the studios (Prompts 18-23): page frame (navigation
-// and account live in the app sidebar), the launch-kit selector ("User can
-// select a launch kit if multiple exist"), and copy buttons with a success
+// and account live in the app sidebar), the campaign-package selector ("User
+// can select a package if multiple exist"), and copy buttons with a success
 // state (Prompt 29).
 // ---------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ export function StudioShell({ title, blurb, kits, kitId, onSelectKit, children }
           {kits && kits.length > 1 && (
             <select className="studio-select" value={kitId || ''} onChange={(e) => onSelectKit(e.target.value)}>
               {kits.map((k) => (
-                <option key={k.id} value={k.id}>{k.title || 'Launch kit'}</option>
+                <option key={k.id} value={k.id}>{k.title || 'Campaign package'}</option>
               ))}
             </select>
           )}
@@ -68,13 +68,13 @@ export function CopyBtn({ text, label = 'Copy' }) {
   );
 }
 
-/** "No kit yet" empty state shared by every studio. */
+/** "No campaign package yet" empty state shared by every legacy studio. */
 export function NoKit() {
   return (
     <div className="flow-card">
-      <h3>No launch kit yet</h3>
-      <p className="flow-muted">Build your first launch kit and this studio fills up automatically.</p>
-      <Link className="flow-btn" to="/app">Go to the flow</Link>
+      <h3>No campaign package yet</h3>
+      <p className="flow-muted">Run the Full launch campaign and this page fills up automatically.</p>
+      <Link className="flow-btn" to="/app/campaigns">Go to Campaigns</Link>
     </div>
   );
 }

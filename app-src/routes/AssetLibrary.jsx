@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { download, findPlaceholders, assetPlainText, assetsCsv, toWordDoc } from '../lib/export';
+import { STATUS_LABEL } from '../lib/status-labels';
 
 // Prompt 13: one searchable library for everything the studios generate.
 const TYPES = [
@@ -12,11 +13,11 @@ const TYPES = [
   ['seo_assets', 'SEO assets'],
 ];
 
-// Playbook v6 Prompt 26 status vocabulary. Underlying enum values are kept
+// Status vocabulary lives in lib/status-labels.js (v7 LB-11) so studio pills
+// and Library always agree. Underlying enum values are kept
 // (draft/edited/ready/published) so the item PATCH route and StatusPill cycle
-// stay valid; only the customer-facing labels change.
-const STATUSES = [['', 'Any status'], ['draft', 'Draft'], ['edited', 'Needs review'], ['ready', 'Ready to export'], ['published', 'Published']];
-const STATUS_LABEL = { draft: 'Draft', edited: 'Needs review', blocked: 'Blocked by unresolved claim', ready: 'Ready to export', published: 'Published' };
+// stay valid; only the customer-facing labels are shared.
+const STATUSES = [['', 'Any status'], ...Object.entries(STATUS_LABEL).filter(([v]) => v !== 'blocked')];
 
 /** Unresolved claims block "Ready to export" — surface that instead. */
 function statusLabel(item) {

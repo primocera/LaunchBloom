@@ -7,13 +7,13 @@ import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 
 // ---------------------------------------------------------------------------
 // Left sidebar, same shell pattern as ConversionForge: brand, nav (Dashboard,
-// Launch Flow, the six studios), and the account block with plan + usage.
+// Launch Flow, the five studios), and the account block with plan + usage.
 // ---------------------------------------------------------------------------
 
 // v5 Prompt 3: canonical navigation — Home, Brand, Campaigns, Create, Library,
 // Account. One asset model, no duplicate generator destinations. The full
 // launch workflow lives inside Campaigns as the "Full launch campaign"
-// template; the old "Launch Kit: …" routes redirect to their studio.
+// template; the old per-section legacy routes redirect to their studio.
 const MAIN_NAV = [
   { to: '/app', label: 'Home', Icon: PagesIcon, end: true },
   { to: '/app/brand', label: 'Brand', Icon: SavedIcon },

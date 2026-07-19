@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 
-// The real pipeline a launch kit goes through — each one is a step the
+// The real pipeline a campaign package goes through — each one is a step the
 // backend actually runs, not invented social proof.
 const STEPS = [
   { icon: '✎', title: 'Learning about you', body: 'Your skills, audience and available time.' },
   { icon: '◎', title: 'Finding your position', body: 'A niche and promise that fit you.' },
   { icon: '⛁', title: 'Designing 3 offers', body: 'Different price points, you pick one.' },
-  { icon: '⚑', title: 'Building the launch kit', body: 'Landing, content, emails, ads, SEO, plan.' },
+  { icon: '⚑', title: 'Building the campaign package', body: 'Landing, content, emails, ads, SEO, plan.' },
 ];
 
 const INTERVAL_MS = 2600;

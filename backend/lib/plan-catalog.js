@@ -4,7 +4,7 @@
 // modals and checkout allowlist all consume this (via GET /api/plans);
 // enforcement limits come from PLAN_LIMITS so numbers can never drift.
 //
-// Prices are display prices in EUR. Annual savings are CALCULATED from the
+// Prices are display prices in USD. Annual savings are CALCULATED from the
 // monthly/yearly numbers — never handwritten.
 // ---------------------------------------------------------------------------
 
