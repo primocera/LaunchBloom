@@ -43,6 +43,11 @@ const CANONICAL_EVENTS = {
   brief_change_detected: 'A material Campaign Brief field was edited (field codes only).',
   stale_asset_opened: 'The brief-change impact review was opened with affected assets.',
   stale_asset_resolved: 'One affected asset was resolved (keep snapshot / regenerate).',
+  // v8 LB-S04 — review queue + evidence locker (categorical only):
+  evidence_added: 'A user-checked evidence record was saved.',
+  review_item_resolved: 'One review-queue item was resolved by an explicit user action.',
+  export_blocked: 'A review-manifest export happened with unresolved blocking findings.',
+  review_manifest_exported: 'A campaign review manifest (handoff record) was exported.',
 };
 
 // Activation (Prompt 18): a documented, testable definition.

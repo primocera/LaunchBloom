@@ -147,6 +147,10 @@ app.use(apiLimiter, adminRouter);
 const campaignsRouter = require('./routes/campaigns');
 app.use(apiLimiter, campaignsRouter);
 
+// Evidence locker (v8 LB-S04) — brings its own JSON parser.
+const evidenceRouter = require('./routes/evidence');
+app.use(apiLimiter, evidenceRouter);
+
 // Asset Library (Prompt 13) — brings its own JSON parser.
 const libraryRouter = require('./routes/library');
 app.use(apiLimiter, libraryRouter);

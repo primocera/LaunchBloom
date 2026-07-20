@@ -113,6 +113,16 @@ export const api = {
   campaignBriefImpact: (id) => request(`/api/campaigns/${id}/brief-impact`),
   keepAssetSnapshot: (id, asset_table, asset_id) =>
     request(`/api/campaigns/${id}/brief-impact/keep`, { method: 'POST', body: { asset_table, asset_id } }),
+  // v8 LB-S04: review queue + evidence locker + export manifest
+  campaignReview: (id) => request(`/api/campaigns/${id}/review`),
+  campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),
+  evidence: () => request('/api/evidence'),
+  addEvidence: (record) => request('/api/evidence', { method: 'POST', body: record }),
+  updateEvidence: (id, patch) => request(`/api/evidence/${id}`, { method: 'PATCH', body: patch }),
+  linkEvidence: (id, asset_table, asset_id) =>
+    request(`/api/evidence/${id}/link`, { method: 'POST', body: { asset_table, asset_id } }),
+  unlinkEvidence: (id, asset_table, asset_id) =>
+    request(`/api/evidence/${id}/link`, { method: 'DELETE', body: { asset_table, asset_id } }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),

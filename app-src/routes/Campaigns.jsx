@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { download } from '../lib/export';
 
 // Prompt 12: Campaign Studio — the organizing layer. Define one brief, generate
 // a strategy (1 AI action), approve it, then generate linked assets in the
@@ -284,6 +285,145 @@ function BriefImpact({ campaign }) {
   );
 }
 
+// v8 LB-S04: one review queue per campaign + evidence locker + manifest
+// export. The manifest is a handoff record — never an approval or compliance
+// certificate, and unresolved items are disclosed, never erased.
+const EVIDENCE_TYPES = ['review', 'testimonial', 'statistic', 'certification', 'press', 'internal_data', 'other'];
+const EMPTY_EVIDENCE = { type: 'review', label: '', source_url: '', checked_date: '', permitted_claim: '' };
+
+function ReviewQueue({ campaign }) {
+  const [open, setOpen] = useState(false);
+  const [review, setReview] = useState(null);
+  const [error, setError] = useState(null);
+  const [ev, setEv] = useState(null); // null = form closed
+
+  async function load() {
+    setOpen(true);
+    setError(null);
+    try { setReview((await api.campaignReview(campaign.id)).review); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function addEvidence(e) {
+    e.preventDefault();
+    setError(null);
+    try {
+      const { evidence } = await api.addEvidence(ev);
+      setEv(null);
+      // Link straight to an asset if one was chosen in the form.
+      if (ev._link) {
+        const [table, id] = ev._link.split(':');
+        await api.linkEvidence(evidence.id, table, id);
+      }
+      load();
+    } catch (err) { setError(err.message); }
+  }
+
+  async function exportManifest() {
+    setError(null);
+    try {
+      const { manifest_markdown } = await api.campaignReviewManifest(campaign.id);
+      download(`${campaign.name.replace(/[^a-z0-9]+/gi, '-')}-review-manifest.md`, manifest_markdown, 'text/markdown');
+    } catch (err) { setError(err.message); }
+  }
+
+  if (!open) return <button className="btn-secondary" onClick={load}>Review queue</button>;
+  if (!review && !error) return <p className="muted">Building the review queue…</p>;
+
+  const q = review;
+  return (
+    <div className="campaign-review">
+      <h3 style={{ marginBottom: 4 }}>Review queue</h3>
+      {error && <p className="login-err">{error}</p>}
+      {q && (
+        <>
+          {q.blocking.length > 0 && (
+            <p><strong>{q.blocking.length} blocking item{q.blocking.length === 1 ? '' : 's'}</strong> — high-severity conflicts to resolve before handoff.</p>
+          )}
+          {q.findings.length > 0 && (
+            <p className="muted">Consistency: {q.findings.length} finding{q.findings.length === 1 ? '' : 's'} (open the consistency check to resolve).</p>
+          )}
+          {q.stale.length > 0 && (
+            <p className="muted">Brief changes: {q.stale.length} asset{q.stale.length === 1 ? '' : 's'} to review (open “Review brief changes”).</p>
+          )}
+          {q.needs_review_assets.length > 0 && (
+            <p className="muted">
+              Needs review: {q.needs_review_assets.map((a) => a.title).join(', ')} —{' '}
+              <a className="account-link" href="/app/assets">open Library</a>
+            </p>
+          )}
+          {q.evidence_reminders.length > 0 && (
+            <p className="muted">Evidence to re-check: {q.evidence_reminders.map((e) => e.label).join(', ')}</p>
+          )}
+          {q.findings.length === 0 && q.stale.length === 0 && q.needs_review_assets.length === 0 && (
+            <p className="muted">No open review items detected by these checks. This is not an approval — the final call stays with you.</p>
+          )}
+
+          <h4 style={{ marginBottom: 2 }}>Evidence</h4>
+          {q.evidence.length === 0 && <p className="muted">No evidence linked to this campaign yet. Record real proof once, reuse it across assets.</p>}
+          {q.evidence.map((e) => (
+            <p className="muted" key={e.id} style={{ margin: '2px 0' }}>
+              {e.label} ({e.type}) · checked {e.checked_date}
+              {e.source_url && <> · <a className="account-link" href={e.source_url} target="_blank" rel="noreferrer">source</a></>}
+              {' '}· linked to {q.evidence_links.filter((l) => l.evidence_id === e.id).length} asset(s)
+            </p>
+          ))}
+          {ev ? (
+            <form onSubmit={addEvidence} className="account-section" style={{ padding: 10 }}>
+              <div className="brand-field">
+                <label>Type</label>
+                <select value={ev.type} onChange={(e) => setEv({ ...ev, type: e.target.value })}>
+                  {EVIDENCE_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
+                </select>
+              </div>
+              <div className="brand-field">
+                <label>Label</label>
+                <input value={ev.label} onChange={(e) => setEv({ ...ev, label: e.target.value })} placeholder='e.g. "Trustpilot 4.8 rating"' required />
+              </div>
+              <div className="brand-field">
+                <label>Source URL</label>
+                <input value={ev.source_url} onChange={(e) => setEv({ ...ev, source_url: e.target.value })} placeholder="https://…" />
+              </div>
+              <div className="brand-field">
+                <label>Date you checked it</label>
+                <input type="date" value={ev.checked_date} onChange={(e) => setEv({ ...ev, checked_date: e.target.value })} required />
+              </div>
+              <div className="brand-field">
+                <label>Permitted claim</label>
+                <input value={ev.permitted_claim} onChange={(e) => setEv({ ...ev, permitted_claim: e.target.value })} placeholder="The exact claim this evidence supports" />
+              </div>
+              {q.assets.length > 0 && (
+                <div className="brand-field">
+                  <label>Link to asset (optional)</label>
+                  <select value={ev._link || ''} onChange={(e) => setEv({ ...ev, _link: e.target.value })}>
+                    <option value="">—</option>
+                    {q.assets.map((a) => <option key={a.table + a.id} value={`${a.table}:${a.id}`}>{a.title}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="confirm-row">
+                <button className="btn-secondary" type="submit">Save evidence</button>
+                <button className="account-link" type="button" onClick={() => setEv(null)}>Cancel</button>
+              </div>
+            </form>
+          ) : (
+            <button className="btn-secondary" onClick={() => setEv({ ...EMPTY_EVIDENCE })}>Add evidence</button>
+          )}
+
+          <div className="confirm-row" style={{ marginTop: 8 }}>
+            <button className="btn-secondary" onClick={exportManifest}
+              title="A handoff record listing assets, statuses, unresolved items and evidence — not an approval or compliance certificate.">
+              Export review manifest{q.blocking.length ? ` (${q.blocking.length} unresolved disclosed)` : ''}
+            </button>
+            <button className="btn-secondary" onClick={load}>Refresh</button>
+            <button className="account-link" onClick={() => setOpen(false)}>Close</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
   const [form, setForm] = useState(null); // null = closed, object = create form
@@ -522,6 +662,7 @@ export default function Campaigns() {
           <Deliverables campaign={c} />
           <Consistency campaign={c} />
           <BriefImpact campaign={c} />
+          <ReviewQueue campaign={c} />
 
           <div className="confirm-row">
             <button className="btn-secondary" onClick={() => strategy(c)} disabled={busyId === c.id}>
