@@ -105,6 +105,10 @@ export const api = {
   campaignDeliverables: (id) => request(`/api/campaigns/${id}/deliverables`),
   saveCampaignDeliverables: (id, deliverables) =>
     request(`/api/campaigns/${id}/deliverables`, { method: 'PUT', body: { deliverables } }),
+  // v8 LB-S02: consistency check (deterministic, free)
+  campaignConsistency: (id) => request(`/api/campaigns/${id}/consistency`),
+  ackConsistencyFinding: (id, fingerprint, note_category) =>
+    request(`/api/campaigns/${id}/consistency/ack`, { method: 'POST', body: { fingerprint, note_category } }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),

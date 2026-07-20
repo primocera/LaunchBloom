@@ -146,6 +146,74 @@ function Deliverables({ campaign }) {
   );
 }
 
+// v8 LB-S02: deterministic cross-channel consistency check. Free — no AI
+// action. A clean result is "no issues detected by these checks", never
+// "campaign approved".
+const ACK_NOTE_OPTIONS = [
+  ['intentional', 'Intentional — keep as is'],
+  ['reviewed_ok', 'Reviewed — looks correct'],
+  ['external_check_pending', 'Waiting on an external check'],
+  ['other', 'Other reason'],
+];
+
+function Consistency({ campaign }) {
+  const [open, setOpen] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    setOpen(true);
+    setError(null);
+    try { setResult(await api.campaignConsistency(campaign.id)); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function ack(f, note) {
+    try {
+      await api.ackConsistencyFinding(campaign.id, f.fingerprint, note);
+      load();
+    } catch (err) { setError(err.message); }
+  }
+
+  if (!open) return <button className="btn-secondary" onClick={load}>Check consistency · free</button>;
+  if (!result && !error) return <p className="muted">Checking…</p>;
+
+  return (
+    <div className="campaign-consistency">
+      <h3 style={{ marginBottom: 4 }}>Consistency check</h3>
+      {error && <p className="login-err">{error}</p>}
+      {result && result.findings.length === 0 && (
+        <p className="muted">{result.clean_message}</p>
+      )}
+      {result && result.findings.map((f) => (
+        <div key={f.fingerprint} className="account-section" style={{ padding: 10, marginBottom: 8 }}>
+          <p style={{ margin: 0 }}>
+            <strong>{f.severity === 'high' ? 'High' : 'Medium'} · {f.code.replace(/_/g, ' ')}</strong>
+            {f.status === 'acknowledged' && <span className="muted"> · acknowledged</span>}
+          </p>
+          <p className="muted" style={{ margin: '4px 0' }}>
+            {f.why}{' '}
+            {f.assets.map((a) => a.title).join(', ')}
+            {f.expected ? ` — brief says: “${f.expected}”` : ''}
+            {f.observed ? ` — found: “${f.observed}”` : ''}
+          </p>
+          <p className="muted" style={{ margin: '4px 0' }}>Detection: {f.detection}. {f.resolution}</p>
+          {f.ackable && f.status !== 'acknowledged' && (
+            <select defaultValue="" onChange={(e) => e.target.value && ack(f, e.target.value)} aria-label="Acknowledge finding">
+              <option value="" disabled>Acknowledge (keeps the finding on record)…</option>
+              {ACK_NOTE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          )}
+        </div>
+      ))}
+      <div className="confirm-row">
+        <button className="btn-secondary" onClick={load}>Re-check</button>
+        <button className="account-link" onClick={() => setOpen(false)}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
   const [form, setForm] = useState(null); // null = closed, object = create form
@@ -382,6 +450,7 @@ export default function Campaigns() {
           <p className="muted">{totalAssets(c)} linked asset{totalAssets(c) === 1 ? '' : 's'}</p>
 
           <Deliverables campaign={c} />
+          <Consistency campaign={c} />
 
           <div className="confirm-row">
             <button className="btn-secondary" onClick={() => strategy(c)} disabled={busyId === c.id}>

@@ -18,6 +18,7 @@ const { brandContextFor } = require('../lib/brand-profile');
 const { resolveWorkspace } = require('./workspaces');
 const { track } = require('../lib/analytics');
 const { DELIVERABLES, campaignGap, validatePlan } = require('../lib/deliverables');
+const { runConsistencyChecks, FINDING_META, RULES_VERSION } = require('../lib/consistency');
 
 router.use(express.json({ limit: '16kb' }));
 
@@ -177,6 +178,127 @@ router.put('/api/campaigns/:id/deliverables', requireAuth, async (req, res, next
 
     const gap = campaignGap(campaign, check.rows, await assetsByTableFor(ws, campaign.id));
     res.json({ ok: true, gap });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── v8 LB-S02: cross-channel consistency check ──────────────────────────────
+// Deterministic and free: recomputing findings never spends an AI action.
+// Findings are derived fresh from structured asset fields + the brief; the
+// consistency_findings table only tracks lifecycle (open/acknowledged/
+// resolved) keyed by fingerprint, so a changed fingerprint reopens naturally.
+
+async function fullAssetsByTableFor(ws, campaignId) {
+  const byTable = {};
+  await Promise.all(DELIVERABLES.map(async (d) => {
+    const { data } = await supabase
+      .from(d.table).select('*')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaignId);
+    byTable[d.table] = data || [];
+  }));
+  return byTable;
+}
+
+// GET /api/campaigns/:id/consistency — recompute, reconcile lifecycle, return.
+router.get('/api/campaigns/:id/consistency', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const computed = runConsistencyChecks(campaign, await fullAssetsByTableFor(ws, campaign.id));
+
+    const { data: persisted } = await supabase
+      .from('consistency_findings').select('fingerprint, status, note_category')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const byFp = new Map((persisted || []).map((r) => [r.fingerprint, r]));
+    const now = new Date().toISOString();
+
+    // Upsert current findings; a previously-resolved fingerprint that
+    // reappears reopens (its resolution no longer holds).
+    if (computed.length) {
+      const { error } = await supabase.from('consistency_findings').upsert(
+        computed.map((f) => {
+          const prev = byFp.get(f.fingerprint);
+          const status = prev && prev.status === 'acknowledged' ? 'acknowledged' : 'open';
+          return {
+            workspace_id: ws.id, campaign_id: campaign.id,
+            fingerprint: f.fingerprint, code: f.code, severity: f.severity,
+            rule_version: f.rule_version, status, last_seen_at: now, resolved_at: null,
+          };
+        }),
+        { onConflict: 'campaign_id,fingerprint' }
+      );
+      if (error) throw new Error('Failed to record findings: ' + error.message);
+    }
+
+    // Findings that stopped appearing are resolved — server-confirmed event.
+    const currentFps = new Set(computed.map((f) => f.fingerprint));
+    for (const row of persisted || []) {
+      if (row.status !== 'resolved' && !currentFps.has(row.fingerprint)) {
+        await supabase.from('consistency_findings')
+          .update({ status: 'resolved', resolved_at: now })
+          .eq('campaign_id', campaign.id).eq('fingerprint', row.fingerprint);
+        const meta = Object.entries(FINDING_META).find(([code]) => row.code === code);
+        track('finding_resolved', {
+          userId: req.userId, workspaceId: ws.id,
+          properties: { code: row.code, severity: meta ? meta[1].severity : 'unknown' },
+        });
+      }
+    }
+
+    const findings = computed.map((f) => {
+      const prev = byFp.get(f.fingerprint);
+      return { ...f, status: prev && prev.status === 'acknowledged' ? 'acknowledged' : 'open', note_category: prev ? prev.note_category : null };
+    });
+    track('consistency_check_viewed', {
+      userId: req.userId, workspaceId: ws.id,
+      properties: {
+        total: findings.length,
+        high: findings.filter((f) => f.severity === 'high').length,
+        medium: findings.filter((f) => f.severity === 'medium').length,
+      },
+    });
+
+    res.json({
+      rule_version: RULES_VERSION,
+      findings,
+      // Honest empty state: absence of findings is not approval.
+      clean_message: findings.length === 0 ? 'No issues detected by these checks. This is not an approval — review remains yours.' : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Categorical acknowledgment notes — never free text.
+const ACK_NOTES = ['intentional', 'reviewed_ok', 'external_check_pending', 'other'];
+
+// POST /api/campaigns/:id/consistency/ack — acknowledge one human-review
+// finding. Acknowledgment never rewrites data and never implies approval.
+router.post('/api/campaigns/:id/consistency/ack', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { fingerprint, note_category } = req.body || {};
+    if (typeof fingerprint !== 'string' || !ACK_NOTES.includes(note_category)) {
+      return res.status(400).json({ error: `Send fingerprint and a note_category (${ACK_NOTES.join('|')}).` });
+    }
+    const { data: row } = await supabase
+      .from('consistency_findings').select('id, code, status')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id).eq('fingerprint', fingerprint).single();
+    if (!row) return res.status(404).json({ error: 'Finding not found — refresh the check first.' });
+    const meta = FINDING_META[row.code];
+    if (!meta || !meta.ackable) {
+      return res.status(400).json({ error: 'This finding needs a fix, not an acknowledgment.' });
+    }
+    await supabase.from('consistency_findings')
+      .update({ status: 'acknowledged', note_category })
+      .eq('id', row.id);
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }
