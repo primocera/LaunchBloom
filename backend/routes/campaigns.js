@@ -348,6 +348,58 @@ router.post('/api/campaigns/:id/brief-impact/keep', requireAuth, async (req, res
   }
 });
 
+// ── v8 LB-S05: deterministic campaign package preview ───────────────────────
+// Shown BEFORE the trial/checkout: what the paid workflow will assemble from
+// this brief — inherited facts, planned deliverables, expected output
+// structures and the review checks that run. No AI call, no fabricated draft.
+
+const OUTPUT_STRUCTURE = {
+  landing_page: 'Structured page copy: headline, sections, SEO title/meta, one primary CTA',
+  email_flow: 'A sequenced email flow: subject options, preheader, body copy, timing and segment per email',
+  social_set: 'Platform captions with hooks, CTAs, hashtags and visual direction (planned, never scheduled)',
+  creative_brief: 'Ad creative briefs: hooks, headlines, primary text, shot list and testing angle (briefs, not media)',
+  seo_ideas: 'SEO research ideas: keywords, intent, titles, H-structure and FAQs — no invented volume or difficulty',
+};
+
+router.get('/api/campaigns/:id/package-preview', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const plan = new Map((planRows || []).map((r) => [r.deliverable_code, r.requirement_state]));
+
+    const preview = {
+      brief_facts: {
+        name: campaign.name,
+        objective: campaign.objective || null,
+        audience: campaign.audience || null,
+        offer: campaign.offer_summary || null,
+        promo_terms: campaign.promo_terms || null,
+        key_message: campaign.key_message || null,
+        dates: campaign.start_date ? `${campaign.start_date} → ${campaign.end_date || 'open'}` : null,
+        proof: campaign.proof || null,
+      },
+      deliverables: DELIVERABLES.map((d) => ({
+        code: d.code,
+        label: d.label,
+        requirement: plan.get(d.code) || 'unplanned',
+        output_structure: OUTPUT_STRUCTURE[d.code],
+      })),
+      review_checks: Object.entries(FINDING_META).map(([code, m]) => ({ code, why: m.why })),
+      honesty: 'This preview is assembled from your brief — nothing here is AI-generated content. ' +
+        'Generation runs after the trial starts and uses 1 AI action per successful generation.',
+    };
+    track('package_preview_viewed', { userId: req.userId, workspaceId: ws.id, properties: { planned: plan.size } });
+    res.json({ preview });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── v8 LB-S04: campaign review queue + export manifest ──────────────────────
 // One place to traverse every campaign risk; individual resolution stays in
 // the mechanisms that own it (findings ack, snapshot keep, Library status).

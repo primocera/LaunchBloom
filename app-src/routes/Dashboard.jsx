@@ -31,12 +31,15 @@ export default function Dashboard() {
   const [campaigns, setCampaigns] = useState(null);
   const [assets, setAssets] = useState(null);
   const [dash, setDash] = useState(null);
+  const [activation, setActivation] = useState(null);
 
   useEffect(() => {
     api.brandProfile().then((r) => setProfile(r.profile || r)).catch(() => setProfile({}));
     api.campaigns().then((r) => setCampaigns(r.campaigns || [])).catch(() => setCampaigns([]));
     api.library({ limit: 6 }).then((r) => setAssets(r.items || r.assets || [])).catch(() => setAssets([]));
     api.dashboard().then(setDash).catch(() => setDash({}));
+    // v8 LB-S05: derived 4-step activation — server state, resumable.
+    api.activation().then((r) => setActivation(r.activation)).catch(() => setActivation(null));
   }, []);
 
   const loading = profile === null || campaigns === null || assets === null || dash === null;
@@ -91,6 +94,23 @@ export default function Dashboard() {
               : "You've used most of your AI actions this period. Editing and exporting are still free. "}
             <Link to="/app/account">See usage &amp; plan</Link>
           </p>
+        )}
+
+        {/* v8 LB-S05: activation checklist until the first full value loop —
+            each step is derived from server state and resumes at its route. */}
+        {activation && activation.done < activation.total && (
+          <div className="flow-card" style={{ marginBottom: 12 }}>
+            <div className="flow-eyebrow">Getting to your first reviewed asset · {activation.done}/{activation.total}</div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '6px 0 0' }}>
+              {activation.steps.map((s) => (
+                <li key={s.key} style={{ margin: '4px 0' }}>
+                  {s.done ? '✓ ' : '○ '}
+                  {s.done ? <span className="flow-muted">{s.label}</span> : <Link to={s.to}>{s.label}</Link>}
+                  {!s.done && s.key === activation.next?.key && <span className="flow-muted"> — {s.hint}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <div className="dash-grid">

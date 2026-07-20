@@ -328,6 +328,41 @@ router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => 
   }
 });
 
+// GET /api/workspace/activation — v8 LB-S05: the 4-step first-value
+// checklist, derived entirely from server state (never a stored flag), so
+// every interrupted step resumes safely.
+router.get('/api/workspace/activation', requireAuth, async (req, res, next) => {
+  try {
+    const { deriveActivation } = require('../lib/activation');
+    const ws = await resolveWorkspace(req);
+
+    const ASSET_TABLES = ['website_pages', 'email_assets', 'social_assets', 'creative_assets', 'seo_assets'];
+    const [{ data: profile }, { data: campaigns }, counts, readyCounts] = await Promise.all([
+      supabase.from('brand_profiles').select('*').eq('workspace_id', ws.id).limit(1).single(),
+      supabase.from('campaigns').select('brief_approved, archived').eq('workspace_id', ws.id),
+      Promise.all(ASSET_TABLES.map(async (t) => {
+        const { count } = await supabase.from(t).select('id', { count: 'exact', head: true }).eq('workspace_id', ws.id);
+        return count || 0;
+      })),
+      Promise.all(ASSET_TABLES.map(async (t) => {
+        const { count } = await supabase.from(t).select('id', { count: 'exact', head: true })
+          .eq('workspace_id', ws.id).in('status', ['ready', 'published']);
+        return count || 0;
+      })),
+    ]);
+
+    const activation = deriveActivation({
+      profile: profile ? profile.data || null : null,
+      campaigns: campaigns || [],
+      assetCount: counts.reduce((a, b) => a + b, 0),
+      reviewedCount: readyCounts.reduce((a, b) => a + b, 0),
+    });
+    res.json({ activation });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/workspace/dashboard — everything the Prompt 10 dashboard needs in
 // one round trip: brand snapshot, current offer, this week's tasks, latest
 // kit, and progress counts. All real Supabase data with nulls for empty state.

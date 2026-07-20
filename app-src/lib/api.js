@@ -113,6 +113,9 @@ export const api = {
   campaignBriefImpact: (id) => request(`/api/campaigns/${id}/brief-impact`),
   keepAssetSnapshot: (id, asset_table, asset_id) =>
     request(`/api/campaigns/${id}/brief-impact/keep`, { method: 'POST', body: { asset_table, asset_id } }),
+  // v8 LB-S05: activation checklist + deterministic package preview
+  activation: () => request('/api/workspace/activation'),
+  campaignPackagePreview: (id) => request(`/api/campaigns/${id}/package-preview`),
   // v8 LB-S04: review queue + evidence locker + export manifest
   campaignReview: (id) => request(`/api/campaigns/${id}/review`),
   campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),

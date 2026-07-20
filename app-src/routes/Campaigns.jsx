@@ -424,9 +424,61 @@ function ReviewQueue({ campaign }) {
   );
 }
 
+// v8 LB-S05: deterministic package preview — what the paid workflow will
+// assemble from this brief. No AI call, no fabricated draft.
+function PackagePreview({ campaign }) {
+  const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    setOpen(true);
+    try { setPreview((await api.campaignPackagePreview(campaign.id)).preview); }
+    catch (err) { setError(err.message); }
+  }
+
+  if (!open) return <button className="btn-secondary" onClick={load}>Preview campaign package</button>;
+  if (!preview) return <p className="muted">{error || 'Assembling preview from your brief…'}</p>;
+
+  const facts = Object.entries(preview.brief_facts).filter(([, v]) => v);
+  return (
+    <div className="campaign-package-preview">
+      <h3 style={{ marginBottom: 4 }}>Campaign package preview</h3>
+      <p className="muted" style={{ marginTop: 0 }}>{preview.honesty}</p>
+      <p className="muted"><strong>From your brief:</strong> {facts.map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' · ')}</p>
+      <ul className="muted">
+        {preview.deliverables.map((d) => (
+          <li key={d.code}>
+            <strong>{d.label}</strong>
+            {d.requirement !== 'unplanned' ? ` (${d.requirement.replace('_', ' ')})` : ''} — {d.output_structure}
+          </li>
+        ))}
+      </ul>
+      <p className="muted">
+        Review checks that run on every campaign: {preview.review_checks.map((r) => r.code.replace(/_/g, ' ')).join(', ')}.
+      </p>
+      <button className="account-link" onClick={() => setOpen(false)}>Close</button>
+    </div>
+  );
+}
+
+// v8 LB-S05: the create-campaign form survives auth/paywall/checkout detours.
+const DRAFT_KEY = 'campaign_form_draft';
+function loadDraft() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY)) || null; } catch { return null; }
+}
+
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
-  const [form, setForm] = useState(null); // null = closed, object = create form
+  // v8 LB-S05: restore an interrupted draft (auth/paywall/checkout detours).
+  const [form, setFormState] = useState(loadDraft); // null = closed, object = create form
+  const setForm = (next) => {
+    setFormState(next);
+    try {
+      if (next) localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch { /* storage unavailable — draft just won't survive a reload */ }
+  };
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState(null);
 
@@ -663,6 +715,7 @@ export default function Campaigns() {
           <Consistency campaign={c} />
           <BriefImpact campaign={c} />
           <ReviewQueue campaign={c} />
+          <PackagePreview campaign={c} />
 
           <div className="confirm-row">
             <button className="btn-secondary" onClick={() => strategy(c)} disabled={busyId === c.id}>

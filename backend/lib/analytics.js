@@ -48,6 +48,11 @@ const CANONICAL_EVENTS = {
   review_item_resolved: 'One review-queue item was resolved by an explicit user action.',
   export_blocked: 'A review-manifest export happened with unresolved blocking findings.',
   review_manifest_exported: 'A campaign review manifest (handoff record) was exported.',
+  // v8 LB-S05 — first-value activation (derived, categorical only):
+  activation_step_completed: 'One derived activation step flipped to done (step key only).',
+  package_preview_viewed: 'The deterministic campaign package preview was shown.',
+  first_warning_resolved: 'The user resolved their first quality warning on an asset.',
+  first_asset_exported: 'The account exported its first asset.',
 };
 
 // Activation (Prompt 18): a documented, testable definition.
@@ -70,6 +75,10 @@ const CLIENT_EVENTS = new Set([
   'onboarding_completed',
   'paywall_viewed',
   'feedback_submitted',
+  // v8 LB-S05: client-observed activation + first-value moments (no content)
+  'activation_step_completed',
+  'first_warning_resolved',
+  'first_asset_exported',
 ]);
 
 // Keys that must never reach analytics (case-insensitive substring match).
