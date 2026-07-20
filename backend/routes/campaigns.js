@@ -19,6 +19,7 @@ const { resolveWorkspace } = require('./workspaces');
 const { track } = require('../lib/analytics');
 const { DELIVERABLES, campaignGap, validatePlan } = require('../lib/deliverables');
 const { runConsistencyChecks, FINDING_META, RULES_VERSION } = require('../lib/consistency');
+const { PLAYBOOKS, playbookById, sanitizeTemplateData } = require('../lib/playbooks');
 const { campaignImpact, diffFingerprint, briefDiffForAsset, MATERIAL_FIELDS } = require('../lib/brief-impact');
 
 router.use(express.json({ limit: '16kb' }));
@@ -342,6 +343,141 @@ router.post('/api/campaigns/:id/brief-impact/keep', requireAuth, async (req, res
       userId: req.userId, workspaceId: ws.id,
       properties: { kind: 'stale_keep' },
     });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── v8 LB-S06: first-party playbooks + workspace templates ──────────────────
+// Playbooks are versioned structure (objective, deliverable plan, questions),
+// never claims or benchmarks. Applying anything creates a NEW draft campaign —
+// existing campaigns are never overwritten and approval never transfers.
+
+// GET /api/playbooks — the versioned first-party catalog (preview data).
+router.get('/api/playbooks', requireAuth, async (_req, res) => {
+  res.json({ playbooks: PLAYBOOKS });
+});
+
+// POST /api/campaigns/apply-playbook — create a draft campaign from one.
+router.post('/api/campaigns/apply-playbook', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const { playbook_id, name } = req.body || {};
+    const pb = playbookById(playbook_id);
+    if (!pb) return res.status(404).json({ error: 'Playbook not found' });
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'Give the campaign a name.' });
+
+    const { data: campaign, error } = await supabase.from('campaigns').insert({
+      workspace_id: ws.id,
+      name: name.trim().slice(0, 120),
+      objective: pb.suggested_objective,
+      channels: pb.channels,
+      status: 'draft',
+      // facts stay empty for the user to verify — never prefilled from a playbook
+    }).select().single();
+    if (error) throw new Error('Failed to create campaign: ' + error.message);
+
+    const now = new Date().toISOString();
+    const planRows = Object.entries(pb.deliverables).map(([deliverable_code, requirement_state]) => ({
+      workspace_id: ws.id, campaign_id: campaign.id, deliverable_code, requirement_state, updated_at: now,
+    }));
+    const { error: planErr } = await supabase.from('campaign_deliverables')
+      .upsert(planRows, { onConflict: 'campaign_id,deliverable_code' });
+    if (planErr) throw new Error('Failed to save deliverable plan: ' + planErr.message);
+
+    track('playbook_applied', {
+      userId: req.userId, workspaceId: ws.id,
+      properties: { playbook_id: pb.id, playbook_version: pb.version },
+    });
+    res.status(201).json({ campaign, brief_questions: pb.brief_questions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/templates — this workspace's saved templates.
+router.get('/api/templates', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const { data } = await supabase
+      .from('workspace_templates').select('*').eq('workspace_id', ws.id)
+      .order('created_at', { ascending: false });
+    res.json({ templates: data || [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/campaigns/:id/save-template — save a sanitized template from an
+// existing campaign. `include` lists the brief fields to carry; everything
+// else (approval, statuses, strategy, evidence, dates) is dropped by design.
+router.post('/api/campaigns/:id/save-template', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { name, include } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'Give the template a name.' });
+
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+
+    const data = sanitizeTemplateData(campaign, include, planRows || []);
+    const { data: saved, error } = await supabase.from('workspace_templates').insert({
+      workspace_id: ws.id,
+      name: name.trim().slice(0, 120),
+      source_campaign_id: campaign.id,
+      data,
+    }).select().single();
+    if (error) throw new Error('Failed to save template: ' + error.message);
+    res.status(201).json({ template: saved });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/templates/:id/apply — new DRAFT campaign from a template.
+router.post('/api/templates/:id/apply', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const { data: tpl } = await supabase
+      .from('workspace_templates').select('*').eq('id', req.params.id).eq('workspace_id', ws.id).single();
+    if (!tpl) return res.status(404).json({ error: 'Template not found' });
+
+    const { name } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'Give the campaign a name.' });
+
+    const brief = (tpl.data && tpl.data.brief) || {};
+    const { data: campaign, error } = await supabase.from('campaigns').insert({
+      workspace_id: ws.id,
+      name: name.trim().slice(0, 120),
+      ...brief,
+      status: 'draft', // never approved, never published
+    }).select().single();
+    if (error) throw new Error('Failed to create campaign: ' + error.message);
+
+    const deliverables = (tpl.data && tpl.data.deliverables) || [];
+    if (deliverables.length) {
+      const now = new Date().toISOString();
+      await supabase.from('campaign_deliverables').upsert(
+        deliverables.map((r) => ({ ...r, workspace_id: ws.id, campaign_id: campaign.id, updated_at: now })),
+        { onConflict: 'campaign_id,deliverable_code' });
+    }
+    track('user_template_reused', { userId: req.userId, workspaceId: ws.id, properties: { template_version: tpl.version } });
+    res.status(201).json({ campaign });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/templates/:id
+router.delete('/api/templates/:id', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    await supabase.from('workspace_templates').delete().eq('id', req.params.id).eq('workspace_id', ws.id);
     res.json({ ok: true });
   } catch (err) {
     next(err);

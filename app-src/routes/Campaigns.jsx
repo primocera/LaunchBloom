@@ -462,6 +462,165 @@ function PackagePreview({ campaign }) {
   );
 }
 
+// v8 LB-S06: first-party playbooks — versioned workflow structure, previewed
+// before applying. Applying always creates a NEW draft campaign; required
+// facts stay empty for the user to verify.
+function Playbooks({ onCreated }) {
+  const [playbooks, setPlaybooks] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [name, setName] = useState('');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    api.playbooks().then((r) => setPlaybooks(r.playbooks)).catch(() => setPlaybooks([]));
+  }, []);
+
+  function preview(p) {
+    setSel(p);
+    setName('');
+    api.trackEvent('playbook_previewed', { playbook_id: p.id });
+  }
+
+  async function apply(e) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api.applyPlaybook(sel.id, name);
+      setSel(null);
+      onCreated();
+    } catch (err) { setError(err.message); }
+  }
+
+  if (!playbooks || playbooks.length === 0) return null;
+  return (
+    <div className="account-section">
+      <h2>Playbooks</h2>
+      <p className="muted" style={{ marginTop: 4 }}>
+        Proven campaign structure — objective, deliverable plan and the brief questions to answer.
+        No benchmarks or invented outcomes; your facts stay yours to verify.
+      </p>
+      <div className="campaign-channels">
+        {playbooks.map((p) => (
+          <button type="button" key={p.id} className="gen-chip" onClick={() => preview(p)}>{p.label}</button>
+        ))}
+      </div>
+      {sel && (
+        <form onSubmit={apply} style={{ marginTop: 8 }}>
+          <p className="muted"><strong>{sel.label}</strong> (v{sel.version}) — {sel.description}</p>
+          <p className="muted">Will set: objective “{sel.suggested_objective}”, channels {sel.channels.join(', ')}, and this deliverable plan:</p>
+          <ul className="muted">
+            {Object.entries(sel.deliverables).map(([code, st]) => (
+              <li key={code}>{code.replace(/_/g, ' ')}: {st.replace('_', ' ')}</li>
+            ))}
+          </ul>
+          <p className="muted">Brief questions you’ll answer (nothing is prefilled):</p>
+          <ul className="muted">{sel.brief_questions.map((q, i) => <li key={i}>{q}</li>)}</ul>
+          <div className="brand-field">
+            <label>Campaign name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name the new draft campaign" required />
+          </div>
+          {error && <p className="login-err">{error}</p>}
+          <div className="confirm-row">
+            <button className="btn-primary" type="submit" disabled={!name.trim()}>Create draft campaign from playbook</button>
+            <button className="account-link" type="button" onClick={() => setSel(null)}>Cancel</button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// v8 LB-S06: sanitized workspace templates — chosen brief fields + the
+// deliverable plan only; approval, statuses, strategy and evidence never copy.
+const TEMPLATE_FIELDS = [
+  ['objective', 'Objective'], ['audience', 'Audience'], ['offer_summary', 'Offer'],
+  ['promo_terms', 'Promo terms'], ['key_message', 'Key message'], ['proof', 'Proof'],
+  ['restrictions', 'Restrictions'], ['markets', 'Markets'], ['language', 'Language'], ['channels', 'Channels'],
+];
+
+function SaveTemplate({ campaign, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [include, setInclude] = useState(['objective', 'audience', 'key_message', 'channels']);
+  const [error, setError] = useState(null);
+
+  async function save(e) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api.saveTemplate(campaign.id, name, include);
+      setOpen(false);
+      if (onSaved) onSaved();
+    } catch (err) { setError(err.message); }
+  }
+
+  if (!open) return <button className="btn-secondary" onClick={() => { setOpen(true); setName(`${campaign.name} template`); }}>Save as template</button>;
+  return (
+    <form onSubmit={save} className="account-section" style={{ padding: 10 }}>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Choose exactly which brief facts to reuse. Dates, approval, statuses and evidence are never copied.
+      </p>
+      <div className="brand-field">
+        <label>Template name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} required />
+      </div>
+      <div className="campaign-channels">
+        {TEMPLATE_FIELDS.map(([f, label]) => (
+          <label key={f} className="consent" style={{ margin: 0 }}>
+            <input
+              type="checkbox"
+              checked={include.includes(f)}
+              onChange={(e) => setInclude(e.target.checked ? [...include, f] : include.filter((x) => x !== f))}
+            />
+            <span>{label}</span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="login-err">{error}</p>}
+      <div className="confirm-row">
+        <button className="btn-secondary" type="submit" disabled={!name.trim()}>Save template</button>
+        <button className="account-link" type="button" onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+// v8 LB-S06: apply/delete saved workspace templates.
+function Templates({ onCreated }) {
+  const [templates, setTemplates] = useState(null);
+  const [error, setError] = useState(null);
+
+  function load() { api.templates().then((r) => setTemplates(r.templates)).catch(() => setTemplates([])); }
+  useEffect(load, []);
+
+  async function apply(t) {
+    const name = window.prompt(`New campaign name (from template “${t.name}”):`, t.name.replace(/ template$/i, ''));
+    if (!name) return;
+    try { await api.applyTemplate(t.id, name); onCreated(); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function remove(t) {
+    if (!window.confirm(`Delete template “${t.name}”?`)) return;
+    try { await api.deleteTemplate(t.id); load(); } catch (err) { setError(err.message); }
+  }
+
+  if (!templates || templates.length === 0) return null;
+  return (
+    <div className="account-section">
+      <h2>Your templates</h2>
+      {error && <p className="login-err">{error}</p>}
+      {templates.map((t) => (
+        <p className="muted" key={t.id} style={{ margin: '4px 0' }}>
+          {t.name} · reuses {Object.keys(t.data?.brief || {}).length} brief field(s) + deliverable plan{' '}
+          <button className="account-link" onClick={() => apply(t)}>Create campaign</button>{' '}
+          <button className="account-link" onClick={() => remove(t)}>Delete</button>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 // v8 LB-S05: the create-campaign form survives auth/paywall/checkout detours.
 const DRAFT_KEY = 'campaign_form_draft';
 function loadDraft() {
@@ -555,6 +714,9 @@ export default function Campaigns() {
       <p className="muted">
         Keep the offer, audience, goal, dates, channels and CTA consistent across every asset.
       </p>
+
+      <Playbooks onCreated={load} />
+      <Templates onCreated={load} />
 
       {/* v5 Prompt 3: the full launch workflow is a campaign template, not a
           competing top-level product. */}
@@ -735,6 +897,7 @@ export default function Campaigns() {
             </button>
             <a className="btn-secondary" href={`/app/create?campaign=${c.id}`}>Create assets</a>
             <button className="btn-secondary" onClick={() => duplicate(c)} title="Copies the brief as a new draft campaign — linked assets are not copied">Duplicate</button>
+            <SaveTemplate campaign={c} />
             <button className="btn-secondary" onClick={() => archive(c)}>{c.archived ? 'Unarchive' : 'Archive'}</button>
             <button className="btn-secondary" onClick={() => remove(c)}>Delete</button>
           </div>

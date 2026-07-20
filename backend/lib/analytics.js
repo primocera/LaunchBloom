@@ -53,6 +53,10 @@ const CANONICAL_EVENTS = {
   package_preview_viewed: 'The deterministic campaign package preview was shown.',
   first_warning_resolved: 'The user resolved their first quality warning on an asset.',
   first_asset_exported: 'The account exported its first asset.',
+  // v8 LB-S06 — playbooks + templates (IDs/versions only):
+  playbook_previewed: 'A first-party playbook preview was opened.',
+  playbook_applied: 'A playbook created a new draft campaign + deliverable plan.',
+  user_template_reused: 'A workspace template created a new draft campaign.',
 };
 
 // Activation (Prompt 18): a documented, testable definition.
@@ -79,6 +83,7 @@ const CLIENT_EVENTS = new Set([
   'activation_step_completed',
   'first_warning_resolved',
   'first_asset_exported',
+  'playbook_previewed',
 ]);
 
 // Keys that must never reach analytics (case-insensitive substring match).

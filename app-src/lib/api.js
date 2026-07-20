@@ -113,6 +113,15 @@ export const api = {
   campaignBriefImpact: (id) => request(`/api/campaigns/${id}/brief-impact`),
   keepAssetSnapshot: (id, asset_table, asset_id) =>
     request(`/api/campaigns/${id}/brief-impact/keep`, { method: 'POST', body: { asset_table, asset_id } }),
+  // v8 LB-S06: playbooks + workspace templates
+  playbooks: () => request('/api/playbooks'),
+  applyPlaybook: (playbook_id, name) =>
+    request('/api/campaigns/apply-playbook', { method: 'POST', body: { playbook_id, name } }),
+  templates: () => request('/api/templates'),
+  saveTemplate: (campaignId, name, include) =>
+    request(`/api/campaigns/${campaignId}/save-template`, { method: 'POST', body: { name, include } }),
+  applyTemplate: (id, name) => request(`/api/templates/${id}/apply`, { method: 'POST', body: { name } }),
+  deleteTemplate: (id) => request(`/api/templates/${id}`, { method: 'DELETE' }),
   // v8 LB-S05: activation checklist + deterministic package preview
   activation: () => request('/api/workspace/activation'),
   campaignPackagePreview: (id) => request(`/api/campaigns/${id}/package-preview`),
