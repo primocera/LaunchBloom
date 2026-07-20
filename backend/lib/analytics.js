@@ -59,7 +59,31 @@ const CANONICAL_EVENTS = {
   user_template_reused: 'A workspace template created a new draft campaign.',
   // v8 LB-S07 — export-only handoff (ADR-001):
   review_packet_exported: 'A campaign review packet (md/html handoff record) was exported.',
+  // v8 LB-S09 — decision-grade value funnel (server-confirmed, deduped, no content):
+  workspace_created: 'A workspace was created (first entry into the product).',
+  minimum_profile_reached: 'The Brand Profile crossed the minimum-viable baseline.',
+  brief_approved: 'A campaign brief was approved by the user.',
+  first_finding_resolved: 'A workspace resolved its first consistency finding.',
+  first_asset_ready: 'A workspace marked its first asset ready to export.',
+  campaign_completed: 'A campaign reached all-required-ready and was exported (handoff produced).',
+  day7_returned: 'An account returned to the app 7+ days after workspace creation.',
 };
+
+// ── The one canonical value funnel (LB-S09). Ordered milestones; each is a
+// once-per-scope event carrying only categorical properties. `dedupe` is the
+// key shape used with track({ dedupeKey }) so retries never double-count.
+// `question` is the single decision this step answers for an operator.
+const VALUE_FUNNEL = [
+  { step: 'workspace_created', scope: 'workspace', dedupe: 'ws:{workspaceId}', question: 'How many accounts start?' },
+  { step: 'minimum_profile_reached', scope: 'workspace', dedupe: 'profile:{workspaceId}', question: 'Do they give us enough to work with?' },
+  { step: 'brief_approved', scope: 'campaign', dedupe: 'brief:{campaignId}', question: 'Do they commit to a campaign?' },
+  { step: 'deliverable_plan_saved', scope: 'campaign', dedupe: 'plan:{campaignId}', question: 'Do they scope the work?' },
+  { step: 'first_generation', scope: 'workspace', dedupe: 'gen:{workspaceId}', question: 'Do they produce anything?' },
+  { step: 'first_finding_resolved', scope: 'workspace', dedupe: 'finding:{workspaceId}', question: 'Do they engage with control (not just generate)?' },
+  { step: 'first_asset_ready', scope: 'workspace', dedupe: 'ready:{workspaceId}', question: 'Do they finish an asset?' },
+  { step: 'campaign_completed', scope: 'campaign', dedupe: 'done:{campaignId}', question: 'Do they complete + export a campaign? (the value moment)' },
+  { step: 'day7_returned', scope: 'workspace', dedupe: 'd7:{workspaceId}', question: 'Do they come back to revise/export? (retention)' },
+];
 
 // Activation (Prompt 18): a documented, testable definition.
 const ACTIVATION = {
@@ -117,17 +141,34 @@ function sanitizeProperties(props) {
   return out;
 }
 
-async function track(event, { userId = null, workspaceId = null, properties = {} } = {}) {
+/**
+ * Record an event. Never throws — analytics failure must not break the product.
+ *
+ * Pass `dedupeKey` for once-per-scope funnel milestones (LB-S09): the row carries
+ * a unique key so a retried webhook / re-posted client event / re-run job inserts
+ * at most once. We insert with onConflict(dedupe_key)/ignoreDuplicates so the
+ * second write is a silent no-op rather than a double count. Volume/diagnostic
+ * events omit dedupeKey and are unconstrained.
+ */
+async function track(event, { userId = null, workspaceId = null, properties = {}, dedupeKey = null } = {}) {
   try {
-    await supabase.from('analytics_events').insert({
+    const row = {
       event: String(event).slice(0, 100),
       user_id: userId || null,
       workspace_id: workspaceId || null,
       properties: sanitizeProperties(properties),
-    });
+    };
+    if (dedupeKey) {
+      row.dedupe_key = String(dedupeKey).slice(0, 200);
+      await supabase
+        .from('analytics_events')
+        .upsert(row, { onConflict: 'dedupe_key', ignoreDuplicates: true });
+    } else {
+      await supabase.from('analytics_events').insert(row);
+    }
   } catch (err) {
     console.error('[analytics] track failed', event, err.message);
   }
 }
 
-module.exports = { track, sanitizeProperties, CLIENT_EVENTS, CANONICAL_EVENTS, ACTIVATION };
+module.exports = { track, sanitizeProperties, CLIENT_EVENTS, CANONICAL_EVENTS, VALUE_FUNNEL, ACTIVATION };

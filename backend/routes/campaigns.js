@@ -755,6 +755,21 @@ router.get('/api/campaigns/:id/review-packet', requireAuth, async (req, res, nex
       userId: req.userId, workspaceId: ws.id,
       properties: { format: req.query.format === 'html' ? 'html' : 'md', assets: q.assets.length, unresolved: q.blocking.length },
     });
+    // v8 LB-S09 funnel: the value moment — a campaign with every required
+    // deliverable ready produced a handoff. Deduped once per campaign so repeat
+    // exports don't inflate the completion count.
+    try {
+      const { data: planRows } = await supabase
+        .from('campaign_deliverables').select('deliverable_code, requirement_state')
+        .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+      const gap = campaignGap(campaign, planRows || [], await assetsByTableFor(ws, campaign.id));
+      if (gap.all_required_ready) {
+        track('campaign_completed', {
+          userId: req.userId, workspaceId: ws.id, dedupeKey: `done:${campaign.id}`,
+          properties: { required: gap.required_total, unresolved: q.blocking.length },
+        });
+      }
+    } catch (_) { /* funnel emission must never block the export */ }
     if (req.query.format === 'html') {
       res.type('html').send(packetHtml(campaign, md));
     } else {
@@ -825,6 +840,14 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
       track('brief_change_detected', {
         userId: req.userId, workspaceId: ws.id,
         properties: { changed_field_codes: changedMaterial.join(','), fields: changedMaterial.length },
+      });
+    }
+    // v8 LB-S09 funnel: brief approval is a once-per-campaign milestone. Deduped
+    // so a repeated approve (or a re-save) can't inflate the funnel.
+    if (patch.brief_approved === true && !campaign.brief_approved) {
+      track('brief_approved', {
+        userId: req.userId, workspaceId: ws.id, dedupeKey: `brief:${campaign.id}`,
+        properties: { objective: campaign.objective || null },
       });
     }
     res.json({ campaign: data });
