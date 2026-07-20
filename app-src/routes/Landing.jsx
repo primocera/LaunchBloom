@@ -46,13 +46,16 @@ function planCard(p) {
     price: p.price.display,
     badge: p.badge || undefined,
     note: p.note,
-    sub: `${p.launch_kits} full launch campaigns + ${p.ai_actions} AI actions / month`,
+    sub: p.jobs || `${p.launch_kits} full launch campaigns + ${p.ai_actions} AI actions / month`,
     features: [
       `${p.workspaces} workspace${p.workspaces === 1 ? '' : 's'}`,
       `${p.launch_kits} full launch campaigns / month`,
       `${p.ai_actions} AI actions / month`,
       'Website, email, social, ads and SEO ideas',
-      'Edit, compare versions and export',
+      // v8 LB-S08: the campaign-control workflow ships on every tier — tiers
+      // differ by capacity, never by review safety.
+      'Gap map, consistency checks and brief-change review',
+      'Review queue, evidence locker and review packet export',
     ],
     cta: 'Start 3-day trial',
     savings: p.yearly_savings,
@@ -353,6 +356,7 @@ export default function Landing() {
           </div>
           <p className="lp-price-definition">
             {catalog?.ai_action_definition || 'One AI action is one successful generation or regeneration. Failed generations, editing, copying and exporting do not count.'}
+            {catalog?.included_free ? ` ${catalog.included_free}` : ''}
           </p>
         </div>
       </section>

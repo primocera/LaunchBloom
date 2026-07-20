@@ -30,11 +30,31 @@ const PRICES = {
   studio: { monthly: 59, yearly: 499 },
 };
 
+// v8 LB-S08: value comms reframed around jobs completed — capacity (campaigns,
+// actions, workspaces) is what scales by tier; the campaign-control workflow
+// (gap map, consistency checks, brief-change review, review packet export)
+// is included for every paid/trial user and never uses AI actions. No badge
+// until real usage data supports one (a fake "Most popular" is banned copy).
 const PLAN_META = {
-  starter: { note: 'Freelancers, creators, solo starters' },
-  pro: { note: 'Small ecommerce brands and serious creators', badge: 'Most popular' },
-  studio: { note: 'Agencies and multi-brand users' },
+  starter: {
+    note: 'Freelancers, creators, solo starters',
+    jobs: 'Run one brand: take an offer from brief to a reviewed, exportable campaign a few times a month.',
+  },
+  pro: {
+    note: 'Small ecommerce brands and serious creators',
+    jobs: 'Run overlapping campaigns for up to three brands or stores with room to revise and regenerate.',
+  },
+  studio: {
+    note: 'Agencies and multi-brand users',
+    jobs: 'Run many client campaigns in parallel — separate workspaces, high revision capacity, handoff packets per client.',
+  },
 };
+
+// Included on every plan AND the trial; never paywalled and never metered.
+const INCLUDED_FREE =
+  'Campaign gap map, consistency checks, brief-change review, evidence locker, ' +
+  'review queue, editing and exports are included on every plan and the trial — ' +
+  'they never use AI actions.';
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -71,6 +91,7 @@ function publicCatalog() {
       plan: key,
       label: limits.label,
       note: PLAN_META[key].note,
+      jobs: PLAN_META[key].jobs,
       badge: PLAN_META[key].badge || null,
       price: {
         monthly: PRICES[key].monthly,
@@ -100,6 +121,7 @@ function publicCatalog() {
     },
     yearly_badge: `Save up to ${maxSavingsPct()}%`,
     ai_action_definition: AI_ACTION_DEFINITION,
+    included_free: INCLUDED_FREE,
   };
 }
 
@@ -119,6 +141,7 @@ function missingStripeEnv() {
 
 module.exports = {
   PRICES,
+  INCLUDED_FREE,
   STRIPE_ENV,
   AI_ACTION_DEFINITION,
   yearlySavings,
