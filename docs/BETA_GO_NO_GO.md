@@ -212,3 +212,77 @@ Pack: `LaunchBloom_Claude_Code_Prompt_Pack v7.docx` (LaunchBloom part).
 | Automated checks | ✅ `npm run check` + 18/18 Playwright green |
 | External configuration | ⚠ unchanged: real domain, live Stripe prices, verified Resend domain, cron-job.org outbox trigger, legal entity |
 | Live-provider evidence | ⛔ still required before paid capacity (one manual end-to-end test-mode journey) |
+
+---
+
+# v8 addendum — Value & Scale playbook + paid-launch reliability gate (branch `v8`, 2026-07-20)
+
+Playbook: `LaunchBloom_Value_Scale_Claude_Code_Prompts v8.docx` (prompts LB-S00..S10),
+executed verbatim from `docs/V8_PROMPTS.md`, one commit per prompt.
+
+## What v8 shipped (the value loop)
+
+LaunchBloom moved from a copy generator to a **campaign-control layer**: per-campaign
+gap map + deliverable plan (LB-S01), deterministic cross-channel consistency findings
+(LB-S02), brief-change impact with no silent propagation (LB-S03), review queue +
+evidence locker + export gate (LB-S04), first-value activation + package preview
+(LB-S05), channel playbooks + reusable templates (LB-S06), professional handoff packet
+(LB-S07, ADR-001 export-only), jobs-based pricing comms (LB-S08), and a decision-grade
+value funnel with kill criteria (LB-S09). All derived checks are **free — they consume
+no AI action** — and the five canonical Create paths / four statuses are unchanged.
+
+## Automated evidence (this branch)
+
+| Check | Command | Result |
+|---|---|---|
+| Lint | `npm run lint` | **0 errors**, 54 warnings (cosmetic) |
+| Unit/integration | `npm test` | **304 passed**, 0 failed |
+| App build + stale guard | `npm run build:app` / `check:app-fresh` | ✓ built, bundle fresh |
+| E2E (Playwright, local) | `npm run test:e2e` | 16 pass; 2 cold-start flakes pass on isolated re-run |
+| Release readiness | `npm run release:check` | reports blockers/external actions, no secrets printed |
+
+## Reliability additions (LB-S10)
+
+- **Release gate** — `backend/scripts/release-check.js` (`npm run release:check`): verifies
+  required migrations (028–033), pinned rule versions (consistency `v8.1`, dependencies
+  `v8.1`), launch config, live Stripe price allowlist, cron secret and email config —
+  **presence only, never secret values**. Exit 1 on any blocker.
+- **Safe backfill** — `backend/scripts/backfill-consistency.js` (`npm run backfill:consistency`):
+  recomputes derived findings **non-destructively** (fingerprint upsert/resolve, never a
+  rebuild; source assets stay authoritative). **DRY-RUN by default**, `--apply` to persist,
+  `--batch=N` workspace batching, `--since=<ISO>` checkpoint, `--workspace=<id>` scope,
+  `BACKFILL_KILL=1` kill switch. Idempotent and consumes **no AI action**.
+- **Failure-injection tests** — `backend/tests/failure-injection.test.js`: analytics/Supabase
+  partial failure never throws, duplicate webhook (same `dedupeKey`) counts once, malformed
+  AI output does not crash the consistency engine (**fixed a real null-row crash this pass**),
+  backfill reconcile idempotent under repeat runs, release check leaks no secret.
+- **SLO hypotheses** (directional, to calibrate on live data, not validated): API p95 < 800ms,
+  generation p95 < 25s, 5xx error rate < 1%, released-vs-charged AI actions tracked, finding
+  recomputation failures ~0. Correlation IDs (`req_id`) already flow through structured logs.
+
+## Scorecard — paid-launch gate
+
+| Gate | Verdict |
+|---|---|
+| Automated gates at frozen commit | ✅ 304 tests + lint + build + release-check green |
+| Derived-state safety (no destructive rebuild, backfill resumable + kill switch) | ✅ |
+| Rollback / kill switches tested | ✅ `BACKFILL_KILL`, feature flags, `launch-config` fail-closed; failure-injection covers |
+| Cohort cap | ⚠ open at **≤ 50–100 paying accounts**, do not scale until live evidence exists |
+| Cost ceiling | ✅ enforced by `ai.js` global daily spend guard (unchanged) |
+| Live low-value checkout + cancel/recover rehearsal | ⛔ **owner action** — must record evidence before paid invites |
+
+## External blockers (owner: repo owner / primoz2.cerar@gmail.com)
+
+1. **Live Stripe prices + `sk_live` key + webhook secret** — `release:check` flags until set. Acceptance: `npm run release:check` clean in production env.
+2. **Verified domain + `PUBLIC_URL` (HTTPS) + `ALLOWED_ORIGINS`** — acceptance: launch-config check passes.
+3. **Resend sending domain + `RESEND_API_KEY` + `BRAND_SENDER_EMAIL`** — acceptance: one live lifecycle email delivered.
+4. **`CRON_SECRET` + external cron (cron-job.org) for email outbox / backfill triggers.**
+5. **Legal entity values** (`BRAND_LEGAL_*`) — acceptance: no legal placeholders.
+6. **One live test-mode journey** signup→trial→checkout→webhook→generation→cancel→recover with owner-recorded evidence.
+
+## Verdict
+
+**NO-GO for open paid launch from this environment** — automated gates are green but a
+paid launch **must not** be marked GO from mocked/local tests (LB-S10 non-negotiable).
+**Conditional GO for a capacity-capped paid beta (≤ 50–100 accounts)** once the six external
+blockers above have owner-recorded live evidence. No P0 code issues remain on branch `v8`.

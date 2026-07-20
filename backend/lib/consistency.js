@@ -129,7 +129,9 @@ function runConsistencyChecks(campaign, assetsByTable) {
   const c = campaign || {};
   const all = [];
   for (const [table, rows] of Object.entries(assetsByTable || {})) {
-    for (const asset of rows || []) all.push({ table, asset });
+    // Skip null/non-object rows: a malformed asset must never crash the engine
+    // (failure-injection contract, LB-S10). Structured fields are read defensively.
+    for (const asset of rows || []) if (asset && typeof asset === 'object') all.push({ table, asset });
   }
 
   // 1. missing_primary_cta — per asset in CTA-carrying tables.

@@ -15,7 +15,9 @@
     "_comment_e2e": "Playwright runs LOCALLY (not in CI — CI stays lean by design). One-time setup: npx playwright install chromium",
     "test:e2e": "playwright test",
     "check:app-fresh": "node scripts/check-app-fresh.mjs",
-    "check": "npm run lint && npm test && npm run build:app && npm run check:app-fresh"
+    "check": "npm run lint && npm test && npm run build:app && npm run check:app-fresh",
+    "release:check": "node backend/scripts/release-check.js",
+    "backfill:consistency": "node backend/scripts/backfill-consistency.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
