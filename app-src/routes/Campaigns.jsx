@@ -46,6 +46,106 @@ function fmtDate(iso) {
   catch { return ''; }
 }
 
+// v8 LB-S01: which deliverables a channel suggests — used only to prefill the
+// plan as "Suggested"; the user decides, nothing is required by default.
+const CHANNEL_SUGGESTS = {
+  email: ['email_flow'],
+  social: ['social_set'],
+  ads: ['creative_brief'],
+  landing: ['landing_page'],
+};
+const REQUIREMENT_OPTIONS = [
+  ['required', 'Required'],
+  ['optional', 'Optional'],
+  ['not_needed', 'Not needed'],
+];
+
+// v8 LB-S01: per-campaign deliverable plan + gap map. Deterministic and free —
+// states come from real asset data; no score, no invented deadlines.
+function Deliverables({ campaign }) {
+  const [open, setOpen] = useState(false);
+  const [gap, setGap] = useState(null);
+  const [draft, setDraft] = useState(null); // {code: requirement_state}
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    setOpen(true);
+    try {
+      const { gap: g } = await api.campaignDeliverables(campaign.id);
+      setGap(g);
+      const suggested = (campaign.channels || []).flatMap((ch) => CHANNEL_SUGGESTS[ch] || []);
+      const next = {};
+      for (const d of g.deliverables) {
+        next[d.code] = d.requirement !== 'unplanned' ? d.requirement
+          : suggested.includes(d.code) ? 'optional' : 'not_needed';
+      }
+      setDraft(next);
+    } catch (err) { setError(err.message); }
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const list = Object.entries(draft).map(([code, requirement_state]) => ({ code, requirement_state }));
+      const { gap: g } = await api.saveCampaignDeliverables(campaign.id, list);
+      setGap(g);
+    } catch (err) { setError(err.message); }
+    setSaving(false);
+  }
+
+  if (!open) {
+    return (
+      <button className="btn-secondary" onClick={load}>
+        Campaign deliverables{campaign.deliverable_plan && campaign.deliverable_plan.length ? '' : ' · not planned yet'}
+      </button>
+    );
+  }
+  if (!gap || !draft) return <p className="muted">{error || 'Loading deliverables…'}</p>;
+
+  return (
+    <div className="campaign-deliverables">
+      <h3 style={{ marginBottom: 4 }}>Campaign deliverables</h3>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Choose what this campaign actually needs — a campaign with two required outcomes is complete
+        without the other three.{!gap.plan_saved && ' Suggestions come from your selected channels; nothing is required until you save.'}
+      </p>
+      {gap.deliverables.map((d) => (
+        <div key={d.code} className="confirm-row" style={{ alignItems: 'center', marginBottom: 6 }}>
+          <strong style={{ minWidth: 160 }}>{d.label}</strong>
+          <select
+            value={draft[d.code]}
+            onChange={(e) => setDraft({ ...draft, [d.code]: e.target.value })}
+            aria-label={`${d.label} requirement`}
+          >
+            {REQUIREMENT_OPTIONS.map(([v, l]) => (
+              <option key={v} value={v}>{l}{d.requirement === 'unplanned' && draft[d.code] === v ? ' (suggested)' : ''}</option>
+            ))}
+          </select>
+          <span className="muted">
+            {d.state_label}{d.asset_count > 0 ? ` · ${d.asset_count} asset${d.asset_count === 1 ? '' : 's'}` : ''}
+          </span>
+        </div>
+      ))}
+      {gap.deliverables.some((d) => d.requirement === 'required' && d.blockers.length > 0) && (
+        <ul className="muted" style={{ marginTop: 6 }}>
+          {gap.deliverables.filter((d) => d.requirement === 'required').flatMap((d) =>
+            d.blockers.map((b, i) => <li key={d.code + i}><strong>{d.label}:</strong> {b}</li>))}
+        </ul>
+      )}
+      {gap.plan_saved && gap.all_required_ready && (
+        <p className="muted">All required deliverables are ready — review and export from the Library when you decide they’re final.</p>
+      )}
+      {error && <p className="login-err">{error}</p>}
+      <div className="confirm-row">
+        <button className="btn-secondary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save plan'}</button>
+        <button className="account-link" onClick={() => setOpen(false)}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
   const [form, setForm] = useState(null); // null = closed, object = create form
@@ -280,6 +380,8 @@ export default function Campaigns() {
           )}
 
           <p className="muted">{totalAssets(c)} linked asset{totalAssets(c) === 1 ? '' : 's'}</p>
+
+          <Deliverables campaign={c} />
 
           <div className="confirm-row">
             <button className="btn-secondary" onClick={() => strategy(c)} disabled={busyId === c.id}>

@@ -33,6 +33,10 @@ const CANONICAL_EVENTS = {
   subscription_activated: 'A subscription became active (paid).',
   subscription_canceled: 'A subscription was canceled or scheduled to cancel.',
   feedback_submitted: 'The user submitted beta feedback.',
+  // v8 LB-S01 — deliverable plan value loop (server-confirmed, no content):
+  deliverable_plan_saved: 'The user saved an explicit campaign deliverable plan.',
+  required_deliverable_started: 'A first asset was saved for a required deliverable.',
+  required_deliverable_ready: 'An asset of a required deliverable was marked ready by the user.',
 };
 
 // Activation (Prompt 18): a documented, testable definition.

@@ -13,6 +13,7 @@ const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
 const { creativeReadyGate } = require('../lib/quality-checks');
+const { trackDeliverableProgress } = require('../lib/deliverables-track');
 const { resolveWorkspace } = require('./workspaces');
 
 router.use(express.json({ limit: '32kb' }));
@@ -232,6 +233,15 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
       .update({ ...patch, updated_at: new Date().toISOString() })
       .eq('id', row.id).select().single();
     if (error) throw new Error(error.message);
+
+    // v8 LB-S01: server-confirmed deliverable progress — only after the user
+    // moved an asset to ready/published (never fired from the client).
+    if ((patch.status === 'ready' || patch.status === 'published') && row.status !== 'ready' && row.status !== 'published') {
+      await trackDeliverableProgress({
+        workspaceId: ws.id, userId: req.userId,
+        campaignId: data.campaign_id, table: req.params.table, phase: 'ready',
+      });
+    }
     res.json({ ok: true, asset: data });
   } catch (err) {
     next(err);

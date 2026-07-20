@@ -16,6 +16,8 @@ const { planGate, usageFor } = require('../lib/plan-limits');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');
 const { resolveWorkspace } = require('./workspaces');
+const { track } = require('../lib/analytics');
+const { DELIVERABLES, campaignGap, validatePlan } = require('../lib/deliverables');
 
 router.use(express.json({ limit: '16kb' }));
 
@@ -50,6 +52,20 @@ router.get('/api/campaigns', requireAuth, async (req, res, next) => {
       .from('campaigns').select('*').eq('workspace_id', ws.id)
       .order('created_at', { ascending: false });
 
+    // v8 LB-S01: attach each campaign's saved deliverable plan (one query) so
+    // the Dashboard can prioritize unresolved required deliverables.
+    const ids = (campaigns || []).map((c) => c.id);
+    let planByCampaign = {};
+    if (ids.length) {
+      const { data: planRows } = await supabase
+        .from('campaign_deliverables').select('campaign_id, deliverable_code, requirement_state')
+        .eq('workspace_id', ws.id).in('campaign_id', ids);
+      for (const r of planRows || []) {
+        (planByCampaign[r.campaign_id] = planByCampaign[r.campaign_id] || []).push(
+          { deliverable_code: r.deliverable_code, requirement_state: r.requirement_state });
+      }
+    }
+
     const withCounts = await Promise.all((campaigns || []).map(async (c) => {
       const counts = {};
       await Promise.all(ASSET_TABLES.map(async (t) => {
@@ -58,7 +74,7 @@ router.get('/api/campaigns', requireAuth, async (req, res, next) => {
           .eq('workspace_id', ws.id).eq('campaign_id', c.id);
         counts[t] = error ? 0 : (count || 0);
       }));
-      return { ...c, asset_counts: counts };
+      return { ...c, asset_counts: counts, deliverable_plan: planByCampaign[c.id] || [] };
     }));
 
     res.json({ campaigns: withCounts });
@@ -98,6 +114,69 @@ router.get('/api/campaigns/:id', requireAuth, async (req, res, next) => {
     const campaign = await ownedCampaign(ws, req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
     res.json({ campaign });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── v8 LB-S01: deliverable plan + gap map ───────────────────────────────────
+// Deterministic and free: reading or saving the plan never spends an AI action.
+
+async function assetsByTableFor(ws, campaignId) {
+  const byTable = {};
+  await Promise.all(DELIVERABLES.map(async (d) => {
+    const { data } = await supabase
+      .from(d.table).select('id, status')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaignId);
+    byTable[d.table] = data || [];
+  }));
+  return byTable;
+}
+
+// GET /api/campaigns/:id/deliverables — the gap map: per-deliverable state
+// derived from the saved plan + real asset rows, with transparent blockers.
+router.get('/api/campaigns/:id/deliverables', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const gap = campaignGap(campaign, planRows || [], await assetsByTableFor(ws, campaign.id));
+    res.json({ gap });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/campaigns/:id/deliverables — save the user's plan. Unknown codes
+// and states are rejected; the plan is replaced atomically per campaign.
+router.put('/api/campaigns/:id/deliverables', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const check = validatePlan(req.body);
+    if (!check.ok) return res.status(400).json({ error: check.error });
+
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('campaign_deliverables').upsert(
+      check.rows.map((r) => ({ ...r, campaign_id: campaign.id, workspace_id: ws.id, updated_at: now })),
+      { onConflict: 'campaign_id,deliverable_code' }
+    );
+    if (error) throw new Error('Failed to save deliverable plan: ' + error.message);
+
+    track('deliverable_plan_saved', {
+      userId: req.userId,
+      workspaceId: ws.id,
+      properties: { required: check.rows.filter((r) => r.requirement_state === 'required').length, total: check.rows.length },
+    });
+
+    const gap = campaignGap(campaign, check.rows, await assetsByTableFor(ws, campaign.id));
+    res.json({ ok: true, gap });
   } catch (err) {
     next(err);
   }

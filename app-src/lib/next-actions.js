@@ -45,6 +45,28 @@ export function minimumViableProfile(profile) {
   return MIN_VIABLE.filter((r) => !r.ok(p)).map((r) => r.label);
 }
 
+// v8 LB-S01: deliverable codes → the asset table their studio saves into
+// (mirrors backend/lib/deliverables.js — used to spot required deliverables
+// with no asset yet from the campaign list payload).
+const DELIVERABLE_TABLE = {
+  landing_page: ['website_pages', 'Landing page'],
+  email_flow: ['email_assets', 'Launch email flow'],
+  social_set: ['social_assets', 'Social launch set'],
+  creative_brief: ['creative_assets', 'Ad creative brief'],
+  seo_ideas: ['seo_assets', 'SEO research ideas'],
+};
+
+/** Required deliverables (from the saved plan) that have no asset yet. */
+export function missingRequiredDeliverables(campaign) {
+  const plan = campaign?.deliverable_plan || [];
+  const counts = campaign?.asset_counts || {};
+  return plan
+    .filter((r) => r.requirement_state === 'required')
+    .map((r) => DELIVERABLE_TABLE[r.deliverable_code])
+    .filter((entry) => entry && !(counts[entry[0]] > 0))
+    .map(([table, label]) => ({ table, label }));
+}
+
 export function usageLevel(account) {
   const used = account?.usage?.ai_actions ?? 0;
   const limit = account?.limits?.ai_actions;
@@ -93,8 +115,22 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
   if (!activeCampaigns.length && primary.to !== '/app/campaigns') {
     actions.push({ to: '/app/campaigns', label: 'Create your first campaign', reason: 'Campaigns keep every asset on one brief' });
   }
+  // v8 LB-S01: an explicit deliverable plan outranks the generic zero-asset
+  // nudge — the highest-priority unresolved required deliverable comes first.
   for (const c of activeCampaigns) {
     if (actions.length >= 3) break;
+    const missingRequired = missingRequiredDeliverables(c);
+    if (missingRequired.length && primary.label.indexOf(c.name) === -1) {
+      actions.push({
+        to: '/app/create',
+        label: `Create the required ${missingRequired[0].label} for “${c.name}”`,
+        reason: `${missingRequired.length} required deliverable${missingRequired.length === 1 ? '' : 's'} not started`,
+      });
+    }
+  }
+  for (const c of activeCampaigns) {
+    if (actions.length >= 3) break;
+    if (missingRequiredDeliverables(c).length) continue; // already covered above
     const assetCount = Object.values(c.asset_counts || {}).reduce((a, b) => a + b, 0);
     if (assetCount === 0 && primary.label.indexOf(c.name) === -1) {
       actions.push({ to: '/app/create', label: `Generate assets for “${c.name}”`, reason: 'This campaign has no assets yet' });

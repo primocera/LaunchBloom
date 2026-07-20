@@ -101,6 +101,10 @@ export const api = {
     request(`/api/campaigns/${id}${confirm ? '?confirm=1' : ''}`, { method: 'DELETE' }),
   duplicateCampaign: (id) => request(`/api/campaigns/${id}/duplicate`, { method: 'POST' }),
   generateCampaignStrategy: (id) => request(`/api/campaigns/${id}/strategy`, { method: 'POST', body: {} }),
+  // v8 LB-S01: deliverable plan + gap map (deterministic, free)
+  campaignDeliverables: (id) => request(`/api/campaigns/${id}/deliverables`),
+  saveCampaignDeliverables: (id, deliverables) =>
+    request(`/api/campaigns/${id}/deliverables`, { method: 'PUT', body: { deliverables } }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),
