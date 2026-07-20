@@ -19,6 +19,7 @@ const { resolveWorkspace } = require('./workspaces');
 const { track } = require('../lib/analytics');
 const { DELIVERABLES, campaignGap, validatePlan } = require('../lib/deliverables');
 const { runConsistencyChecks, FINDING_META, RULES_VERSION } = require('../lib/consistency');
+const { campaignImpact, diffFingerprint, briefDiffForAsset, MATERIAL_FIELDS } = require('../lib/brief-impact');
 
 router.use(express.json({ limit: '16kb' }));
 
@@ -272,6 +273,77 @@ router.get('/api/campaigns/:id/consistency', requireAuth, async (req, res, next)
   }
 });
 
+// ── v8 LB-S03: brief-change impact + stale-asset review ─────────────────────
+// Derived from snapshots — free, no AI action, no silent propagation.
+
+// GET /api/campaigns/:id/brief-impact — field-level diff of the current brief
+// vs each asset's generation-time snapshot, with per-asset review state.
+router.get('/api/campaigns/:id/brief-impact', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { data: reviews } = await supabase
+      .from('asset_brief_reviews').select('asset_table, asset_id, diff_fingerprint, reviewed_at, reviewer')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const impact = campaignImpact(campaign, await fullAssetsByTableFor(ws, campaign.id), reviews || []);
+
+    if (impact.affected.length) {
+      track('stale_asset_opened', {
+        userId: req.userId, workspaceId: ws.id,
+        properties: { affected: impact.affected.length, open: impact.open },
+      });
+    }
+    res.json({ impact });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/campaigns/:id/brief-impact/keep — explicitly keep one asset's
+// snapshot for the CURRENT diff. Records reviewer + time; a further material
+// brief change produces a new fingerprint and reopens the review. Keeping a
+// snapshot is a decision on record — not a statement that it is factually
+// correct.
+router.post('/api/campaigns/:id/brief-impact/keep', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { asset_table, asset_id } = req.body || {};
+    if (!MATERIAL_FIELDS[asset_table] || typeof asset_id !== 'string') {
+      return res.status(400).json({ error: 'Send asset_table and asset_id.' });
+    }
+    const { data: asset } = await supabase
+      .from(asset_table).select('*')
+      .eq('id', asset_id).eq('workspace_id', ws.id).eq('campaign_id', campaign.id).single();
+    if (!asset) return res.status(404).json({ error: 'Asset not found in this campaign' });
+
+    const changed = briefDiffForAsset(campaign, asset_table, asset);
+    if (!changed.length) return res.status(409).json({ error: 'This asset matches the current brief — nothing to keep.' });
+
+    const { error } = await supabase.from('asset_brief_reviews').upsert({
+      workspace_id: ws.id, campaign_id: campaign.id,
+      asset_table, asset_id,
+      diff_fingerprint: diffFingerprint(asset_table, asset_id, changed),
+      decision: 'keep_snapshot',
+      reviewer: req.userEmail || null,
+      reviewed_at: new Date().toISOString(),
+    }, { onConflict: 'campaign_id,asset_table,asset_id' });
+    if (error) throw new Error('Failed to record review: ' + error.message);
+
+    track('stale_asset_resolved', {
+      userId: req.userId, workspaceId: ws.id,
+      properties: { method: 'keep_snapshot', changed_field_codes: changed.map((c) => c.field).join(',') },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Categorical acknowledgment notes — never free text.
 const ACK_NOTES = ['intentional', 'reviewed_ok', 'external_check_pending', 'other'];
 
@@ -317,6 +389,19 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
 
     const { data, error } = await supabase.from('campaigns').update(patch).eq('id', campaign.id).select().single();
     if (error) throw new Error(error.message);
+
+    // v8 LB-S03: a material brief edit is a change-control event — recorded
+    // with field CODES only (never values/content). Assets are NOT touched:
+    // impact is derived on review, nothing propagates silently.
+    const ALL_MATERIAL = [...new Set(Object.values(MATERIAL_FIELDS).flat())];
+    const changedMaterial = ALL_MATERIAL.filter(
+      (f) => f in patch && String(patch[f] ?? '') !== String(campaign[f] ?? ''));
+    if (changedMaterial.length) {
+      track('brief_change_detected', {
+        userId: req.userId, workspaceId: ws.id,
+        properties: { changed_field_codes: changedMaterial.join(','), fields: changedMaterial.length },
+      });
+    }
     res.json({ campaign: data });
   } catch (err) {
     next(err);

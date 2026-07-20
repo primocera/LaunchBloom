@@ -214,6 +214,76 @@ function Consistency({ campaign }) {
   );
 }
 
+// v8 LB-S03: brief-change impact review. Each affected asset is resolved
+// independently — Keep snapshot (explicit, on record), edit manually, or
+// regenerate in its studio (1 AI action, only on success). Never bulk.
+const STUDIO_BY_TABLE = {
+  website_pages: '/app/studio/website',
+  email_assets: '/app/studio/email-flow',
+  social_assets: '/app/studio/social',
+  creative_assets: '/app/studio/creative',
+  seo_assets: '/app/studio/seo',
+};
+
+function BriefImpact({ campaign }) {
+  const [open, setOpen] = useState(false);
+  const [impact, setImpact] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    setOpen(true);
+    setError(null);
+    try { setImpact((await api.campaignBriefImpact(campaign.id)).impact); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function keep(a) {
+    try { await api.keepAssetSnapshot(campaign.id, a.table, a.id); load(); }
+    catch (err) { setError(err.message); }
+  }
+
+  if (!open) return <button className="btn-secondary" onClick={load}>Review brief changes · free</button>;
+  if (!impact && !error) return <p className="muted">Comparing brief to asset snapshots…</p>;
+
+  return (
+    <div className="campaign-brief-impact">
+      <h3 style={{ marginBottom: 4 }}>Brief changes</h3>
+      {error && <p className="login-err">{error}</p>}
+      {impact && impact.affected.length === 0 && (
+        <p className="muted">Every asset matches the current brief. Assets without a snapshot cannot be compared.</p>
+      )}
+      {impact && impact.affected.map((a) => (
+        <div key={a.table + a.id} className="account-section" style={{ padding: 10, marginBottom: 8 }}>
+          <p style={{ margin: 0 }}>
+            <strong>{a.title}</strong>
+            <span className="muted"> · {a.review_state === 'snapshot_kept' ? 'snapshot kept (your decision is on record)' : 'review brief changes'}</span>
+          </p>
+          <ul className="muted" style={{ margin: '4px 0' }}>
+            {a.changed.map((ch) => (
+              <li key={ch.field}><strong>{ch.label}:</strong> “{ch.old_value}” → “{ch.new_value}”</li>
+            ))}
+          </ul>
+          {a.review_state !== 'snapshot_kept' && (
+            <div className="confirm-row">
+              <button className="btn-secondary" onClick={() => keep(a)} title="Keeps the asset as generated. Recorded with your email and time; a further brief change reopens this review.">
+                Keep snapshot
+              </button>
+              <a className="btn-secondary" href="/app/assets">Edit manually</a>
+              <a className="btn-secondary" href={`${STUDIO_BY_TABLE[a.table]}?campaign=${campaign.id}`} title="Regenerating creates a new version and uses 1 AI action only on success.">
+                Open studio to regenerate
+              </a>
+            </div>
+          )}
+        </div>
+      ))}
+      <div className="confirm-row">
+        <button className="btn-secondary" onClick={load}>Refresh</button>
+        <button className="account-link" onClick={() => setOpen(false)}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState(null);
   const [form, setForm] = useState(null); // null = closed, object = create form
@@ -451,6 +521,7 @@ export default function Campaigns() {
 
           <Deliverables campaign={c} />
           <Consistency campaign={c} />
+          <BriefImpact campaign={c} />
 
           <div className="confirm-row">
             <button className="btn-secondary" onClick={() => strategy(c)} disabled={busyId === c.id}>

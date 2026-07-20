@@ -37,6 +37,12 @@ const CANONICAL_EVENTS = {
   deliverable_plan_saved: 'The user saved an explicit campaign deliverable plan.',
   required_deliverable_started: 'A first asset was saved for a required deliverable.',
   required_deliverable_ready: 'An asset of a required deliverable was marked ready by the user.',
+  // v8 LB-S02/LB-S03 — consistency + change control (codes/counts only, no content):
+  consistency_check_viewed: 'A campaign consistency check was computed and shown.',
+  finding_resolved: 'A previously detected consistency finding stopped appearing.',
+  brief_change_detected: 'A material Campaign Brief field was edited (field codes only).',
+  stale_asset_opened: 'The brief-change impact review was opened with affected assets.',
+  stale_asset_resolved: 'One affected asset was resolved (keep snapshot / regenerate).',
 };
 
 // Activation (Prompt 18): a documented, testable definition.

@@ -109,6 +109,10 @@ export const api = {
   campaignConsistency: (id) => request(`/api/campaigns/${id}/consistency`),
   ackConsistencyFinding: (id, fingerprint, note_category) =>
     request(`/api/campaigns/${id}/consistency/ack`, { method: 'POST', body: { fingerprint, note_category } }),
+  // v8 LB-S03: brief-change impact (deterministic, free)
+  campaignBriefImpact: (id) => request(`/api/campaigns/${id}/brief-impact`),
+  keepAssetSnapshot: (id, asset_table, asset_id) =>
+    request(`/api/campaigns/${id}/brief-impact/keep`, { method: 'POST', body: { asset_table, asset_id } }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),
