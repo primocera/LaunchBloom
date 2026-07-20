@@ -128,6 +128,8 @@ export const api = {
   // v8 LB-S04: review queue + evidence locker + export manifest
   campaignReview: (id) => request(`/api/campaigns/${id}/review`),
   campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),
+  // v8 LB-S07: full review packet (export-only handoff per ADR-001)
+  campaignReviewPacket: (id) => request(`/api/campaigns/${id}/review-packet`),
   evidence: () => request('/api/evidence'),
   addEvidence: (record) => request('/api/evidence', { method: 'POST', body: record }),
   updateEvidence: (id, patch) => request(`/api/evidence/${id}`, { method: 'PATCH', body: patch }),

@@ -411,6 +411,22 @@ function ReviewQueue({ campaign }) {
           )}
 
           <div className="confirm-row" style={{ marginTop: 8 }}>
+            {/* v8 LB-S07 (ADR-001): export-only handoff — no share links,
+                no collaboration claims. */}
+            <button className="btn-secondary"
+              onClick={async () => {
+                try {
+                  const { packet_markdown } = await api.campaignReviewPacket(campaign.id);
+                  download(`${campaign.name.replace(/[^a-z0-9]+/gi, '-')}-review-packet.md`, packet_markdown, 'text/markdown');
+                } catch (err) { setError(err.message); }
+              }}
+              title="A complete handoff record for a client or channel operator: summary, assets, statuses, unresolved items, evidence and an owner checklist.">
+              Export review packet
+            </button>
+            <a className="btn-secondary" href={`/api/campaigns/${campaign.id}/review-packet?format=html`} target="_blank" rel="noreferrer"
+              title="Print-friendly version — use your browser's Print to save as PDF.">
+              Print view
+            </a>
             <button className="btn-secondary" onClick={exportManifest}
               title="A handoff record listing assets, statuses, unresolved items and evidence — not an approval or compliance certificate.">
               Export review manifest{q.blocking.length ? ` (${q.blocking.length} unresolved disclosed)` : ''}

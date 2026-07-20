@@ -57,6 +57,8 @@ const CANONICAL_EVENTS = {
   playbook_previewed: 'A first-party playbook preview was opened.',
   playbook_applied: 'A playbook created a new draft campaign + deliverable plan.',
   user_template_reused: 'A workspace template created a new draft campaign.',
+  // v8 LB-S07 — export-only handoff (ADR-001):
+  review_packet_exported: 'A campaign review packet (md/html handoff record) was exported.',
 };
 
 // Activation (Prompt 18): a documented, testable definition.
