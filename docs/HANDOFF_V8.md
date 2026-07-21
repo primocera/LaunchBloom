@@ -21,9 +21,24 @@ Configured and verified by the owner:
 - Cron trigger live: cron-job.org → `GET /api/cron/email-outbox` every 15 min with
   `Authorization: Bearer <CRON_SECRET>` (verified **200 OK**).
 
-Product **name/copy still say "LaunchBloom"** — the Scalvya copy rebrand (display
-name, tagline, landing HTML, legal entity name) is **deferred** and is the main
-open work item for whoever picks up the repo next.
+## Post-launch changes (after the merge, same day)
+
+- **Global rebrand LaunchBloom → Scalvya** (commit on `main`): customer-facing name
+  is Scalvya everywhere — frontend (`brand.js`, `index.html` title/OG/twitter meta,
+  Landing FAQ, Signup, Brand Profile, Social/Email studios, status labels), backend
+  copy (review-packet/manifest handoff records, AI system guardrails, evidence/SEO/
+  deliverables notes), `backend/lib/brand.js` env defaults + email `from` line,
+  export filenames (`scalvya-export.json`), `package.json` names, `CLAUDE.md`.
+  Brand-asserting tests updated in lockstep; `app/` bundle rebuilt. Tagline, internal
+  Stripe `source` metadata tag, and dated historical docs (HANDOFF_V7, V8_PROMPTS
+  verbatim playbook) were left as-is.
+  - **Action required for backend:** Vercel env `BRAND_NAME` (and `BRAND_SENDER_NAME`)
+    must be set to `Scalvya` or deleted, otherwise backend emails still read the old
+    name (the code default is now `Scalvya`, but the env var overrides it).
+- **Admin scorecard UI** (`app-src/routes/Admin.jsx`, route `/app/admin`): renders
+  `GET /api/admin/scorecard` as a readable metric dashboard (beta-gate pass/below/
+  no-data badges, cancellation reasons, AI cost) instead of raw JSON. 403s to an
+  honest "admins only" state for non-allowlisted accounts. Requires `ADMIN_EMAILS`.
 
 ## State
 

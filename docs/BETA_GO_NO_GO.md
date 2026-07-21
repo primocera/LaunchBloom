@@ -299,5 +299,10 @@ Customer Portal, legal env vars, and the cron trigger verified **200 OK**). Deta
 
 **Standing guidance still applies:** keep the initial cohort capped (≤ 50–100 paying
 accounts) and watch the first real Stripe/webhook/AI-cost and email behaviour against the
-scorecard before scaling. Product name/copy still read "LaunchBloom" — the Scalvya copy
-rebrand is the main open work item.
+scorecard before scaling.
+
+**Rebrand + admin UI (same-day, post-launch):** the product was renamed **LaunchBloom →
+Scalvya** across all customer surfaces and tests (`app/` rebuilt); set Vercel `BRAND_NAME`
+= `Scalvya` (or delete it) so backend emails match. An admin scorecard page was added at
+`/app/admin` (renders `GET /api/admin/scorecard`; needs `ADMIN_EMAILS`). See
+`docs/HANDOFF_V8.md` → "Post-launch changes".

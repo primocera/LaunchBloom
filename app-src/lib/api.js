@@ -89,6 +89,8 @@ export const api = {
   archiveWorkspace: (id, archived) => request(`/api/workspaces/${id}`, { method: 'PATCH', body: { archived } }),
   deleteWorkspace: (id) => request(`/api/workspaces/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/api/workspace/dashboard'),
+  // Admin support view (Prompt 10 + 16) — 403 for non-allowlisted accounts.
+  scorecard: () => request('/api/admin/scorecard'),
   // Brand Profile (Prompt 9)
   brandProfile: () => request('/api/workspace/brand-profile'),
   saveBrandProfile: (profile) => request('/api/workspace/brand-profile', { method: 'PUT', body: { profile } }),

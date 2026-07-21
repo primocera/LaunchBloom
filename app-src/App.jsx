@@ -20,6 +20,7 @@ import BrandProfile from './routes/BrandProfile';
 import Campaigns from './routes/Campaigns';
 import AssetLibrary from './routes/AssetLibrary';
 import Create from './routes/Create';
+import Admin from './routes/Admin';
 import SeoStudio from './routes/studios/SeoStudio';
 import WeeklyPlan from './routes/studios/WeeklyPlan';
 // Upgrade prompts 16-18: marketing-asset generator studios
@@ -148,6 +149,8 @@ function AppShell() {
           <Route path="/create" element={<Create />} />
           <Route path="/assets" element={<AssetLibrary />} />
           <Route path="/account" element={<Account />} />
+          {/* Admin support scorecard — endpoint 403s for non-allowlisted accounts */}
+          <Route path="/admin" element={<Admin />} />
           {/* Full launch workflow — a campaign template inside Campaigns (v5 P3) */}
           <Route path="/flow" element={<Flow />} />
           <Route path="/kits/:id" element={<KitDetail />} />
