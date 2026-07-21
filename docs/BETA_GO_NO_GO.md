@@ -286,3 +286,18 @@ no AI action** — and the five canonical Create paths / four statuses are uncha
 paid launch **must not** be marked GO from mocked/local tests (LB-S10 non-negotiable).
 **Conditional GO for a capacity-capped paid beta (≤ 50–100 accounts)** once the six external
 blockers above have owner-recorded live evidence. No P0 code issues remain on branch `v8`.
+
+---
+
+## 🟢 LIVE UPDATE (2026-07-20)
+
+The six external blockers have been closed by the owner and the product is **live in
+production on `scalvya.com` with live Stripe payments enabled** (domain + DNS, Supabase +
+migrations 028–033, verified Resend domain, live Stripe key + six price IDs + live webhook +
+Customer Portal, legal env vars, and the cron trigger verified **200 OK**). Details in
+`docs/HANDOFF_V8.md` → "🟢 LIVE".
+
+**Standing guidance still applies:** keep the initial cohort capped (≤ 50–100 paying
+accounts) and watch the first real Stripe/webhook/AI-cost and email behaviour against the
+scorecard before scaling. Product name/copy still read "LaunchBloom" — the Scalvya copy
+rebrand is the main open work item.

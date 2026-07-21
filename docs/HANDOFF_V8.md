@@ -1,4 +1,4 @@
-# HANDOFF — v8 Value & Scale playbook (branch `v8`, 2026-07-20)
+# HANDOFF — v8 Value & Scale playbook (merged to `main`, 2026-07-20)
 
 For the next agent/owner. What shipped, how it was executed, the rules that held,
 and what remains. Companion docs: `docs/V8_PROMPTS.md` (verbatim prompts),
@@ -6,10 +6,29 @@ and what remains. Companion docs: `docs/V8_PROMPTS.md` (verbatim prompts),
 `docs/BETA_GO_NO_GO.md` (v8 addendum = the go/no-go scorecard),
 `docs/adr/ADR-001-handoff-export-only.md`.
 
+## 🟢 LIVE (2026-07-20)
+
+The product is **live in production on `scalvya.com` with live Stripe payments enabled.**
+Configured and verified by the owner:
+- Domain `scalvya.com` attached (Vercel) + DNS; app loads over HTTPS.
+- Supabase URLs set + migrations 028–033 applied.
+- Resend domain `scalvya.com` verified (SPF/DKIM/DMARC); `RESEND_API_KEY` set;
+  sender `hello@scalvya.com`, support `support@scalvya.com`.
+- Stripe **live** mode: `sk_live` secret key + the six live `STRIPE_PRICE_*` IDs +
+  live webhook endpoint (`https://scalvya.com/api/webhooks/stripe`) with its own
+  `whsec_` secret + Customer Portal enabled.
+- Legal env vars set (`BRAND_LEGAL_*`).
+- Cron trigger live: cron-job.org → `GET /api/cron/email-outbox` every 15 min with
+  `Authorization: Bearer <CRON_SECRET>` (verified **200 OK**).
+
+Product **name/copy still say "LaunchBloom"** — the Scalvya copy rebrand (display
+name, tagline, landing HTML, legal entity name) is **deferred** and is the main
+open work item for whoever picks up the repo next.
+
 ## State
 
-- Branch `v8` off `v7`. **Not pushed, not merged** (matching the v7 workflow — do
-  not push/merge without an explicit ask).
+- v8 is **merged to `main` and pushed** (`origin/main`). Development continued on
+  `main` after the merge.
 - Gate at HEAD (`72f734b`): `npm run lint` 0 errors (54 cosmetic warnings),
   `npm test` **304 passed / 0 failed**, `npm run build:app` clean, `check:app-fresh`
   fresh, Playwright **18/18** (2 tests are cold-start flaky and pass on isolated
