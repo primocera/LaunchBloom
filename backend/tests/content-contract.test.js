@@ -58,8 +58,8 @@ test('landing hero, final CTA and metadata all carry the canonical promise', () 
   const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
   const html = read(path.join(APP_SRC, 'index.html'));
   assert.ok(landing.includes(`<h1>${PROMISE}.</h1>`), 'hero h1 must state the promise');
-  assert.ok(html.includes(`<title>LaunchBloom — ${PROMISE}</title>`), 'title must state the promise');
-  assert.ok(html.includes(`og:title" content="LaunchBloom — ${PROMISE}"`), 'og:title must match the visible hero');
+  assert.ok(html.includes(`<title>Scalvya — ${PROMISE}</title>`), 'title must state the promise');
+  assert.ok(html.includes(`og:title" content="Scalvya — ${PROMISE}"`), 'og:title must match the visible hero');
 });
 
 // ── Exactly five canonical Create paths, consistent across surfaces ─────────
@@ -159,7 +159,7 @@ test('hero defines launch-ready and signup routes to first activation', () => {
   assert.match(signup, /navigate\('\/app\/brand\?welcome=1'\)/, 'fresh signups must land in Brand Profile first run');
 });
 
-test('Email studio discloses cost and says LaunchBloom does not send', () => {
+test('Email studio discloses cost and says Scalvya does not send', () => {
   const email = read(path.join(APP_SRC, 'routes', 'studios', 'EmailFlowStudio.jsx'));
   assert.match(email, /Generate emails · 1 AI action/);
   assert.match(email, /does not send emails/);

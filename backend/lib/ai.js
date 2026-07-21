@@ -17,7 +17,7 @@ const { BRAND } = require('./brand');
 // Override with ANTHROPIC_MODEL only if you knowingly want a pricier model.
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
 
-// Shared guardrails for every LaunchBloom generation. The playbook rules:
+// Shared guardrails for every Scalvya generation. The playbook rules:
 // guided business workflow, ethical marketing, no overpromising.
 const BASE_SYSTEM =
   `You are the AI engine of ${BRAND.name}, a guided business workflow that takes solopreneurs, ` +

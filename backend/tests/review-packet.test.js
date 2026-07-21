@@ -88,7 +88,7 @@ test('review packet is a complete, honest handoff record (markdown)', async () =
   assert.match(md, /needs review ·/);
   assert.match(md, /Trustpilot \(review\) — checked 2026-07-01/);
   assert.match(md, /Downstream owner checklist/);
-  assert.match(md, /LaunchBloom does none of these/);
+  assert.match(md, /Scalvya does none of these/);
 });
 
 test('html packet is print-friendly, noindexed and escapes user content', async () => {

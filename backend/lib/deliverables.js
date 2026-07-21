@@ -43,7 +43,7 @@ function missingBriefFields(campaign) {
  * assets: [{ status }] rows from the deliverable's table for this campaign.
  * Returns one of: 'excluded' | 'not_planned' | 'in_progress' | 'needs_review'
  * | 'ready'. "Ready" means at least one asset the user marked ready/published;
- * it is a user decision, never something LaunchBloom published.
+ * it is a user decision, never something Scalvya published.
  */
 function deliverableState(requirement, assets) {
   if (requirement === 'not_needed') return 'excluded';

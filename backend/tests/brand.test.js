@@ -56,6 +56,6 @@ test('brand config exposes the required customer-facing fields', () => {
   for (const key of ['name', 'siteUrl', 'supportEmail', 'senderName', 'senderEmail', 'legalName']) {
     assert.ok(BRAND[key], `BRAND.${key} must be set`);
   }
-  assert.equal(BRAND.name, 'LaunchBloom');
-  assert.match(emailFrom(), /^LaunchBloom <.+@.+>$/);
+  assert.equal(BRAND.name, 'Scalvya');
+  assert.match(emailFrom(), /^Scalvya <.+@.+>$/);
 });

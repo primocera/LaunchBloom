@@ -1,5 +1,5 @@
 {
-  "name": "launchbloom-backend",
+  "name": "scalvya-backend",
   "version": "1.0.0",
   "description": "Convenience scripts only — ALL dependencies live in the root package.json (single manifest, v5 Prompt 16). Run `npm install` at the repo root; Node resolves modules up the tree.",
   "main": "server.js",

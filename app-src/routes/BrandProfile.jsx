@@ -203,7 +203,7 @@ function Onboarding({ profile, onDone, save }) {
     <div className="brand-page">
       <h1>Give every campaign the same ground truth.</h1>
       <p className="muted">
-        Add the facts LaunchBloom should reuse — and the claims it must never invent. You can refine
+        Add the facts Scalvya should reuse — and the claims it must never invent. You can refine
         this profile as your business changes.
       </p>
       <div className="flow-card">
@@ -293,7 +293,7 @@ export default function BrandProfile() {
         <span className="brand-status" role="status" aria-live="polite">{status}</span>
       </div>
       <p className="muted">
-        Add the facts LaunchBloom should reuse — and the claims it must never invent. Changes apply
+        Add the facts Scalvya should reuse — and the claims it must never invent. Changes apply
         to future generations; assets you&rsquo;ve already saved keep the context they were generated
         from.
       </p>

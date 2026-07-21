@@ -3,7 +3,7 @@
 // keeps its historical values (draft/edited/ready/published); every surface —
 // studio status pills, Library filters and cards — renders these labels so
 // "edited" never shows up next to "Needs review" for the same state.
-// Published is always a user-declared status: LaunchBloom never publishes.
+// Published is always a user-declared status: Scalvya never publishes.
 // ---------------------------------------------------------------------------
 
 export const STATUS_VALUES = ['draft', 'edited', 'ready', 'published'];

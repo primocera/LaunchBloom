@@ -1,4 +1,4 @@
-/* The guided flow — the LaunchBloom palette from the spec. */
+/* The guided flow — the Scalvya palette from the spec. */
 
 .flow {
   min-height: 100%;
@@ -532,7 +532,7 @@
 .kit-badge.is-pass { background: rgba(16, 185, 129, 0.12); color: #059669; }
 .kit-badge.is-fail { background: rgba(185, 28, 28, 0.1); color: #b91c1c; }
 
-/* ── App shell / sidebar (LaunchBloom palette overrides) ─────────────────── */
+/* ── App shell / sidebar (Scalvya palette overrides) ─────────────────── */
 
 .nav-item.is-active {
   color: #2563eb;

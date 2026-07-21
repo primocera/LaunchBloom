@@ -147,7 +147,7 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
       workspaces: archives,
     };
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="launchbloom-export.json"');
+    res.setHeader('Content-Disposition', 'attachment; filename="scalvya-export.json"');
     res.send(JSON.stringify(payload, null, 2));
   } catch (err) {
     next(err);

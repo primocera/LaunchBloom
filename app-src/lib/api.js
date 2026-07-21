@@ -74,7 +74,7 @@ export const api = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'launchbloom-export.json';
+    a.download = 'scalvya-export.json';
     document.body.appendChild(a);
     a.click();
     a.remove();

@@ -85,7 +85,7 @@ export default function Signup() {
     <div className="login">
       <form className="login-card" onSubmit={submit}>
         <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
-        <h1>Create your LaunchBloom workspace</h1>
+        <h1>Create your Scalvya workspace</h1>
         <p>Set up your brand and campaign brief free. You’ll choose a plan only when you’re ready to generate.</p>
 
         <input

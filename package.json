@@ -1,7 +1,7 @@
 {
-  "name": "launchbloom",
+  "name": "scalvya",
   "version": "1.0.0",
-  "description": "OfferFlow AI (LaunchBloom) — Vite frontend + Express API on Vercel (serverless)",
+  "description": "Scalvya — Vite frontend + Express API on Vercel (serverless)",
   "private": true,
   "scripts": {
     "dev": "node --watch backend/server.js",

@@ -244,7 +244,7 @@ export default function EmailFlowStudio() {
             <p className="flow-muted">
               Build lifecycle flows or campaign sequences with audience, timing, exclusions and
               complete body copy — subject options, preheader, CTAs and a plain-text version to
-              review. LaunchBloom does not send emails: export the drafts into your email tool and
+              review. Scalvya does not send emails: export the drafts into your email tool and
               review timing, links and compliance there.
             </p>
           </div>

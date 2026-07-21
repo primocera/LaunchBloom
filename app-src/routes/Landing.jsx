@@ -65,18 +65,18 @@ function planCard(p) {
 const FAQ = [
   {
     q: 'How is this different from a general AI chat?',
-    a: 'A chat answers one prompt at a time. LaunchBloom keeps your approved brand facts and campaign brief attached to every asset, then saves outputs with version history and review checks.',
+    a: 'A chat answers one prompt at a time. Scalvya keeps your approved brand facts and campaign brief attached to every asset, then saves outputs with version history and review checks.',
   },
   {
     q: 'Do I need a finished brand strategy?',
-    a: 'No. Start with the facts you know. LaunchBloom marks missing proof, prices or restrictions for review instead of inventing them.',
+    a: 'No. Start with the facts you know. Scalvya marks missing proof, prices or restrictions for review instead of inventing them.',
   },
   {
     q: 'What does the free account include?',
     a: 'You can create your account and prepare your Brand Profile and Campaign Brief without a payment method. Generation starts when you choose a plan and begin the 3-day trial.',
   },
   {
-    q: 'Will LaunchBloom publish for me?',
+    q: 'Will Scalvya publish for me?',
     a: 'No. It creates, organizes and exports review-ready drafts. You remain responsible for checking and publishing them.',
   },
   {

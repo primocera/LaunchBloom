@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // v5 Prompt 12 — SEO provider adapter interface.
 //
-// LaunchBloom generates SEO content *ideas*, not researched keyword data. Until
+// Scalvya generates SEO content *ideas*, not researched keyword data. Until
 // a real keyword/SERP data provider is integrated, everything is "Not
 // researched": we never fabricate search volume, difficulty, CPC or rankings.
 //

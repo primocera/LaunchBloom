@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // v8 LB-S04: evidence locker. Reusable, user-recorded proof references —
-// LaunchBloom never scrapes a source or asserts that it is true; the record
+// Scalvya never scrapes a source or asserts that it is true; the record
 // keeps WHO checked WHAT and WHEN so review work is not repeated per asset.
 // One evidence record can be linked to many assets without copying its text.
 // ---------------------------------------------------------------------------
