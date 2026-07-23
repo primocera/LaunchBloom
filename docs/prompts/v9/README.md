@@ -31,8 +31,8 @@ Source of truth: `Scalvya_Product_Elevation_Claude_Code_Prompts_v9.docx` (repo r
 - [x] SC-V9-03 Campaign creation / brief editing / approval UX (commit efb9de1)
 - [x] SC-V9-04 Unified review workbench + evidence workflow (commit c5cf050)
 - [x] SC-V9-05 Asset studios output quality + editing (high-value slice; commit c5b1a5c) — deferred: per-channel prompt/schema versioning rewrites + golden evals
-- [x] SC-V9-06 Campaign-scoped library + version comparison (commit pending)
-- [ ] SC-V9-07 Professional handoff packet + export
+- [x] SC-V9-06 Campaign-scoped library + version comparison (commit 4e8c4df)
+- [x] SC-V9-07 Professional handoff packet + export (commit pending) — deferred: ZIP/DOCX (conditional on safe streaming per prompt)
 - [ ] SC-V9-08 ICP positioning, onboarding, pricing, lifecycle
 - [ ] SC-V9-09 Design system, accessibility, responsive polish
 - [ ] SC-V9-10 Legal, billing, support, paid-production hardening

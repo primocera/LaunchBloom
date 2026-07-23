@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
@@ -561,6 +562,7 @@ async function buildReviewQueue(ws, campaign) {
       const title = (a.title || a.subject_line || a.hook || a.h1 || a.page_type || a.flow_type || 'Untitled');
       assetIndex.push({
         table, id: a.id, title, status: a.status || 'draft',
+        archived: !!a.archived,
         brief_snapshot_at: a.brief_snapshot ? a.brief_snapshot.snapshot_at || null : null,
       });
       if (a.status === 'edited') needsReview.push({ table, id: a.id, title });
@@ -783,6 +785,179 @@ router.get('/api/campaigns/:id/review-packet', requireAuth, async (req, res, nex
     } else {
       res.json({ packet_markdown: md });
     }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── v9 SC-07: professional handoff packet (server-owned composition) ────────
+// One coherent, reviewable package a founder/client/designer/channel operator
+// can understand WITHOUT app access. Composed server-side from canonical state,
+// with a deterministic fingerprint so a later material change surfaces "packet
+// is older than current campaign" without deleting the download they have.
+// Honest boundary preserved: this is a Review record, never an approval.
+
+const PACKET_VERSION = 'handoff-1';
+
+const RESPONSIBILITIES = [
+  'Verify every fact, price, date and claim against your own sources.',
+  'Resolve the unresolved items in this packet before publishing.',
+  'Check platform policies and legal/compliance requirements yourself.',
+  'Set up publishing, sending and scheduling in your own tools — Scalvya does none of these.',
+  'Record final approval in your own process — this packet is not an approval.',
+];
+
+// Stable stringify (sorted keys) so the same canonical state always hashes the
+// same fingerprint regardless of property insertion order.
+function stableStringify(v) {
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(',')}]`;
+  if (v && typeof v === 'object') {
+    return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${stableStringify(v[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(v === undefined ? null : v);
+}
+
+// The single canonical packet object — used for JSON export, the Markdown/HTML
+// packet's data and the fingerprint. No timestamps that aren't canonical.
+function handoffManifest(campaign, q, planRows) {
+  const plan = new Map((planRows || []).map((r) => [r.deliverable_code, r.requirement_state]));
+  const asset = (a) => ({ type: a.table, title: a.title, status: a.status, brief_snapshot_at: a.brief_snapshot_at || null });
+  return {
+    packet_version: PACKET_VERSION,
+    rules_version: RULES_VERSION,
+    campaign: {
+      name: campaign.name,
+      objective: campaign.objective || null,
+      audience: campaign.audience || null,
+      offer: campaign.offer_summary || null,
+      promo_terms: campaign.promo_terms || null,
+      key_message: campaign.key_message || null,
+      proof: campaign.proof || null,
+      restrictions: campaign.restrictions || null,
+      markets: campaign.markets || null,
+      language: campaign.language || null,
+      dates: campaign.start_date ? `${campaign.start_date} → ${campaign.end_date || 'open'}` : null,
+      deadline: campaign.deadline || null,
+      brief_approved: !!campaign.brief_approved,
+      brief_approved_at: campaign.brief_approved_at || null,
+    },
+    deliverable_plan: DELIVERABLES.map((d) => ({ code: d.code, label: d.label, requirement: plan.get(d.code) || 'unplanned' })),
+    included_assets: q.assets.filter((a) => !a.archived).map(asset),
+    excluded_assets: q.assets.filter((a) => a.archived).map((a) => ({ ...asset(a), reason: 'archived' })),
+    unresolved: {
+      blocking: q.blocking.map((f) => ({ code: f.code, assets: f.assets.map((x) => x.title) })),
+      findings: q.findings
+        .filter((f) => f.severity !== 'high' || f.status === 'acknowledged')
+        .map((f) => ({ code: f.code, status: f.status, assets: f.assets.map((x) => x.title) })),
+      brief_changes: q.stale.map((a) => ({ title: a.title, fields: a.changed.map((c) => c.field) })),
+      needs_review: q.needs_review_assets.map((a) => a.title),
+      evidence_reminders: q.evidence_reminders.map((e) => e.label),
+    },
+    evidence: q.evidence.map((e) => ({
+      label: e.label, type: e.type, checked_date: e.checked_date,
+      source_url: e.source_url || null, source_ref: e.source_ref || null,
+    })),
+    responsibilities: RESPONSIBILITIES,
+  };
+}
+
+function packetFingerprint(manifest) {
+  return crypto.createHash('sha256').update(stableStringify(manifest)).digest('hex').slice(0, 16);
+}
+
+const band = (n) => (n <= 0 ? '0' : n <= 3 ? '1-3' : n <= 10 ? '4-10' : '10+');
+
+// GET /api/campaigns/:id/handoff — the Handoff screen preview: readiness,
+// included/excluded assets, unresolved items, evidence, formats, fingerprint
+// and whether a previously exported packet is now stale.
+router.get('/api/campaigns/:id/handoff', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const q = await buildReviewQueue(ws, campaign);
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const gap = campaignGap(campaign, planRows || [], await assetsByTableFor(ws, campaign.id));
+
+    const manifest = handoffManifest(campaign, q, planRows || []);
+    const fingerprint = packetFingerprint(manifest);
+
+    track('handoff_previewed', {
+      userId: req.userId, workspaceId: ws.id,
+      properties: { asset_count_band: band(manifest.included_assets.length), blocker_count_band: band(q.blocking.length) },
+    });
+
+    res.json({
+      handoff: {
+        ...manifest,
+        all_required_ready: gap.all_required_ready,
+        required_total: gap.required_total,
+        blocking_count: q.blocking.length,
+        reminder_count: manifest.unresolved.findings.length + manifest.unresolved.brief_changes.length +
+          manifest.unresolved.needs_review.length + manifest.unresolved.evidence_reminders.length,
+        formats: ['md', 'json', 'html'],
+        disclosure: 'This is a Review record prepared for your review — not an approval, fact-check, ' +
+          'compliance certificate or a published/sent campaign. Publishing remains with you.',
+        fingerprint,
+        stale: !!(campaign.last_handoff_fingerprint && campaign.last_handoff_fingerprint !== fingerprint),
+        last_handoff_at: campaign.last_handoff_at || null,
+        last_handoff_format: campaign.last_handoff_format || null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/campaigns/:id/handoff/manifest?format=json — deterministic JSON
+// manifest (Markdown/HTML remain on the existing review-packet endpoint).
+router.get('/api/campaigns/:id/handoff/manifest', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const q = await buildReviewQueue(ws, campaign);
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const manifest = handoffManifest(campaign, q, planRows || []);
+    res.json({
+      manifest: { ...manifest, generated_at: new Date().toISOString(), fingerprint: packetFingerprint(manifest) },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/campaigns/:id/handoff/record — remember the fingerprint the user
+// just exported (so a later change flags staleness). Never blocks the download;
+// the client calls this after a successful export.
+router.post('/api/campaigns/:id/handoff/record', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { fingerprint, format } = req.body || {};
+    if (typeof fingerprint !== 'string' || !/^[a-f0-9]{16}$/.test(fingerprint)) {
+      return res.status(400).json({ error: 'A valid packet fingerprint is required.' });
+    }
+    const fmt = ['md', 'json', 'html'].includes(format) ? format : 'md';
+    await supabase.from('campaigns').update({
+      last_handoff_fingerprint: fingerprint, last_handoff_at: new Date().toISOString(), last_handoff_format: fmt,
+    }).eq('id', campaign.id);
+
+    // Recompute the blocker band without trusting any client-sent count.
+    const q = await buildReviewQueue(ws, campaign);
+    track('handoff_exported', {
+      userId: req.userId, workspaceId: ws.id,
+      properties: { format: fmt, asset_count_band: band(q.assets.filter((a) => !a.archived).length), blocker_count_band: band(q.blocking.length) },
+    });
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }
@@ -1082,3 +1257,8 @@ async function campaignContext(ws, campaignId) {
 
 module.exports = router;
 module.exports.campaignContext = campaignContext;
+// v9 SC-07: exported for pure unit tests (fingerprint determinism + structure).
+module.exports.handoffManifest = handoffManifest;
+module.exports.packetFingerprint = packetFingerprint;
+module.exports.stableStringify = stableStringify;
+module.exports.handoffBand = band;

@@ -204,58 +204,130 @@ export function PackagePreview({ campaign, defaultOpen }) {
   );
 }
 
-// v8 LB-S07 (ADR-001): export-only handoff. Extracted from ReviewQueue in v9
-// SC-01 so the Handoff section owns manifest/packet/export.
+// v9 SC-07 (ADR-001 preserved): the Handoff screen. Server-owned preview of the
+// exact packet — readiness, included/excluded assets, unresolved items and
+// evidence — before any download, with a deterministic fingerprint so a stale
+// packet is visible after a material change. Export-only: no share links, no
+// email, no client accounts. This is a Review record, never an approval.
 export function HandoffExports({ campaign }) {
+  const [h, setH] = useState(null);
   const [error, setError] = useState(null);
-  const [blocking, setBlocking] = useState(null);
-  const slug = (campaign.name || 'campaign').replace(/[^a-z0-9]+/gi, '-');
+  const [confirmReminders, setConfirmReminders] = useState(false);
+  const slug = (campaign.name || 'campaign').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'campaign';
 
-  useEffect(() => {
-    api.campaignReview(campaign.id)
-      .then((r) => setBlocking(r.review?.blocking?.length || 0))
-      .catch(() => setBlocking(null));
-  }, [campaign.id]);
+  function load() {
+    api.campaignHandoff(campaign.id).then((r) => setH(r.handoff)).catch((e) => setError(e.message));
+  }
+  useEffect(load, [campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function exportPacket() {
+  async function record(format) {
+    try { await api.recordHandoff(campaign.id, h.fingerprint, format); load(); } catch { /* never blocks the download */ }
+  }
+
+  async function exportMd() {
     setError(null);
     try {
       const { packet_markdown } = await api.campaignReviewPacket(campaign.id);
-      download(`${slug}-review-packet.md`, packet_markdown, 'text/markdown');
+      download(`${slug}-handoff-packet.md`, packet_markdown, 'text/markdown');
+      record('md');
     } catch (err) { setError(err.message); }
   }
 
-  async function exportManifest() {
+  async function exportJson() {
     setError(null);
     try {
-      const { manifest_markdown } = await api.campaignReviewManifest(campaign.id);
-      download(`${slug}-review-manifest.md`, manifest_markdown, 'text/markdown');
+      const { manifest } = await api.campaignHandoffManifest(campaign.id);
+      download(`${slug}-handoff-manifest.json`, JSON.stringify(manifest, null, 2), 'application/json');
+      record('json');
     } catch (err) { setError(err.message); }
   }
 
+  if (error) return <p className="login-err">{error}</p>;
+  if (!h) return <p className="muted">Assembling the handoff packet…</p>;
+
+  const hasReminders = h.reminder_count > 0;
+  const canExport = h.blocking_count === 0 && (!hasReminders || confirmReminders);
+
   return (
-    <div className="campaign-handoff-exports">
-      <h3 style={{ marginBottom: 4 }}>Export handoff</h3>
-      <p className="muted" style={{ marginTop: 0 }}>
-        A complete handoff record for a client or channel operator: summary, assets, statuses,
-        unresolved items and evidence. This is a review record, not an approval or compliance certificate —
-        publishing remains with you.
-      </p>
-      {error && <p className="login-err">{error}</p>}
-      <div className="confirm-row">
-        <button className="btn-secondary" onClick={exportPacket}
-          title="Summary, assets, statuses, unresolved items, evidence and an owner checklist.">
-          Export review packet
-        </button>
-        <a className="btn-secondary" href={`/api/campaigns/${campaign.id}/review-packet?format=html`} target="_blank" rel="noreferrer"
-          title="Print-friendly version — use your browser's Print to save as PDF.">
-          Print view
-        </a>
-        <button className="btn-secondary" onClick={exportManifest}
-          title="A handoff record listing assets, statuses, unresolved items and evidence.">
-          Export review manifest{blocking ? ` (${blocking} unresolved disclosed)` : ''}
-        </button>
+    <div className="campaign-handoff">
+      <div className="brand-head" style={{ alignItems: 'baseline' }}>
+        <h3 style={{ margin: 0 }}>Handoff packet</h3>
+        {h.stale && <span className="campaign-badge">Packet is older than the current campaign</span>}
       </div>
+      <p className="muted" style={{ marginTop: 0 }}>{h.disclosure}</p>
+
+      {/* Readiness + what the packet will and won't contain, before download. */}
+      <div className="campaign-summary-grid">
+        <div className="account-section campaign-readiness">
+          <span className="muted">Readiness</span>
+          <strong>{h.all_required_ready ? 'All required deliverables ready' : `${h.required_total} required planned`}</strong>
+        </div>
+        <div className="account-section campaign-readiness">
+          <span className="muted">Included assets</span>
+          <strong>{h.included_assets.length}</strong>
+        </div>
+        <div className={`account-section campaign-readiness ${h.blocking_count ? 'is-blocked' : ''}`}>
+          <span className="muted">Hard blockers</span>
+          <strong>{h.blocking_count}</strong>
+        </div>
+        <div className="account-section campaign-readiness">
+          <span className="muted">Disclosed reminders</span>
+          <strong>{h.reminder_count}</strong>
+        </div>
+      </div>
+
+      {h.blocking_count > 0 && (
+        <div className="account-section" role="alert">
+          <strong>{h.blocking_count} hard blocker{h.blocking_count === 1 ? '' : 's'} must be resolved before export.</strong>
+          <ul className="muted">
+            {h.unresolved.blocking.map((b, i) => <li key={i}>{b.code.replace(/_/g, ' ')}: {b.assets.join(', ')}</li>)}
+          </ul>
+          <p className="muted">Resolve these in Review, then return here.</p>
+        </div>
+      )}
+
+      {h.excluded_assets.length > 0 && (
+        <p className="muted">Excluded (archived, disclosed): {h.excluded_assets.map((a) => a.title).join(', ')}.</p>
+      )}
+
+      {/* "What remains outside Scalvya" — prominent, never fine print. */}
+      <div className="account-section">
+        <strong>What remains outside Scalvya</strong>
+        <ul className="muted" style={{ marginBottom: 0 }}>
+          {h.responsibilities.map((r, i) => <li key={i}>{r}</li>)}
+        </ul>
+      </div>
+
+      {hasReminders && h.blocking_count === 0 && (
+        <label className="consent" style={{ marginTop: 8 }}>
+          <input type="checkbox" checked={confirmReminders} onChange={(e) => setConfirmReminders(e.target.checked)} />
+          <span>I understand this packet discloses {h.reminder_count} unresolved reminder{h.reminder_count === 1 ? '' : 's'} and export anyway.</span>
+        </label>
+      )}
+
+      <div className="confirm-row" style={{ marginTop: 8 }}>
+        <button className="btn-secondary" onClick={exportMd} disabled={!canExport}
+          title="Human-readable Markdown packet: summary, assets, statuses, unresolved items, evidence and an owner checklist.">
+          Export packet (Markdown)
+        </button>
+        <button className="btn-secondary" onClick={exportJson} disabled={!canExport}
+          title="Deterministic JSON manifest of the same canonical packet.">
+          Export manifest (JSON)
+        </button>
+        <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
+          href={canExport ? `/api/campaigns/${campaign.id}/review-packet?format=html` : undefined}
+          onClick={() => canExport && record('html')}
+          target="_blank" rel="noreferrer" aria-disabled={!canExport}
+          title="Print-friendly HTML — use your browser's Print to save as PDF. This is a Word-compatible HTML view, not a .docx file.">
+          Print view (HTML)
+        </a>
+      </div>
+      {h.last_handoff_at && (
+        <p className="muted" style={{ marginTop: 6 }}>
+          Last exported {new Date(h.last_handoff_at).toLocaleString()}{h.last_handoff_format ? ` · ${h.last_handoff_format.toUpperCase()}` : ''}.
+          {h.stale ? ' The campaign changed since — re-export for the current version.' : ' This matches the current campaign.'}
+        </p>
+      )}
     </div>
   );
 }

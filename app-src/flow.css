@@ -1179,6 +1179,9 @@ textarea:focus-visible,
 .asset-diff-label { font-size: 12px; font-weight: 600; text-transform: capitalize; }
 .asset-diff-before p, .asset-diff-after p { margin: 2px 0 6px; white-space: pre-wrap; }
 .asset-diff-before p { color: #6b7280; text-decoration: line-through; }
+/* v9 SC-07: handoff export — disabled anchor while blockers/reminders unmet. */
+.btn-secondary.is-disabled { opacity: 0.5; pointer-events: none; }
+.campaign-readiness.is-blocked strong { color: #b91c1c; }
 
 /* v9 SC-01: campaign workspace — tabs, overview summary, quiet overflow menu. */
 .campaign-workspace .brand-head { align-items: flex-start; }

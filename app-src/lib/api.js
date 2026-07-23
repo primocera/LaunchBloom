@@ -130,6 +130,10 @@ export const api = {
   // v8 LB-S04: review queue + evidence locker + export manifest
   campaignReview: (id) => request(`/api/campaigns/${id}/review`),
   campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),
+  campaignHandoff: (id) => request(`/api/campaigns/${id}/handoff`),
+  campaignHandoffManifest: (id) => request(`/api/campaigns/${id}/handoff/manifest`),
+  recordHandoff: (id, fingerprint, format) =>
+    request(`/api/campaigns/${id}/handoff/record`, { method: 'POST', body: { fingerprint, format } }),
   // v8 LB-S07: full review packet (export-only handoff per ADR-001)
   campaignReviewPacket: (id) => request(`/api/campaigns/${id}/review-packet`),
   evidence: () => request('/api/evidence'),
