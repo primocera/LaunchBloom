@@ -36,5 +36,5 @@ Source of truth: `Scalvya_Product_Elevation_Claude_Code_Prompts_v9.docx` (repo r
 - [x] SC-V9-08 ICP positioning, onboarding, pricing, lifecycle (ICP slice; commit 9bda45a) — deferred: full lifecycle-email rewrite (overlaps SC-10)
 - [x] SC-V9-09 Design system, accessibility, responsive polish (a11y slice; commit 9d9f240) — deferred: full shared-component library migration
 - [x] SC-V9-10 Legal, billing, support, paid-production hardening (commit db18897) — legal fail-closed done in SC-00; live rehearsal is owner-operated (runbook)
-- [x] SC-V9-11 Value analytics, beta learning, pruning (commit pending) — fixed dropped v9 client events; cohort dashboard UI deferred (doc'd)
-- [ ] SC-V9-12 Integrated RC + final product-quality gate
+- [x] SC-V9-11 Value analytics, beta learning, pruning (commit 20673ae) — fixed dropped v9 client events; cohort dashboard UI deferred (doc'd)
+- [x] SC-V9-12 Integrated RC + final product-quality gate (commit pending) — docs/GO_NO_GO_V9.md; full gate green 355/0; live rehearsal owner-outstanding
