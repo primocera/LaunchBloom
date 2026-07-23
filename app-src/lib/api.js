@@ -141,6 +141,7 @@ export const api = {
     request(`/api/evidence/${id}/link`, { method: 'DELETE', body: { asset_table, asset_id } }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
+  assetDetail: (table, id) => request(`/api/assets/library/${table}/${id}`),
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),
   duplicateAsset: (table, id) => request(`/api/assets/library/${table}/${id}/duplicate`, { method: 'POST' }),
   deleteAsset: (table, id) => request(`/api/assets/library/${table}/${id}`, { method: 'DELETE' }),

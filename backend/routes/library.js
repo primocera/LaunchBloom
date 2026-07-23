@@ -165,6 +165,16 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     if (!row) return res.status(404).json({ error: 'Asset not found' });
 
     const b = req.body || {};
+    // v9 SC-06: optimistic concurrency for the asset drawer's manual edits.
+    // A stale expected_updated_at (edited elsewhere) is a conflict — reject with
+    // 409 STALE and the current row instead of clobbering a newer version.
+    if (b.expected_updated_at && row.updated_at && b.expected_updated_at !== row.updated_at) {
+      return res.status(409).json({
+        error: 'This asset was changed somewhere else. Reload it to get the latest version before saving.',
+        code: 'STALE',
+        asset: { ...row, table: req.params.table },
+      });
+    }
     const patch = {};
     // Library metadata
     if (typeof b.favourite === 'boolean') patch.favourite = b.favourite;
@@ -336,6 +346,26 @@ router.post('/api/assets/library/bulk', requireAuth, async (req, res, next) => {
       done++;
     }
     res.json({ ok: true, updated: done });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// v9 SC-06: GET /api/assets/library/:table/:id — full detail for the asset
+// drawer, fetched on demand (the list stays bounded to snippets, no N+1). The
+// editable text fields are named so the client can render + diff them.
+router.get('/api/assets/library/:table/:id', requireAuth, async (req, res, next) => {
+  try {
+    const cfg = tableConfig(req.params.table, res);
+    if (!cfg) return;
+    const ws = await resolveWorkspace(req);
+    const row = await ownedAsset(ws, req.params.table, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Asset not found' });
+    res.json({
+      asset: { ...row, table: req.params.table, type_label: cfg.label },
+      edit_fields: cfg.rewriteFields,
+      title_field: cfg.titleField,
+    });
   } catch (err) {
     next(err);
   }

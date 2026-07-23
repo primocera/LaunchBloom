@@ -1155,6 +1155,30 @@ textarea:focus-visible,
   border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer;
 }
 .library-pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+/* v9 SC-06: open link, persistent selection bar and the asset drawer + diff. */
+.library-open-link { font: inherit; font-weight: 700; background: none; border: none; padding: 0; cursor: pointer; color: #111827; text-align: left; }
+.library-open-link:hover { color: #2563eb; text-decoration: underline; }
+.library-actionbar {
+  position: sticky; bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 14px; padding: 10px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  box-shadow: 0 -2px 10px #0000000d;
+}
+.asset-drawer {
+  position: fixed; inset: 0; background: #1118270f; display: flex; justify-content: flex-end; z-index: 50;
+}
+.asset-drawer-panel {
+  width: min(680px, 100%); height: 100%; overflow-y: auto; background: #fff;
+  border-left: 1px solid #e5e7eb; padding: 20px; box-shadow: -8px 0 24px #0000001a;
+}
+.asset-version-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+.asset-diff { margin-top: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f8f7f4; }
+.asset-diff-field { border-left: 3px solid #e5e7eb; padding: 6px 10px; margin: 8px 0; background: #fff; border-radius: 6px; }
+.asset-diff-field.is-changed { border-left-color: #2563eb; }
+.asset-diff-field.is-added { border-left-color: #10b981; }
+.asset-diff-field.is-removed { border-left-color: #dc2626; }
+.asset-diff-label { font-size: 12px; font-weight: 600; text-transform: capitalize; }
+.asset-diff-before p, .asset-diff-after p { margin: 2px 0 6px; white-space: pre-wrap; }
+.asset-diff-before p { color: #6b7280; text-decoration: line-through; }
 
 /* v9 SC-01: campaign workspace — tabs, overview summary, quiet overflow menu. */
 .campaign-workspace .brand-head { align-items: flex-start; }
