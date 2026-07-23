@@ -141,3 +141,30 @@ test('campaignContext 404s for a foreign campaign', async () => {
   const ctx = await campaignContext({ id: 'ws-other' }, db._campaigns[0].id);
   assert.equal(ctx.status, 404);
 });
+
+// v9 SC-03: optimistic concurrency guards autosave against clobbering a newer
+// version edited in another tab/device. A stale expected_updated_at → 409 STALE
+// with the current row; the current one saves.
+test('PATCH with a stale expected_updated_at is rejected with 409 STALE', async () => {
+  const created = await request(app).post('/api/campaigns').set(...AUTHED).send({ name: 'Concurrency' });
+  const id = created.body.campaign.id;
+
+  // First save establishes an updated_at on the row.
+  const first = await request(app).patch(`/api/campaigns/${id}`).set(...AUTHED).send({ objective: 'v1' });
+  assert.equal(first.status, 200);
+  const current = first.body.campaign.updated_at;
+  assert.ok(current, 'a saved campaign carries updated_at');
+
+  // A save that saw an older version must be rejected, not silently applied.
+  const stale = await request(app).patch(`/api/campaigns/${id}`).set(...AUTHED)
+    .send({ objective: 'v2', expected_updated_at: '2000-01-01T00:00:00.000Z' });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.code, 'STALE');
+  assert.ok(stale.body.campaign, 'the conflict response returns the current row for recovery');
+
+  // The reader who sent the current updated_at saves normally.
+  const ok = await request(app).patch(`/api/campaigns/${id}`).set(...AUTHED)
+    .send({ objective: 'v3', expected_updated_at: current });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.campaign.objective, 'v3');
+});

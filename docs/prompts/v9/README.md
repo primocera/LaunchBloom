@@ -28,7 +28,7 @@ Source of truth: `Scalvya_Product_Elevation_Claude_Code_Prompts_v9.docx` (repo r
 - [x] SC-V9-00 Baseline freeze, route audit, guardrails (commit e109af1)
 - [x] SC-V9-01 Campaign cockpit IA + route refactor ← **Fable/Opus** (commit 788cb43)
 - [ ] SC-V9-02 Deterministic next-best-action + readiness
-- [ ] SC-V9-03 Campaign creation / brief editing / approval UX
+- [x] SC-V9-03 Campaign creation / brief editing / approval UX (commit pending)
 - [ ] SC-V9-04 Unified review workbench + evidence workflow
 - [ ] SC-V9-05 Asset studios output quality + editing
 - [ ] SC-V9-06 Campaign-scoped library + version comparison

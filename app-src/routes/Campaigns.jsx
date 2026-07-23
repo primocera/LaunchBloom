@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { CHANNELS, EMPTY_BRIEF as EMPTY, TEMPLATES, missingDecisions, totalAssets, sectionPath } from './campaign/shared';
+import { EMPTY_BRIEF as EMPTY, TEMPLATES, missingDecisions, totalAssets, sectionPath } from './campaign/shared';
 
 // ---------------------------------------------------------------------------
 // v9 SC-01: Campaigns is now the campaign list + create surface only. Each
@@ -32,9 +32,9 @@ function Playbooks({ onCreated }) {
     e.preventDefault();
     setError(null);
     try {
-      await api.applyPlaybook(sel.id, name);
+      const { campaign } = await api.applyPlaybook(sel.id, name);
       setSel(null);
-      onCreated();
+      onCreated(campaign);
     } catch (err) { setError(err.message); }
   }
 
@@ -88,7 +88,7 @@ function Templates({ onCreated }) {
   async function apply(t) {
     const name = window.prompt(`New campaign name (from template “${t.name}”):`, t.name.replace(/ template$/i, ''));
     if (!name) return;
-    try { await api.applyTemplate(t.id, name); onCreated(); }
+    try { const { campaign } = await api.applyTemplate(t.id, name); onCreated(campaign); }
     catch (err) { setError(err.message); }
   }
 
@@ -137,6 +137,7 @@ function CampaignMenu({ campaign, onArchive, onDuplicate, onRemove }) {
 }
 
 export default function Campaigns() {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState(null);
   const [form, setFormState] = useState(loadDraft); // null = closed, object = create form
   const setForm = (next) => {
@@ -153,13 +154,20 @@ export default function Campaigns() {
   }
   useEffect(load, []);
 
+  // v9 SC-03: creating a campaign is one decision (name, optional template).
+  // The full brief is then filled in the workspace Brief editor, so a new
+  // campaign always opens straight into the guided brief with nothing lost.
+  function openWorkspace(campaign) {
+    setForm(null);
+    navigate(sectionPath(campaign.id, 'brief'));
+  }
+
   async function create(e) {
     e.preventDefault();
     setError(null);
     try {
-      await api.createCampaign(form);
-      setForm(null);
-      load();
+      const { campaign } = await api.createCampaign(form);
+      openWorkspace(campaign);
     } catch (err) { setError(err.message); }
   }
 
@@ -198,8 +206,8 @@ export default function Campaigns() {
         Keep the offer, audience, goal, dates, channels and CTA consistent across every asset. Open a campaign to plan, create, review and hand it off.
       </p>
 
-      <Playbooks onCreated={load} />
-      <Templates onCreated={load} />
+      <Playbooks onCreated={openWorkspace} />
+      <Templates onCreated={openWorkspace} />
 
       {/* v5 Prompt 3: the full launch workflow is a campaign template. */}
       <div className="account-section campaign-template">
@@ -218,7 +226,11 @@ export default function Campaigns() {
         <form className="account-section" onSubmit={create}>
           <h2>New campaign</h2>
           <div className="brand-field">
-            <label>Template</label>
+            <label>Name</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Summer Sale 2026" required autoFocus />
+          </div>
+          <div className="brand-field">
+            <label>Start from a template (optional)</label>
             <div className="campaign-channels">
               {TEMPLATES.map((t) => (
                 <button type="button" key={t.key} className="gen-chip" onClick={() => setForm({ ...form, ...t.brief })}>
@@ -227,46 +239,11 @@ export default function Campaigns() {
               ))}
             </div>
           </div>
-          <div className="brand-field">
-            <label>Name</label>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Summer Sale 2026" required />
-          </div>
-          <div className="brand-field">
-            <label>Objective</label>
-            <input value={form.objective} onChange={(e) => setForm({ ...form, objective: e.target.value })} placeholder="e.g. Sell out the summer collection" />
-          </div>
-          <div className="brand-field">
-            <label>Audience</label>
-            <input value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="Who this campaign targets" />
-          </div>
-          <div className="brand-field">
-            <label>Offer</label>
-            <textarea rows={2} value={form.offer_summary} onChange={(e) => setForm({ ...form, offer_summary: e.target.value })} placeholder="What's on offer (product, bundle, discount)…" />
-          </div>
-          <div className="brand-field">
-            <label>Key message</label>
-            <input value={form.key_message} onChange={(e) => setForm({ ...form, key_message: e.target.value })} placeholder="The one thing every asset should say" />
-          </div>
-          <div className="brand-field">
-            <label>Channels</label>
-            <div className="campaign-channels">
-              {CHANNELS.map((ch) => (
-                <label key={ch} className="consent" style={{ margin: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={form.channels.includes(ch)}
-                    onChange={(e) => setForm({
-                      ...form,
-                      channels: e.target.checked ? [...form.channels, ch] : form.channels.filter((x) => x !== ch),
-                    })}
-                  />
-                  <span>{ch}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <p className="muted">You can fill in offer terms, proof, restrictions, markets and dates in the campaign’s Brief section after it’s created.</p>
-          <button className="btn-primary" type="submit" disabled={!form.name.trim()}>Create campaign</button>
+          <p className="muted">
+            Name it now — you’ll fill in the objective, offer, audience, key message, dates and channels in the
+            campaign’s guided Brief, which opens next. Nothing is generated and no AI action is used.
+          </p>
+          <button className="btn-primary" type="submit" disabled={!form.name.trim()}>Create and open brief</button>
         </form>
       )}
 
