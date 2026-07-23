@@ -1149,3 +1149,39 @@ textarea:focus-visible,
   border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer;
 }
 .library-pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+
+/* v9 SC-01: campaign workspace — tabs, overview summary, quiet overflow menu. */
+.campaign-workspace .brand-head { align-items: flex-start; }
+.campaign-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid #e5e7eb; margin: 12px 0 16px;
+}
+.campaign-tab {
+  padding: 8px 14px; min-height: 44px; display: inline-flex; align-items: center;
+  color: #6b7280; text-decoration: none; border-bottom: 2px solid transparent;
+  font-size: 14px; border-radius: 6px 6px 0 0;
+}
+.campaign-tab:hover { color: #111827; background: #f8f7f4; }
+.campaign-tab.is-active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+.campaign-tab:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.campaign-section { min-height: 200px; }
+.campaign-next { border-left: 3px solid #2563eb; }
+.campaign-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px; margin: 12px 0;
+}
+.campaign-summary-card { display: flex; flex-direction: column; gap: 4px; }
+.campaign-summary-card strong { font-size: 20px; }
+.campaign-list-row .campaign-row-head h2 { margin: 0; }
+.campaign-menu { position: relative; display: inline-block; }
+.campaign-menu-pop {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column;
+  min-width: 140px; padding: 4px;
+}
+.campaign-menu-pop button { text-align: left; padding: 8px 10px; min-height: 40px; }
+@media (max-width: 520px) {
+  .campaign-tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .campaign-tab { white-space: nowrap; }
+}
