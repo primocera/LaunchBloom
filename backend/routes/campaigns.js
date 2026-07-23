@@ -545,7 +545,7 @@ async function buildReviewQueue(ws, campaign) {
 
   const findings = runConsistencyChecks(campaign, assetsByTable);
   const { data: persisted } = await supabase
-    .from('consistency_findings').select('fingerprint, status, note_category')
+    .from('consistency_findings').select('fingerprint, status, note_category, acknowledged_by, acknowledged_at')
     .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
   const statusByFp = new Map((persisted || []).map((r) => [r.fingerprint, r]));
 
@@ -583,7 +583,15 @@ async function buildReviewQueue(ws, campaign) {
 
   const openFindings = findings.map((f) => {
     const prev = statusByFp.get(f.fingerprint);
-    return { ...f, status: prev && prev.status === 'acknowledged' ? 'acknowledged' : 'open' };
+    const acknowledged = prev && prev.status === 'acknowledged';
+    return {
+      ...f,
+      status: acknowledged ? 'acknowledged' : 'open',
+      note_category: prev ? prev.note_category : null,
+      // v9 SC-04: audit trail for the workbench ("Acknowledged by you").
+      acknowledged_by: acknowledged ? prev.acknowledged_by : null,
+      acknowledged_at: acknowledged ? prev.acknowledged_at : null,
+    };
   });
 
   return {
@@ -803,12 +811,19 @@ router.post('/api/campaigns/:id/consistency/ack', requireAuth, async (req, res, 
     if (!meta || !meta.ackable) {
       return res.status(400).json({ error: 'This finding needs a fix, not an acknowledgment.' });
     }
+    // v9 SC-04: record who acknowledged and when so the handoff record can
+    // attribute the decision. Never overwrites an existing acknowledgment time
+    // unless this is a fresh acknowledgment.
     await supabase.from('consistency_findings')
-      .update({ status: 'acknowledged', note_category })
+      .update({
+        status: 'acknowledged', note_category,
+        acknowledged_by: req.userEmail || null,
+        acknowledged_at: new Date().toISOString(),
+      })
       .eq('id', row.id);
     track('review_item_resolved', {
       userId: req.userId, workspaceId: ws.id,
-      properties: { kind: 'finding_ack', code: row.code, note_category },
+      properties: { kind: 'finding_ack', code: row.code, note_category, severity: meta.severity },
     });
     res.json({ ok: true });
   } catch (err) {

@@ -6,9 +6,9 @@ import {
 } from './shared';
 import { campaignSummary, campaignNextAction, readinessGroups } from '../../lib/campaign-next-action';
 import {
-  Deliverables, Consistency, BriefImpact, ReviewQueue,
-  PackagePreview, HandoffExports, SaveTemplate,
+  Deliverables, BriefImpact, PackagePreview, HandoffExports, SaveTemplate,
 } from './panels';
+import { ReviewWorkbench } from './ReviewWorkbench';
 import BriefEditor from './BriefEditor';
 
 // ---------------------------------------------------------------------------
@@ -99,13 +99,7 @@ export default function CampaignWorkspace() {
         {validSection === 'brief' && <BriefSection campaign={campaign} onChange={load} />}
         {validSection === 'deliverables' && <Deliverables campaign={campaign} defaultOpen />}
         {validSection === 'assets' && <AssetsSection campaign={campaign} />}
-        {validSection === 'review' && (
-          <>
-            <Consistency campaign={campaign} defaultOpen />
-            <BriefImpact campaign={campaign} defaultOpen />
-            <ReviewQueue campaign={campaign} defaultOpen />
-          </>
-        )}
+        {validSection === 'review' && <ReviewWorkbench campaign={campaign} />}
         {validSection === 'handoff' && (
           <>
             <PackagePreview campaign={campaign} defaultOpen />

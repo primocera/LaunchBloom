@@ -1182,6 +1182,27 @@ textarea:focus-visible,
 .campaign-readiness.is-unknown { border-left-color: #e5e7eb; }
 .campaign-readiness-reasons { margin: 0; padding-left: 16px; font-size: 13px; color: #111827; }
 .campaign-readiness-reasons li { margin: 2px 0; }
+/* v9 SC-04: unified Review workbench. Severity is handoff risk, muted not
+   alarmist — a subtle left edge, never a wall of red. */
+.review-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.review-impact-summary { margin: 4px 0 10px; }
+.review-list { display: flex; flex-direction: column; gap: 6px; outline: none; }
+.review-list:focus-visible { box-shadow: 0 0 0 2px #2563eb33; border-radius: 8px; }
+.review-item {
+  border: 1px solid #e5e7eb; border-left-width: 3px; border-radius: 8px;
+  background: #fff; padding: 10px; cursor: pointer;
+}
+.review-item.is-hard { border-left-color: #dc2626; }
+.review-item.is-reminder { border-left-color: #f59e0b; }
+.review-item.is-external { border-left-color: #6b7280; }
+.review-item.is-focus { box-shadow: 0 0 0 2px #2563eb55; }
+.review-item-head { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.review-group { font-weight: 600; }
+.review-impact { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #f3f4f6; color: #374151; }
+.review-impact.impact-hard { background: #fef2f2; color: #b91c1c; }
+.review-item-title { font-weight: 600; margin: 4px 0 2px; }
+.review-item-why { font-size: 13px; }
+.review-drawer { margin-top: 10px; border-left: 3px solid #2563eb; }
 .campaign-list-row .campaign-row-head h2 { margin: 0; }
 .campaign-menu { position: relative; display: inline-block; }
 .campaign-menu-pop {
