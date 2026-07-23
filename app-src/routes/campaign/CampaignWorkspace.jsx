@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import {
-  SECTIONS, missingDecisions, hasNoDates, fmtDate, totalAssets, sectionPath,
+  SECTIONS, missingDecisions, hasNoDates, fmtDate, sectionPath,
 } from './shared';
+import { campaignSummary, campaignNextAction, readinessGroups } from '../../lib/campaign-next-action';
 import {
   Deliverables, Consistency, BriefImpact, ReviewQueue,
   PackagePreview, HandoffExports, SaveTemplate,
@@ -11,32 +12,15 @@ import {
 import BriefEditor from './BriefEditor';
 
 // ---------------------------------------------------------------------------
-// v9 SC-01: the campaign workspace. One campaign, six focused sections
+// v9 SC-01/02: the campaign workspace. One campaign, six focused sections
 // (Overview / Brief / Deliverables / Assets / Review / Handoff) reachable in a
-// single click from the campaign list. Replaces the old Campaigns.jsx monolith
-// where every tool was stacked on one card. Canonical statuses are unchanged;
-// there is no synthetic percentage score.
+// single click from the campaign list. Overview's next action and readiness
+// come from the shared pure lib/campaign-next-action service (SC-02) so the
+// Dashboard and Overview always agree. Canonical statuses are unchanged; there
+// is no synthetic percentage score.
 // ---------------------------------------------------------------------------
 
-/** Deterministic single next action for a campaign. SC-02 will formalise this
- *  into a shared pure service; this keeps Overview honest in the meantime. */
-function nextAction(campaign) {
-  const missing = missingDecisions(campaign);
-  if (missing.length) {
-    return { to: 'brief', label: 'Complete the campaign brief', reason: `${missing.length} required decision${missing.length === 1 ? '' : 's'} left` };
-  }
-  if (!campaign.brief_approved) {
-    return { to: 'brief', label: 'Approve the brief and start creating', reason: 'The brief is complete but not approved' };
-  }
-  const required = (campaign.deliverable_plan || []).filter((r) => r.requirement_state === 'required');
-  if (!campaign.deliverable_plan || campaign.deliverable_plan.length === 0) {
-    return { to: 'deliverables', label: 'Plan the deliverables', reason: 'Choose what this campaign needs' };
-  }
-  if (totalAssets(campaign) === 0 && required.length) {
-    return { to: 'assets', label: 'Create the required assets', reason: `${required.length} required deliverable${required.length === 1 ? '' : 's'} planned`, href: `/app/create?campaign=${campaign.id}` };
-  }
-  return { to: 'review', label: 'Review the campaign', reason: 'Check consistency and brief changes before handoff' };
-}
+const READINESS_MARK = { ready: '✓', attention: '!', blocked: '✕', incomplete: '○', unknown: '·' };
 
 export default function CampaignWorkspace() {
   const { campaignId, section = 'overview' } = useParams();
@@ -133,17 +117,35 @@ export default function CampaignWorkspace() {
   );
 }
 
-// ── Overview: status, blockers and one primary next action ──
+// ── Overview: one trustworthy next action + transparent readiness groups ──
 function Overview({ campaign, navigate }) {
   const [review, setReview] = useState(null);
-  const na = nextAction(campaign);
+  const lastAction = useRef(null);
 
   useEffect(() => {
     api.campaignReview(campaign.id).then((r) => setReview(r.review)).catch(() => setReview(null));
   }, [campaign.id]);
 
-  const required = (campaign.deliverable_plan || []).filter((r) => r.requirement_state === 'required');
-  const highMed = review ? (review.blocking?.length || 0) + (review.findings?.length || 0) : null;
+  // Derive everything from canonical rows via the shared pure service — the
+  // same summary the Dashboard uses, so both surfaces agree on the next action.
+  const summary = campaignSummary(campaign, review);
+  const na = campaignNextAction(summary);
+  const groups = readinessGroups(summary);
+  const isRoute = na.destination.startsWith('/app/campaigns');
+
+  // next_action_viewed on each new action_code; next_action_completed when the
+  // previously-viewed action is no longer current after a summary reload (a
+  // durable, server-confirmed state change advanced the campaign).
+  useEffect(() => {
+    const prev = lastAction.current;
+    if (prev && prev !== na.action_code) {
+      api.trackEvent('next_action_completed', { action_code: prev, next: na.action_code, evaluated: summary.review.evaluated });
+    }
+    if (prev !== na.action_code) {
+      api.trackEvent('next_action_viewed', { action_code: na.action_code, severity: na.severity, evaluated: summary.review.evaluated });
+    }
+    lastAction.current = na.action_code;
+  }, [na.action_code]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
@@ -156,21 +158,25 @@ function Overview({ campaign, navigate }) {
         <p className="muted">No fixed dates — urgency or deadline language will not be generated.</p>
       )}
 
-      {/* One primary next action. */}
-      <div className="account-section campaign-next">
+      {/* One primary next action, announced accessibly. */}
+      <div className="account-section campaign-next" role="status" aria-live="polite">
         <h2 style={{ marginTop: 0 }}>Next: {na.label}</h2>
         <p className="muted" style={{ marginTop: 0 }}>{na.reason}</p>
-        {na.href
-          ? <a className="btn-primary" href={na.href}>{na.label}</a>
-          : <button className="btn-primary" onClick={() => navigate(sectionPath(campaign.id, na.to))}>{na.label}</button>}
+        {isRoute
+          ? <button className="btn-primary" onClick={() => navigate(na.destination)}>{na.label}</button>
+          : <a className="btn-primary" href={na.destination}>{na.label}</a>}
       </div>
 
-      {/* Readiness summary — real counts, no synthetic score. */}
+      {/* Transparent readiness — four groups with reasons, no synthetic score. */}
       <div className="campaign-summary-grid">
-        <SummaryCard label="Required deliverables" value={`${required.length} planned`} />
-        <SummaryCard label="Linked assets" value={`${totalAssets(campaign)}`} />
-        <SummaryCard label="Open review items" value={highMed == null ? '—' : `${highMed}`} />
-        <SummaryCard label="Brief changes to review" value={review ? `${review.stale?.length || 0}` : '—'} />
+        {groups.map((g) => (
+          <div className={`account-section campaign-readiness is-${g.state}`} key={g.key}>
+            <span className="muted">{READINESS_MARK[g.state] || '·'} {g.label}</span>
+            <ul className="campaign-readiness-reasons">
+              {g.reasons.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+          </div>
+        ))}
       </div>
 
       {campaign.strategy && (
@@ -179,15 +185,6 @@ function Overview({ campaign, navigate }) {
           <p><strong>CTA:</strong> {campaign.strategy.cta}</p>
         </div>
       )}
-    </div>
-  );
-}
-
-function SummaryCard({ label, value }) {
-  return (
-    <div className="account-section campaign-summary-card">
-      <span className="muted">{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }

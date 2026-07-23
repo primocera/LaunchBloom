@@ -48,7 +48,7 @@ export function minimumViableProfile(profile) {
 // v8 LB-S01: deliverable codes → the asset table their studio saves into
 // (mirrors backend/lib/deliverables.js — used to spot required deliverables
 // with no asset yet from the campaign list payload).
-const DELIVERABLE_TABLE = {
+export const DELIVERABLE_TABLE = {
   landing_page: ['website_pages', 'Landing page'],
   email_flow: ['email_assets', 'Launch email flow'],
   social_set: ['social_assets', 'Social launch set'],

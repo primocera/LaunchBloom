@@ -1172,6 +1172,16 @@ textarea:focus-visible,
 }
 .campaign-summary-card { display: flex; flex-direction: column; gap: 4px; }
 .campaign-summary-card strong { font-size: 20px; }
+/* v9 SC-02: transparent readiness groups — state colour on the left edge, plain
+   reasons underneath. No synthetic 0–100 score. */
+.campaign-readiness { display: flex; flex-direction: column; gap: 6px; border-left: 3px solid #e5e7eb; }
+.campaign-readiness.is-ready { border-left-color: #10b981; }
+.campaign-readiness.is-attention { border-left-color: #f59e0b; }
+.campaign-readiness.is-blocked { border-left-color: #dc2626; }
+.campaign-readiness.is-incomplete { border-left-color: #6b7280; }
+.campaign-readiness.is-unknown { border-left-color: #e5e7eb; }
+.campaign-readiness-reasons { margin: 0; padding-left: 16px; font-size: 13px; color: #111827; }
+.campaign-readiness-reasons li { margin: 2px 0; }
 .campaign-list-row .campaign-row-head h2 { margin: 0; }
 .campaign-menu { position: relative; display: inline-block; }
 .campaign-menu-pop {
