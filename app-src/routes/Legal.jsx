@@ -7,8 +7,12 @@ import { BRAND, LEGAL_VERSION } from '../brand';
 // Final wording should still be reviewed by qualified counsel before launch.
 const SUPPORT = BRAND.supportEmail;
 
+// v9 SC-00: docs whose text legally names the operating entity. When the
+// entity isn't configured these fail closed instead of showing a placeholder.
+const ENTITY_DEPENDENT = new Set(['terms']);
+
 const buildDocs = (cfg) => {
-  const entity = cfg?.legal_name || BRAND.legalName;
+  const entity = cfg?.legal_name || 'the operator of ' + BRAND.name;
   const address = cfg?.legal_address ? ` Registered address: ${cfg.legal_address}.` : '';
   const law = cfg?.governing_law ? ` These Terms are governed by the laws of ${cfg.governing_law}.` : '';
   const privacyContact = cfg?.privacy_email || SUPPORT;
@@ -72,17 +76,45 @@ const buildDocs = (cfg) => {
 export default function Legal() {
   const { slug } = useParams();
   const [cfg, setCfg] = useState(null);
+  const [status, setStatus] = useState('loading'); // loading | ok | error
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/legal')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && data) setCfg(data); })
-      .catch(() => {});
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('legal config unavailable'))))
+      .then((data) => { if (!cancelled) { setCfg(data); setStatus('ok'); } })
+      .catch(() => { if (!cancelled) setStatus('error'); });
     return () => { cancelled = true; };
   }, []);
 
   const doc = buildDocs(cfg)[slug];
+
+  // v9 SC-00: fail closed. If this document legally names the operating entity
+  // but the entity isn't configured (or the config request failed), show an
+  // explicit unavailable state rather than a fabricated placeholder entity.
+  const entityConfigured = !!(cfg && cfg.configured && cfg.legal_name);
+  if (doc && ENTITY_DEPENDENT.has(slug) && status !== 'loading' && !entityConfigured) {
+    return (
+      <div className="legal">
+        <div className="legal-card">
+          <p className="legal-back"><Link to="/">&larr; {BRAND.name}</Link></p>
+          <h1>{doc.title}</h1>
+          <p role="alert">
+            Our {doc.title} is being finalized with our current operating entity and isn’t available
+            right now. For the operating entity, registered address and governing law, please
+            contact <a href={`mailto:${SUPPORT}`}>{SUPPORT}</a> before relying on these Terms.
+          </p>
+          <hr />
+          <p className="legal-links">
+            <Link to="/legal/privacy">Privacy</Link> &middot;{' '}
+            <Link to="/legal/cookies">Cookies</Link> &middot;{' '}
+            <Link to="/legal/ai-disclaimer">AI Disclaimer</Link> &middot;{' '}
+            <Link to="/legal/refund">Refunds</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!doc) {
     return (

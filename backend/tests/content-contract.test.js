@@ -133,12 +133,14 @@ test('paywall and checkout banner switch copy for prior-trial users', () => {
 // ── Brief approval is a human decision, not an AI-strategy purchase ─────────
 
 test('a complete manual brief can be approved without generating strategy', () => {
-  const campaigns = read(path.join(APP_SRC, 'routes', 'Campaigns.jsx'));
-  // The approve button must not be conditioned on c.strategy existing.
-  assert.ok(!/c\.strategy && \([\s\S]{0,200}approve\(c\)/.test(campaigns), 'approve must not require strategy');
-  assert.match(campaigns, /Generate strategy \(optional\) · 1 AI action/, 'strategy is optional and cost-disclosed');
-  assert.match(campaigns, /Reopen this brief\? New generations will pause/, 'reopen must explain downstream implications');
-  assert.match(campaigns, /keep the snapshot they were created from/, 'reopen must state snapshot semantics');
+  // v9 SC-01: the brief approval UI moved from the Campaigns.jsx monolith into
+  // the per-campaign workspace Brief section. The guarantees are unchanged.
+  const brief = read(path.join(APP_SRC, 'routes', 'campaign', 'CampaignWorkspace.jsx'));
+  // Approval must not be conditioned on a generated strategy existing.
+  assert.ok(!/strategy[\s\S]{0,60}disabled[\s\S]{0,60}approve/i.test(brief), 'approve must not require strategy');
+  assert.match(brief, /Generate strategy \(optional\) · 1 AI action/, 'strategy is optional and cost-disclosed');
+  assert.match(brief, /Reopen this brief\? New generations will pause/, 'reopen must explain downstream implications');
+  assert.match(brief, /keep the snapshot they were created from/, 'reopen must state snapshot semantics');
 });
 
 // ── Brand Profile states the minimum baseline and snapshot semantics ────────

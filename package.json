@@ -17,6 +17,7 @@
     "check:app-fresh": "node scripts/check-app-fresh.mjs",
     "check": "npm run lint && npm test && npm run build:app && npm run check:app-fresh",
     "release:check": "node backend/scripts/release-check.js",
+    "release:evidence": "node backend/scripts/release-check.js --evidence",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js"
   },
   "dependencies": {

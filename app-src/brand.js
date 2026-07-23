@@ -6,7 +6,9 @@ export const BRAND = {
   tagline: 'From Idea to Offer to Launch',
   siteUrl: 'https://scalvya.com',
   supportEmail: 'support@scalvya.com',
-  legalName: 'Scalvya (legal entity TBD)',
+  // v9 SC-00: no hardcoded legal entity. The operating entity comes only from
+  // GET /api/legal (env-backed). If it isn't configured the legal pages fail
+  // closed — they never fabricate an entity name in the bundle.
 };
 
 // Keep in sync with backend/lib/brand.js LEGAL_VERSION.
