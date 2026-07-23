@@ -10,6 +10,9 @@ import {
   deriveContext,
   validateFields,
   hasBlockingErrors,
+  missingRequiredFields,
+  outputContractFor,
+  structuredFieldsFor,
   outputEstimate,
   RESULT_TABS,
 } from '../../lib/generator-shell';
@@ -134,6 +137,64 @@ const REGEN_MODES = [
 ];
 
 /**
+ * v9 SC-05: targeted structured-field editing. Editing CTA / subject / headline
+ * inline is FREE, saves a version first (backend snapshots on every content
+ * edit), and lets a user resolve a deterministic consistency finding (missing
+ * or conflicting CTA/URL) without spending an AI action on a full rewrite.
+ */
+function StructuredEdits({ table, item, onChange, onUpgrade }) {
+  const specs = structuredFieldsFor(table);
+  const [draft, setDraft] = useState(() => Object.fromEntries(specs.map(([f]) => [f, item[f] || ''])));
+  const [saving, setSaving] = useState(null); // field being saved
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    setDraft(Object.fromEntries(specs.map(([f]) => [f, item[f] || ''])));
+  }, [item.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!specs.length) return null;
+
+  async function saveField(field) {
+    const value = draft[field];
+    if ((item[field] || '') === value) return; // nothing changed
+    setSaving(field);
+    setErr(null);
+    try {
+      const r = await api.updateAsset(table, item.id, { [field]: value });
+      onChange(r.asset || r.item || r);
+    } catch (e) {
+      if (e.status === 402 || e.code === 'UPGRADE') onUpgrade(e);
+      else setErr(e.message);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <details className="gen-structured">
+      <summary>Fix key fields without regenerating · free</summary>
+      <p className="flow-muted gen-cost-note">
+        Editing these saves a version and can resolve a consistency finding (like a missing or conflicting CTA)
+        without using an AI action.
+      </p>
+      {specs.map(([field, label]) => (
+        <label className="flow-field" key={field}>
+          <span>{label}</span>
+          <input
+            value={draft[field]}
+            onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
+            onBlur={() => saveField(field)}
+            disabled={saving === field}
+          />
+        </label>
+      ))}
+      {saving && <p className="flow-muted gen-cost-note" role="status">Saving…</p>}
+      {err && <p className="flow-err" role="alert">{err}</p>}
+    </details>
+  );
+}
+
+/**
  * One result with Output / Quality / Versions / Brief tabs (Prompt 7).
  * Editing and copying are free; full/section regeneration costs one action and
  * always snapshots the previous copy into version history first.
@@ -213,6 +274,7 @@ function ResultCard({ item, table, renderItem, fullCopy, onChange, onUpgrade }) 
       {tab === 'Output' && (
         <>
           {renderItem(item, { table, onChange })}
+          {table && <StructuredEdits table={table} item={item} onChange={onChange} onUpgrade={onUpgrade} />}
           {table && (
             <div className="gen-regen">
               <p className="flow-muted gen-cost-note">
@@ -392,6 +454,8 @@ export default function GeneratorStudio({
   }
 
   const missingRequired = hasBlockingErrors(fields, values);
+  const missingLabels = missingRequiredFields(fields, values);
+  const contract = outputContractFor(table);
   const assetType = title.replace(/ Studio$/, '');
 
   return (
@@ -442,11 +506,28 @@ export default function GeneratorStudio({
           {fields.map((f) => (
             <FormField key={f.name} field={f} value={values[f.name]} onChange={(v) => set(f.name, v)} warning={fieldWarnings[f.name]} />
           ))}
+
+          {/* v9 SC-05: show WHAT this studio produces and its boundary before
+              the user spends an action — structure, not a vague promise. */}
+          {contract && (
+            <div className="gen-output-contract" aria-label="What you'll get">
+              <span className="gen-context-head">What you’ll get</span>
+              <ul className="kit-outline">{contract.structure.map((s) => <li key={s}>{s}</li>)}</ul>
+              <p className="flow-muted gen-cost-note">{contract.note}</p>
+            </div>
+          )}
+
           <div className="flow-row">
             <button className="flow-btn" disabled={busy || missingRequired} onClick={onGenerate}>
               {busy ? 'Creating drafts from your approved brief…' : `Generate ${assetType} · 1 AI action`}
             </button>
           </div>
+          {/* v9 SC-05: explain a disabled button rather than greying out silently. */}
+          {missingRequired && missingLabels.length > 0 && (
+            <p className="flow-muted gen-missing-note" role="status">
+              Add {missingLabels.join(', ')} to generate.
+            </p>
+          )}
           <p className="flow-muted gen-cost-note" role="status">{outputEstimate({ resultKey })}</p>
           {error && (
             <p className="flow-err" role="alert">

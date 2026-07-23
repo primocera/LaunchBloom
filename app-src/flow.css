@@ -793,6 +793,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+/* v9 SC-05: pre-generation output contract + inline structured edits. */
+.gen-output-contract { margin: 10px 0; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f8f7f4; }
+.gen-output-contract .kit-outline { margin: 4px 0; }
+.gen-missing-note { color: #b45309; margin: 4px 0; }
+.gen-structured { margin: 10px 0; border-top: 1px dashed #e5e7eb; padding-top: 8px; }
+.gen-structured > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
 .gen-context {
   display: flex;
   flex-wrap: wrap;
