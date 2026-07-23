@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import {
-  CHANNELS, SECTIONS, EMPTY_BRIEF, TEMPLATES,
-  missingDecisions, hasNoDates, fmtDate, totalAssets, sectionPath,
+  SECTIONS, missingDecisions, hasNoDates, fmtDate, totalAssets, sectionPath,
 } from './shared';
 import {
   Deliverables, Consistency, BriefImpact, ReviewQueue,
   PackagePreview, HandoffExports, SaveTemplate,
 } from './panels';
+import BriefEditor from './BriefEditor';
 
 // ---------------------------------------------------------------------------
 // v9 SC-01: the campaign workspace. One campaign, six focused sections
@@ -17,17 +17,6 @@ import {
 // where every tool was stacked on one card. Canonical statuses are unchanged;
 // there is no synthetic percentage score.
 // ---------------------------------------------------------------------------
-
-const BRIEF_FIELDS = [
-  ['name', 'Name', 'e.g. Summer Sale 2026'],
-  ['objective', 'Objective', 'e.g. Sell out the summer collection'],
-  ['audience', 'Audience', 'Who this campaign targets'],
-  ['offer_summary', 'Offer', "What's on offer (product, bundle, discount)…"],
-  ['promo_terms', 'Promo terms', 'e.g. "20% off with code SUMMER20, ends July 31"'],
-  ['key_message', 'Key message', 'The one thing every asset should say'],
-  ['proof', 'Proof', 'Real reviews, numbers or results to use'],
-  ['restrictions', 'Restrictions', 'Claims to avoid, compliance rules'],
-];
 
 /** Deterministic single next action for a campaign. SC-02 will formalise this
  *  into a shared pure service; this keeps Overview honest in the meantime. */
@@ -203,35 +192,22 @@ function SummaryCard({ label, value }) {
   );
 }
 
-// ── Brief: view, edit, approve/reopen, optional AI strategy ──
+// ── Brief: guided editor (autosave) + approve/reopen + optional AI strategy ──
 function BriefSection({ campaign, onChange }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState(campaign);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const missing = missingDecisions(editing ? form : campaign);
-
-  function startEdit() {
-    setForm({ ...EMPTY_BRIEF, ...campaign, channels: campaign.channels || [] });
-    setEditing(true);
-  }
-
-  async function save(e) {
-    e.preventDefault();
-    setBusy(true); setError(null);
-    try {
-      await api.updateCampaign(campaign.id, form);
-      setEditing(false);
-      onChange();
-    } catch (err) { setError(err.message); }
-    setBusy(false);
-  }
+  const missing = missingDecisions(campaign);
 
   async function approve() {
-    if (campaign.brief_approved && !window.confirm(
-      'Reopen this brief? New generations will pause until you approve it again. ' +
-      'Assets you already generated keep the snapshot they were created from.'
-    )) return;
+    // v9 SC-03: reopening an approved brief is explicit about downstream impact
+    // and is never triggered by autosave.
+    if (campaign.brief_approved) {
+      if (!window.confirm(
+        'Reopen this brief? New generations will pause until you approve it again. ' +
+        'Assets you already generated keep the snapshot they were created from.'
+      )) return;
+      api.trackEvent('approved_brief_reopened', { had_strategy: !!campaign.strategy });
+    }
     setError(null);
     try { await api.updateCampaign(campaign.id, { brief_approved: !campaign.brief_approved }); onChange(); }
     catch (err) { setError(err.message); }
@@ -244,97 +220,18 @@ function BriefSection({ campaign, onChange }) {
     setBusy(false);
   }
 
-  if (editing) {
-    return (
-      <form className="account-section" onSubmit={save}>
-        <h2 style={{ marginTop: 0 }}>Edit brief</h2>
-        <div className="brand-field">
-          <label>Template</label>
-          <div className="campaign-channels">
-            {TEMPLATES.map((t) => (
-              <button type="button" key={t.key} className="gen-chip" onClick={() => setForm({ ...form, ...t.brief })}>{t.label}</button>
-            ))}
-          </div>
-        </div>
-        {BRIEF_FIELDS.map(([k, label, ph]) => (
-          <div className="brand-field" key={k}>
-            <label>{label}</label>
-            {k === 'offer_summary'
-              ? <textarea rows={2} value={form[k] || ''} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={ph} />
-              : <input value={form[k] || ''} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={ph} required={k === 'name'} />}
-          </div>
-        ))}
-        <div className="brand-field campaign-dates">
-          <label>Markets / language</label>
-          <input value={form.markets || ''} onChange={(e) => setForm({ ...form, markets: e.target.value })} placeholder="e.g. US" />
-          <input value={form.language || ''} onChange={(e) => setForm({ ...form, language: e.target.value })} placeholder="e.g. English" />
-        </div>
-        <div className="brand-field campaign-dates">
-          <label>Dates</label>
-          <input type="date" value={form.start_date || ''} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
-          <span> → </span>
-          <input type="date" value={form.end_date || ''} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
-        </div>
-        <div className="brand-field campaign-dates">
-          <label>Real deadline</label>
-          <input type="date" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-        </div>
-        <div className="brand-field">
-          <label>Channels</label>
-          <div className="campaign-channels">
-            {CHANNELS.map((ch) => (
-              <label key={ch} className="consent" style={{ margin: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={(form.channels || []).includes(ch)}
-                  onChange={(e) => setForm({
-                    ...form,
-                    channels: e.target.checked ? [...(form.channels || []), ch] : (form.channels || []).filter((x) => x !== ch),
-                  })}
-                />
-                <span>{ch}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        {campaign.brief_approved && (
-          <p className="muted">This brief is approved — saved changes apply to new generations only. Existing assets keep their snapshot; use Review to check brief changes.</p>
-        )}
-        {error && <p className="login-err">{error}</p>}
-        <div className="confirm-row">
-          <button className="btn-primary" type="submit" disabled={busy || !form.name?.trim()}>{busy ? 'Saving…' : 'Save brief'}</button>
-          <button className="account-link" type="button" onClick={() => setEditing(false)}>Cancel</button>
-        </div>
-      </form>
-    );
-  }
-
-  const facts = BRIEF_FIELDS.filter(([k]) => k !== 'name' && campaign[k]);
   return (
     <div>
-      <div className="account-section">
-        <h2 style={{ marginTop: 0 }}>Brief</h2>
-        {facts.length === 0 && <p className="muted">No brief details yet.</p>}
-        {facts.map(([k, label]) => (
-          <p className="muted" key={k} style={{ margin: '2px 0' }}><strong>{label}:</strong> {campaign[k]}</p>
-        ))}
-        {(campaign.markets || campaign.language) && (
-          <p className="muted" style={{ margin: '2px 0' }}><strong>Markets / language:</strong> {[campaign.markets, campaign.language].filter(Boolean).join(' · ')}</p>
-        )}
-        {(campaign.start_date || campaign.deadline) && (
-          <p className="muted" style={{ margin: '2px 0' }}><strong>Dates:</strong> {[campaign.start_date && `${campaign.start_date} → ${campaign.end_date || 'open'}`, campaign.deadline && `deadline ${campaign.deadline}`].filter(Boolean).join(' · ')}</p>
-        )}
-        {(campaign.channels || []).length > 0 && (
-          <p className="muted" style={{ margin: '2px 0' }}><strong>Channels:</strong> {campaign.channels.join(', ')}</p>
-        )}
-        {missing.length > 0 && (
-          <p className="muted">Add {missing.map(([, label]) => label).join(', ')} to complete the brief.</p>
-        )}
-      </div>
+      <BriefEditor campaign={campaign} onSaved={onChange} />
 
+      {!campaign.brief_approved && (
+        <p className="muted">
+          Approving locks in what new generations inherit: your offer, audience, key message, terms and restrictions.
+          Existing assets are unaffected. Approval is a human decision — it does not mean legally approved or fact-checked.
+        </p>
+      )}
       {error && <p className="login-err">{error}</p>}
       <div className="confirm-row">
-        <button className="btn-secondary" onClick={startEdit}>Edit brief</button>
         <button className="btn-secondary" onClick={approve} disabled={!campaign.brief_approved && missing.length > 0}
           title={!campaign.brief_approved && missing.length > 0 ? `Add ${missing.map(([, l]) => l).join(', ')} first` : undefined}>
           {campaign.brief_approved ? 'Reopen brief' : 'Approve brief and start creating'}

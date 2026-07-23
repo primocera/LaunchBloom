@@ -825,6 +825,19 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
 
     const patch = briefPatch(req.body);
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Nothing to update.' });
+
+    // v9 SC-03: optimistic concurrency for autosave. When the client sends the
+    // updated_at it last saw, a newer row (edited in another tab/device) is a
+    // conflict — reject with 409 STALE and the current row so the client can
+    // recover instead of silently clobbering a newer approved brief.
+    if (req.body.expected_updated_at && campaign.updated_at &&
+        req.body.expected_updated_at !== campaign.updated_at) {
+      return res.status(409).json({
+        error: 'This campaign was changed somewhere else. Reload to get the latest version before saving.',
+        code: 'STALE',
+        campaign,
+      });
+    }
     patch.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase.from('campaigns').update(patch).eq('id', campaign.id).select().single();

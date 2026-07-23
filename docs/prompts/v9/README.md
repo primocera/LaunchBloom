@@ -25,7 +25,7 @@ Source of truth: `Scalvya_Product_Elevation_Claude_Code_Prompts_v9.docx` (repo r
 - **Opus**: SC-V9-00, 02–11 (and 12 if Fable unavailable).
 
 ## Status
-- [ ] SC-V9-00 Baseline freeze, route audit, guardrails
+- [x] SC-V9-00 Baseline freeze, route audit, guardrails (commit e109af1)
 - [x] SC-V9-01 Campaign cockpit IA + route refactor ← **Fable/Opus** (commit 788cb43)
 - [ ] SC-V9-02 Deterministic next-best-action + readiness
 - [ ] SC-V9-03 Campaign creation / brief editing / approval UX
