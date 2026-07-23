@@ -8,6 +8,7 @@ export default function WorkspaceSwitcher() {
   const [active, setActive] = useState(getActiveWorkspace());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [creating, setCreating] = useState(null); // string while naming, null when closed
 
   async function load() {
     try {
@@ -32,13 +33,13 @@ export default function WorkspaceSwitcher() {
     window.location.assign('/app');
   }
 
-  async function createWorkspace() {
-    const name = window.prompt('Name your new workspace (brand or client):');
-    if (name === null) return;
+  // v9 SC-09: inline create (no window.prompt) — accessible, keyboard-friendly.
+  async function createWorkspace(e) {
+    e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const { workspace } = await api.createWorkspace(name.trim() || 'New workspace');
+      const { workspace } = await api.createWorkspace((creating || '').trim() || 'New workspace');
       setActiveWorkspace(workspace.id);
       window.location.assign('/app');
     } catch (err) {
@@ -62,7 +63,16 @@ export default function WorkspaceSwitcher() {
           <option key={w.id} value={w.id}>{w.name}</option>
         ))}
       </select>
-      <button className="ws-new" onClick={createWorkspace} disabled={busy} title="New workspace">+ New</button>
+      {creating === null ? (
+        <button className="ws-new" onClick={() => setCreating('')} disabled={busy} title="New workspace">+ New</button>
+      ) : (
+        <form className="ws-create" onSubmit={createWorkspace}>
+          <input aria-label="New workspace name (brand or client)" autoFocus placeholder="Brand or client name"
+            value={creating} onChange={(e) => setCreating(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setCreating(null)} />
+          <button className="ws-new" type="submit" disabled={busy}>Create</button>
+          <button className="account-link" type="button" onClick={() => setCreating(null)}>Cancel</button>
+        </form>
+      )}
       {error && <div className="ws-error">{error}</div>}
     </div>
   );

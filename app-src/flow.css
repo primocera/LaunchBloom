@@ -1,5 +1,48 @@
 /* The guided flow — the Scalvya palette from the spec. */
 
+/* v9 SC-09: one canonical token layer + baseline accessibility. Tokens mirror
+   the palette already used across routes so components can converge on them
+   without a visual rebrand. */
+:root {
+  --sc-bg: #f8f7f4;
+  --sc-surface: #ffffff;
+  --sc-text: #111827;
+  --sc-muted: #6b7280;
+  --sc-primary: #2563eb;
+  --sc-success: #10b981;
+  --sc-warn: #f59e0b;
+  --sc-danger: #dc2626;
+  --sc-border: #e5e7eb;
+  --sc-radius: 10px;
+  --sc-tap: 44px; /* WCAG 2.5.5 minimum touch target */
+}
+
+/* Visible keyboard focus everywhere — never removed to look "clean". */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--sc-primary);
+  outline-offset: 2px;
+}
+
+/* Comfortable touch targets on the primary interactive controls. */
+.btn-primary, .btn-secondary, .lp-cta, .lp-price-btn, .flow-btn {
+  min-height: var(--sc-tap);
+}
+
+/* Respect reduced-motion: disable animation/transition-driven motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* v9 SC-09: inline workspace create/rename + template naming (replaced the old
+   window.prompt flows). */
+.ws-create, .ws-rename { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ws-create input, .ws-rename input { min-height: 36px; padding: 4px 8px; border: 1px solid var(--sc-border); border-radius: 8px; }
+
 .flow {
   min-height: 100%;
   background: #f8f7f4;

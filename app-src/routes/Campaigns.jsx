@@ -81,14 +81,15 @@ function Playbooks({ onCreated }) {
 function Templates({ onCreated }) {
   const [templates, setTemplates] = useState(null);
   const [error, setError] = useState(null);
+  const [naming, setNaming] = useState(null); // { id, name } while naming a new campaign
 
   function load() { api.templates().then((r) => setTemplates(r.templates)).catch(() => setTemplates([])); }
   useEffect(load, []);
 
-  async function apply(t) {
-    const name = window.prompt(`New campaign name (from template “${t.name}”):`, t.name.replace(/ template$/i, ''));
-    if (!name) return;
-    try { const { campaign } = await api.applyTemplate(t.id, name); onCreated(campaign); }
+  // v9 SC-09: inline naming (no window.prompt) — accessible and keyboard-driven.
+  async function apply(e) {
+    e.preventDefault();
+    try { const { campaign } = await api.applyTemplate(naming.id, naming.name); setNaming(null); onCreated(campaign); }
     catch (err) { setError(err.message); }
   }
 
@@ -103,11 +104,23 @@ function Templates({ onCreated }) {
       <h2>Your templates</h2>
       {error && <p className="login-err">{error}</p>}
       {templates.map((t) => (
-        <p className="muted" key={t.id} style={{ margin: '4px 0' }}>
+        <div className="muted" key={t.id} style={{ margin: '4px 0' }}>
           {t.name} · reuses {Object.keys(t.data?.brief || {}).length} brief field(s) + deliverable plan{' '}
-          <button className="account-link" onClick={() => apply(t)}>Create campaign</button>{' '}
-          <button className="account-link" onClick={() => remove(t)}>Delete</button>
-        </p>
+          {naming && naming.id === t.id ? (
+            <form className="confirm-row" style={{ display: 'inline-flex' }} onSubmit={apply}>
+              <input aria-label={`New campaign name from ${t.name}`} autoFocus value={naming.name}
+                onChange={(e) => setNaming({ id: t.id, name: e.target.value })}
+                onKeyDown={(e) => e.key === 'Escape' && setNaming(null)} />
+              <button className="btn-secondary" type="submit" disabled={!naming.name.trim()}>Create</button>
+              <button className="account-link" type="button" onClick={() => setNaming(null)}>Cancel</button>
+            </form>
+          ) : (
+            <>
+              <button className="account-link" onClick={() => setNaming({ id: t.id, name: t.name.replace(/ template$/i, '') })}>Create campaign</button>{' '}
+              <button className="account-link" onClick={() => remove(t)}>Delete</button>
+            </>
+          )}
+        </div>
       ))}
     </div>
   );

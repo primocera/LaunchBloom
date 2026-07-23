@@ -28,6 +28,7 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [workspaces, setWorkspaces] = useState([]);
+  const [renaming, setRenaming] = useState(null); // { id, name } while editing
   const [receipt, setReceipt] = useState(null); // Prompt 27: deletion receipt
 
   function loadWorkspaces() {
@@ -41,10 +42,9 @@ export default function Account() {
     return () => { cancelled = true; };
   }, []);
 
-  async function renameWorkspace(w) {
-    const name = window.prompt('Rename workspace:', w.name);
-    if (name === null) return;
-    try { await api.renameWorkspace(w.id, name.trim() || w.name); loadWorkspaces(); }
+  // v9 SC-09: inline rename (no window.prompt) — accessible, keyboard-friendly.
+  async function renameWorkspace(id, name) {
+    try { await api.renameWorkspace(id, name.trim() || 'Workspace'); setRenaming(null); loadWorkspaces(); }
     catch (err) { setError(err.message); }
   }
 
@@ -190,9 +190,20 @@ export default function Account() {
         <p className="muted">Each workspace keeps a separate Brand Profile, campaigns and Library.</p>
         {workspaces.map((w) => (
           <div className="ws-row" key={w.id}>
-            <span className="ws-name">{w.name}{w.archived ? ' (archived)' : ''}</span>
-            <button onClick={() => renameWorkspace(w)}>Rename</button>
-            <button onClick={() => removeWorkspace(w)}>Delete</button>
+            {renaming && renaming.id === w.id ? (
+              <form className="ws-rename" onSubmit={(e) => { e.preventDefault(); renameWorkspace(w.id, renaming.name); }}>
+                <input aria-label={`Rename ${w.name}`} autoFocus value={renaming.name}
+                  onChange={(e) => setRenaming({ id: w.id, name: e.target.value })} />
+                <button className="btn-secondary" type="submit">Save</button>
+                <button className="account-link" type="button" onClick={() => setRenaming(null)}>Cancel</button>
+              </form>
+            ) : (
+              <>
+                <span className="ws-name">{w.name}{w.archived ? ' (archived)' : ''}</span>
+                <button onClick={() => setRenaming({ id: w.id, name: w.name })}>Rename</button>
+                <button onClick={() => removeWorkspace(w)}>Delete</button>
+              </>
+            )}
           </div>
         ))}
       </section>
