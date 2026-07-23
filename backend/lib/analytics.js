@@ -67,6 +67,23 @@ const CANONICAL_EVENTS = {
   first_asset_ready: 'A workspace marked its first asset ready to export.',
   campaign_completed: 'A campaign reached all-required-ready and was exported (handoff produced).',
   day7_returned: 'An account returned to the app 7+ days after workspace creation.',
+  // ── v9 cockpit / review / library / handoff / onboarding (codes + bands
+  // only, never content). These were fired from the new UI in SC-01..08; they
+  // MUST be registered here and (for client-fired ones) in CLIENT_EVENTS or the
+  // events route silently drops them. ──
+  campaign_section_viewed: 'A campaign workspace section was viewed (section code + coarse state).',
+  next_action_viewed: 'The single recommended next action was shown (action_code + severity).',
+  next_action_completed: 'The recommended next action advanced after a durable state change (prior action_code).',
+  brief_section_completed: 'A guided Campaign Brief group was fully filled (section key only).',
+  approved_brief_reopened: 'An approved campaign brief was reopened for editing.',
+  review_item_opened: 'A Review workbench item was opened (group/severity/kind, no content).',
+  asset_opened: 'A Library asset detail drawer was opened (type/status).',
+  version_compared: 'Two asset versions were compared in the Library (type).',
+  version_restored: 'An earlier asset version was restored after preview + confirm (type).',
+  export_completed: 'An asset was exported from the Library drawer (type/status/format).',
+  onboarding_path_selected: 'A landing use-case path was chosen (path only: own|client).',
+  handoff_previewed: 'The Handoff screen preview was shown (asset_count_band + blocker_count_band).',
+  handoff_exported: 'A handoff packet was exported (format + bands, recomputed server-side).',
 };
 
 // ── The one canonical value funnel (LB-S09). Ordered milestones; each is a
@@ -110,6 +127,21 @@ const CLIENT_EVENTS = new Set([
   'first_warning_resolved',
   'first_asset_exported',
   'playbook_previewed',
+  // v9 client-fired cockpit/review/library/onboarding events (codes + bands
+  // only). Server-confirmed milestones (handoff_previewed/exported, brief_
+  // approved, *_ready, campaign_completed) stay backend-fired and are NOT here.
+  'campaign_section_viewed',
+  'next_action_viewed',
+  'next_action_completed',
+  'brief_section_completed',
+  'approved_brief_reopened',
+  'review_item_opened',
+  'review_item_resolved',
+  'asset_opened',
+  'version_compared',
+  'version_restored',
+  'export_completed',
+  'onboarding_path_selected',
 ]);
 
 // Keys that must never reach analytics (case-insensitive substring match).
