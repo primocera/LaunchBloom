@@ -3,8 +3,32 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const { sanitizeProperties, CANONICAL_EVENTS, CLIENT_EVENTS, ACTIVATION } = require('../lib/analytics');
+
+// v9 SC-11: every event the frontend fires via api.trackEvent MUST be an
+// allowlisted client event, or POST /api/events silently drops it (204). This
+// guard would have caught the SC-01..08 cockpit/review/library events being
+// dropped before they were registered.
+test('every frontend trackEvent name is an allowlisted client event', () => {
+  const APP = path.join(__dirname, '..', '..', 'app-src');
+  const files = [];
+  (function walk(d) {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (['.js', '.jsx'].includes(path.extname(e.name))) files.push(p);
+    }
+  })(APP);
+  const fired = new Set();
+  for (const f of files) {
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/trackEvent\('([a-z_]+)'/g)) fired.add(m[1]);
+  }
+  const dropped = [...fired].filter((e) => !CLIENT_EVENTS.has(e));
+  assert.deepEqual(dropped, [], `these fired events are not allowlisted (silently dropped): ${dropped.join(', ')}`);
+});
 
 test('every canonical event has a non-empty documented definition', () => {
   const required = [

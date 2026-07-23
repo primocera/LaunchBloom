@@ -31,14 +31,19 @@ const { BRAND, LEGAL_VERSION, legalPlaceholders } = require('../lib/brand');
 
 function legalHandler(_req, res) {
   res.set('Cache-Control', 'public, max-age=300');
+  // v9 SC-00: fail closed. Never emit a placeholder entity to customers — when
+  // the legal identity isn't fully configured, entity-bearing fields are null
+  // and the client renders an explicit "unavailable" state instead of a
+  // fabricated name like "Scalvya (legal entity TBD)".
+  const configured = legalPlaceholders().length === 0;
   res.json({
-    legal_name: BRAND.legalName,
-    legal_address: BRAND.legalAddress,
+    legal_name: configured ? BRAND.legalName : null,
+    legal_address: configured ? BRAND.legalAddress : '',
     support_email: BRAND.supportEmail,
     privacy_email: BRAND.privacyEmail,
-    governing_law: BRAND.governingLaw,
+    governing_law: configured ? BRAND.governingLaw : '',
     version: LEGAL_VERSION,
-    configured: legalPlaceholders().length === 0,
+    configured,
   });
 }
 

@@ -1,10 +1,14 @@
 name: CI
 
-# Runs on pull requests only. We push straight to main, so this does NOT run
-# on push (no failure emails on every commit). Tests are run locally before
-# each push; open a PR if you want CI to gate a change.
+# v9 SC-00: the complete non-secret gate (lint + unit/integration tests +
+# production build + stale-bundle check) now runs on pull requests AND on
+# direct pushes to main, so a commit can never appear release-green when these
+# checks did not run. Browser E2E stays scheduled/on-demand (see e2e.yml) for
+# cost; it does NOT gate a release. Nothing here needs secrets.
 on:
   pull_request:
+  push:
+    branches: [main]
 
 jobs:
   build-and-test:

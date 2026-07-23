@@ -130,6 +130,10 @@ export const api = {
   // v8 LB-S04: review queue + evidence locker + export manifest
   campaignReview: (id) => request(`/api/campaigns/${id}/review`),
   campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),
+  campaignHandoff: (id) => request(`/api/campaigns/${id}/handoff`),
+  campaignHandoffManifest: (id) => request(`/api/campaigns/${id}/handoff/manifest`),
+  recordHandoff: (id, fingerprint, format) =>
+    request(`/api/campaigns/${id}/handoff/record`, { method: 'POST', body: { fingerprint, format } }),
   // v8 LB-S07: full review packet (export-only handoff per ADR-001)
   campaignReviewPacket: (id) => request(`/api/campaigns/${id}/review-packet`),
   evidence: () => request('/api/evidence'),
@@ -141,6 +145,7 @@ export const api = {
     request(`/api/evidence/${id}/link`, { method: 'DELETE', body: { asset_table, asset_id } }),
   // Asset Library (Prompt 13)
   library: (params) => request(`/api/assets/library?${new URLSearchParams(params || {})}`),
+  assetDetail: (table, id) => request(`/api/assets/library/${table}/${id}`),
   updateAsset: (table, id, patch) => request(`/api/assets/library/${table}/${id}`, { method: 'PATCH', body: patch }),
   duplicateAsset: (table, id) => request(`/api/assets/library/${table}/${id}/duplicate`, { method: 'POST' }),
   deleteAsset: (table, id) => request(`/api/assets/library/${table}/${id}`, { method: 'DELETE' }),

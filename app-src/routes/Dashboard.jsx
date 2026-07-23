@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { homePlan } from '../lib/next-actions';
+import { campaignSummary, campaignNextAction } from '../lib/campaign-next-action';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -154,14 +155,16 @@ export default function Dashboard() {
             {activeCampaigns.length ? (
               <div className="kit-items">
                 {activeCampaigns.map((c) => {
-                  const count = Object.values(c.asset_counts || {}).reduce((a, b) => a + b, 0);
+                  // Same shared selector as Campaign Overview (without review data
+                  // here, so it conservatively routes to Review rather than
+                  // asserting an unseen blocker or a false export-ready state).
+                  const na = campaignNextAction(campaignSummary(c, null));
                   return (
                     <div className="kit-item" key={c.id}>
-                      <div className="kit-item-title">{c.name}</div>
-                      <div className="kit-item-meta">
-                        {count} asset{count === 1 ? '' : 's'}
-                        {c.end_date ? ` · ends ${new Date(c.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
+                      <div className="kit-item-title">
+                        <Link to={na.destination}>{c.name}</Link>
                       </div>
+                      <div className="kit-item-meta">Next: {na.label}</div>
                     </div>
                   );
                 })}

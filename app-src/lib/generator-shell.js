@@ -78,4 +78,63 @@ export function outputEstimate({ resultKey = 'items', count } = {}) {
   return `Generates ${what}. This uses 1 AI action — editing, copying and exporting are free.`;
 }
 
+// v9 SC-05: the exact required labels still missing before Generate can run, so
+// a disabled button explains WHY rather than greying out silently.
+export function missingRequiredFields(fields = [], values = {}) {
+  return fields
+    .filter((f) => {
+      if (!f.required) return false;
+      const v = values[f.name];
+      return v == null || v === '' || (Array.isArray(v) && v.length === 0);
+    })
+    .map((f) => f.label);
+}
+
+// v9 SC-05: the per-channel output contract shown BEFORE generation — what the
+// studio actually produces (structure) and the boundary it never crosses. The
+// wording is deliberately outcome-safe and matches the product contract: Social
+// never posts/schedules, Creative is briefs not media, SEO invents no metrics.
+export const OUTPUT_CONTRACT = {
+  website_pages: {
+    structure: ['Page goal', 'Headline and sections', 'SEO title and meta', 'FAQ', 'One primary CTA'],
+    note: 'Structured page copy to review and adapt — not a published page.',
+  },
+  email_assets: {
+    structure: ['Sequence purpose', 'Subject and preheader', 'Plain-text-safe body', 'One CTA per email'],
+    note: 'Draft emails to review and adapt — Scalvya does not send them.',
+  },
+  social_assets: {
+    structure: ['Platform and format', 'Hook', 'Caption and hashtags', 'Calendar planning only'],
+    note: 'Planned captions to review — never posted or scheduled to any platform.',
+  },
+  creative_assets: {
+    structure: ['Concept and format', 'Script or primary text', 'Claim with an evidence hook', 'Testing note'],
+    note: 'Ad creative briefs to review — not rendered media or launched ads.',
+  },
+  seo_assets: {
+    structure: ['Research question and intent', 'Outline (H-structure)', 'Title and meta', 'Verification checklist'],
+    note: 'Research ideas to verify — no invented search volume, difficulty or rank.',
+  },
+};
+
+export function outputContractFor(table) {
+  return OUTPUT_CONTRACT[table] || null;
+}
+
+// v9 SC-05: structured fields a user can edit inline (free, versioned) to fix a
+// deterministic consistency finding WITHOUT spending an AI action. The keys
+// mirror the backend rewriteFields for each table (backend snapshots the prior
+// version on every content edit), so editing here is non-destructive.
+export const STRUCTURED_FIELDS = {
+  website_pages: [['cta', 'Primary CTA (and link)']],
+  email_assets: [['subject_line', 'Subject line'], ['cta', 'Primary CTA (and link)']],
+  social_assets: [['cta', 'Primary CTA (and link)']],
+  creative_assets: [['headline', 'Headline'], ['cta', 'Primary CTA (and link)']],
+  seo_assets: [['seo_title', 'SEO title'], ['h1', 'H1']],
+};
+
+export function structuredFieldsFor(table) {
+  return STRUCTURED_FIELDS[table] || [];
+}
+
 export const RESULT_TABS = ['Output', 'Quality', 'Versions', 'Brief'];

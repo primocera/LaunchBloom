@@ -18,6 +18,7 @@ import FeedbackWidget from './components/FeedbackWidget';
 import Account from './routes/Account';
 import BrandProfile from './routes/BrandProfile';
 import Campaigns from './routes/Campaigns';
+import CampaignWorkspace from './routes/campaign/CampaignWorkspace';
 import AssetLibrary from './routes/AssetLibrary';
 import Create from './routes/Create';
 import Admin from './routes/Admin';
@@ -146,6 +147,9 @@ function AppShell() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/brand" element={<BrandProfile />} />
           <Route path="/campaigns" element={<Campaigns />} />
+          {/* v9 SC-01: focused per-campaign workspace (Overview/Brief/Deliverables/Assets/Review/Handoff) */}
+          <Route path="/campaigns/:campaignId" element={<CampaignWorkspace />} />
+          <Route path="/campaigns/:campaignId/:section" element={<CampaignWorkspace />} />
           <Route path="/create" element={<Create />} />
           <Route path="/assets" element={<AssetLibrary />} />
           <Route path="/account" element={<Account />} />

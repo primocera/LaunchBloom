@@ -27,6 +27,26 @@ const MECHANISM = [
   { n: '4', title: 'Review and ship', body: 'Resolve unsupported claims, compare versions, edit and export from Library.' },
 ];
 
+// v9 SC-08: two honest use-case paths under ONE product. They change the
+// examples and setup guidance only — never entitlements, navigation or the
+// Brand Profile → Campaign Brief contract. Both reach first value the same way.
+const ICP_PATHS = [
+  {
+    key: 'own',
+    title: 'Launch my own campaign',
+    who: 'Solo founders and small brands',
+    body: 'Keep one launch consistent across website, email, social and ads — without the offer drifting between tools.',
+    cta: 'Create my workspace',
+  },
+  {
+    key: 'client',
+    title: 'Build campaigns for clients',
+    who: 'Freelance marketers and boutique agencies',
+    body: 'Run each client on its own brief, review for consistency, and hand off a clean packet — no client logins to manage.',
+    cta: 'Create my workspace',
+  },
+];
+
 // "What one campaign can include" — deliverables as one connected set.
 const VALUE_LIST = [
   'Website pages',
@@ -139,6 +159,15 @@ export default function Landing() {
     return () => observer.disconnect();
   }, []);
 
+  // v9 SC-08: record the chosen use-case path (bounded analytics — path only,
+  // never a company or client name) and remember it so onboarding can tailor
+  // guidance. Both paths route into the same signup → Brand Profile flow.
+  function pickPath(key) {
+    api.trackEvent('onboarding_path_selected', { path: key });
+    try { localStorage.setItem('of-use-case', key); } catch { /* private mode */ }
+    navigate(account ? '/app' : '/app/signup');
+  }
+
   // Remember which plan + interval was clicked; checkout resumes once signed in.
   async function choose(plan) {
     try {
@@ -192,8 +221,9 @@ export default function Landing() {
           <div className="lp-eyebrow lp-hero-eyebrow">FROM ONE BRIEF TO ONE CONNECTED CAMPAIGN</div>
           <h1>Turn one offer into a launch-ready campaign.</h1>
           <p className="lp-sub">
-            {BRAND.name} helps solo founders and small teams create connected website copy, emails,
-            social posts and ads from one approved Brand Profile and Campaign Brief. Launch-ready
+            {BRAND.name} is the campaign-control workspace for freelance marketers, boutique agencies
+            and solo founders. Turn one approved brief into connected website copy, emails, social
+            posts and ads — with review checks and a client-ready handoff. Launch-ready
             means structured, connected and ready for your review — publishing stays in your hands.
           </p>
 
@@ -225,6 +255,30 @@ export default function Landing() {
               the same approved brand facts and campaign brief.
             </p>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ── 2b. Who it's for — two paths, one product ──────────────────── */}
+      <section className="lp-paths" id="who-its-for">
+        <div className="lp-paths-inner">
+          <Reveal>
+            <div className="lp-eyebrow">Who it's for</div>
+            <h2 className="lp-h2">Two ways to use {BRAND.name} — one product, one workflow.</h2>
+            <p className="lp-h2-sub">
+              Same Brand Profile → Campaign Brief → Create → Review → Export. Choosing a path only tailors
+              your examples and setup guidance — it never changes what you can do or what you pay.
+            </p>
+          </Reveal>
+          <div className="lp-paths-grid">
+            {ICP_PATHS.map((p, i) => (
+              <Reveal className="lp-path-card" key={p.key} delay={i * 90}>
+                <div className="lp-path-who">{p.who}</div>
+                <h3>{p.title}</h3>
+                <p>{p.body}</p>
+                <button className="lp-price-btn" onClick={() => pickPath(p.key)}>{p.cta}</button>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 

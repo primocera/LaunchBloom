@@ -13,6 +13,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { execSync } = require('child_process');
 
 const { launchMode, launchConfigProblems } = require('../lib/launch-config');
 const { RULES_VERSION } = require('../lib/consistency');
@@ -77,7 +79,51 @@ function collect() {
   return { mode, checks };
 }
 
+// v9 SC-00: a machine-readable release evidence record. Pins the commit SHA,
+// migration set and built-bundle hash plus the deterministic check results, so
+// a release can be reproduced and audited. Contains NO secrets — env vars are
+// reported as presence booleans only (via collect()).
+function releaseEvidence() {
+  let commit = process.env.GITHUB_SHA || null;
+  if (!commit) {
+    try { commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim(); }
+    catch { commit = null; }
+  }
+
+  const migDir = path.join(__dirname, '..', 'migrations');
+  const migrations = fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort();
+
+  // Built bundle hash: the vite output filenames already encode content hashes;
+  // fold them into one deterministic digest of the release artifact.
+  const assetsDir = path.join(__dirname, '..', '..', 'app', 'assets');
+  let bundleFiles = [];
+  try { bundleFiles = fs.readdirSync(assetsDir).sort(); } catch { /* not built */ }
+  const buildHash = bundleFiles.length
+    ? crypto.createHash('sha256').update(bundleFiles.join('|')).digest('hex').slice(0, 16)
+    : null;
+
+  const { mode, checks } = collect();
+  const blockers = checks.filter((c) => !c.ok && c.level === 'blocker');
+  return {
+    generated_at: new Date().toISOString(),
+    commit,
+    mode,
+    ready: blockers.length === 0,
+    migrations,
+    migration_count: migrations.length,
+    build_hash: buildHash,
+    bundle_files: bundleFiles,
+    rules: { consistency: RULES_VERSION, dependencies: DEPENDENCIES_VERSION },
+    checks,
+  };
+}
+
 function main() {
+  if (process.argv.includes('--evidence')) {
+    const evidence = releaseEvidence();
+    console.log(JSON.stringify(evidence, null, 2));
+    process.exit(evidence.ready ? 0 : 1);
+  }
   const asJson = process.argv.includes('--json');
   const { mode, checks } = collect();
   const blockers = checks.filter((c) => !c.ok && c.level === 'blocker');
@@ -102,4 +148,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { collect, REQUIRED_MIGRATIONS };
+module.exports = { collect, releaseEvidence, REQUIRED_MIGRATIONS };
