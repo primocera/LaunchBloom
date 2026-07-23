@@ -297,6 +297,20 @@ export default function BrandProfile() {
         to future generations; assets you&rsquo;ve already saved keep the context they were generated
         from.
       </p>
+      {/* v9 SC-08: tailored setup guidance from the chosen use-case path. It only
+          changes wording — the same Brand Profile → Campaign Brief contract runs
+          for both. No company or client names are read or stored. */}
+      {(() => {
+        let path = null;
+        try { path = localStorage.getItem('of-use-case'); } catch { /* private mode */ }
+        if (path === 'client') {
+          return <p className="muted" role="note">Building for clients? Use one workspace per client and fill this with that client&rsquo;s facts — each campaign brief then inherits them for a clean, consistent handoff.</p>;
+        }
+        if (path === 'own') {
+          return <p className="muted" role="note">Launching your own campaign? Add your real products, audience and proof once here — every campaign you brief will reuse them.</p>;
+        }
+        return null;
+      })()}
 
       {/* v7 LB-03: the smallest credible baseline, stated — not a score. */}
       {(() => {

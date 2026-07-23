@@ -50,6 +50,35 @@ test('no frontend source contains banned claims or retired vocabulary', () => {
   assert.deepEqual(hits, [], `banned copy found:\n${hits.join('\n')}`);
 });
 
+// ── v9 SC-08: ICP legibility + two honest use-case paths, one product ───────
+
+test('landing names the ICP and offers two use-case paths into one workflow', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  // Category + who it's for, without hype words.
+  assert.match(landing, /campaign-control workspace/i, 'landing must state the category');
+  assert.match(landing, /freelance marketers/i);
+  assert.match(landing, /boutique agencies/i);
+  // Two paths under one product.
+  assert.match(landing, /Launch my own campaign/);
+  assert.match(landing, /Build campaigns for clients/);
+  // The paths must reuse the same contract, not fork the product.
+  assert.match(landing, /Brand Profile\s*→\s*Campaign Brief\s*→\s*Create\s*→\s*Review\s*→\s*Export/);
+  // Hype/vague-AI vocabulary the prompt forbids must not appear.
+  assert.ok(!/all-in-one|effortless|10x|one-click/i.test(landing), 'no hype vocabulary');
+});
+
+test('landing embeds no hardcoded prices — commercial values come from the catalog', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  assert.ok(!/[$€£]\s?\d/.test(landing), 'no currency+digit literals in landing content');
+});
+
+test('onboarding path analytics carry only the path, never a company/client name', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const m = landing.match(/trackEvent\('onboarding_path_selected'\s*,\s*\{([^}]*)\}/);
+  assert.ok(m, 'onboarding_path_selected must be tracked');
+  assert.ok(!/name|company|client_name|email/i.test(m[1]), 'no identifying fields in path analytics');
+});
+
 // ── The canonical promise ───────────────────────────────────────────────────
 
 const PROMISE = 'Turn one offer into a launch-ready campaign';
