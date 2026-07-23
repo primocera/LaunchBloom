@@ -34,7 +34,7 @@ Source of truth: `Scalvya_Product_Elevation_Claude_Code_Prompts_v9.docx` (repo r
 - [x] SC-V9-06 Campaign-scoped library + version comparison (commit 4e8c4df)
 - [x] SC-V9-07 Professional handoff packet + export (commit 4f1aebb) — deferred: ZIP/DOCX (conditional on safe streaming per prompt)
 - [x] SC-V9-08 ICP positioning, onboarding, pricing, lifecycle (ICP slice; commit 9bda45a) — deferred: full lifecycle-email rewrite (overlaps SC-10)
-- [x] SC-V9-09 Design system, accessibility, responsive polish (a11y slice; commit pending) — deferred: full shared-component library migration
-- [ ] SC-V9-10 Legal, billing, support, paid-production hardening
+- [x] SC-V9-09 Design system, accessibility, responsive polish (a11y slice; commit 9d9f240) — deferred: full shared-component library migration
+- [x] SC-V9-10 Legal, billing, support, paid-production hardening (commit pending) — legal fail-closed done in SC-00; live rehearsal is owner-operated (runbook)
 - [ ] SC-V9-11 Value analytics, beta learning, pruning
 - [ ] SC-V9-12 Integrated RC + final product-quality gate
