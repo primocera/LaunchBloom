@@ -10,6 +10,8 @@
 
 const supabase = require('./supabase');
 const { BRAND, emailFrom } = require('./brand');
+// v10 SC-06: consent gate — categories, suppression and unsubscribe links.
+const { categoryOf, isSuppressed, unsubscribeUrl } = require('./email-consent');
 
 let resend = null;
 if (process.env.RESEND_API_KEY) {
@@ -23,8 +25,10 @@ function template(title, bodyHtml) {
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:28px">
     <h1 style="font-size:20px;color:#111827;margin:0 0 12px">${title}</h1>
     <div style="font-size:14px;color:#111827;line-height:1.6">${bodyHtml}</div>
-    <p style="font-size:12px;color:#6B7280;margin-top:24px">${BRAND.name} · <a href="${BRAND.siteUrl}" style="color:#2563EB">${BRAND.siteUrl}</a><br>
-    This is a transactional message about your account.</p>
+    <p style="font-size:12px;color:#6B7280;margin-top:24px">${BRAND.name} · <a href="${BRAND.siteUrl}" style="color:#2563EB">${BRAND.siteUrl}</a></p>
+    <!-- v10 SC-06: the "why you got this" line is appended per category by
+         withConsentFooter(). It used to be hardcoded as transactional here,
+         which would have been a false statement on an optional nudge. -->
   </div></body></html>`;
 }
 
@@ -94,6 +98,45 @@ const TEMPLATES = {
     html: template('Action needed: update your payment method', `<p>We couldn't process your latest payment. We'll retry automatically, and your account stays accessible during the retry window.</p><p>To avoid losing generation access, update your payment method: <a href="${billingLink()}">Account &amp; billing → Manage billing</a>.</p>`),
     text: `We couldn't process your latest payment. We'll retry automatically; update your payment method to keep generation access: ${billingLink()}`,
   }),
+  // v10 SC-06: recovery closes the loop that payment_failed opens. Without it
+  // the last thing a customer heard was "action needed", even after the charge
+  // succeeded — which reads as an unresolved problem with their money.
+  payment_recovered: ({ periodEnd, amount } = {}) => ({
+    subject: 'Payment went through — your access continues',
+    html: template('Payment went through', `<p>${amount ? `Your payment of <strong>${amount}</strong> was received. ` : 'Your payment was received. '}Nothing further is needed and your access continues${periodEnd ? ` through <strong>${fmtDate(periodEnd)}</strong>` : ''}.</p><p>If you updated your card, the new one is now on file. <a href="${billingLink()}">View billing</a></p>`),
+    text: `Your payment went through${amount ? ` (${amount})` : ''}. Nothing further is needed and your access continues${periodEnd ? ` through ${fmtDate(periodEnd)}` : ''}. Billing: ${billingLink()}`,
+  }),
+  // v10 SC-06: the ONLY optional nudge, and it fires solely when a specific
+  // canonical setup step is missing. `step` is a server-derived step key —
+  // never campaign, brief or asset content.
+  activation_nudge: ({ step } = {}) => {
+    const STEPS = {
+      brand_profile: {
+        what: 'add your products, audience, voice and proof to Brand Profile',
+        why: 'Every generation reads those facts, so a thin profile produces generic copy.',
+        href: billingLink().replace('/account', '/brand'),
+        cta: 'Finish Brand Profile',
+      },
+      first_campaign: {
+        what: 'create your first campaign',
+        why: 'A campaign holds the offer, audience, dates and CTA that keep every asset consistent.',
+        href: billingLink().replace('/account', '/campaigns'),
+        cta: 'Create a campaign',
+      },
+      approve_brief: {
+        what: 'approve your campaign brief',
+        why: 'Approving locks in what new generations inherit — it takes a minute and nothing is generated.',
+        href: billingLink().replace('/account', '/campaigns'),
+        cta: 'Review the brief',
+      },
+    };
+    const s = STEPS[step] || STEPS.brand_profile;
+    return {
+      subject: `One step left: ${s.what}`,
+      html: template('One step left', `<p>Your workspace is set up — the next step is to ${s.what}.</p><p>${s.why}</p><p><a href="${s.href}">${s.cta}</a></p><p>This step is free and uses no AI actions.</p>`),
+      text: `Your workspace is set up. Next: ${s.what}. ${s.why} ${s.href} — this step is free and uses no AI actions.`,
+    };
+  },
   cancellation_scheduled: ({ periodEnd } = {}) => ({
     subject: `Your plan ends on ${fmtDate(periodEnd)}`,
     html: template(`Your plan ends on ${fmtDate(periodEnd)}`, `<p>Generation access ends on <strong>${fmtDate(periodEnd)}</strong>. You keep full access until then, and your existing assets remain available according to the retention policy afterwards.</p><p>Changed your mind? <a href="${billingLink()}">Resume from Account &amp; billing</a>. Need help? Reply to this email.</p>`),
@@ -121,6 +164,27 @@ const TEMPLATES = {
 };
 
 /**
+ * v10 SC-06: append the footer that matches the message's category.
+ * Marketing gets a working one-click unsubscribe. Transactional says WHY the
+ * message was sent and that it cannot be unsubscribed from — so a receipt is
+ * never mistaken for marketing that ignored an opt-out.
+ */
+function withConsentFooter(built, type, to) {
+  const marketing = categoryOf(type) === 'marketing';
+  const url = marketing ? unsubscribeUrl(to) : null;
+
+  const htmlFooter = marketing && url
+    ? `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">You're receiving this because you created a ${BRAND.name} account. <a href="${url}">Unsubscribe from optional email</a> — you'll still get billing and account messages.</p>`
+    : `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">This is a billing and account message about your ${BRAND.name} subscription, so it isn't part of optional email.</p>`;
+
+  const textFooter = marketing && url
+    ? `\n\n---\nYou're receiving this because you created a ${BRAND.name} account. Unsubscribe from optional email: ${url} (billing and account messages continue).`
+    : `\n\n---\nThis is a billing and account message about your ${BRAND.name} subscription, so it isn't part of optional email.`;
+
+  return { subject: built.subject, html: `${built.html}${htmlFooter}`, text: `${built.text}${textFooter}` };
+}
+
+/**
  * Idempotently send one lifecycle email.
  *   sendLifecycleEmail('trial_started', 'sub_123', 'a@b.com', { chargeAt })
  * Returns 'sent' | 'duplicate' | 'skipped' | 'failed'. Never throws.
@@ -129,14 +193,26 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
   const make = TEMPLATES[type];
   if (!make || !to) return 'skipped';
   const dedupeKey = `${type}:${dedupeId}`;
+  const category = categoryOf(type);
 
   try {
+    // v10 SC-06: consent gate. Marketing is checked against the suppression
+    // list; transactional never is — withholding a receipt or a charge notice
+    // because someone opted out of product news would be the worse failure.
+    if (category === 'marketing' && (await isSuppressed(to))) {
+      await supabase
+        .from('email_events')
+        .insert({ dedupe_key: dedupeKey, email_type: type, recipient: to, status: 'suppressed', category, payload: params })
+        .then(() => {}, () => {}); // a duplicate claim here is not an error
+      return 'suppressed';
+    }
+
     // Claim first — the unique constraint makes retries no-ops. Template
     // params (dates, plan labels — never generated content) are stored so the
     // outbox worker can rebuild the exact email on retry.
     const { error: insErr } = await supabase
       .from('email_events')
-      .insert({ dedupe_key: dedupeKey, email_type: type, recipient: to, status: 'pending', payload: params });
+      .insert({ dedupe_key: dedupeKey, email_type: type, recipient: to, status: 'pending', category, payload: params });
     if (insErr) {
       // Unique violation (or any insert failure): treat as already handled —
       // err toward not sending twice.
@@ -148,7 +224,8 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
       return 'skipped';
     }
 
-    const { subject, html, text } = make(params);
+    const built = make(params);
+    const { subject, html, text } = withConsentFooter(built, type, to);
     const { data, error } = await resend.emails.send({ from: emailFrom(), to, subject, html, text });
     if (error) throw new Error(error.message || 'send failed');
 

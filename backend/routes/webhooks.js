@@ -353,6 +353,14 @@ async function onInvoicePaid(invoice, eventAt) {
     return;
   }
 
+  // v10 SC-06: was this payment a RECOVERY? Read the prior state before the
+  // update overwrites it — a customer who was told "action needed" must be
+  // told the problem is resolved, not left with an unanswered money warning.
+  const { data: priorRow } = await supabase
+    .from('subscriptions').select('status')
+    .eq('stripe_subscription_id', invoice.subscription).single();
+  const wasPastDue = priorRow && priorRow.status === 'past_due';
+
   const { error } = await supabase
     .from('subscriptions')
     .update({
@@ -390,7 +398,13 @@ async function onInvoicePaid(invoice, eventAt) {
         const plan = pricePlans()[priceId];
         planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : null;
       }
-      await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd, amount, planLabel });
+      // A recovery gets the recovery message instead of a routine receipt.
+      // Both are deduped on the invoice id, so a redelivery sends neither twice.
+      if (wasPastDue) {
+        await sendLifecycleEmail('payment_recovered', invoice.id, email, { periodEnd, amount });
+      } else {
+        await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd, amount, planLabel });
+      }
     }
   }
 }
