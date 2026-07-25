@@ -11,16 +11,32 @@ function makeSupabase() {
   let seq = 0;
   const flags = { user: { id: 'user-1', email: 'me@app.com' } };
 
+  // v10 SC-02: the list endpoint now pushes filters to the database and uses
+  // exact counts + range windows instead of a 500-row in-memory slice, so the
+  // fake has to model or()/range()/lte()/count faithfully — otherwise these
+  // tests would pass against behaviour the real PostgREST never performs.
   function builder(table) {
-    const st = { table, op: 'select', filters: {}, ins: null };
+    const st = { table, op: 'select', filters: {}, preds: [], ins: null, range: null, count: false, head: false, desc: false };
     const api = {
-      select() { return api; },
+      select(_cols, opts) {
+        if (opts && opts.count) { st.count = true; st.head = Boolean(opts.head); }
+        return api;
+      },
       insert(p) { st.op = 'insert'; st.ins = p; return api; },
       update(p) { st.op = 'update'; st.ins = p; return api; },
       delete() { st.op = 'delete'; return api; },
       eq(k, v) { st.filters[k] = v; return api; },
-      is() { return api; }, in() { return api; }, gte() { return api; },
-      order() { return api; }, limit() { return api; },
+      is() { return api; }, in() { return api; },
+      gte(k, v) { st.preds.push((r) => r[k] != null && r[k] >= v); return api; },
+      lte(k, v) { st.preds.push((r) => r[k] != null && r[k] <= v); return api; },
+      or(expr) {
+        // Only the shape the route actually emits is modelled.
+        if (expr === 'archived.is.null,archived.eq.false') st.preds.push((r) => r.archived !== true);
+        return api;
+      },
+      order(col, opts) { st.desc = opts ? opts.ascending === false : false; st.orderBy = col; return api; },
+      limit() { return api; },
+      range(from, to) { st.range = [from, to]; return api; },
       single() { return Promise.resolve(single(st)); },
       then(res, rej) { return Promise.resolve(list(st)).then(res, rej); },
     };
@@ -61,7 +77,18 @@ function makeSupabase() {
     }
     if (st.table === 'workspaces') return { data: [{ id: 'ws-' + flags.user.id, user_id: flags.user.id, archived: false }], error: null };
     if (!(st.table in store)) return { data: null, error: { code: '42P01', message: 'missing' } };
-    return { data: rowsOf(st.table).filter((r) => match(r, st.filters)), error: null };
+
+    let rows = rowsOf(st.table).filter((r) => match(r, st.filters) && st.preds.every((p) => p(r)));
+    if (st.orderBy) {
+      rows = rows.slice().sort((a, b) => {
+        const av = a[st.orderBy], bv = b[st.orderBy];
+        return st.desc ? (av < bv ? 1 : av > bv ? -1 : 0) : (av > bv ? 1 : av < bv ? -1 : 0);
+      });
+    }
+    // A head count reports the total BEFORE any range window is applied.
+    if (st.count && st.head) return { data: null, count: rows.length, error: null };
+    if (st.range) rows = rows.slice(st.range[0], st.range[1] + 1);
+    return { data: rows, count: st.count ? rows.length : undefined, error: null };
   }
 
   return {
@@ -220,4 +247,65 @@ test('version snapshot records source and author', async () => {
   assert.equal(db._store.asset_versions.length, 1);
   assert.equal(db._store.asset_versions[0].source, 'edit');
   assert.equal(db._store.asset_versions[0].author_email, 'me@app.com');
+});
+
+// ── v10 SC-02: bounded retrieval ───────────────────────────────────────────
+// The previous implementation fetched 500 rows per table and paginated in
+// memory, so a workspace past that mark silently lost assets and reported a
+// wrong total. These tests pin the corrected behaviour.
+
+test('pagination is exact beyond the old 500-row in-memory cap', async () => {
+  db._store.social_assets.length = 0;
+  for (let i = 0; i < 620; i++) {
+    seedAsset({ id: `bulk-${String(i).padStart(4, '0')}`, created_at: new Date(1700000000000 + i * 1000).toISOString() });
+  }
+
+  const first = await request(app).get('/api/assets/library?per=25').set(...AUTHED);
+  assert.equal(first.status, 200);
+  assert.equal(first.body.total, 620, 'total must be an exact count, not a capped slice length');
+  assert.equal(first.body.items.length, 25);
+  assert.equal(first.body.truncated, false);
+
+  // Newest first: the last-seeded row leads page 1.
+  assert.equal(first.body.items[0].id, 'bulk-0619');
+
+  // A page that lived entirely beyond the old 500 cap must still resolve.
+  const deep = await request(app).get('/api/assets/library?per=25&page=25').set(...AUTHED);
+  assert.equal(deep.status, 200);
+  assert.equal(deep.body.items.length, 20, 'page 25 of 620 holds the final 20 rows');
+  assert.equal(deep.body.items[0].id, 'bulk-0019');
+});
+
+test('rows predating the archive column are not treated as archived', async () => {
+  db._store.social_assets.length = 0;
+  seedAsset({ id: 'legacy', archived: undefined });
+  seedAsset({ id: 'archived-one', archived: true });
+
+  const r = await request(app).get('/api/assets/library').set(...AUTHED);
+  assert.equal(r.status, 200);
+  const ids = r.body.items.map((i) => i.id);
+  assert.ok(ids.includes('legacy'), 'a NULL archived flag means not archived');
+  assert.ok(!ids.includes('archived-one'), 'archived rows stay hidden by default');
+});
+
+test('a search scan reports its own bound instead of a confident wrong total', async () => {
+  db._store.social_assets.length = 0;
+  for (let i = 0; i < 3; i++) seedAsset({ id: `s-${i}`, caption: 'findable candle copy' });
+  seedAsset({ id: 'other', caption: 'unrelated' });
+
+  const r = await request(app).get('/api/assets/library?q=candle').set(...AUTHED);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.total, 3, 'search counts matches, not all rows');
+  assert.equal(r.body.truncated, false, 'a scan well under the cap is not truncated');
+});
+
+test('list rows expose brief version and last edit without the full body', async () => {
+  db._store.social_assets.length = 0;
+  seedAsset({ id: 'meta', brief_version: 2, updated_at: '2026-07-01T00:00:00.000Z' });
+
+  const r = await request(app).get('/api/assets/library').set(...AUTHED);
+  const item = r.body.items[0];
+  assert.equal(item.brief_version, 2, 'campaign asset rows must show staleness without opening the asset');
+  assert.equal(item.updated_at, '2026-07-01T00:00:00.000Z');
+  assert.ok(item.snippet.length <= 180, 'list rows stay bounded to a snippet');
 });
