@@ -40,10 +40,10 @@ automatically.
 
 | Migration | On disk | Applied to DB |
 |---|---|---|
-| `028`–`033` | ✅ verified present | not verified by this check |
-| `034_finding_audit.sql` | ✅ (v9) | not verified |
-| `035_handoff_packet.sql` | ✅ (v9) | not verified |
-| `036_email_suppressions.sql` | ✅ (v10 SC-06) | **owner running this now** |
+| `001`–`033` | ✅ present | ✅ **applied** — verified 2026-07-26 via CHECK_APPLIED.sql |
+| `034_finding_audit.sql` | ✅ (v9) | ❌ **NOT applied** as of 2026-07-26 |
+| `035_handoff_packet.sql` | ✅ (v9) | ❌ **NOT applied** as of 2026-07-26 — handoff staleness inert in production since v9 |
+| `036_email_suppressions.sql` | ✅ (v10 SC-06) | ❌ **NOT applied** as of 2026-07-26 |
 
 If `036` has not been applied, unsubscribe writes fail and marketing email
 fails closed — nothing is sent. That is the safe direction, but it is not the

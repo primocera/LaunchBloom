@@ -67,6 +67,24 @@ and bounded 24h counts only — no secret values, customer content, emails or
 payment data. Re-verified by reading the route; locked by
 `production-hardening.test.js`. **No change required in v10.**
 
+## Migrations applied ≠ migrations present (found 2026-07-26)
+
+`release-check` reports migrations as **"present"**, meaning present in the
+source tree. It never connects to the database. On 2026-07-26 the owner ran
+`backend/migrations/CHECK_APPLIED.sql` against production and found `034`,
+`035` and `036` **unapplied** — `034` and `035` since v9 shipped on 2026-07-23.
+
+Consequence, and the reason this matters beyond housekeeping: handoff staleness
+has never worked in production. `POST /handoff/record` writes to
+`campaigns.last_handoff_*`, those columns did not exist, and the client
+swallows that error by design so the download is never blocked. Nothing
+surfaced the failure — not a log the owner would see, not a test, not the
+release check.
+
+**Gate rule for v10:** a release may not be called GO on migration evidence
+from `release-check` alone. `CHECK_APPLIED.sql` must return `applied = true`
+for every row, recorded with a date.
+
 ## Risk register
 
 **P0 (block release):** none open. The out-of-order entitlement bug above is
