@@ -189,6 +189,57 @@ router.get('/api/admin/stuck-reservations', requireAuth, requireAdmin, async (re
   }
 });
 
+// ── v10 SC-07: cohort funnel ────────────────────────────────────────────────
+// The eleven-step campaign-control loop, computed from canonical events only
+// (ids + timestamps; properties are not selected, so no content can leak).
+// Every metric ships numerator, denominator, window, state and a decision.
+// Tiny cohorts are suppressed. Internal decision aid — never public proof.
+router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await audit(req, 'cohort');
+    const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 180);
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+
+    const { computeFunnel, biggestDropOff, costPerOutcome, COHORT_FUNNEL } = require('../lib/cohort');
+    const wanted = COHORT_FUNNEL.map((f) => f.event).filter(Boolean);
+
+    // ids + timestamps only — `properties` is deliberately not selected.
+    const { data: eventRows } = await supabase
+      .from('analytics_events')
+      .select('event, user_id, workspace_id, campaign_id, created_at')
+      .in('event', wanted)
+      .gte('created_at', since)
+      .limit(20000);
+
+    const funnel = computeFunnel(Array.isArray(eventRows) ? eventRows : [], {
+      window: { days, since },
+    });
+
+    // AI cost per outcome, from the ledger. Null rather than a divide-by-zero.
+    const { data: spendRows } = await supabase
+      .from('ai_spend_ledger').select('amount_usd').gte('created_at', since);
+    const spend = (spendRows || []).reduce((sum, r) => sum + (Number(r.amount_usd) || 0), 0);
+    const byStep = Object.fromEntries(funnel.steps.map((s) => [s.step, s.numerator]));
+
+    res.json({
+      window: { days, since },
+      cohort: funnel,
+      biggest_drop_off: biggestDropOff(funnel),
+      cost: {
+        ai_spend_usd: +spend.toFixed(4),
+        per_activated_account: costPerOutcome(spend, byStep.first_asset_saved),
+        per_exporting_account: costPerOutcome(spend, byStep.handoff_exported),
+        per_renewed_account: costPerOutcome(spend, byStep.subscription_renewed),
+        note: 'Null means the denominator was zero or spend is unknown — not that cost was zero.',
+      },
+      disclosure: 'Internal decision aid. These numbers are not benchmarks, are not ' +
+        'statistically significant at beta scale, and must not be shown to customers or used as proof.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Cohort lookup failed', req_id: req.id });
+  }
+});
+
 // ── Weekly beta scorecard (Prompt 18) ───────────────────────────────────────
 // Each metric ships its definition so numbers are never ambiguous. Read-only,
 // derived from the analytics ledger + subscriptions; no customer content.

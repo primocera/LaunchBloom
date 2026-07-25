@@ -93,6 +93,24 @@ router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
       return res.status(400).json({ error: 'Please accept the Terms and Privacy Policy to continue.' });
     }
 
+    // v10 SC-07: the capped beta stops taking new accounts by itself. Enforced
+    // server-side so it cannot be bypassed from the client, and counted from
+    // real workspace rows rather than a maintained tally that could drift.
+    // Unset or 0 = uncapped (normal operation outside the beta).
+    const cap = Number(process.env.BETA_INVITE_CAP || 0);
+    if (cap > 0) {
+      const { count, error: capErr } = await supabase
+        .from('workspaces').select('id', { count: 'exact', head: true });
+      // Fail OPEN: a counting failure must not lock legitimate users out of a
+      // product that is otherwise accepting signups.
+      if (!capErr && (count || 0) >= cap) {
+        return res.status(403).json({
+          error: 'The beta is currently full. Leave your email with support and we will let you know when a place opens.',
+          code: 'BETA_FULL',
+        });
+      }
+    }
+
     const client = supabase.authClient();
     const { data, error } = await client.auth.signUp({
       email: creds.email,

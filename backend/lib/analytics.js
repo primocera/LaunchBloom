@@ -88,6 +88,10 @@ const CANONICAL_EVENTS = {
   // approved brief and a first connected asset without getting lost?" Carries
   // the stage code and entitlement band only — never a campaign name or any
   // brief/asset content. ──
+  // ── v10 SC-07 — the two cohort milestones that had no instrumentation.
+  // Both are server-confirmed and deduped; neither carries content. ──
+  three_channel_types_reached: 'A campaign reached three distinct channel types (count + campaign id only) — the paid job, as opposed to one generator used repeatedly.',
+  subscription_renewed: 'A recurring invoice was paid after the first one — the customer paid a second time.',
   primary_path_started: 'The user entered the recommended path (stage code + entitlement).',
   primary_path_completed: 'The user reached the end of the recommended path — a first asset created against an approved brief (stage code + entitlement).',
 };

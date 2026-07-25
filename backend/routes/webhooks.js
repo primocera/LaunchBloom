@@ -379,6 +379,18 @@ async function onInvoicePaid(invoice, eventAt) {
     throw new Error(`Supabase update failed for invoice.paid: ${error.message}`);
   }
 
+  // v10 SC-07: a renewal is a recurring cycle invoice, not the first one.
+  // Stripe's billing_reason distinguishes them, so this needs no heuristic.
+  // Deduped on the invoice id: a redelivered webhook cannot double-count the
+  // one metric that proves the job was worth paying for twice.
+  if (invoice.total > 0 && invoice.billing_reason === 'subscription_cycle') {
+    track('subscription_renewed', {
+      userId: null,
+      dedupeKey: `renewal:${invoice.id}`,
+      properties: { billing_reason: invoice.billing_reason },
+    });
+  }
+
   // Real charges only — the €0/$0 trial-start invoice is not a "payment".
   if (invoice.total > 0) {
     const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));

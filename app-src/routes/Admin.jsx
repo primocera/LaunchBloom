@@ -83,12 +83,16 @@ function MetricCard({ mkey, metric }) {
 
 export default function Admin() {
   const [data, setData] = useState(null);
+  // v10 SC-07: the cohort funnel loads independently — a cohort failure must
+  // not blank the scorecard, and vice versa.
+  const [cohort, setCohort] = useState(null);
   const [state, setState] = useState('loading'); // loading | ready | denied | error
 
   useEffect(() => {
     api.scorecard()
       .then((d) => { setData(d); setState('ready'); })
       .catch((err) => setState(err.status === 403 || err.status === 401 ? 'denied' : 'error'));
+    api.cohort().then(setCohort).catch(() => setCohort(null));
   }, []);
 
   if (state === 'loading') return <div style={{ padding: 32, color: C.muted }}>Loading scorecard…</div>;
@@ -128,6 +132,11 @@ export default function Admin() {
         {ORDER.map((k) => <MetricCard key={k} mkey={k} metric={m[k]} />)}
       </div>
 
+      {/* v10 SC-07: the campaign-control funnel. Every row shows numerator,
+          denominator, state and the decision it supports; tiny cohorts are
+          suppressed. Internal decision aid, never customer-facing proof. */}
+      <CohortFunnel cohort={cohort} />
+
       <div style={{ display: 'grid', gap: 14, marginTop: 20, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 18px' }}>
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Cancellation reasons</div>
@@ -153,5 +162,103 @@ export default function Admin() {
         </div>
       </div>
     </div>
+  );
+}
+
+// v10 SC-07: the eleven-step campaign-control funnel.
+//
+// Renders the server's state verbatim — it never computes a rate the backend
+// suppressed, and never fills a blank with a zero. "Insufficient data" and
+// "not instrumented" read differently from a real 0%, because they mean
+// different things and imply different actions.
+const STATE_STYLE = {
+  reported: { color: C.text, note: null },
+  insufficient_data: { color: C.muted, note: 'Too few accounts to report a rate' },
+  no_data: { color: C.muted, note: 'Nothing measured in this window' },
+  unavailable: { color: C.warn, note: 'Not instrumented' },
+};
+
+function CohortFunnel({ cohort }) {
+  if (!cohort) return null;
+  const c = cohort.cohort || {};
+  const steps = c.steps || [];
+  const drop = cohort.biggest_drop_off;
+  const cost = cohort.cost || {};
+  const money = (v) => (v == null ? '—' : `$${v}`);
+
+  return (
+    <section style={{ marginTop: 28 }}>
+      <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Campaign-control funnel</h2>
+      <p style={{ color: C.muted, marginTop: 0, fontSize: 13 }}>
+        Last {cohort.window?.days ?? 30} days · cohort of {c.cohort_size ?? 0}
+        {c.reportable === false && ` · under the reporting threshold of ${c.min_cohort}`}
+      </p>
+
+      {drop && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+          <div style={{ fontSize: 13, color: C.muted }}>Biggest drop-off</div>
+          <div style={{ fontSize: 15, margin: '4px 0' }}>
+            <strong>{drop.from}</strong> → <strong>{drop.to}</strong> — lost {drop.lost} of {drop.of}
+          </div>
+          <div style={{ fontSize: 13, color: C.muted }}>{drop.decision}</div>
+        </div>
+      )}
+
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+          <caption style={{ captionSide: 'bottom', textAlign: 'left', padding: '10px 16px', fontSize: 12, color: C.muted }}>
+            {cohort.disclosure}
+          </caption>
+          <thead>
+            <tr>
+              {['Step', 'Reached', 'Of cohort', 'Of previous', 'What it tells you'].map((h) => (
+                <th key={h} scope="col" style={{ textAlign: 'left', fontSize: 12, color: C.muted, fontWeight: 600, padding: '10px 16px', borderBottom: `1px solid ${C.border}` }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {steps.map((s) => {
+              const style = STATE_STYLE[s.state] || STATE_STYLE.no_data;
+              return (
+                <tr key={s.step}>
+                  <th scope="row" style={{ textAlign: 'left', fontWeight: 500, padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: C.text }}>
+                    {s.label}
+                  </th>
+                  <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: style.color }}>
+                    {s.numerator == null ? '—' : `${s.numerator} / ${s.denominator}`}
+                  </td>
+                  <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: style.color }}>
+                    {s.value == null ? <span title={style.note || ''}>—</span> : `${s.value}%`}
+                  </td>
+                  <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: style.color }}>
+                    {s.step_value == null ? '—' : `${s.step_value}%`}
+                  </td>
+                  <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, fontSize: 13, color: C.muted }}>
+                    {s.decision}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: 'grid', gap: 14, marginTop: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+        {[
+          ['AI spend (window)', money(cost.ai_spend_usd)],
+          ['Per activated account', money(cost.per_activated_account)],
+          ['Per exporting account', money(cost.per_exporting_account)],
+          ['Per renewed account', money(cost.per_renewed_account)],
+        ].map(([label, value]) => (
+          <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ fontSize: 13, color: C.muted }}>{label}</div>
+            <div style={{ fontSize: 20, marginTop: 4 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+      <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{cost.note}</p>
+    </section>
   );
 }
