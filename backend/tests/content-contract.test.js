@@ -214,11 +214,42 @@ test('shared export note says review remains with the user and costs nothing', (
   assert.match(generator, /does not use AI actions/);
 });
 
-// ── Generation cost is disclosed before every guided-flow generation ────────
+// ── v10 SC-01: one recommended path ────────────────────────────────────────
+// The guided flow used to be a SECOND way to create work, with its own
+// positioning → offers → package generation steps. It is folded into the
+// campaign-creation contract; /app/flow is now a read-only archive. The old
+// per-button AI-cost disclosures are therefore gone by design — what must hold
+// now is that the page generates nothing and loses nothing.
 
-test('guided flow discloses the 1-AI-action cost on each generation button', () => {
+test('the legacy guided flow generates nothing and offers no AI actions', () => {
   const flow = read(path.join(APP_SRC, 'routes', 'Flow.jsx'));
-  assert.match(flow, /Generate my positioning · 1 AI action/);
-  assert.match(flow, /Design my 3 offers · 1 AI action/);
-  assert.match(flow, /Build campaign package · 1 AI action/);
+  assert.doesNotMatch(flow, /1 AI action/, 'an archive must not offer a generation');
+  assert.doesNotMatch(flow, /api\.generate/, 'no generation call may remain on this route');
+  assert.match(flow, /Full launch campaigns now start in Campaigns/);
+});
+
+test('the legacy guided flow keeps earlier work readable (no data stranded)', () => {
+  const flow = read(path.join(APP_SRC, 'routes', 'Flow.jsx'));
+  // /app/kits/:id is linked from nowhere else — losing this index would make
+  // earlier launch kits unreachable in practice even though the rows survive.
+  assert.match(flow, /\/app\/kits\/\$\{k\.id\}/);
+  assert.match(flow, /nothing was deleted/i);
+});
+
+test('Create resolves a campaign before offering the five creation paths', () => {
+  const create = read(path.join(APP_SRC, 'routes', 'Create.jsx'));
+  // Without a campaign the user is asked which campaign the work belongs to,
+  // rather than being shown a second navigation list of studios.
+  assert.match(create, /Choose the campaign this work belongs to/);
+  assert.match(create, /Complete brief/);
+});
+
+test('Home and the campaign Overview send the user to the same destination', () => {
+  const nextActions = read(path.join(APP_SRC, 'lib', 'next-actions.js'));
+  const campaignAction = read(path.join(APP_SRC, 'lib', 'campaign-next-action.js'));
+  // Both must carry campaign context into Create; a bare /app/create from Home
+  // would ask which campaign the user meant immediately after Home named one.
+  assert.match(campaignAction, /\/app\/create\?campaign=/);
+  assert.match(nextActions, /\/app\/create\?campaign=/);
+  assert.doesNotMatch(nextActions, /to: '\/app\/create'/, 'no context-free Create destination may remain');
 });

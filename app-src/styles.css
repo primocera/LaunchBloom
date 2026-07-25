@@ -186,6 +186,39 @@ button {
   text-transform: uppercase;
 }
 
+/* v10 SC-01: demoted disclosures — the five studios in the sidebar and the
+   "start from a playbook/template" chooser on Campaigns. Collapsed by default
+   so one primary path stays obvious; native <details> keeps them keyboard-
+   and screen-reader-operable without custom JS. */
+.sidebar-disclosure > summary {
+  cursor: pointer;
+  padding: 0 8px 8px;
+  list-style: none;
+}
+
+.sidebar-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar-disclosure > summary::after {
+  content: ' ▸';
+}
+
+.sidebar-disclosure[open] > summary::after {
+  content: ' ▾';
+}
+
+.sidebar-disclosure > summary:focus-visible,
+.start-from > summary:focus-visible {
+  outline: 2px solid var(--primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.start-from > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .thread-list {
   display: flex;
   flex-direction: column;

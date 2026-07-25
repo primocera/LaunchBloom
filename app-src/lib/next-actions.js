@@ -95,7 +95,12 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
   if (plan === 'free' || !plan) {
     primary = missing.length >= ESSENTIAL_PROFILE_FIELDS.length - 1
       ? { to: '/app/brand', label: 'Complete Brand Profile' }
-      : { to: '/app/create', label: 'Start your 3-day trial and generate' };
+      // v10 SC-01: generation needs a campaign, so send a free user to the
+      // campaign they have — or to creating one — rather than to a Create
+      // screen that would immediately ask which campaign they meant.
+      : activeCampaigns.length
+        ? { to: `/app/create?campaign=${activeCampaigns[0].id}`, label: 'Start your 3-day trial and generate' }
+        : { to: '/app/campaigns', label: 'Create your first campaign' };
   } else if (level === 'over') {
     primary = { to: '/app/account', label: 'Review your plan and usage' };
   } else if (missing.length >= ESSENTIAL_PROFILE_FIELDS.length - 1) {
@@ -105,7 +110,10 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
   } else if (!activeCampaigns.length) {
     primary = { to: '/app/campaigns', label: 'Create your first campaign' };
   } else {
-    primary = { to: '/app/create', label: `Continue “${activeCampaigns[0].name}”` };
+    // v10 SC-01: carry the campaign id so Home and the campaign Overview send
+    // the user to the SAME destination. Without it Create had to ask which
+    // campaign the user meant, immediately after Home named one.
+    primary = { to: `/app/create?campaign=${activeCampaigns[0].id}`, label: `Continue “${activeCampaigns[0].name}”` };
   }
 
   // ── up to three next best actions (never duplicating the primary) ──
@@ -122,7 +130,7 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
     const missingRequired = missingRequiredDeliverables(c);
     if (missingRequired.length && primary.label.indexOf(c.name) === -1) {
       actions.push({
-        to: '/app/create',
+        to: `/app/create?campaign=${c.id}`,
         label: `Create the required ${missingRequired[0].label} for “${c.name}”`,
         reason: `${missingRequired.length} required deliverable${missingRequired.length === 1 ? '' : 's'} not started`,
       });
@@ -133,7 +141,7 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
     if (missingRequiredDeliverables(c).length) continue; // already covered above
     const assetCount = Object.values(c.asset_counts || {}).reduce((a, b) => a + b, 0);
     if (assetCount === 0 && primary.label.indexOf(c.name) === -1) {
-      actions.push({ to: '/app/create', label: `Generate assets for “${c.name}”`, reason: 'This campaign has no assets yet' });
+      actions.push({ to: `/app/create?campaign=${c.id}`, label: `Generate assets for “${c.name}”`, reason: 'This campaign has no assets yet' });
     }
   }
   if (unfinished && primary.to !== '/app/assets' && actions.length < 3) {
