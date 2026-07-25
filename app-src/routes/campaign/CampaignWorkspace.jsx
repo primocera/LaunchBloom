@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import AssetDrawer, { statusLabel } from '../../components/AssetDrawer';
+import { blockersByAsset, isStale } from '../../lib/asset-rows';
 import {
   SECTIONS, missingDecisions, hasNoDates, fmtDate, sectionPath,
 } from './shared';
@@ -259,32 +260,6 @@ function BriefSection({ campaign, onChange }) {
 // explicit user action. There is deliberately no bulk Ready/Published control
 // and no share link.
 
-/** Highest unresolved blocker per asset, from the campaign review payload. */
-function blockersByAsset(review) {
-  const map = {};
-  const put = (table, id, blocker, rank) => {
-    if (!table || id == null) return;
-    const key = `${table}:${id}`;
-    if (!map[key] || rank > map[key].rank) map[key] = { ...blocker, rank };
-  };
-  for (const f of (review && review.findings) || []) {
-    if (f.status === 'acknowledged') continue;
-    for (const a of f.assets || []) {
-      put(a.table, a.id, {
-        label: f.severity === 'high' ? 'Blocks export' : 'Needs a decision',
-        detail: f.why || (f.code || '').replace(/_/g, ' '),
-      }, f.severity === 'high' ? 3 : 1);
-    }
-  }
-  for (const a of (review && review.stale) || []) {
-    put(a.table, a.id, { label: 'Brief changed since generated', detail: 'Keep its snapshot on record or update it.' }, 2);
-  }
-  for (const a of (review && review.needs_review_assets) || []) {
-    put(a.table, a.id, { label: 'Edited since generated', detail: 'Confirm it is ready or keep reviewing.' }, 1);
-  }
-  return map;
-}
-
 function AssetsSection({ campaign }) {
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState(null);
@@ -341,8 +316,7 @@ function AssetsSection({ campaign }) {
       {(items || []).map((it) => {
         const key = `${it.table}:${it.id}`;
         const blocker = blockers[key];
-        const stale = it.brief_version != null && campaign.brief_version != null
-          && Number(it.brief_version) < Number(campaign.brief_version);
+        const stale = isStale(it, campaign);
         return (
           <div className="account-section campaign-asset-row" key={key}>
             <div className="library-title">
