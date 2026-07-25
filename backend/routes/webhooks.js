@@ -177,7 +177,7 @@ async function handleEvent(event) {
       await onInvoicePaid(data, eventAt);
       break;
     case 'invoice.payment_failed':
-      await onInvoicePaymentFailed(data);
+      await onInvoicePaymentFailed(data, eventAt);
       break;
     case 'customer.created':
     case 'customer.updated':
@@ -395,12 +395,20 @@ async function onInvoicePaid(invoice, eventAt) {
   }
 }
 
-async function onInvoicePaymentFailed(invoice) {
+async function onInvoicePaymentFailed(invoice, eventAt) {
   if (!invoice.subscription) return;
+
+  // SC-V10-00 out-of-order guard: a late payment_failed delivered AFTER the
+  // recovery invoice.paid must not flip a recovered subscription back to
+  // past_due — that would revoke entitlement the customer has paid for.
+  if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
+    console.log(`Skipping stale invoice.payment_failed for ${invoice.subscription}`);
+    return;
+  }
 
   const { error } = await supabase
     .from('subscriptions')
-    .update({ status: 'past_due' })
+    .update({ status: 'past_due', stripe_event_at: eventAt })
     .eq('stripe_subscription_id', invoice.subscription);
 
   if (error) {
