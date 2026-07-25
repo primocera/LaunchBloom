@@ -80,3 +80,119 @@ test('prompt registry: unregistered env override falls back to current', () => {
     delete require.cache[require.resolve('../lib/prompt-registry.js')];
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v10 SC-03 — the golden campaign corpus as a release gate.
+//
+// The tests above prove generated output is schema-shaped. These prove the
+// deterministic QUALITY GATE behaves: it catches the defects the product
+// promises to catch, and — just as important — stays quiet on healthy
+// campaigns. A checker that cries wolf gets ignored, which is indistinguishable
+// from having no checker at all.
+//
+// No live model calls: the corpus is hand-written, so this costs nothing and
+// cannot flake. It measures the gate, not the model.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const { runConsistencyChecks, RULES_VERSION, FINDING_META } = require('../lib/consistency');
+const { claimProvenanceWarnings } = require('../lib/quality-checks');
+const { CORPUS_VERSION, FIXTURES, PROHIBITED_INVENTIONS } = require('./fixtures/golden-campaigns');
+
+const codesOf = (findings) => [...new Set(findings.map((f) => f.code))].sort();
+
+test('golden corpus: the baseline is pinned and broad enough to mean something', () => {
+  assert.ok(FIXTURES.length >= 12, `corpus is ${FIXTURES.length} fixtures; the v10 floor is 12`);
+  assert.match(CORPUS_VERSION, /^v\d+\.\d+$/, 'a shifting baseline must be version-stamped');
+  // Every fixture id is unique, so a failure names exactly one case.
+  assert.equal(new Set(FIXTURES.map((f) => f.id)).size, FIXTURES.length);
+  // The sectors the pack calls for are all represented.
+  const sectors = new Set(FIXTURES.map((f) => f.sector));
+  for (const s of ['services', 'ecommerce', 'events', 'regulated', 'multi_audience']) {
+    assert.ok(sectors.has(s), `corpus has no ${s} campaign`);
+  }
+  // Clean baselines exist — without them the gate could pass by flagging all.
+  assert.ok(FIXTURES.filter((f) => f.expect.length === 0).length >= 4, 'too few clean fixtures to detect false positives');
+});
+
+for (const fixture of FIXTURES) {
+  test(`golden corpus [${fixture.id}]: ${fixture.why}`, () => {
+    const findings = runConsistencyChecks(fixture.campaign, fixture.assets);
+    assert.deepEqual(
+      codesOf(findings), [...fixture.expect].sort(),
+      `${fixture.id}: expected ${fixture.expect.join(', ') || '(clean)'}`
+    );
+    // Every finding must be explainable to the user — no bare codes reach the UI.
+    for (const f of findings) {
+      assert.ok(FINDING_META[f.code], `${f.code} has no registered explanation`);
+      assert.ok(f.why && f.resolution, `${f.code} must say what is wrong and what to do`);
+      assert.equal(f.rule_version, RULES_VERSION, 'findings carry the rule version that produced them');
+    }
+  });
+}
+
+test('golden corpus: no fixture contains a prohibited invention', () => {
+  // Guards the corpus itself. If a banned claim appears in the reference copy,
+  // the fixture is the bug and every assertion built on it is worthless.
+  for (const fixture of FIXTURES) {
+    const blob = JSON.stringify(fixture.assets);
+    for (const rx of PROHIBITED_INVENTIONS) {
+      assert.ok(!rx.test(blob), `${fixture.id} contains prohibited claim language matching ${rx}`);
+    }
+  }
+});
+
+test('golden corpus: findings are deterministic and stably fingerprinted', () => {
+  // A finding's fingerprint is what lets an acknowledgement survive a re-run.
+  // If it moved between identical runs, resolved items would reappear forever.
+  for (const fixture of FIXTURES) {
+    const a = runConsistencyChecks(fixture.campaign, fixture.assets);
+    const b = runConsistencyChecks(fixture.campaign, fixture.assets);
+    assert.deepEqual(a.map((f) => f.fingerprint), b.map((f) => f.fingerprint), `${fixture.id} is not deterministic`);
+  }
+});
+
+// ── Regression guards for the two failures the pack names explicitly ────────
+
+test('golden regression: a fabricated statistic is flagged when the brief has no proof', () => {
+  const pages = [{
+    id: 'w1', title: 'Trusted by thousands',
+    meta_description: 'Join 5,000+ customers and a 98% satisfaction rate.',
+    cta: 'Start now',
+  }];
+  const warnings = claimProvenanceWarnings(pages, '');
+  assert.ok(warnings.length > 0, 'an unsupported statistic must not pass silently');
+});
+
+test('golden regression: the same statistic passes once the brief supplies proof', () => {
+  const pages = [{ id: 'w1', title: 'Trusted by thousands', meta_description: 'Join 5,000+ customers.', cta: 'Start now' }];
+  const supported = claimProvenanceWarnings(pages, 'Owner-supplied export: 5,000+ customers as of 2026-06-30.');
+  const unsupported = claimProvenanceWarnings(pages, '');
+  assert.ok(supported.length < unsupported.length, 'supplied proof must reduce the warnings, or the check is noise');
+});
+
+test('golden regression: duplicate angles across social posts are flagged', () => {
+  const { qualityWarnings: qw } = require('../lib/quality-checks');
+  const post = (hook) => ({ hook, caption: 'A caption long enough to avoid unrelated checks.', cta: 'Learn more' });
+  // Assert on the DUPLICATE signal specifically. A bare length > 0 would pass
+  // on the unrelated caption warnings these items also produce, and would stay
+  // green with duplicate detection deleted entirely.
+  const dupeSignal = (warnings) => warnings.filter((w) => /same hook|distinct angle/i.test(w));
+
+  const duplicated = dupeSignal(qw('social', {
+    items: [
+      post('Stop wasting money on ads that never convert'),
+      post('Stop wasting money on ads that never convert'),
+      post('Stop wasting money on ads that never convert'),
+    ],
+  }));
+  assert.equal(duplicated.length, 3, 'each duplicated pair must be named: three posts, three pairs');
+
+  const distinct = dupeSignal(qw('social', {
+    items: [
+      post('Your ad budget deserves a plan before it deserves a bigger number'),
+      post('Three questions to ask before boosting another post today'),
+      post('What a landing page must do before the traffic arrives at it'),
+    ],
+  }));
+  assert.deepEqual(distinct, [], 'genuinely different angles must not be reported as duplicates');
+});
