@@ -253,3 +253,33 @@ test('Home and the campaign Overview send the user to the same destination', () 
   assert.match(nextActions, /\/app\/create\?campaign=/);
   assert.doesNotMatch(nextActions, /to: '\/app\/create'/, 'no context-free Create destination may remain');
 });
+
+// ── v10 SC-05: ICP focus and first-screen honesty ──────────────────────────
+
+test('the hero leads with the client-work ICP without excluding solo founders', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const paths = landing.slice(landing.indexOf('const ICP_PATHS'), landing.indexOf('const PROOF_STEPS'));
+  // Order signals focus. Both paths must remain present and identically served.
+  assert.ok(paths.indexOf("key: 'client'") < paths.indexOf("key: 'own'"), 'client work should lead');
+  assert.ok(paths.includes('Solo founders and small brands'), 'the second ICP must not be dropped');
+  assert.match(landing, /never changes what you can do or what you pay/,
+    'choosing a path must not imply different entitlements');
+});
+
+test('the above-fold proof strip claims capability, never outcomes', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const strip = landing.slice(landing.indexOf('const PROOF_STEPS'), landing.indexOf('const VALUE_LIST'));
+  // Illustrative labels only: no counts, percentages, ratings or time savings.
+  assert.doesNotMatch(strip, /\d+\s*%|\d[\d,]*\+|\bhours saved\b|\bfaster\b|\btrusted by\b|\bcustomers\b/i,
+    'the proof strip must not carry a metric or social-proof claim');
+  assert.match(strip, /One approved brief/);
+  assert.match(strip, /Client-ready handoff/);
+});
+
+test('every hero CTA states what happens next', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  assert.match(landing, /Create an account free/, 'the primary CTA must say the account is free');
+  assert.match(landing, /a payment method is required for the trial/,
+    'the trial disclosure must stay explicit about the payment method');
+  assert.doesNotMatch(landing, /no card needed|free forever|cancel anytime, no questions/i);
+});
