@@ -111,22 +111,26 @@ export default function Sidebar({ onCollapse }) {
         ))}
       </nav>
 
+      {/* v10 SC-01: the five studios are demoted behind a collapsed disclosure.
+          "Create" in the main nav is the one recommended path — it resolves a
+          campaign first, so an asset is never generated without a brief. These
+          direct links stay for people who already know where they're going. */}
       <div className="sidebar-section">
-        <div className="section-head">
-          <span className="section-title">Create</span>
-        </div>
-        <nav className="sidebar-nav is-sub">
-          {STUDIO_NAV.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => (isActive ? 'nav-item is-active' : 'nav-item')}
-            >
-              <SavedIcon />
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+        <details className="sidebar-disclosure">
+          <summary className="section-title">Create directly</summary>
+          <nav className="sidebar-nav is-sub">
+            {STUDIO_NAV.map(({ to, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) => (isActive ? 'nav-item is-active' : 'nav-item')}
+              >
+                <SavedIcon />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+        </details>
       </div>
 
       <AccountBlock />

@@ -36,3 +36,86 @@ jobs:
       # Fails when app/ was not rebuilt after app-src/ changes (stale bundle).
       - name: Stale-build detection
         run: npm run check:app-fresh
+
+  # v10 SC-00: the production-config gate. The job above proves the CODE is
+  # good; this one proves the DEPLOYED CONFIGURATION can take real money.
+  # It is deliberately NOT allowed to report green when the production secrets
+  # are absent — a skipped config gate must look skipped, never passed, or a
+  # release reads as verified on evidence that was never collected. Free on
+  # this public repo (unlimited Actions minutes); it cannot go red while no
+  # production secrets are configured.
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Presence only — never echo a secret value. Missing secrets are normal
+      # on fork PRs, where GitHub withholds them by design.
+      - name: Detect production configuration
+        id: cfg
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          BRAND_LEGAL_NAME: ${{ secrets.BRAND_LEGAL_NAME }}
+        run: |
+          missing=""
+          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY SESSION_SECRET BRAND_LEGAL_NAME; do
+            if [ -z "${!v}" ]; then missing="$missing $v"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "missing=$missing" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release check (production configuration)
+        if: steps.cfg.outputs.available == 'true'
+        env:
+          LAUNCH_MODE: ${{ vars.LAUNCH_MODE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+          STRIPE_PRICE_STARTER_YEARLY: ${{ secrets.STRIPE_PRICE_STARTER_YEARLY }}
+          STRIPE_PRICE_PRO_MONTHLY: ${{ secrets.STRIPE_PRICE_PRO_MONTHLY }}
+          STRIPE_PRICE_PRO_YEARLY: ${{ secrets.STRIPE_PRICE_PRO_YEARLY }}
+          STRIPE_PRICE_STUDIO_MONTHLY: ${{ secrets.STRIPE_PRICE_STUDIO_MONTHLY }}
+          STRIPE_PRICE_STUDIO_YEARLY: ${{ secrets.STRIPE_PRICE_STUDIO_YEARLY }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BRAND_LEGAL_NAME: ${{ secrets.BRAND_LEGAL_NAME }}
+          BRAND_LEGAL_ADDRESS: ${{ secrets.BRAND_LEGAL_ADDRESS }}
+          BRAND_LEGAL_EMAIL: ${{ secrets.BRAND_LEGAL_EMAIL }}
+        run: |
+          node backend/scripts/release-check.js --evidence
+          echo "### Release check: production configuration verified" >> "$GITHUB_STEP_SUMMARY"
+
+      # Neutral-but-loud: the workflow does not fail (secrets are legitimately
+      # absent on forks and while none are configured), but the summary states
+      # plainly that the gate did not run, so GO/NO-GO can never cite this job
+      # as evidence it did.
+      - name: Release check NOT RUN (production secrets unavailable)
+        if: steps.cfg.outputs.available != 'true'
+        run: |
+          echo "::warning::release-check SKIPPED — production secrets unavailable in this context. This job is NOT evidence of a verified production configuration."
+          {
+            echo "### Release check: NOT RUN"
+            echo ""
+            echo "Production secrets were unavailable, so the configuration gate did **not** execute."
+            echo "Missing:${{ steps.cfg.outputs.missing }}"
+            echo ""
+            echo "State this as \`configured\` at most — never \`verified in CI\`. See docs/GO_NO_GO_V10.md."
+          } >> "$GITHUB_STEP_SUMMARY"

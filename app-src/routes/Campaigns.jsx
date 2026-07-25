@@ -219,21 +219,23 @@ export default function Campaigns() {
         Keep the offer, audience, goal, dates, channels and CTA consistent across every asset. Open a campaign to plan, create, review and hand it off.
       </p>
 
-      <Playbooks onCreated={openWorkspace} />
-      <Templates onCreated={openWorkspace} />
-
-      {/* v5 Prompt 3: the full launch workflow is a campaign template. */}
-      <div className="account-section campaign-template">
-        <h2>Full launch campaign</h2>
-        <p className="muted" style={{ marginTop: 4 }}>
-          Website, email, social, ads and SEO ideas from one brief — the guided template that starts
-          with positioning and three offer options. Each generation step (positioning, offers,
-          campaign package) uses 1 AI action, and the package counts as 1 full launch campaign.
+      {/* v10 SC-01: one primary action above (Create campaign). Playbooks and
+          templates are real but secondary — they are ways to START the same
+          campaign, not competing paths, so they sit behind one collapsed
+          chooser instead of stacking three creation surfaces on the page. */}
+      <details className="account-section start-from">
+        <summary>Start from a playbook or template</summary>
+        <p className="muted" style={{ marginTop: 8 }}>
+          Each of these creates the same kind of draft campaign — only the starting
+          structure differs. Nothing is generated and no AI action is used.
         </p>
-        <a className="btn-primary" href="/app/flow" style={{ display: 'inline-block', marginTop: 8 }}>
-          Start full launch campaign
-        </a>
-      </div>
+        <Playbooks onCreated={openWorkspace} />
+        <Templates onCreated={openWorkspace} />
+        <p className="muted">
+          Made positioning, offers or a campaign package here earlier?{' '}
+          <Link to="/app/flow">Earlier launch work</Link> stays readable.
+        </p>
+      </details>
 
       {form && (
         <form className="account-section" onSubmit={create}>

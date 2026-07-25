@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
+import AssetDrawer, { statusLabel } from '../../components/AssetDrawer';
+import { blockersByAsset, isStale } from '../../lib/asset-rows';
 import {
   SECTIONS, missingDecisions, hasNoDates, fmtDate, sectionPath,
 } from './shared';
@@ -28,13 +30,20 @@ export default function CampaignWorkspace() {
   const [campaign, setCampaign] = useState(undefined); // undefined = loading, null = not found
   const [error, setError] = useState(null);
 
+  // v10 SC-02: a detail route fetches the detail endpoint. This used to pull
+  // the entire campaign list and .find() the one it wanted, so opening one
+  // campaign cost every campaign in the workspace and grew with the account.
   function load() {
-    api.campaigns()
-      .then(({ campaigns }) => {
-        const c = (campaigns || []).find((x) => String(x.id) === String(campaignId));
-        setCampaign(c || null);
-      })
-      .catch((e) => { setError(e.message); setCampaign(null); });
+    setError(null);
+    api.campaign(campaignId)
+      .then(({ campaign: c }) => setCampaign(c || null))
+      .catch((e) => {
+        // 404 is "not in your workspace"; anything else is a recoverable error
+        // and must not masquerade as a missing campaign.
+        if (e.status === 404) { setCampaign(null); return; }
+        setError(e.message);
+        setCampaign(null);
+      });
   }
   useEffect(load, [campaignId]);
 
@@ -240,36 +249,117 @@ function BriefSection({ campaign, onChange }) {
   );
 }
 
-// ── Assets: campaign-filtered library items (compact) ──
+// ── Assets: a complete working surface inside the campaign ──
+// v10 SC-02: this used to be a dead-end list whose only real action was "open
+// the global Library". It now carries the state a reviewer needs per row and
+// opens the SAME shared drawer the Library uses — edit, rewrite, versions,
+// diff, restore and export all happen here, in campaign context.
+//
+// Blockers are surfaced, never enforced as status: canonical statuses stay
+// Draft / Needs review / Ready to export / Published and are only changed by an
+// explicit user action. There is deliberately no bulk Ready/Published control
+// and no share link.
+
 function AssetsSection({ campaign }) {
+  const [params, setParams] = useSearchParams();
   const [items, setItems] = useState(null);
+  const [review, setReview] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  // Deep-linkable: ?asset=<table>:<id> keeps campaign context in the URL, so
+  // Back closes the drawer and returns to this tab rather than leaving the
+  // campaign entirely.
+  const openParam = params.get('asset');
+  const openAsset = openParam && openParam.includes(':')
+    ? { table: openParam.split(':')[0], id: openParam.split(':').slice(1).join(':') }
+    : null;
+  const setOpenAsset = (a) => {
+    const next = new URLSearchParams(params);
+    if (a) next.set('asset', `${a.table}:${a.id}`); else next.delete('asset');
+    setParams(next, { replace: !a });
+  };
+
+  function load() {
+    setError(null);
     api.library({ campaign_id: campaign.id, per: 100 })
       .then((d) => setItems(d.items || []))
-      .catch((e) => setError(e.message));
+      .catch((e) => { setItems([]); setError(e.message); });
+  }
+  useEffect(load, [campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    api.campaignReview(campaign.id).then((r) => setReview(r.review)).catch(() => setReview(null));
   }, [campaign.id]);
+
+  const blockers = blockersByAsset(review);
 
   return (
     <div>
       <div className="brand-head">
         <h2 style={{ margin: 0 }}>Assets</h2>
-        <a className="btn-primary" href={`/app/create?campaign=${campaign.id}`}>Create assets</a>
+        <Link className="btn-primary" to={`/app/create?campaign=${campaign.id}`}>Create assets</Link>
       </div>
-      {error && <p className="login-err">{error}</p>}
+
+      {error && (
+        <div className="account-section" role="alert">
+          <p className="login-err" style={{ marginTop: 0 }}>{error}</p>
+          <p className="muted" style={{ marginBottom: 0 }}>
+            Nothing was lost. <button className="account-link" onClick={load}>Try again</button>
+          </p>
+        </div>
+      )}
+
       {items === null && <p className="muted">Loading assets…</p>}
-      {items && items.length === 0 && (
+      {items && items.length === 0 && !error && (
         <p className="muted">No assets linked to this campaign yet. Create the first one so it inherits the approved brief.</p>
       )}
-      {items && items.map((it) => (
-        <div className="account-section" key={`${it.table}:${it.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{it.title || it.type_label || 'Untitled asset'}</span>
-          <span className="campaign-badge">{it.type_label || it.table}</span>
-        </div>
-      ))}
+
+      {(items || []).map((it) => {
+        const key = `${it.table}:${it.id}`;
+        const blocker = blockers[key];
+        const stale = isStale(it, campaign);
+        return (
+          <div className="account-section campaign-asset-row" key={key}>
+            <div className="library-title">
+              <button className="library-open-link" onClick={() => setOpenAsset(it)}>
+                {it.title || 'Untitled asset'}
+              </button>
+              <span className="campaign-badge">{it.type_label || it.table}</span>
+              <span className="campaign-badge">{statusLabel(it)}</span>
+            </div>
+            <p className="muted" style={{ margin: '4px 0' }}>
+              {[
+                it.brief_version != null ? `Brief v${it.brief_version}${stale ? ` · campaign is on v${campaign.brief_version}` : ''}` : null,
+                it.updated_at ? `Last edit ${fmtDate(it.updated_at)}` : null,
+              ].filter(Boolean).join(' · ') || 'No edit history yet.'}
+            </p>
+            {blocker && (
+              <p className="muted" style={{ margin: '4px 0' }}>
+                <span className="campaign-badge">{blocker.label}</span> {blocker.detail}
+              </p>
+            )}
+            <div className="confirm-row">
+              <button className="btn-secondary" onClick={() => setOpenAsset(it)}>
+                {blocker ? 'Open and resolve' : 'Open'}
+              </button>
+              {blocker && <Link className="account-link" to={sectionPath(campaign.id, 'review')}>Review queue →</Link>}
+            </div>
+          </div>
+        );
+      })}
+
       {items && items.length > 0 && (
-        <p className="muted"><a className="account-link" href="/app/assets">Open the full Library →</a></p>
+        <p className="muted">
+          <Link className="account-link" to={`/app/assets?campaign_id=${campaign.id}`}>
+            Open these in the full Library →
+          </Link>
+        </p>
+      )}
+
+      {openAsset && (
+        <AssetDrawer
+          table={openAsset.table} id={openAsset.id}
+          onClose={() => setOpenAsset(null)} onChanged={load} onError={setError}
+        />
       )}
     </div>
   );

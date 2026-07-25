@@ -91,6 +91,7 @@ export const api = {
   dashboard: () => request('/api/workspace/dashboard'),
   // Admin support view (Prompt 10 + 16) — 403 for non-allowlisted accounts.
   scorecard: () => request('/api/admin/scorecard'),
+  cohort: (days = 30) => request(`/api/admin/cohort?days=${days}`),
   // Brand Profile (Prompt 9)
   brandProfile: () => request('/api/workspace/brand-profile'),
   saveBrandProfile: (profile) => request('/api/workspace/brand-profile', { method: 'PUT', body: { profile } }),

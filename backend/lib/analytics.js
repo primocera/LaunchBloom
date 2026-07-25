@@ -84,6 +84,16 @@ const CANONICAL_EVENTS = {
   onboarding_path_selected: 'A landing use-case path was chosen (path only: own|client).',
   handoff_previewed: 'The Handoff screen preview was shown (asset_count_band + blocker_count_band).',
   handoff_exported: 'A handoff packet was exported (format + bands, recomputed server-side).',
+  // ── v10 SC-01 — the one recommended path. Answers "does a new user reach an
+  // approved brief and a first connected asset without getting lost?" Carries
+  // the stage code and entitlement band only — never a campaign name or any
+  // brief/asset content. ──
+  // ── v10 SC-07 — the two cohort milestones that had no instrumentation.
+  // Both are server-confirmed and deduped; neither carries content. ──
+  three_channel_types_reached: 'A campaign reached three distinct channel types (count + campaign id only) — the paid job, as opposed to one generator used repeatedly.',
+  subscription_renewed: 'A recurring invoice was paid after the first one — the customer paid a second time.',
+  primary_path_started: 'The user entered the recommended path (stage code + entitlement).',
+  primary_path_completed: 'The user reached the end of the recommended path — a first asset created against an approved brief (stage code + entitlement).',
 };
 
 // ── The one canonical value funnel (LB-S09). Ordered milestones; each is a
@@ -142,6 +152,10 @@ const CLIENT_EVENTS = new Set([
   'version_restored',
   'export_completed',
   'onboarding_path_selected',
+  // v10 SC-01: the recommended path is observed in the UI, so both ends are
+  // client-fired. Bounded properties only (see sanitizeProperties).
+  'primary_path_started',
+  'primary_path_completed',
 ]);
 
 // Keys that must never reach analytics (case-insensitive substring match).

@@ -36,4 +36,42 @@ async function trackDeliverableProgress({ workspaceId, userId, campaignId, table
   }
 }
 
-module.exports = { trackDeliverableProgress };
+/**
+ * v10 SC-07: server-confirmed "this campaign uses three channel types".
+ *
+ * This is the paid job — a campaign, not one generator used repeatedly — so
+ * the cohort funnel needs it as a durable milestone rather than a client
+ * claim. Counted from real asset rows after a successful save, deduped per
+ * campaign so it fires exactly once however many assets follow.
+ *
+ * Carries the count only. No campaign name, no asset content.
+ */
+const CHANNEL_TABLES = DELIVERABLES.map((d) => d.table);
+const THREE_CHANNELS = 3;
+
+async function trackChannelBreadth({ workspaceId, userId, campaignId }) {
+  try {
+    if (!campaignId) return;
+    let distinct = 0;
+    for (const table of new Set(CHANNEL_TABLES)) {
+      const { count, error } = await supabase
+        .from(table).select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId).eq('campaign_id', campaignId);
+      if (!error && (count || 0) > 0) distinct += 1;
+      if (distinct >= THREE_CHANNELS) break;
+    }
+    if (distinct < THREE_CHANNELS) return;
+
+    await track('three_channel_types_reached', {
+      userId,
+      workspaceId,
+      // Once per campaign, whatever the retry or save order.
+      dedupeKey: `channels3:${campaignId}`,
+      properties: { channel_types: distinct, campaign_id: campaignId },
+    });
+  } catch (err) {
+    console.error('[deliverables] channel breadth track failed', err.message);
+  }
+}
+
+module.exports = { trackDeliverableProgress, trackChannelBreadth };

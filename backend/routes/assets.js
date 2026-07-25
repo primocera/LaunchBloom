@@ -24,7 +24,7 @@ const { brandContextFor } = require('../lib/brand-profile');
 const { buildSequence } = require('../lib/email-blueprints');
 const { campaignContext } = require('./campaigns');
 const { qualityWarnings } = require('../lib/quality-checks');
-const { trackDeliverableProgress } = require('../lib/deliverables-track');
+const { trackDeliverableProgress, trackChannelBreadth } = require('../lib/deliverables-track');
 const {
   websiteKitSchema,
   emailFlowSchema,
@@ -279,6 +279,8 @@ router.post('/generate-website-kit', idempotent('generate-website-kit'), planGat
     const { data: saved, error } = await supabase.from('website_pages').insert(rows).select();
     if (error) throw new Error('Failed to save website pages: ' + error.message);
     await trackDeliverableProgress({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id, table: 'website_pages', phase: 'started' });
+    // v10 SC-07: does this campaign now span three channel types?
+    await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     // v6 Prompt 21: claims are checked against the proof the user actually
     // supplied — anything risky outside it gets a per-claim warning.
@@ -395,6 +397,8 @@ router.post('/generate-email-flow', idempotent('generate-email-flow'), planGate(
     const { data: saved, error } = await supabase.from('email_assets').insert(rows).select();
     if (error) throw new Error('Failed to save emails: ' + error.message);
     await trackDeliverableProgress({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id, table: 'email_assets', phase: 'started' });
+    // v10 SC-07: does this campaign now span three channel types?
+    await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     res.json({
       ok: true,
@@ -622,6 +626,8 @@ router.post('/generate-campaign-emails', idempotent('generate-campaign-emails'),
     const { data: saved, error } = await supabase.from('email_assets').insert(rows).select();
     if (error) throw new Error('Failed to save campaign emails: ' + error.message);
     await trackDeliverableProgress({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id, table: 'email_assets', phase: 'started' });
+    // v10 SC-07: does this campaign now span three channel types?
+    await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     res.json({
       ok: true,
@@ -731,6 +737,8 @@ router.post('/generate-social-assets', idempotent('generate-social-assets'), pla
     const { data: saved, error } = await supabase.from('social_assets').insert(rows).select();
     if (error) throw new Error('Failed to save social assets: ' + error.message);
     await trackDeliverableProgress({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id, table: 'social_assets', phase: 'started' });
+    // v10 SC-07: does this campaign now span three channel types?
+    await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     res.json({
       ok: true,
@@ -845,6 +853,8 @@ router.post('/generate-creative-assets', idempotent('generate-creative-assets'),
     const { data: saved, error } = await supabase.from('creative_assets').insert(rows).select();
     if (error) throw new Error('Failed to save creative assets: ' + error.message);
     await trackDeliverableProgress({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id, table: 'creative_assets', phase: 'started' });
+    // v10 SC-07: does this campaign now span three channel types?
+    await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     res.json({
       ok: true,
@@ -922,6 +932,8 @@ router.post('/generate-seo-ideas', idempotent('generate-seo-ideas'), planGate('a
     const { data: saved, error } = await supabase.from('seo_assets').insert(rows).select();
     if (error) throw new Error('Failed to save SEO ideas: ' + error.message);
     await trackDeliverableProgress({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id, table: 'seo_assets', phase: 'started' });
+    // v10 SC-07: does this campaign now span three channel types?
+    await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     // Cannibalization check across the whole workspace (new + existing ideas).
     const { data: existing } = await supabase

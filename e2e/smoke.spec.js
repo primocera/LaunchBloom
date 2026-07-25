@@ -9,7 +9,9 @@ const { test, expect } = require('@playwright/test');
 test.describe('public pages', () => {
   test('landing renders and pricing comes from the canonical /api/plans catalog', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/LaunchBloom/i);
+    // v10 SC-05: was /LaunchBloom/i — stale since the rename to Scalvya. This
+    // e2e suite is not in CI, so it had been failing unnoticed.
+    await expect(page).toHaveTitle(/Scalvya/i);
     // Pricing is fetched from the backend — limits must match enforcement.
     await page.locator('#pricing').scrollIntoViewIfNeeded();
     await expect(page.locator('.lp-price-card').first()).toBeVisible();
@@ -167,5 +169,65 @@ test.describe('accessibility structure', () => {
       return getComputedStyle(el).outlineStyle;
     });
     expect(outline).not.toBe('none');
+  });
+});
+
+// ── v10 SC-05: the landing at every width the pack names ───────────────────
+// Public pages, so these run without credentials. A horizontal scrollbar on a
+// marketing page is a conversion bug, not a cosmetic one.
+
+const WIDTHS = [320, 375, 768, 1440];
+
+test.describe('landing responsiveness', () => {
+  for (const width of WIDTHS) {
+    test(`no horizontal overflow at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(overflow, `page scrolls sideways at ${width}px`).toBeLessThanOrEqual(1);
+    });
+  }
+
+  test('the above-fold proof strip is visible without scrolling on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const strip = page.getByRole('list', { name: /what one brief produces/i });
+    await expect(strip).toBeVisible();
+    const box = await strip.boundingBox();
+    expect(box.y, 'the proof strip should sit within the first screen').toBeLessThan(900);
+  });
+
+  test('the proof strip makes no metric or social-proof claim', async ({ page }) => {
+    await page.goto('/');
+    const text = await page.getByRole('list', { name: /what one brief produces/i }).innerText();
+    expect(text).not.toMatch(/\d+\s*%|\d[\d,]*\+|trusted by|customers|reviews/i);
+  });
+});
+
+test.describe('landing accessibility @a11y', () => {
+  test('hero copy is opaque white, not translucent over the gradient', async ({ page }) => {
+    await page.goto('/');
+    for (const selector of ['.lp-sub', '.lp-cta-note', '.lp-hero-eyebrow']) {
+      const color = await page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+      // rgb(...) means opaque; rgba(...) with alpha < 1 is what failed AA.
+      expect(color, `${selector} should be opaque`).toMatch(/^rgb\(255,\s*255,\s*255\)$/);
+    }
+  });
+
+  test('reveal content is visible when motion is reduced', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    // Content gated behind an animation would be invisible to these users.
+    const opacity = await page.locator('.reveal').first().evaluate((el) => getComputedStyle(el).opacity);
+    expect(Number(opacity)).toBe(1);
+  });
+
+  test('decorative meteors do not animate under reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await page.waitForTimeout(600); // past the deferred mount window
+    expect(await page.locator('.lp-meteor').count()).toBe(0);
   });
 });

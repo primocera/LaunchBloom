@@ -103,6 +103,11 @@ function normalize(table, cfg, row) {
     language: row.target_language || row.language || (row.brief_snapshot && row.brief_snapshot.language) || null,
     product: (row.brief_snapshot && row.brief_snapshot.offer) || row.product || null,
     created_at: row.created_at,
+    // v10 SC-02: what a campaign asset row must show without opening the asset —
+    // when it last changed, and which brief version it was generated from (so a
+    // stale asset is visible as stale). Derived, never a new stored field.
+    updated_at: row.updated_at || null,
+    brief_version: row.brief_version ?? (row.brief_snapshot && row.brief_snapshot.version) ?? null,
   };
 }
 
@@ -116,40 +121,85 @@ router.get('/api/assets/library', requireAuth, async (req, res, next) => {
     const page = Math.max(1, parseInt(q.page, 10) || 1);
     const per = Math.min(100, Math.max(5, parseInt(q.per, 10) || 25));
 
+    // v10 SC-02: bounded retrieval. The previous implementation fetched up to
+    // 500 rows PER TABLE and paginated in memory, so a workspace past that mark
+    // silently dropped assets AND reported a wrong total. Filters that map to
+    // real columns are now pushed to the database; the remainder (facets whose
+    // column is not present on every table, and full-text search) still need a
+    // scan, so that path is explicitly capped and reports `truncated` rather
+    // than lying about the total.
+    const needsScan = Boolean(search || q.platform || q.language || q.product);
+    const SCAN_CAP = 1000; // per table; only reached by scan-mode filters
+
+    // Predicates every asset table genuinely supports.
+    const applyColumnFilters = (query) => {
+      let out = query.eq('workspace_id', ws.id);
+      if (q.campaign_id) out = out.eq('campaign_id', q.campaign_id);
+      if (q.status) out = out.eq('status', q.status);
+      if (q.favourite === 'true') out = out.eq('favourite', true);
+      // Rows predating the archive column store NULL, which is not archived.
+      out = q.archived === 'true' ? out.eq('archived', true) : out.or('archived.is.null,archived.eq.false');
+      if (q.date_from) out = out.gte('created_at', q.date_from);
+      if (q.date_to) out = out.lte('created_at', `${q.date_to}T23:59:59`);
+      return out;
+    };
+
     let items = [];
+    let total = 0;
+    let truncated = false;
+
     for (const table of wanted) {
       const cfg = TABLES[table];
-      let query = supabase.from(table).select('*').eq('workspace_id', ws.id);
-      if (q.campaign_id) query = query.eq('campaign_id', q.campaign_id);
-      if (q.status) query = query.eq('status', q.status);
-      const { data, error } = await query.order('created_at', { ascending: false }).limit(500);
-      if (error) continue; // missing table/column (migration pending) — skip
+
+      if (!needsScan) {
+        // Exact count from the database — never derived from a fetched slice.
+        const { count, error: countErr } = await applyColumnFilters(
+          supabase.from(table).select('id', { count: 'exact', head: true })
+        );
+        if (countErr) continue; // missing table/column (migration pending) — skip
+        total += count || 0;
+
+        // Each table is ordered by created_at desc, so the globally newest
+        // `page * per` rows are always contained in the first `page * per` rows
+        // of each table. Fetching more than that cannot change this page.
+        const needed = page * per;
+        const { data, error } = await applyColumnFilters(supabase.from(table).select('*'))
+          .order('created_at', { ascending: false })
+          .range(0, needed - 1);
+        if (error) continue;
+        for (const row of data || []) items.push(normalize(table, cfg, row));
+        continue;
+      }
+
+      // Scan mode: facet/search filters are evaluated in JS because the backing
+      // column is not guaranteed to exist on every table.
+      const { data, error } = await applyColumnFilters(supabase.from(table).select('*'))
+        .order('created_at', { ascending: false })
+        .range(0, SCAN_CAP - 1);
+      if (error) continue;
+      if ((data || []).length === SCAN_CAP) truncated = true;
       for (const row of data || []) {
         const n = normalize(table, cfg, row);
-        if (q.favourite === 'true' && !n.favourite) continue;
-        // archived hidden unless explicitly requested
-        if (q.archived === 'true' ? !n.archived : n.archived) continue;
-        // v5 Prompt 13: channel / language / product / date facets (JS-side so a
-        // missing column never drops an entire table).
+        // v5 Prompt 13: channel / language / product facets.
         if (q.platform && n.platform !== q.platform) continue;
         if (q.language && String(n.language || '').toLowerCase() !== String(q.language).toLowerCase()) continue;
         if (q.product && !String(n.product || '').toLowerCase().includes(String(q.product).toLowerCase())) continue;
-        if (q.date_from && new Date(n.created_at) < new Date(q.date_from)) continue;
-        if (q.date_to && new Date(n.created_at) > new Date(`${q.date_to}T23:59:59`)) continue;
         // Search title + full searchable content (not just the snippet).
         if (search) {
           const hay = `${n.title} ${cfg.searchFields.map((f) => row[f]).filter((v) => typeof v === 'string').join(' ')}`.toLowerCase();
           if (!hay.includes(search)) continue;
         }
         items.push(n);
+        total += 1;
       }
     }
 
     items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    const total = items.length;
     items = items.slice((page - 1) * per, page * per);
 
-    res.json({ items, total, page, per });
+    // `truncated` is true only when a scan hit its cap: the caller is told the
+    // count is a floor rather than being handed a confidently wrong number.
+    res.json({ items, total, page, per, truncated });
   } catch (err) {
     next(err);
   }

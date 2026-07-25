@@ -177,7 +177,7 @@ async function handleEvent(event) {
       await onInvoicePaid(data, eventAt);
       break;
     case 'invoice.payment_failed':
-      await onInvoicePaymentFailed(data);
+      await onInvoicePaymentFailed(data, eventAt);
       break;
     case 'customer.created':
     case 'customer.updated':
@@ -353,6 +353,14 @@ async function onInvoicePaid(invoice, eventAt) {
     return;
   }
 
+  // v10 SC-06: was this payment a RECOVERY? Read the prior state before the
+  // update overwrites it — a customer who was told "action needed" must be
+  // told the problem is resolved, not left with an unanswered money warning.
+  const { data: priorRow } = await supabase
+    .from('subscriptions').select('status')
+    .eq('stripe_subscription_id', invoice.subscription).single();
+  const wasPastDue = priorRow && priorRow.status === 'past_due';
+
   const { error } = await supabase
     .from('subscriptions')
     .update({
@@ -369,6 +377,18 @@ async function onInvoicePaid(invoice, eventAt) {
 
   if (error) {
     throw new Error(`Supabase update failed for invoice.paid: ${error.message}`);
+  }
+
+  // v10 SC-07: a renewal is a recurring cycle invoice, not the first one.
+  // Stripe's billing_reason distinguishes them, so this needs no heuristic.
+  // Deduped on the invoice id: a redelivered webhook cannot double-count the
+  // one metric that proves the job was worth paying for twice.
+  if (invoice.total > 0 && invoice.billing_reason === 'subscription_cycle') {
+    track('subscription_renewed', {
+      userId: null,
+      dedupeKey: `renewal:${invoice.id}`,
+      properties: { billing_reason: invoice.billing_reason },
+    });
   }
 
   // Real charges only — the €0/$0 trial-start invoice is not a "payment".
@@ -390,17 +410,31 @@ async function onInvoicePaid(invoice, eventAt) {
         const plan = pricePlans()[priceId];
         planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : null;
       }
-      await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd, amount, planLabel });
+      // A recovery gets the recovery message instead of a routine receipt.
+      // Both are deduped on the invoice id, so a redelivery sends neither twice.
+      if (wasPastDue) {
+        await sendLifecycleEmail('payment_recovered', invoice.id, email, { periodEnd, amount });
+      } else {
+        await sendLifecycleEmail('payment_succeeded', invoice.id, email, { periodEnd, amount, planLabel });
+      }
     }
   }
 }
 
-async function onInvoicePaymentFailed(invoice) {
+async function onInvoicePaymentFailed(invoice, eventAt) {
   if (!invoice.subscription) return;
+
+  // SC-V10-00 out-of-order guard: a late payment_failed delivered AFTER the
+  // recovery invoice.paid must not flip a recovered subscription back to
+  // past_due — that would revoke entitlement the customer has paid for.
+  if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
+    console.log(`Skipping stale invoice.payment_failed for ${invoice.subscription}`);
+    return;
+  }
 
   const { error } = await supabase
     .from('subscriptions')
-    .update({ status: 'past_due' })
+    .update({ status: 'past_due', stripe_event_at: eventAt })
     .eq('stripe_subscription_id', invoice.subscription);
 
   if (error) {

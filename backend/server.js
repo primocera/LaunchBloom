@@ -136,6 +136,12 @@ app.use('/api/customers', apiLimiter, customerRouter);
 const accountRouter = require('./routes/account');
 app.use(apiLimiter, accountRouter);
 
+// v10 SC-06: one-click unsubscribe. Public by necessity — the link is clicked
+// from a mail client with no session. Mounted before the restrictive CORS
+// allowlist for the same reason the other public endpoints are.
+const emailPreferencesRouter = require('./routes/email-preferences');
+app.use(apiLimiter, emailPreferencesRouter);
+
 const eventsRouter = require('./routes/events');
 app.use(apiLimiter, eventsRouter);
 

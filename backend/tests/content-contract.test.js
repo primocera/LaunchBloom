@@ -214,11 +214,72 @@ test('shared export note says review remains with the user and costs nothing', (
   assert.match(generator, /does not use AI actions/);
 });
 
-// ── Generation cost is disclosed before every guided-flow generation ────────
+// ── v10 SC-01: one recommended path ────────────────────────────────────────
+// The guided flow used to be a SECOND way to create work, with its own
+// positioning → offers → package generation steps. It is folded into the
+// campaign-creation contract; /app/flow is now a read-only archive. The old
+// per-button AI-cost disclosures are therefore gone by design — what must hold
+// now is that the page generates nothing and loses nothing.
 
-test('guided flow discloses the 1-AI-action cost on each generation button', () => {
+test('the legacy guided flow generates nothing and offers no AI actions', () => {
   const flow = read(path.join(APP_SRC, 'routes', 'Flow.jsx'));
-  assert.match(flow, /Generate my positioning · 1 AI action/);
-  assert.match(flow, /Design my 3 offers · 1 AI action/);
-  assert.match(flow, /Build campaign package · 1 AI action/);
+  assert.doesNotMatch(flow, /1 AI action/, 'an archive must not offer a generation');
+  assert.doesNotMatch(flow, /api\.generate/, 'no generation call may remain on this route');
+  assert.match(flow, /Full launch campaigns now start in Campaigns/);
+});
+
+test('the legacy guided flow keeps earlier work readable (no data stranded)', () => {
+  const flow = read(path.join(APP_SRC, 'routes', 'Flow.jsx'));
+  // /app/kits/:id is linked from nowhere else — losing this index would make
+  // earlier launch kits unreachable in practice even though the rows survive.
+  assert.match(flow, /\/app\/kits\/\$\{k\.id\}/);
+  assert.match(flow, /nothing was deleted/i);
+});
+
+test('Create resolves a campaign before offering the five creation paths', () => {
+  const create = read(path.join(APP_SRC, 'routes', 'Create.jsx'));
+  // Without a campaign the user is asked which campaign the work belongs to,
+  // rather than being shown a second navigation list of studios.
+  assert.match(create, /Choose the campaign this work belongs to/);
+  assert.match(create, /Complete brief/);
+});
+
+test('Home and the campaign Overview send the user to the same destination', () => {
+  const nextActions = read(path.join(APP_SRC, 'lib', 'next-actions.js'));
+  const campaignAction = read(path.join(APP_SRC, 'lib', 'campaign-next-action.js'));
+  // Both must carry campaign context into Create; a bare /app/create from Home
+  // would ask which campaign the user meant immediately after Home named one.
+  assert.match(campaignAction, /\/app\/create\?campaign=/);
+  assert.match(nextActions, /\/app\/create\?campaign=/);
+  assert.doesNotMatch(nextActions, /to: '\/app\/create'/, 'no context-free Create destination may remain');
+});
+
+// ── v10 SC-05: ICP focus and first-screen honesty ──────────────────────────
+
+test('the hero leads with the client-work ICP without excluding solo founders', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const paths = landing.slice(landing.indexOf('const ICP_PATHS'), landing.indexOf('const PROOF_STEPS'));
+  // Order signals focus. Both paths must remain present and identically served.
+  assert.ok(paths.indexOf("key: 'client'") < paths.indexOf("key: 'own'"), 'client work should lead');
+  assert.ok(paths.includes('Solo founders and small brands'), 'the second ICP must not be dropped');
+  assert.match(landing, /never changes what you can do or what you pay/,
+    'choosing a path must not imply different entitlements');
+});
+
+test('the above-fold proof strip claims capability, never outcomes', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const strip = landing.slice(landing.indexOf('const PROOF_STEPS'), landing.indexOf('const VALUE_LIST'));
+  // Illustrative labels only: no counts, percentages, ratings or time savings.
+  assert.doesNotMatch(strip, /\d+\s*%|\d[\d,]*\+|\bhours saved\b|\bfaster\b|\btrusted by\b|\bcustomers\b/i,
+    'the proof strip must not carry a metric or social-proof claim');
+  assert.match(strip, /One approved brief/);
+  assert.match(strip, /Client-ready handoff/);
+});
+
+test('every hero CTA states what happens next', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  assert.match(landing, /Create an account free/, 'the primary CTA must say the account is free');
+  assert.match(landing, /a payment method is required for the trial/,
+    'the trial disclosure must stay explicit about the payment method');
+  assert.doesNotMatch(landing, /no card needed|free forever|cancel anytime, no questions/i);
 });

@@ -30,14 +30,10 @@ const MECHANISM = [
 // v9 SC-08: two honest use-case paths under ONE product. They change the
 // examples and setup guidance only — never entitlements, navigation or the
 // Brand Profile → Campaign Brief contract. Both reach first value the same way.
+// v10 SC-05: client work leads, because that is where the willingness to pay
+// is strongest — but both paths stay first-class and eligible for exactly the
+// same product, entitlements and price. Order signals focus, not privilege.
 const ICP_PATHS = [
-  {
-    key: 'own',
-    title: 'Launch my own campaign',
-    who: 'Solo founders and small brands',
-    body: 'Keep one launch consistent across website, email, social and ads — without the offer drifting between tools.',
-    cta: 'Create my workspace',
-  },
   {
     key: 'client',
     title: 'Build campaigns for clients',
@@ -45,6 +41,24 @@ const ICP_PATHS = [
     body: 'Run each client on its own brief, review for consistency, and hand off a clean packet — no client logins to manage.',
     cta: 'Create my workspace',
   },
+  {
+    key: 'own',
+    title: 'Launch my own campaign',
+    who: 'Solo founders and small brands',
+    body: 'Keep one launch consistent across website, email, social and ads — without the offer drifting between tools.',
+    cta: 'Create my workspace',
+  },
+];
+
+// v10 SC-05: the mechanism made concrete above the fold. Every value here is
+// an illustrative label describing what the product produces — not a metric,
+// benchmark, customer count or result. Nothing on this strip is a claim about
+// outcomes, so nothing here needs proof the product cannot supply.
+const PROOF_STEPS = [
+  { label: 'One approved brief', detail: 'Offer, audience, dates, CTA' },
+  { label: 'Connected assets', detail: 'Website · email · social · ads · SEO' },
+  { label: 'Review findings', detail: 'Conflicts and unsupported claims surfaced' },
+  { label: 'Client-ready handoff', detail: 'Word, PDF or bundle' },
 ];
 
 // "What one campaign can include" — deliverables as one connected set.
@@ -221,10 +235,11 @@ export default function Landing() {
           <div className="lp-eyebrow lp-hero-eyebrow">FROM ONE BRIEF TO ONE CONNECTED CAMPAIGN</div>
           <h1>Turn one offer into a launch-ready campaign.</h1>
           <p className="lp-sub">
-            {BRAND.name} is the campaign-control workspace for freelance marketers, boutique agencies
-            and solo founders. Turn one approved brief into connected website copy, emails, social
-            posts and ads — with review checks and a client-ready handoff. Launch-ready
-            means structured, connected and ready for your review — publishing stays in your hands.
+            {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
+            agencies — and for solo founders running their own launch. Turn one approved brief into
+            connected website copy, emails, social posts and ads, with review checks and a
+            client-ready handoff.
+            Launch-ready means structured, connected and ready for your review — publishing stays in your hands.
           </p>
 
           <div className="lp-hero-actions">
@@ -237,9 +252,21 @@ export default function Landing() {
           </div>
 
           <p className="lp-cta-note">
-            Create an account free. Start a 3-day trial only when you’re ready to generate. Payment
-            method required for the trial.
+            Create an account free — it takes an email and a password. Start a 3-day trial only when
+            you’re ready to generate; a payment method is required for the trial.
           </p>
+
+          {/* v10 SC-05: what the product actually produces, above the fold.
+              Labels only — no metrics, counts, logos or outcome claims. */}
+          <ol className="lp-proof-strip" aria-label="What one brief produces">
+            {PROOF_STEPS.map((s, i) => (
+              <li key={s.label}>
+                <span className="lp-proof-n" aria-hidden="true">{i + 1}</span>
+                <span className="lp-proof-label">{s.label}</span>
+                <span className="lp-proof-detail">{s.detail}</span>
+              </li>
+            ))}
+          </ol>
         </main>
       </div>
 

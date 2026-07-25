@@ -55,13 +55,19 @@
 .lp-sky {
   position: relative;
   overflow: hidden;
-  /* Saturated at the top, bleaching to white where the next section starts. */
+  /* Saturated at the top, bleaching to white where the next section starts.
+     v10 SC-05: the dark band is held until 70% because hero copy sits on it.
+     Measured white-on-stop ratios: #1d4ed8 6.70, #2159cf 6.2, #2f6ceb 4.70 —
+     all at or above WCAG AA 4.5 for normal text. The old stops (4.10 and 2.49)
+     put the eyebrow, sub and CTA note below AA. Do not lighten a stop at or
+     below 70% without re-running backend/tests/landing-contrast.test.js. */
   background: linear-gradient(
     180deg,
-    var(--sky-top) 0%,
-    #3d78ee 26%,
-    #7ba4f3 62%,
-    #cfdefa 85%,
+    #1d4ed8 0%,
+    #2159cf 45%,
+    #2f6ceb 70%,
+    #7ba4f3 86%,
+    #cfdefa 94%,
     #ffffff 100%
   );
 }
@@ -245,7 +251,8 @@
   margin: 20px auto 0;
   font-size: clamp(15px, 1.6vw, 19px);
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.92);
+  /* v10 SC-05: opaque — alpha over the gradient dropped this below AA. */
+  color: #fff;
 }
 
 .lp-hero-actions {
@@ -272,8 +279,10 @@
 
 .lp-cta-ghost {
   color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  /* v10 SC-05: a white veil LIGHTENED the button and cut contrast to 3.41.
+     A dark scrim raises white-on-button to 6.39 and keeps the ghost look. */
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.65);
 }
 
 .lp-cta:hover,
@@ -282,14 +291,20 @@
 }
 
 .lp-cta-ghost:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.26);
 }
 
 /* Hero eyebrow + CTA note + example trust line (Prompt 15) */
-.lp-hero-eyebrow {
+/* v10 SC-05: the element carries BOTH .lp-eyebrow and .lp-hero-eyebrow. Both
+   were single-class specificity, and .lp-eyebrow is declared ~475 lines later,
+   so it won with color: var(--blue) — blue text on the blue sky at 1.10:1,
+   effectively invisible. The compound selector makes the hero rule win.
+   Guarded by the browser assertion in e2e/smoke.spec.js, which is what caught
+   this; a stylesheet parser cannot see a cascade conflict. */
+.lp-eyebrow.lp-hero-eyebrow {
   display: inline-block;
   margin-bottom: 20px;
-  color: rgba(255, 255, 255, 0.85);
+  color: #fff;
 }
 
 .lp-cta-note {
@@ -297,7 +312,8 @@
   margin: 20px auto 0;
   font-size: 13.5px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.78);
+  /* v10 SC-05: was .78 — the worst offender at 2.07 on the lower gradient. */
+  color: #fff;
 }
 
 .lp-trust-line {
@@ -1414,4 +1430,63 @@
 .lp-price-grid.is-four {
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   max-width: 1160px;
+}
+
+/* ── v10 SC-05: above-fold proof strip ────────────────────────────────────
+   The mechanism made concrete in the hero. Text is opaque white on the dark
+   band (see .lp-sky); the card tint is a DARK scrim, because a white veil
+   lightens the background and costs contrast. */
+.lp-proof-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-width: 860px;
+  padding: 0;
+  margin: 34px auto 0;
+  list-style: none;
+}
+
+.lp-proof-strip li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 14px 15px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 12px;
+}
+
+.lp-proof-n {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.12em;
+}
+
+.lp-proof-label {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.lp-proof-detail {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #fff;
+}
+
+/* Two columns on tablets, one on phones — never a horizontal scroll. */
+@media (max-width: 860px) {
+  .lp-proof-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 460px) {
+  .lp-proof-strip {
+    grid-template-columns: 1fr;
+    margin-top: 26px;
+  }
 }

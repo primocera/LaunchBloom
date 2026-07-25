@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 /**
  * The light streaks that sweep across the blue hero. Copied from ReelPanda's
  * `rp-meteor`: seven 1px lines, each with its own position, length, duration
@@ -13,7 +15,30 @@ const METEORS = [
   { left: '86%', top: '36%', width: 100, duration: 7.4, delay: 3.2 },
 ];
 
+/**
+ * v10 SC-05 (LCP): purely decorative, so it must not compete with the hero for
+ * the first paint. Mounting is deferred until the browser is idle, and skipped
+ * entirely under prefers-reduced-motion — seven infinite animations are exactly
+ * what that setting exists to prevent.
+ */
 export default function Meteors() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    const idle = window.requestIdleCallback
+      ? window.requestIdleCallback(() => setShow(true), { timeout: 1500 })
+      : window.setTimeout(() => setShow(true), 300);
+    return () => {
+      if (window.cancelIdleCallback && window.requestIdleCallback) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+    };
+  }, []);
+
+  if (!show) return null;
+
   return (
     <div className="lp-meteors" aria-hidden="true">
       {METEORS.map((m, i) => (
