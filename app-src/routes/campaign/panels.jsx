@@ -305,23 +305,58 @@ export function HandoffExports({ campaign }) {
         </label>
       )}
 
+      {/* v10 SC-04: what the bundle contains, stated BEFORE the download —
+          no surprises about what a client is about to receive. */}
+      {h.bundle_contents && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          The bundle contains {h.bundle_contents.join(', ')} — the documents plus the
+          manifest they were built from.
+        </p>
+      )}
+
       <div className="confirm-row" style={{ marginTop: 8 }}>
-        <button className="btn-secondary" onClick={exportMd} disabled={!canExport}
-          title="Human-readable Markdown packet: summary, assets, statuses, unresolved items, evidence and an owner checklist.">
-          Export packet (Markdown)
-        </button>
-        <button className="btn-secondary" onClick={exportJson} disabled={!canExport}
-          title="Deterministic JSON manifest of the same canonical packet.">
-          Export manifest (JSON)
-        </button>
+        <a className={`btn-primary${canExport ? '' : ' is-disabled'}`}
+          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=docx` : undefined}
+          onClick={() => canExport && record('docx')} aria-disabled={!canExport}
+          title="A real Word document (.docx) built from the canonical manifest. Opens in Word, Pages or Google Docs.">
+          Download Word (.docx)
+        </a>
         <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
-          href={canExport ? `/api/campaigns/${campaign.id}/review-packet?format=html` : undefined}
-          onClick={() => canExport && record('html')}
-          target="_blank" rel="noreferrer" aria-disabled={!canExport}
-          title="Print-friendly HTML — use your browser's Print to save as PDF. This is a Word-compatible HTML view, not a .docx file.">
-          Print view (HTML)
+          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=pdf` : undefined}
+          onClick={() => canExport && record('pdf')} aria-disabled={!canExport}
+          title="Fixed-layout PDF of the same record.">
+          Download PDF
+        </a>
+        <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
+          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=zip` : undefined}
+          onClick={() => canExport && record('zip')} aria-disabled={!canExport}
+          title="Everything in one archive: Word, PDF, the manifest and a README.">
+          Download bundle (.zip)
         </a>
       </div>
+
+      {/* The original text formats stay available, explicitly labelled as the
+          plain-text alternatives rather than the primary deliverable. */}
+      <details style={{ marginTop: 8 }}>
+        <summary className="muted">Plain-text formats</summary>
+        <div className="confirm-row" style={{ marginTop: 8 }}>
+          <button className="btn-secondary" onClick={exportMd} disabled={!canExport}
+            title="Human-readable Markdown packet: summary, assets, statuses, unresolved items, evidence and an owner checklist.">
+            Export packet (Markdown)
+          </button>
+          <button className="btn-secondary" onClick={exportJson} disabled={!canExport}
+            title="Deterministic JSON manifest of the same canonical packet.">
+            Export manifest (JSON)
+          </button>
+          <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
+            href={canExport ? `/api/campaigns/${campaign.id}/review-packet?format=html` : undefined}
+            onClick={() => canExport && record('html')}
+            target="_blank" rel="noreferrer" aria-disabled={!canExport}
+            title="Print-friendly HTML view in the browser.">
+            Print view (HTML)
+          </a>
+        </div>
+      </details>
       {h.last_handoff_at && (
         <p className="muted" style={{ marginTop: 6 }}>
           Last exported {new Date(h.last_handoff_at).toLocaleString()}{h.last_handoff_format ? ` · ${h.last_handoff_format.toUpperCase()}` : ''}.

@@ -898,7 +898,8 @@ router.get('/api/campaigns/:id/handoff', requireAuth, async (req, res, next) => 
         blocking_count: q.blocking.length,
         reminder_count: manifest.unresolved.findings.length + manifest.unresolved.brief_changes.length +
           manifest.unresolved.needs_review.length + manifest.unresolved.evidence_reminders.length,
-        formats: ['md', 'json', 'html'],
+        formats: ['md', 'json', 'html', 'docx', 'pdf', 'zip'],
+        bundle_contents: ['README.txt', 'manifest.json', 'handoff.docx', 'handoff.pdf'],
         disclosure: 'This is a Review record prepared for your review — not an approval, fact-check, ' +
           'compliance certificate or a published/sent campaign. Publishing remains with you.',
         fingerprint,
@@ -933,6 +934,78 @@ router.get('/api/campaigns/:id/handoff/manifest', requireAuth, async (req, res, 
   }
 });
 
+// GET /api/campaigns/:id/handoff/export?format=docx|pdf|zip — v10 SC-04.
+// The premium deliverable: a real Word file, a fixed-layout PDF, or a bundle,
+// all built from the SAME canonical manifest as the md/json/html packets.
+//
+// Authorization and blockers are recomputed here from the database; nothing
+// about what may be exported is taken from the client. The response streams to
+// the authenticated caller rather than minting a shareable URL — there is no
+// link to expire or leak.
+router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, next) => {
+  try {
+    const ws = await resolveWorkspace(req);
+    const campaign = await ownedCampaign(ws, req.params.id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const { FORMATS, ExportTooLarge, safeFilename } = require('../lib/handoff-docs');
+    const format = String(req.query.format || 'docx').toLowerCase();
+    const spec = FORMATS[format];
+    if (!spec) {
+      return res.status(400).json({ error: 'Choose docx, pdf or zip.', code: 'UNKNOWN_FORMAT' });
+    }
+
+    const q = await buildReviewQueue(ws, campaign);
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+
+    const manifest = handoffManifest(campaign, q, planRows || []);
+    const fingerprint = packetFingerprint(manifest);
+    const meta = {
+      generatedAt: new Date().toISOString(),
+      fingerprint,
+      disclosure: 'This is a Review record prepared for your review — not an approval, fact-check, ' +
+        'compliance certificate or a published/sent campaign. Publishing remains with you.',
+    };
+
+    let body;
+    try {
+      body = spec.build(manifest, meta);
+    } catch (err) {
+      if (err.code === 'EXPORT_TOO_LARGE') {
+        // Honest failure with a narrower option, never a truncated document.
+        return res.status(413).json({
+          error: `${err.message} Nothing was lost — export a single format instead of the bundle, ` +
+            'or archive assets you do not need in this handoff.',
+          code: 'EXPORT_TOO_LARGE',
+        });
+      }
+      throw err;
+    }
+
+    // Unresolved blockers never silently block the download — they are
+    // disclosed inside the document — but the event records that they existed.
+    track('handoff_exported', {
+      userId: req.userId, workspaceId: ws.id,
+      properties: {
+        format,
+        asset_count_band: band(manifest.included_assets.length),
+        blocker_count_band: band(q.blocking.length),
+        packet_version: manifest.packet_version,
+      },
+    });
+
+    res.setHeader('Content-Type', spec.mime);
+    res.setHeader('Content-Length', body.length);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(campaign.name, fingerprint, spec.ext)}"`);
+    res.setHeader('X-Packet-Fingerprint', fingerprint);
+    res.send(body);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/campaigns/:id/handoff/record — remember the fingerprint the user
 // just exported (so a later change flags staleness). Never blocks the download;
 // the client calls this after a successful export.
@@ -946,7 +1019,7 @@ router.post('/api/campaigns/:id/handoff/record', requireAuth, async (req, res, n
     if (typeof fingerprint !== 'string' || !/^[a-f0-9]{16}$/.test(fingerprint)) {
       return res.status(400).json({ error: 'A valid packet fingerprint is required.' });
     }
-    const fmt = ['md', 'json', 'html'].includes(format) ? format : 'md';
+    const fmt = ['md', 'json', 'html', 'docx', 'pdf', 'zip'].includes(format) ? format : 'md';
     await supabase.from('campaigns').update({
       last_handoff_fingerprint: fingerprint, last_handoff_at: new Date().toISOString(), last_handoff_format: fmt,
     }).eq('id', campaign.id);
