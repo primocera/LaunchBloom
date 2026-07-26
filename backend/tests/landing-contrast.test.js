@@ -37,14 +37,34 @@ function contrast(a, b) {
 }
 const composite = (fg, alpha, bg) => fg.map((c, i) => c * alpha + bg[i] * (1 - alpha));
 
-/** The .lp-sky gradient stops, as [{ hex, position }]. */
+/** Custom properties declared on .lp, e.g. --sky-top: #2f6ceb. */
+function cssVariables() {
+  const vars = {};
+  for (const m of CSS.matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-f]{3,8})\s*;/gi)) {
+    vars[m[1]] = m[2].toLowerCase();
+  }
+  return vars;
+}
+
+/**
+ * The .lp-sky gradient stops, as [{ hex, position }].
+ * Stops may be written as a literal or as var(--sky-top), so variables are
+ * resolved — reading only hex literals silently skipped the first stop, which
+ * is the one the headline sits on.
+ */
 function skyStops() {
   const rule = CSS.match(/\.lp-sky\s*\{[\s\S]*?\}/);
   assert.ok(rule, '.lp-sky rule not found — has the landing been restructured?');
   const gradient = rule[0].match(/linear-gradient\(([\s\S]*?)\);/);
   assert.ok(gradient, '.lp-sky has no linear-gradient');
-  return [...gradient[1].matchAll(/(#[0-9a-f]{6})\s+(\d+)%/gi)]
-    .map((m) => ({ hex: m[1].toLowerCase(), position: Number(m[2]) }));
+  const vars = cssVariables();
+
+  return [...gradient[1].matchAll(/(#[0-9a-f]{6}|var\(\s*(--[a-z0-9-]+)\s*\))\s+(\d+)%/gi)]
+    .map((m) => {
+      const hex = m[2] ? vars[m[2]] : m[1].toLowerCase();
+      assert.ok(hex, `gradient references ${m[2]}, which is not defined as a colour`);
+      return { hex, position: Number(m[3]) };
+    });
 }
 
 /**
@@ -64,18 +84,35 @@ function declaration(selector, prop) {
   return value;
 }
 
-test('the hero gradient is dark enough for white text everywhere text sits', () => {
-  const stops = skyStops();
-  assert.ok(stops.length >= 2, 'gradient has too few stops to reason about');
+// The owner restored the original v9 palette on 2026-07-26, accepting that the
+// lower gradient stops fall below WCAG AA for normal text. That is a product
+// decision, so this test no longer fails the build for it — but it PINS the
+// measured ratios, so the palette cannot silently get worse, and any change
+// forces a deliberate re-measurement here.
+const RECORDED = [
+  { hex: '#2f6ceb', position: 0, ratio: 4.70, meetsAA: true },
+  { hex: '#3d78ee', position: 26, ratio: 4.10, meetsAA: false },
+  { hex: '#7ba4f3', position: 62, ratio: 2.49, meetsAA: false },
+];
 
+test('the hero gradient matches the recorded palette and has not got worse', () => {
+  const stops = skyStops();
   const white = [255, 255, 255];
-  for (const stop of stops.filter((s) => s.position <= TEXT_BAND_END)) {
-    const ratio = contrast(white, hexToRgb(stop.hex));
+
+  for (const expected of RECORDED) {
+    const stop = stops.find((s) => s.position === expected.position);
+    assert.ok(stop, `no gradient stop at ${expected.position}% — the palette changed; re-measure and update RECORDED`);
+    const actual = contrast(white, hexToRgb(stop.hex));
     assert.ok(
-      ratio >= AA_NORMAL,
-      `gradient stop ${stop.hex} at ${stop.position}% gives white text ${ratio.toFixed(2)}:1, below AA ${AA_NORMAL}`
+      actual >= expected.ratio - 0.01,
+      `stop at ${expected.position}% is now ${actual.toFixed(2)}:1, worse than the recorded ${expected.ratio}:1`
     );
   }
+
+  // The h1 sits on the top stop. That one is not negotiable — if the headline
+  // itself drops below AA the hero is unreadable, not merely imperfect.
+  const top = stops.find((s) => s.position === 0);
+  assert.ok(contrast(white, hexToRgb(top.hex)) >= AA_NORMAL, 'the top stop must meet AA — the headline sits on it');
 });
 
 test('hero text is opaque, because alpha over a gradient is what broke AA', () => {
@@ -105,15 +142,20 @@ test('the ghost CTA is legible: a dark scrim, never a white veil', () => {
   const alpha = Number(rgba[4]);
   const white = [255, 255, 255];
 
-  // Worst case: the lightest stop the button can sit on.
-  const stops = skyStops().filter((s) => s.position <= TEXT_BAND_END);
-  const worst = stops.reduce((a, b) => (luminance(hexToRgb(a.hex)) > luminance(hexToRgb(b.hex)) ? a : b));
-  const button = composite(overlay, alpha, hexToRgb(worst.hex));
-  const ratio = contrast(white, button);
+  // The buttons sit at the top of the hero, on the first stop. A dark scrim
+  // must always beat a white veil there: 6.43:1 with the current scrim versus
+  // 4.70:1 with none. A regression here means someone reintroduced the white
+  // overlay that made the button LIGHTER than the sky behind it (3.41:1).
+  const top = skyStops().find((s) => s.position === 0);
+  const onTop = contrast(white, composite(overlay, alpha, hexToRgb(top.hex)));
 
   assert.ok(
-    ratio >= AA_NORMAL,
-    `ghost CTA text is ${ratio.toFixed(2)}:1 on ${worst.hex}; a white veil lightens the button and fails AA`
+    onTop >= AA_NORMAL,
+    `ghost CTA text is ${onTop.toFixed(2)}:1 on ${top.hex}; a white veil lightens the button and fails AA`
+  );
+  assert.ok(
+    overlay[0] === 0 && overlay[1] === 0 && overlay[2] === 0,
+    `.lp-cta-ghost must use a dark scrim, found rgba(${overlay.join(',')})`
   );
 });
 

@@ -56,18 +56,24 @@
   position: relative;
   overflow: hidden;
   /* Saturated at the top, bleaching to white where the next section starts.
-     v10 SC-05: the dark band is held until 70% because hero copy sits on it.
-     Measured white-on-stop ratios: #1d4ed8 6.70, #2159cf 6.2, #2f6ceb 4.70 —
-     all at or above WCAG AA 4.5 for normal text. The old stops (4.10 and 2.49)
-     put the eyebrow, sub and CTA note below AA. Do not lighten a stop at or
-     below 70% without re-running backend/tests/landing-contrast.test.js. */
+     This is the original v9 palette, restored by owner decision on 2026-07-26.
+
+     Known accessibility trade-off, recorded rather than hidden: white text
+     measures 4.70:1 on the top stop (passes AA), 4.10:1 at 26% and 2.49:1 at
+     62% (both below the 4.5 AA threshold for normal text). v10 SC-05 had
+     darkened these stops to 6.70/6.2/4.70; the owner preferred the original
+     blue. Reaching AA on this palette needs roughly a 30% black scrim, which
+     darkens the hero anyway and defeats the purpose.
+
+     Hero copy remains OPAQUE white (not translucent) — that costs nothing
+     visually and is strictly better than the v9 alpha values, which measured
+     as low as 2.07:1. */
   background: linear-gradient(
     180deg,
-    #1d4ed8 0%,
-    #2159cf 45%,
-    #2f6ceb 70%,
-    #7ba4f3 86%,
-    #cfdefa 94%,
+    var(--sky-top) 0%,
+    #3d78ee 26%,
+    #7ba4f3 62%,
+    #cfdefa 85%,
     #ffffff 100%
   );
 }
