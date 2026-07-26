@@ -185,6 +185,24 @@ function withConsentFooter(built, type, to) {
 }
 
 /**
+ * RFC 8058 one-click unsubscribe headers for marketing mail.
+ *
+ * Without these, Gmail and Apple Mail show no native "Unsubscribe" control, so
+ * the only opt-out is the footer link buried at the bottom of the message —
+ * which is what made unsubscribing feel impossible. Transactional mail
+ * deliberately gets no headers: it is not unsubscribable.
+ */
+function consentHeaders(type, to) {
+  if (categoryOf(type) !== 'marketing') return undefined;
+  const url = unsubscribeUrl(to);
+  if (!url) return undefined;
+  return {
+    'List-Unsubscribe': `<${url}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
+
+/**
  * Idempotently send one lifecycle email.
  *   sendLifecycleEmail('trial_started', 'sub_123', 'a@b.com', { chargeAt })
  * Returns 'sent' | 'duplicate' | 'skipped' | 'failed'. Never throws.
@@ -226,7 +244,10 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
 
     const built = make(params);
     const { subject, html, text } = withConsentFooter(built, type, to);
-    const { data, error } = await resend.emails.send({ from: emailFrom(), to, subject, html, text });
+    const { data, error } = await resend.emails.send({
+      from: emailFrom(), to, subject, html, text,
+      headers: consentHeaders(type, to),
+    });
     if (error) throw new Error(error.message || 'send failed');
 
     await supabase
@@ -296,9 +317,14 @@ async function processEmailOutbox({ limit = 20 } = {}) {
     }
 
     try {
-      const { subject, html, text } = make(row.payload || {});
+      // Rebuild through the consent footer: a retry must carry the same
+      // unsubscribe link as the first attempt, not a bare template.
+      const { subject, html, text } = withConsentFooter(
+        make(row.payload || {}), row.email_type, row.recipient
+      );
       const { data, error: sendErr } = await resend.emails.send({
         from: emailFrom(), to: row.recipient, subject, html, text,
+        headers: consentHeaders(row.email_type, row.recipient),
       });
       if (sendErr) throw new Error(sendErr.message || 'send failed');
 

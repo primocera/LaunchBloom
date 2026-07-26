@@ -58,6 +58,19 @@ router.get('/api/email/unsubscribe', async (req, res) => {
     <p><a href="${BRAND.siteUrl}/api/email/resubscribe?token=${encodeURIComponent(req.query.token)}">Changed your mind? Re-subscribe</a></p>`));
 });
 
+// POST /api/email/unsubscribe?token=… — RFC 8058 one-click.
+//
+// This is what Gmail's and Apple Mail's native "Unsubscribe" button calls, and
+// it calls it with no user interaction and expects a 2xx. A GET-only route
+// makes that button fail, which leaves the buried footer link as the only way
+// out — the reason unsubscribing appeared not to work at all.
+router.post('/api/email/unsubscribe', async (req, res) => {
+  const email = verifyUnsubscribeToken(req.query.token);
+  if (!email) return res.status(400).json({ error: 'invalid_token' });
+  const ok = await suppress(email, { reason: 'unsubscribed_one_click', sourceTemplate: null });
+  return res.status(ok ? 200 : 500).json(ok ? { unsubscribed: true } : { error: 'failed' });
+});
+
 // GET /api/email/resubscribe?token=… — the same signed token, reversed.
 router.get('/api/email/resubscribe', async (req, res) => {
   const email = verifyUnsubscribeToken(req.query.token);
