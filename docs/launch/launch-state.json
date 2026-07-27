@@ -1,0 +1,278 @@
+{
+  "schema_version": "launch-state-1",
+  "product": "Scalvya",
+  "repository": "primocera/LaunchBloom",
+  "generated_at_utc": "2026-07-27T00:00:00Z",
+  "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
+  "candidate": {
+    "branch": "v11",
+    "sha": null,
+    "state": "unpinned",
+    "environment_class": "local",
+    "baseline_sha": "445d29e488d198ceaacceac59950697c00b9765c",
+    "head_at_generation": "77009bc749582195211c7453e4177ff0f355db79",
+    "bundle": {
+      "build_hash": null,
+      "files": [
+        "index-BzOQebEE.css",
+        "index-D0q_lEuW.js"
+      ],
+      "note": "Bundle at generation time. Pinned with a build hash only when SC-V11-08 freezes the candidate."
+    },
+    "explanation": "No v11 release candidate exists yet. SC-V11-08 pins the SHA, re-runs every gate at it and only then may a verdict be anything but NO-GO."
+  },
+  "drift_from_baseline": [
+    {
+      "sha": "0ba7362",
+      "subject": "fix(billing): isolate Scalvya webhooks on the shared Stripe account",
+      "closes_requirement": "Part 1 of handoff-scalvya.md — Scalvya was processing Mellowa's Stripe events. Verify at candidate freeze; do not re-implement."
+    },
+    {
+      "sha": "77009bc",
+      "subject": "fix(app): give phones a navigation drawer and a reachable Sign out",
+      "closes_requirement": "Partially pre-closes mobile navigation findings in SC-V11-04. Verify before changing app shell navigation."
+    }
+  ],
+  "migrations": {
+    "range": "001-037",
+    "on_disk_count": 38,
+    "on_disk_note": "37 numbered migrations plus CHECK_APPLIED.sql (a verification query, not a migration).",
+    "applied_verification": {
+      "status": "unknown",
+      "source": "backend/migrations/CHECK_APPLIED.sql",
+      "last_run_utc": null,
+      "verified_by": null,
+      "contradiction": "docs/GO_NO_GO_V10.md states 034/035/036 were verified applied on 2026-07-26. docs/CONFIGURED_STATE.md states, for the same date, that 034/035/036 are NOT applied. Both cannot be true and neither can be settled from the repository, so applied-state is UNKNOWN until the owner re-runs CHECK_APPLIED.sql and records the result here.",
+      "owner_action": "Run backend/migrations/CHECK_APPLIED.sql in the production Supabase SQL editor. Record the run timestamp and any rows with applied = false. Note that 037_beta_feedback.sql is new in v11 and is NOT covered by CHECK_APPLIED.sql yet — verify it separately."
+    }
+  },
+  "checks": [
+    {
+      "id": "lint",
+      "name": "ESLint",
+      "command": "npm run lint",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "Must be re-run at the frozen candidate SHA."
+    },
+    {
+      "id": "unit",
+      "name": "Unit / contract / safety tests",
+      "command": "npm test",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "node --test over backend/tests."
+    },
+    {
+      "id": "build",
+      "name": "Production build",
+      "command": "npm run build:app",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": null
+    },
+    {
+      "id": "bundle_fresh",
+      "name": "Stale-bundle detection",
+      "command": "npm run check:app-fresh",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "app/ is committed and served statically, so a stale bundle ships old UI with new code."
+    },
+    {
+      "id": "e2e_public",
+      "name": "Public browser journeys",
+      "command": "npx playwright test",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "Runs locally and on the weekly e2e workflow; not a required PR check by design."
+    },
+    {
+      "id": "e2e_authenticated",
+      "name": "Authenticated seeded browser matrix",
+      "command": "npm run test:e2e:auth",
+      "required": true,
+      "status": "skipped",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "Built by SC-V11-03 (desktop, phone and keyboard projects over seeded isolated data). NOT RUN here: it needs a non-production Supabase project and an E2E_SEED_SECRET, which this environment does not have. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md."
+    },
+    {
+      "id": "export_rendering",
+      "name": "DOCX / PDF / ZIP structural validation and bounds",
+      "command": "node --test backend/tests/handoff-export-integrity.test.js",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "SC-V11-05 built it: archives verified against their own CRCs, PDF page graph and drawn text checked, path traversal and hostile filenames covered, limits measured (docs/EXPORT_LIMITS_V11.md). Still NOT proven: the files have never been opened in Word or Acrobat — no renderer exists in this environment. Re-run and record at the candidate SHA."
+    },
+    {
+      "id": "release_config",
+      "name": "Production configuration gate",
+      "command": "npm run release:check",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "Presence-only. Green here means CONFIGURED, never live-verified."
+    },
+    {
+      "id": "launch_integrity",
+      "name": "Launch-state document integrity",
+      "command": "npm run launch:verify",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "Runs in CI on every push and pull request."
+    },
+    {
+      "id": "hero_contrast",
+      "name": "Hero contrast and responsive layout",
+      "command": "npm test -- landing-contrast",
+      "required": true,
+      "status": "not_run",
+      "observed_at_sha": null,
+      "evidence": null,
+      "note": "SC-V11-02."
+    }
+  ],
+  "owner_evidence": [
+    {
+      "id": "migrations_applied",
+      "title": "All migrations verified applied against the production database",
+      "status": "unknown",
+      "required_for": [
+        "capped_beta",
+        "public_paid"
+      ],
+      "runbook": "backend/migrations/CHECK_APPLIED.sql",
+      "evidence_ref": null,
+      "note": "Blocked on the 034/035/036 contradiction recorded under migrations.applied_verification."
+    },
+    {
+      "id": "live_money_rehearsal",
+      "title": "Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence",
+      "status": "not_run",
+      "required_for": [
+        "public_paid"
+      ],
+      "runbook": "docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal",
+      "evidence_ref": null,
+      "note": "Owner-only. Claude Code must never perform a live charge or refund."
+    },
+    {
+      "id": "resend_suppression",
+      "title": "Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036)",
+      "status": "not_run",
+      "required_for": [
+        "public_paid"
+      ],
+      "runbook": "docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036",
+      "evidence_ref": null,
+      "note": "Owner-only, against live Resend. Depends on 036 actually being applied."
+    },
+    {
+      "id": "ai_spend_ceiling",
+      "title": "AI_SPEND_DAILY_CEILING_USD set in production",
+      "status": "not_run",
+      "required_for": [
+        "capped_beta",
+        "public_paid"
+      ],
+      "runbook": "docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling",
+      "evidence_ref": null,
+      "note": "Now enforced: npm run release:check fails a production release when AI_SPEND_DAILY_CEILING_USD is absent, zero, negative, non-numeric or absurd (backend/tests/spend-ceiling-gate.test.js). Still unset in production."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "P0-migration-truth",
+      "severity": "P0",
+      "status": "open",
+      "title": "Migration applied-state is contradicted between two release documents",
+      "owner": "owner",
+      "closure": "Re-run CHECK_APPLIED.sql against production and record the result in migrations.applied_verification."
+    },
+    {
+      "id": "P0-no-authenticated-e2e",
+      "severity": "P0",
+      "status": "open",
+      "title": "The signed-in journey has never been executed in a browser at any commit",
+      "owner": "owner",
+      "closure": "The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA."
+    },
+    {
+      "id": "P1-live-money-unrehearsed",
+      "severity": "P1",
+      "status": "open",
+      "title": "Live billing recovery has never been rehearsed against real Stripe",
+      "owner": "owner",
+      "closure": "Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence."
+    },
+    {
+      "id": "P1-no-spend-ceiling",
+      "severity": "P1",
+      "status": "open",
+      "title": "No daily AI spend ceiling is configured in production",
+      "owner": "owner",
+      "closure": "Set AI_SPEND_DAILY_CEILING_USD in the production environment. SC-V11-06 made its absence a hard production release blocker; the value itself is still owner-only."
+    }
+  ],
+  "verdicts": {
+    "capped_beta": {
+      "verdict": "NO-GO",
+      "decided_at_utc": "2026-07-27T00:00:00Z",
+      "note": "Recomputed from this file by `npm run launch:gate`. A declared verdict that disagrees with the computed one is an integrity failure."
+    },
+    "public_paid": {
+      "verdict": "NO-GO",
+      "decided_at_utc": "2026-07-27T00:00:00Z",
+      "note": "Requires every capped-beta condition plus live money, email suppression and spend-ceiling evidence."
+    }
+  },
+  "rollback": {
+    "reference": "docs/RUNBOOK_INCIDENTS.md",
+    "code": "v11 commits are independent and additive; revert the offending commit and rebuild app/.",
+    "data": "No destructive migration is introduced by v11. Additive migrations are safe to leave applied when application code is rolled back.",
+    "flags": "BETA_INVITE_CAP unset reopens signup; it fails open by design."
+  },
+  "superseded_documents": [
+    {
+      "path": "docs/GO_NO_GO_V9.md",
+      "reason": "Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current."
+    },
+    {
+      "path": "docs/GO_NO_GO_V10.md",
+      "reason": "Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any v11 commit."
+    },
+    {
+      "path": "docs/BETA_GO_NO_GO.md",
+      "reason": "Historical v5 beta audit pinned to 0ce5cd5."
+    },
+    {
+      "path": "docs/CONFIGURED_STATE.md",
+      "reason": "Production configuration snapshot from 2026-07-26. Still useful as a record of what the owner already set up, but it is not current release truth and its migration table conflicts with docs/GO_NO_GO_V10.md."
+    }
+  ],
+  "how_to_create_a_new_candidate": [
+    "1. Land all intended work on the release branch. No feature work after this point.",
+    "2. Set candidate.sha to the exact frozen commit and candidate.state to \"frozen\".",
+    "3. Re-run every required check at that SHA and record status, observed_at_sha and an evidence reference for each.",
+    "4. Attach owner evidence references for the live items.",
+    "5. Run `npm run launch:gate`. It recomputes both verdicts; it cannot be argued with.",
+    "6. Run `npm run launch:render` to regenerate docs/LAUNCH_STATE.md.",
+    "Any commit after step 2 creates a NEW candidate: the SHA no longer matches HEAD, every check pinned to the old SHA stops counting, and the verdict returns to NO-GO."
+  ]
+}

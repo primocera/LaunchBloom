@@ -27,6 +27,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # v11 SC-00: the release documents must agree with the canonical launch
+      # state on every commit — not only when someone remembers to look. This
+      # checks the document is trustworthy (vocabulary, evidence pinned to the
+      # candidate, declared verdict recomputed), NOT that we may ship; the
+      # GO/NO-GO verdict lives behind `npm run launch:gate` and is expected to
+      # be red until the evidence exists.
+      - name: Launch-state integrity
+        run: npm run launch:verify
+
       - name: Unit & integration tests (no secrets required)
         run: npm test
 

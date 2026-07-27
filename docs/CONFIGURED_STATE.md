@@ -1,5 +1,13 @@
 # Configured state — what is ALREADY set up in production
 
+> **SUPERSEDED as release truth — still authoritative as a setup record.** Use
+> this file to avoid asking the owner to configure something they configured
+> versions ago. Do **not** use it as current release state: that lives in
+> `docs/LAUNCH_STATE.md`, generated from `docs/launch/launch-state.json`. The
+> migration table below contradicts `docs/GO_NO_GO_V10.md` for the same date
+> (2026-07-26), so migration applied-state is recorded as **unknown** in the
+> canonical record until `CHECK_APPLIED.sql` is re-run against production.
+
 **Read this before writing any owner checklist.** Every slice that needs
 external configuration must check here first and ask only for what is genuinely
 missing. Re-asking the owner to configure something they set up versions ago is

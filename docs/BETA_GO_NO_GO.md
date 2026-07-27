@@ -1,5 +1,10 @@
 # LaunchBloom — Paid-Beta Go/No-Go Audit (v5 Prompt 20)
 
+> **SUPERSEDED — historical record, not current truth.** This audit belongs to
+> commit `0ce5cd5` on branch `v5`, under the product's former name. Current
+> launch truth lives in `docs/LAUNCH_STATE.md`, generated from
+> `docs/launch/launch-state.json`.
+
 **Branch:** `v5` · **Audited at commit:** the `v5-P20` commit that adds this file
 (HEAD after `v5-P19` = `0ce5cd5`).
 **Environment:** local Windows dev + credential-blanked Playwright runner (no live
