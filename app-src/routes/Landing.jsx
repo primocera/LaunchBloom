@@ -8,6 +8,7 @@ import BloomMark from '../components/BloomMark';
 import Marquee from '../components/Marquee';
 import Meteors from '../components/Meteors';
 import Reveal from '../components/Reveal';
+import ProductPreview from '../components/ProductPreview';
 import '../landing.css';
 
 // ---------------------------------------------------------------------------
@@ -228,7 +229,11 @@ export default function Landing() {
             <a href="#pricing">Pricing</a>
             <Link to="/app/login">Sign in</Link>
           </nav>
-          <Link className="lp-header-cta" to="/app">
+          {/* v11 SC-01: acquisition CTAs go straight to signup. Pointing them at
+              /app sent every anonymous visitor through a login screen they had
+              no account for — a silent detour at the most valuable moment.
+              Returning users have the "Sign in" link beside this. */}
+          <Link className="lp-header-cta" to="/app/signup">
             Create my campaign
           </Link>
         </header>
@@ -245,7 +250,7 @@ export default function Landing() {
           </p>
 
           <div className="lp-hero-actions">
-            <Link className="lp-cta" to="/app">
+            <Link className="lp-cta" to="/app/signup">
               Create my campaign
             </Link>
             <a className="lp-cta-ghost" href="#example">
@@ -370,6 +375,14 @@ export default function Landing() {
               </p>
             </Reveal>
           </div>
+          {/* v11 SC-04: the same sequence rendered in the product's own status
+              vocabulary, from the synthetic fixture the authenticated E2E
+              matrix seeds. Code-native rather than a screenshot, so it cannot
+              go stale against a rebuild. */}
+          <Reveal>
+            <ProductPreview />
+          </Reveal>
+
           <Reveal>
             <p className="lp-trust-line">
               Every claim stays tied to facts you approve. Missing proof remains clearly marked for
@@ -472,7 +485,7 @@ export default function Landing() {
         <Reveal className="lp-final-inner">
           <h2>Turn one offer into a launch-ready campaign.</h2>
           <p>Set up your Brand Profile and Campaign Brief free. Start the 3-day trial when you’re ready to generate.</p>
-          <Link className="lp-cta" to="/app">
+          <Link className="lp-cta" to="/app/signup">
             Create my campaign
           </Link>
         </Reveal>
