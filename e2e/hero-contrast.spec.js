@@ -1,0 +1,178 @@
+// v11 SC-02 — hero readability in a real browser.
+//
+// The stylesheet test (backend/tests/landing-contrast.test.js) does the contrast
+// arithmetic. This file asserts the things arithmetic on a stylesheet cannot
+// see: which rule actually won the cascade, whether the scrim really paints,
+// and whether any of it overlaps, clips or overflows at real widths and zoom.
+// A cascade conflict is exactly how the hero eyebrow shipped at 1.10:1 before.
+
+const { test, expect } = require('@playwright/test');
+
+const WIDTHS = [320, 375, 768, 1024, 1440];
+
+// Every hero text style, with the surface it is supposed to be readable on.
+const HERO_TEXT = [
+  { name: 'eyebrow', selector: '.lp-hero-eyebrow' },
+  { name: 'headline', selector: '.lp-hero h1' },
+  { name: 'sub-headline', selector: '.lp-sub' },
+  { name: 'CTA note', selector: '.lp-cta-note' },
+  { name: 'proof label', selector: '.lp-proof-label' },
+  { name: 'proof detail', selector: '.lp-proof-detail' },
+];
+
+const rgbaParts = (value) => {
+  const m = value.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,/\s]+([\d.]+))?\s*\)/);
+  return m ? { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] } : null;
+};
+
+test.describe('hero text renders as the stylesheet intends', () => {
+  test('every hero text style resolves to opaque white after the cascade', async ({ page }) => {
+    await page.goto('/');
+    for (const { name, selector } of HERO_TEXT) {
+      const color = await page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+      const c = rgbaParts(color);
+      expect(c, `${name} has no resolvable colour`).not.toBeNull();
+      expect(c.a, `${name} is translucent (${color}) — alpha over a gradient is what broke AA before`).toBe(1);
+      expect([c.r, c.g, c.b], `${name} resolved to ${color}, not white — a later rule won the cascade`)
+        .toEqual([255, 255, 255]);
+    }
+  });
+
+  test('the localized scrim actually paints behind the hero', async ({ page }) => {
+    await page.goto('/');
+    const scrim = await page.locator('.lp-hero').evaluate((el) => {
+      const s = getComputedStyle(el, '::before');
+      return { image: s.backgroundImage, pointer: s.pointerEvents, z: s.zIndex };
+    });
+    expect(scrim.image).toContain('linear-gradient');
+    expect(scrim.image).not.toBe('none');
+    expect(scrim.pointer).toBe('none');
+    expect(Number(scrim.z)).toBeLessThan(0);
+  });
+
+  test('helper and proof surfaces are opaque enough to carry their own text', async ({ page }) => {
+    await page.goto('/');
+    for (const selector of ['.lp-cta-note', '.lp-proof-strip li']) {
+      const bg = await page.locator(selector).first().evaluate((el) => getComputedStyle(el).backgroundColor);
+      const c = rgbaParts(bg);
+      expect(c, `${selector} has no background`).not.toBeNull();
+      // Below ~0.7 the gradient behind starts to determine the ratio again.
+      expect(c.a, `${selector} background ${bg} is too transparent to be background-independent`)
+        .toBeGreaterThanOrEqual(0.7);
+      // A dark surface, not a white veil.
+      expect(c.r + c.g + c.b).toBeLessThan(255);
+    }
+  });
+
+  test('the brand blue is still the dominant hero colour', async ({ page }) => {
+    await page.goto('/');
+    // The scrim must not have turned the sky grey or black.
+    const sky = await page.locator('.lp-sky').evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(sky).toContain('linear-gradient');
+    const stops = [...sky.matchAll(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/g)].map((m) => [+m[1], +m[2], +m[3]]);
+    expect(stops.length).toBeGreaterThan(2);
+    // Every stop stays blue-dominant.
+    for (const [r, g, b] of stops.slice(0, -1)) {
+      expect(b, `sky stop rgb(${r},${g},${b}) is no longer blue-dominant`).toBeGreaterThanOrEqual(g);
+    }
+  });
+});
+
+test.describe('hero layout holds at every supported width', () => {
+  for (const width of WIDTHS) {
+    test(`no clipping, overlap or horizontal overflow at ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+
+      const overflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, 'the page scrolls horizontally').toBeLessThanOrEqual(1);
+
+      const hero = await page.locator('.lp-hero').boundingBox();
+      for (const { name, selector } of HERO_TEXT) {
+        const el = page.locator(selector).first();
+        await expect(el).toBeVisible();
+        const box = await el.boundingBox();
+        expect(box.width, `${name} collapsed to nothing`).toBeGreaterThan(0);
+        expect(box.height, `${name} collapsed to nothing`).toBeGreaterThan(0);
+        // Text must stay inside the hero rather than escaping its surface.
+        expect(box.x, `${name} starts left of the hero`).toBeGreaterThanOrEqual(hero.x - 1);
+        expect(box.x + box.width, `${name} runs past the hero's right edge`)
+          .toBeLessThanOrEqual(hero.x + hero.width + 1);
+        // Content is only really lost when the box also clips overflow —
+        // a tight line-height legitimately overflows a visible box.
+        const clipped = await el.evaluate((node) => {
+          const overflowY = getComputedStyle(node).overflowY;
+          if (overflowY === 'visible') return false;
+          return node.scrollHeight - node.clientHeight > 1;
+        });
+        expect(clipped, `${name} is clipped by its own box`).toBe(false);
+      }
+
+      // The CTA note and proof cards must not collide with their neighbours.
+      const note = await page.locator('.lp-cta-note').boundingBox();
+      const firstProof = await page.locator('.lp-proof-strip li').first().boundingBox();
+      expect(firstProof.y, 'the proof strip overlaps the CTA note')
+        .toBeGreaterThanOrEqual(note.y + note.height - 1);
+
+      await testInfo.attach(`hero-${width}px`, {
+        body: await page.locator('.lp-sky').screenshot(),
+        contentType: 'image/png',
+      });
+    });
+  }
+
+  test('hero text stays readable and inside the page at 200% text scaling', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    // Emulating zoom by halving the CSS viewport is equivalent to 200% zoom.
+    await page.setViewportSize({ width: 640, height: 450 });
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    for (const { name, selector } of HERO_TEXT) {
+      await expect(page.locator(selector).first(), `${name} disappeared at 200%`).toBeVisible();
+    }
+  });
+});
+
+test.describe('hero interaction states', () => {
+  test('both CTAs show a visible focus ring without moving anything', async ({ page }) => {
+    await page.goto('/');
+    for (const selector of ['.lp-hero-actions .lp-cta', '.lp-cta-ghost']) {
+      const el = page.locator(selector);
+      const before = await el.boundingBox();
+      await el.focus();
+      const style = await el.evaluate((node) => {
+        const s = getComputedStyle(node);
+        return { width: s.outlineWidth, style: s.outlineStyle };
+      });
+      expect(style.style, `${selector} has no focus outline`).not.toBe('none');
+      expect(parseFloat(style.width)).toBeGreaterThanOrEqual(2);
+      const after = await el.boundingBox();
+      // An outline must not reflow the button.
+      expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('reduced motion keeps every hero element present and still', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    for (const { name, selector } of HERO_TEXT) {
+      await expect(page.locator(selector).first(), `${name} is hidden under reduced motion`).toBeVisible();
+    }
+    const scrim = await page.locator('.lp-hero').evaluate((el) => getComputedStyle(el, '::before').backgroundImage);
+    expect(scrim, 'the scrim must not depend on motion').toContain('linear-gradient');
+  });
+
+  test('forced colors keeps all hero content and drops the scrim', async ({ page }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.goto('/');
+    for (const { name, selector } of HERO_TEXT) {
+      await expect(page.locator(selector).first(), `${name} vanished in forced-colors mode`).toBeVisible();
+    }
+    const display = await page.locator('.lp-hero').evaluate((el) => getComputedStyle(el, '::before').display);
+    expect(display).toBe('none');
+  });
+});

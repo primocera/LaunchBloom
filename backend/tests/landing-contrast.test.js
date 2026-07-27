@@ -159,6 +159,169 @@ test('the ghost CTA is legible: a dark scrim, never a white veil', () => {
   );
 });
 
+// ---------------------------------------------------------------------------
+// v11 SC-02 — the recorded ratios above describe the sky ALONE. Text does not
+// sit on the sky alone any more: a localized scrim covers the hero band, and
+// the two lowest text blocks carry their own surface. These tests measure the
+// pairs that actually render, which is what the earlier "known trade-off" note
+// could not do.
+// ---------------------------------------------------------------------------
+
+/** rgba(R, G, B, A) → { rgb, alpha }, resolving `rgba(var(--token), a)`. */
+function rgbaValue(value) {
+  const vars = {};
+  for (const m of CSS.matchAll(/(--[a-z0-9-]+)\s*:\s*([\d]+,\s*[\d]+,\s*[\d]+)\s*;/gi)) {
+    vars[m[1]] = m[2].split(',').map((n) => Number(n.trim()));
+  }
+  const viaVar = value.match(/rgba\(\s*var\(\s*(--[a-z0-9-]+)\s*\)\s*,\s*([\d.]+)\s*\)/i);
+  if (viaVar) return { rgb: vars[viaVar[1]], alpha: Number(viaVar[2]) };
+  const literal = value.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/i);
+  if (!literal) return null;
+  return { rgb: [Number(literal[1]), Number(literal[2]), Number(literal[3])], alpha: Number(literal[4]) };
+}
+
+/** Resolve a custom property declared on .lp to its raw value. */
+function token(name) {
+  const m = CSS.match(new RegExp(`${name}\\s*:\\s*([^;]+);`));
+  return m ? m[1].trim() : null;
+}
+
+/** The scrim stops inside .lp-hero::before, as [{ alpha, position }]. */
+function scrimStops() {
+  const rule = CSS.match(/\.lp-hero::before\s*\{[\s\S]*?\}/);
+  assert.ok(rule, '.lp-hero::before scrim not found — hero readability depends on it');
+  const gradient = rule[0].match(/linear-gradient\(([\s\S]*?)\);/);
+  assert.ok(gradient, 'the hero scrim must be a gradient: the sky bleaches downward, so a flat scrim over-darkens the top');
+  return [...gradient[1].matchAll(/rgba\(\s*var\(--hero-scrim\)\s*,\s*(?:([\d.]+)|var\(\s*(--[a-z0-9-]+)\s*\))\s*\)\s+(\d+)%/g)]
+    .map((m) => ({
+      alpha: m[1] !== undefined ? Number(m[1]) : Number(token(m[2])),
+      position: Number(m[3]),
+    }));
+}
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/** The scrim alpha at an arbitrary position, interpolated as the browser does. */
+function scrimAlphaAt(position, stops) {
+  if (position <= stops[0].position) return stops[0].alpha;
+  const last = stops[stops.length - 1];
+  if (position >= last.position) return last.alpha;
+  for (let i = 1; i < stops.length; i += 1) {
+    const [a, b] = [stops[i - 1], stops[i]];
+    if (position <= b.position) {
+      return lerp(a.alpha, b.alpha, (position - a.position) / (b.position - a.position));
+    }
+  }
+  return last.alpha;
+}
+
+/** The sky colour at an arbitrary position, interpolated between its stops. */
+function skyColourAt(position, stops) {
+  for (let i = 1; i < stops.length; i += 1) {
+    const [a, b] = [stops[i - 1], stops[i]];
+    if (position <= b.position) {
+      const t = (position - a.position) / (b.position - a.position);
+      const [ca, cb] = [hexToRgb(a.hex), hexToRgb(b.hex)];
+      return ca.map((c, j) => lerp(c, cb[j], t));
+    }
+  }
+  return hexToRgb(stops[stops.length - 1].hex);
+}
+
+test('the scrim is a deep blue, not black and not a white veil', () => {
+  const rgb = token('--hero-scrim').split(',').map((n) => Number(n.trim()));
+  const [r, g, b] = rgb;
+  assert.ok(b > r && b > g, `the scrim must stay in the brand blue family, found rgb(${rgb.join(',')})`);
+  assert.ok(b < 140, 'the scrim must be dark enough to raise contrast, not a light blue veil');
+  // Pure black would read as a grey wash over the brand colour.
+  assert.ok(r + g + b > 30, 'a pure-black scrim greys out the approved blue');
+});
+
+test('white hero text passes AA everywhere in the scrimmed band', () => {
+  const sky = skyStops();
+  const scrim = scrimStops();
+  assert.ok(scrim.length >= 3, 'the scrim needs enough stops to track the bleaching sky');
+
+  const white = [255, 255, 255];
+  const failures = [];
+  // Sampled across the whole band that carries scrimmed hero text. Below
+  // TEXT_BAND_END the only content is the proof strip, which has its own
+  // surface and is checked separately.
+  //
+  // The scrim's percentages are relative to .lp-hero and the sky's to .lp-sky,
+  // which also contains the header — so at any given sky position the real
+  // scrim is slightly STRONGER than modelled here. Treating them as the same
+  // axis keeps this check conservative rather than optimistic.
+  for (let pos = 0; pos <= TEXT_BAND_END; pos += 2) {
+    const background = composite(
+      rgbaValue(`rgba(var(--hero-scrim), ${scrimAlphaAt(pos, scrim)})`).rgb,
+      scrimAlphaAt(pos, scrim),
+      skyColourAt(pos, sky),
+    );
+    const ratio = contrast(white, background);
+    if (ratio < AA_NORMAL) failures.push(`${pos}%: ${ratio.toFixed(2)}:1`);
+  }
+  assert.deepEqual(failures, [], `hero text falls below ${AA_NORMAL}:1 at: ${failures.join(', ')}`);
+});
+
+test('the scrim leaves the top of the sky essentially untouched', () => {
+  // The headline already passes on the top stop. Darkening there would change
+  // the approved look for no accessibility gain.
+  const scrim = scrimStops();
+  assert.ok(scrimAlphaAt(0, scrim) <= 0.02, 'the scrim must start transparent at the top of the hero');
+});
+
+test('helper and proof surfaces carry their own contrast, whatever is behind them', () => {
+  const surface = rgbaValue(token('--hero-surface'));
+  assert.ok(surface, '--hero-surface must be an rgba value');
+  const white = [255, 255, 255];
+
+  // Pure white is the worst backdrop that can occur anywhere on this page —
+  // the sky's final stop, and the brightest point of the cloud layer. Passing
+  // there means these surfaces never depend on the gradient.
+  const worstCase = contrast(white, composite(surface.rgb, surface.alpha, [255, 255, 255]));
+  assert.ok(
+    worstCase >= AA_NORMAL,
+    `--hero-surface gives only ${worstCase.toFixed(2)}:1 over white; helper and proof text would depend on the gradient`,
+  );
+
+  // Both consumers must actually use the token rather than a local value.
+  for (const selector of ['.lp-cta-note', '.lp-proof-strip li']) {
+    const bg = declaration(selector, 'background');
+    assert.equal(bg, 'var(--hero-surface)', `${selector} must use the shared hero surface token, found ${bg}`);
+  }
+});
+
+test('proof and helper text on that surface is opaque white', () => {
+  for (const selector of ['.lp-cta-note', '.lp-proof-n', '.lp-proof-label', '.lp-proof-detail']) {
+    const color = declaration(selector, 'color');
+    assert.match(color, /^#fff(f{3})?$/i, `${selector} should be opaque white, found ${color}`);
+  }
+});
+
+test('hero CTAs have distinct, non-reflowing focus and hover states', () => {
+  for (const selector of ['.lp-cta:focus-visible', '.lp-cta-ghost:focus-visible', '.lp-header-cta:focus-visible']) {
+    const outline = declaration(selector, 'outline');
+    assert.ok(outline, `${selector} has no focus outline`);
+    // An outline does not participate in layout; a border or padding change would.
+    assert.match(outline, /solid/, `${selector} focus must be a visible solid outline`);
+  }
+  assert.ok(declaration('.lp-cta:hover', 'background'), 'the solid CTA needs a hover state that is not only a transform');
+  const ghostHover = rgbaValue(declaration('.lp-cta-ghost:hover', 'background'));
+  const ghostBase = rgbaValue(declaration('.lp-cta-ghost', 'background'));
+  assert.ok(ghostHover.alpha > ghostBase.alpha, 'ghost CTA hover must darken, never lighten — a white veil cuts contrast');
+});
+
+test('the hero scrim is decorative and never blocks interaction', () => {
+  const rule = CSS.match(/\.lp-hero::before\s*\{[\s\S]*?\}/)[0];
+  assert.match(rule, /pointer-events:\s*none/);
+  // A pseudo-element is not in the accessibility tree, and it must stay behind
+  // the content rather than over it.
+  assert.match(rule, /z-index:\s*-1/);
+  assert.match(CSS, /@media\s*\(forced-colors:\s*active\)[\s\S]*?\.lp-hero::before[\s\S]*?display:\s*none/,
+    'forced-colors mode must drop the scrim so the system palette wins');
+});
+
 test('reveal animations degrade to visible content without motion', () => {
   // Content that only appears via an animation is invisible to anyone with
   // reduced motion — and to anyone whose JS never runs.
