@@ -76,7 +76,45 @@ function collect() {
     emailOk ? 'Resend key + sender configured' : 'RESEND_API_KEY / BRAND_SENDER_EMAIL incomplete',
     mode === 'production' ? 'blocker' : 'external');
 
+  // 7. v11 SC-06: a daily AI spend ceiling. Without one, a runaway loop or an
+  //    abusive account spends real money with nothing to stop it — and the
+  //    readiness endpoint has been reporting `ai_spend_ceiling_usd: not set`
+  //    since v10. Presence is not enough: an unparseable or non-positive value
+  //    disables the cap just as completely as an absent one, so the format is
+  //    validated and anything invalid fails CLOSED.
+  const ceiling = spendCeiling();
+  add('ai:spend_ceiling', ceiling.ok, ceiling.detail,
+    mode === 'production' ? 'blocker' : 'external');
+
   return { mode, checks };
+}
+
+// Bounded positive dollars per day. The upper bound is deliberate: a ceiling
+// of 1e9 is a typo, not a policy, and would read as configured while capping
+// nothing.
+const MAX_SENSIBLE_CEILING_USD = 10000;
+
+function spendCeiling() {
+  const raw = process.env.AI_SPEND_DAILY_CEILING_USD;
+  if (!raw || !String(raw).trim()) {
+    return { ok: false, detail: 'AI_SPEND_DAILY_CEILING_USD not set — no daily cap on AI spend' };
+  }
+  const value = Number(String(raw).trim());
+  if (!Number.isFinite(value)) {
+    return { ok: false, detail: 'AI_SPEND_DAILY_CEILING_USD is not a number' };
+  }
+  if (value <= 0) {
+    return { ok: false, detail: 'AI_SPEND_DAILY_CEILING_USD must be greater than 0' };
+  }
+  if (value > MAX_SENSIBLE_CEILING_USD) {
+    return {
+      ok: false,
+      detail: `AI_SPEND_DAILY_CEILING_USD exceeds ${MAX_SENSIBLE_CEILING_USD} — that caps nothing in practice`,
+    };
+  }
+  // The value itself is operational configuration, not a secret, and the
+  // owner needs to see what was read to trust the gate.
+  return { ok: true, detail: `daily ceiling set to $${value}` };
 }
 
 // v9 SC-00: a machine-readable release evidence record. Pins the commit SHA,
@@ -148,4 +186,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { collect, releaseEvidence, REQUIRED_MIGRATIONS };
+module.exports = { collect, releaseEvidence, REQUIRED_MIGRATIONS, spendCeiling, MAX_SENSIBLE_CEILING_USD };
