@@ -17,10 +17,12 @@ export async function resumePendingCheckout() {
   const pendingPlan = localStorage.getItem('of-pending-plan');
   if (!pendingPlan) return false;
   const pendingInterval = localStorage.getItem('of-pending-interval') || 'monthly';
-  localStorage.removeItem('of-pending-plan');
-  localStorage.removeItem('of-pending-interval');
   const data = await api.checkout(pendingPlan, pendingInterval);
   if (!data.url) throw new Error('Could not start checkout.');
+  // Clear only once checkout actually started — a failed attempt keeps the
+  // selection so the paywall/retry doesn't silently lose the chosen plan.
+  localStorage.removeItem('of-pending-plan');
+  localStorage.removeItem('of-pending-interval');
   window.location.href = data.url;
   return true; // the browser is navigating to Stripe
 }

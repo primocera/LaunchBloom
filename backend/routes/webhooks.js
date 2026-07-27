@@ -39,6 +39,44 @@ function priceInfo(subscription) {
   }
 }
 
+// ── foreign-event filtering (see handoff-scalvya.md Part 1) ─────────────────
+// One Stripe account serves Mellowa, Frost and Scalvya, and Stripe broadcasts
+// every matching event type to every endpoint on the account — so this handler
+// receives other products' subscription events. Those must be ACKNOWLEDGED and
+// DROPPED, never processed (they clobber customer rows and send our lifecycle
+// mail for other products' trials) and never thrown on (permanently failing
+// deliveries get the endpoint disabled by Stripe).
+
+/** A subscription is ours iff our checkout stamped app_user_id metadata or its
+ *  price is one of our configured STRIPE_PRICE_* prices.
+ *
+ *  Presence, not truthiness: payments.js writes `app_user_id: userId || ''`, so
+ *  a session without a user id stamps an empty string. That is still OUR stamp
+ *  — a truthiness check would discard those subscriptions as foreign and leave
+ *  a paying customer with no entitlement. */
+function isOurSubscription(subscription) {
+  const meta = subscription?.metadata;
+  if (meta && Object.prototype.hasOwnProperty.call(meta, 'app_user_id')) return true;
+  const priceId = subscription?.items?.data?.[0]?.price?.id;
+  const { pricePlans } = require('./customers');
+  return !!(priceId && pricePlans()[priceId]);
+}
+
+/** An invoice is ours iff we already mirror its subscription, or its line
+ *  price is one of ours (covers the event-before-row race). */
+async function isOurInvoice(invoice) {
+  if (!invoice.subscription) return false;
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('stripe_subscription_id')
+    .eq('stripe_subscription_id', invoice.subscription)
+    .single();
+  if (data) return true;
+  const priceId = invoice.lines?.data?.[0]?.price?.id;
+  const { pricePlans } = require('./customers');
+  return !!(priceId && pricePlans()[priceId]);
+}
+
 /** Customer email for a Stripe customer id (null when unknown). */
 async function emailForStripeCustomer(stripeCustomerId) {
   if (!stripeCustomerId) return null;
@@ -161,22 +199,49 @@ async function handleEvent(event) {
 
   switch (event.type) {
     case 'checkout.session.completed':
+      // Only sessions our checkout created (payments.js stamps this metadata).
+      // A foreign product's checkout for the same email would otherwise
+      // overwrite our customers.stripe_customer_id with a foreign customer id.
+      if (!data.metadata?.scalvya && !data.metadata?.app_user_id) {
+        console.log(`Ignoring foreign checkout.session.completed ${data.id}`);
+        return;
+      }
       await onCheckoutSessionCompleted(data);
       break;
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
+      if (!isOurSubscription(data)) {
+        console.log(`Ignoring foreign subscription event for ${data.id}`);
+        return;
+      }
       await onSubscriptionUpdated(data, eventAt, event.type, event.data.previous_attributes || {});
       break;
     case 'customer.subscription.deleted':
+      if (!isOurSubscription(data)) {
+        console.log(`Ignoring foreign subscription delete for ${data.id}`);
+        return;
+      }
       await onSubscriptionDeleted(data, eventAt);
       break;
     case 'customer.subscription.trial_will_end':
+      if (!isOurSubscription(data)) {
+        console.log(`Ignoring foreign trial_will_end for ${data.id}`);
+        return;
+      }
       await onTrialWillEnd(data);
       break;
     case 'invoice.paid':
+      if (!(await isOurInvoice(data))) {
+        console.log(`Ignoring foreign invoice.paid ${data.id}`);
+        return;
+      }
       await onInvoicePaid(data, eventAt);
       break;
     case 'invoice.payment_failed':
+      if (!(await isOurInvoice(data))) {
+        console.log(`Ignoring foreign invoice.payment_failed ${data.id}`);
+        return;
+      }
       await onInvoicePaymentFailed(data, eventAt);
       break;
     case 'customer.created':

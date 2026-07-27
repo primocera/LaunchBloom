@@ -144,7 +144,9 @@ const subUpdated = (id, subId, created, status) => ({
     object: {
       id: subId, customer: 'cus_1', status,
       items: { data: [{ price: { id: 'price_x' } }] },
-      cancel_at_period_end: false, metadata: {},
+      // app_user_id is our webhook-isolation stamp (see webhook-isolation
+      // .test.js). Every subscription our checkout creates carries it.
+      cancel_at_period_end: false, metadata: { app_user_id: 'u_1' },
     },
   },
 });

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api, getActiveWorkspace, setActiveWorkspace } from '../lib/api';
 import { BRAND } from '../brand';
+import TrialPaywall from '../components/TrialPaywall';
 
 // Prompts 8 + 14: account page — profile, billing (plan, trial countdown, next
 // charge, billing portal), usage, data export and account deletion.
@@ -30,6 +31,9 @@ export default function Account() {
   const [workspaces, setWorkspaces] = useState([]);
   const [renaming, setRenaming] = useState(null); // { id, name } while editing
   const [receipt, setReceipt] = useState(null); // Prompt 27: deletion receipt
+  // Plan selection happens here, in the app — sending a signed-in user to the
+  // marketing page's #pricing anchor dropped them on the landing page instead.
+  const [paywall, setPaywall] = useState(false);
 
   function loadWorkspaces() {
     api.workspaces().then(({ workspaces: list }) => setWorkspaces(list)).catch(() => {});
@@ -151,7 +155,7 @@ export default function Account() {
         {billing && !sub && billing.plan === 'free' && (
           <>
             <p className="muted">You're on the free plan.</p>
-            <a className="btn-primary inline" href="/#pricing">Start a plan</a>
+            <button className="btn-primary inline" onClick={() => setPaywall(true)}>Start a plan</button>
           </>
         )}
 
@@ -178,10 +182,14 @@ export default function Account() {
         )}
 
         {billing?.has_billing && (
-          <button className="btn-secondary" onClick={openPortal}>Manage billing</button>
-        )}
-        {sub && (
-          <a className="btn-secondary inline" href="/#pricing" style={{ marginLeft: 8 }}>Change plan</a>
+          // One button: the Stripe portal is where plan changes, card updates,
+          // invoices and cancellation all live. The old separate "Change plan"
+          // link pointed at the marketing page's #pricing, which for an
+          // existing subscriber only starts a checkout the server rejects with
+          // ALREADY_SUBSCRIBED.
+          <button className="btn-secondary" onClick={openPortal}>
+            {sub ? 'Manage billing or change plan' : 'Manage billing'}
+          </button>
         )}
       </section>
 
@@ -274,6 +282,8 @@ export default function Account() {
         <Link to="/legal/refund">Refunds</Link> &middot;{' '}
         <a href={`mailto:${BRAND.supportEmail}`}>Contact support</a>
       </p>
+
+      <TrialPaywall open={paywall} onClose={() => setPaywall(false)} />
     </div>
   );
 }

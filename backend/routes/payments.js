@@ -46,7 +46,18 @@ async function ensureStripeCustomer(email, userId) {
     .eq('email', email)
     .single();
 
-  if (existing && existing.stripe_customer_id) return existing.stripe_customer_id;
+  if (existing && existing.stripe_customer_id) {
+    // Shared-Stripe fallout: the stored id can point at a customer that only
+    // exists in test mode or on another account ("No such customer" in live).
+    // Verify it against the current key; recreate on resource_missing.
+    try {
+      const c = await stripe.customers.retrieve(existing.stripe_customer_id);
+      if (!c.deleted) return existing.stripe_customer_id;
+    } catch (err) {
+      if (err.code !== 'resource_missing') throw err;
+      console.warn(`[ensureStripeCustomer] stale stripe_customer_id ${existing.stripe_customer_id} for ${email} — recreating`);
+    }
+  }
 
   const stripeCustomer = await stripe.customers.create({
     email,
@@ -199,6 +210,9 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       line_items: [{ price: priceId, quantity: 1 }],
       customer: customerId,
       client_reference_id: userId || undefined,
+      // Webhook discriminator on the shared Stripe account: the handler drops
+      // checkout.session.completed events without this stamp as foreign.
+      metadata: { scalvya: '1', app_user_id: userId || '' },
       subscription_data: {
         metadata: { app_user_id: userId || '' },
         ...(giveTrial ? { trial_period_days: 3 } : {}),

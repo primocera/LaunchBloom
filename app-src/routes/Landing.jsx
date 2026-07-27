@@ -196,10 +196,12 @@ export default function Landing() {
     if (account) {
       try {
         if (await resumePendingCheckout()) return;
+        navigate('/app');
       } catch {
-        /* fall through to the app; they can retry from there */
+        // Don't silently swallow a failed checkout — land in the app with a
+        // visible notice instead of pretending the trial started.
+        navigate('/app?checkout=error');
       }
-      navigate('/app');
       return;
     }
     navigate('/app/signup');

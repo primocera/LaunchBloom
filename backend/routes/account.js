@@ -110,10 +110,24 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
     if (!customer || !customer.stripe_customer_id) {
       return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
     }
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customer.stripe_customer_id,
-      return_url: `${appUrl()}/app/account`,
-    });
+    let session;
+    try {
+      session = await stripe.billingPortal.sessions.create({
+        customer: customer.stripe_customer_id,
+        return_url: `${appUrl()}/app/account`,
+      });
+    } catch (err) {
+      if (err.code === 'resource_missing') {
+        // Stale id from a test-mode/foreign checkout on the shared Stripe
+        // account. Clear it so the next checkout mints a fresh live customer.
+        await supabase
+          .from('customers')
+          .update({ stripe_customer_id: null })
+          .eq('email', req.userEmail);
+        return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
+      }
+      throw err;
+    }
     res.json({ url: session.url });
   } catch (err) {
     next(err);

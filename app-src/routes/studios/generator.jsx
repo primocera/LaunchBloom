@@ -538,7 +538,8 @@ export default function GeneratorStudio({
           {upgrade && (
             <p className="flow-err">
               You've hit your plan limit for generations.{' '}
-              <Link to="/#pricing">Upgrade your plan</Link> to keep going.
+              <button className="account-link" onClick={() => setPaywall(true)}>Upgrade your plan</button>{' '}
+              to keep going.
             </p>
           )}
           {warnings.length > 0 ? (

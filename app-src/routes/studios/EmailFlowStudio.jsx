@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { download } from '../../lib/export';
@@ -201,7 +200,8 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
       {error && <p className="flow-err">{error}</p>}
       {upgrade && (
         <p className="flow-err">
-          You've hit your plan limit for generations. <Link to="/#pricing">Upgrade your plan</Link> to keep going.
+          You've hit your plan limit for generations.{' '}
+          <button className="account-link" onClick={() => setPaywall(true)}>Upgrade your plan</button> to keep going.
         </p>
       )}
       {warnings.length > 0 && (

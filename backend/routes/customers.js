@@ -187,10 +187,23 @@ router.get('/:id/portal', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Customer or Stripe account not found' });
     }
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customer.stripe_customer_id,
-      return_url: returnUrl,
-    });
+    let session;
+    try {
+      session = await stripe.billingPortal.sessions.create({
+        customer: customer.stripe_customer_id,
+        return_url: returnUrl,
+      });
+    } catch (err) {
+      if (err.code === 'resource_missing') {
+        // Stale id (test-mode/foreign customer on the shared Stripe account).
+        await supabase
+          .from('customers')
+          .update({ stripe_customer_id: null })
+          .eq('id', req.params.id);
+        return res.status(404).json({ error: 'Customer or Stripe account not found' });
+      }
+      throw err;
+    }
 
     res.json({ url: session.url });
   } catch (err) {

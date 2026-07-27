@@ -100,6 +100,15 @@ function ShellNotices() {
       </div>
     );
   }
+  if (checkout === 'error') {
+    return (
+      <div className="shell-notice is-warn" role="status">
+        We couldn't start checkout — nothing was charged. Try again from{' '}
+        <Link to="/app/account">Account &amp; billing</Link>.{' '}
+        <button className="account-link" onClick={dismiss}>Dismiss</button>
+      </div>
+    );
+  }
   if (checkout === 'cancelled') {
     return (
       <div className="shell-notice" role="status">
