@@ -132,6 +132,12 @@ export const api = {
   campaignReview: (id) => request(`/api/campaigns/${id}/review`),
   campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),
   campaignHandoff: (id) => request(`/api/campaigns/${id}/handoff`),
+
+  // v11 SC-07 — capped-beta feedback. Categories are analytics; the optional
+  // note is read by a person and never enters an event.
+  feedbackStatus: () => request('/api/feedback/status'),
+  feedbackQuestions: () => request('/api/feedback/questions'),
+  submitFeedback: (body) => request('/api/feedback', { method: 'POST', body }),
   campaignHandoffManifest: (id) => request(`/api/campaigns/${id}/handoff/manifest`),
   recordHandoff: (id, fingerprint, format) =>
     request(`/api/campaigns/${id}/handoff/record`, { method: 'POST', body: { fingerprint, format } }),

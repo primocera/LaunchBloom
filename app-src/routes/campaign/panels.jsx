@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { download } from '../../lib/export';
 import { CHANNEL_SUGGESTS, REQUIREMENT_OPTIONS, STUDIO_BY_TABLE } from './shared';
+import FeedbackMoment from '../../components/FeedbackMoment';
 
 // ---------------------------------------------------------------------------
 // v9 SC-01: the v8 campaign control panels, extracted verbatim from the old
@@ -362,6 +363,16 @@ export function HandoffExports({ campaign }) {
           Last exported {new Date(h.last_handoff_at).toLocaleString()}{h.last_handoff_format ? ` · ${h.last_handoff_format.toUpperCase()}` : ''}.
           {h.stale ? ' The campaign changed since — re-export for the current version.' : ' This matches the current campaign.'}
         </p>
+      )}
+
+      {/* v11 SC-07: asked once, after work has actually left the product —
+          the only point at which a beta user can say whether it was worth it.
+          Hides itself if already answered and never blocks the export. */}
+      {h.last_handoff_at && (
+        <FeedbackMoment
+          moment="handoff"
+          title="You just handed off a campaign. Two minutes on whether it was worth it?"
+        />
       )}
     </div>
   );
