@@ -2,24 +2,24 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-07-27T00:00:00Z",
+  "generated_at_utc": "2026-07-28T00:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "v11",
-    "sha": null,
-    "state": "unpinned",
+    "sha": "86d1f2cc82688c23f258b3667564201394599603",
+    "state": "frozen",
     "environment_class": "local",
     "baseline_sha": "445d29e488d198ceaacceac59950697c00b9765c",
     "head_at_generation": "77009bc749582195211c7453e4177ff0f355db79",
     "bundle": {
-      "build_hash": null,
+      "build_hash": "index-B3BfQ7jf",
       "files": [
-        "index-BzOQebEE.css",
-        "index-D0q_lEuW.js"
+        "index-B3BfQ7jf.js",
+        "index-BX-HQ_o_.css"
       ],
-      "note": "Bundle at generation time. Pinned with a build hash only when SC-V11-08 freezes the candidate."
+      "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "No v11 release candidate exists yet. SC-V11-08 pins the SHA, re-runs every gate at it and only then may a verdict be anything but NO-GO."
+    "explanation": "Frozen after SC-V11-00..07. The gate documents that follow this commit are themselves commits, so HEAD moves past the candidate the moment they land — `npm run launch:gate` will report the drift, which is the mechanism working, not a fault. Any code change creates a new candidate and every check pinned to this SHA stops counting."
   },
   "drift_from_baseline": [
     {
@@ -52,50 +52,50 @@
       "name": "ESLint",
       "command": "npm run lint",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "Must be re-run at the frozen candidate SHA."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "npm run lint — 0 errors, 59 pre-existing warnings",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "unit",
       "name": "Unit / contract / safety tests",
       "command": "npm test",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "node --test over backend/tests."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "npm test — 562 pass / 0 fail / 0 skipped",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "build",
       "name": "Production build",
       "command": "npm run build:app",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": null
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "npm run build:app — success",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "bundle_fresh",
       "name": "Stale-bundle detection",
       "command": "npm run check:app-fresh",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "app/ is committed and served statically, so a stale bundle ships old UI with new code."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "npm run check:app-fresh — app/ matches app-src/ at HEAD",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "e2e_public",
       "name": "Public browser journeys",
       "command": "npx playwright test",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "Runs locally and on the weekly e2e workflow; not a required PR check by design."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "npx playwright test — 54 pass / 0 fail (chromium + mobile projects)",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "e2e_authenticated",
@@ -112,40 +112,40 @@
       "name": "DOCX / PDF / ZIP structural validation and bounds",
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "SC-V11-05 built it: archives verified against their own CRCs, PDF page graph and drawn text checked, path traversal and hostile filenames covered, limits measured (docs/EXPORT_LIMITS_V11.md). Still NOT proven: the files have never been opened in Word or Acrobat — no renderer exists in this environment. Re-run and record at the candidate SHA."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "release_config",
       "name": "Production configuration gate",
       "command": "npm run release:check",
       "required": true,
-      "status": "not_run",
+      "status": "failed",
       "observed_at_sha": null,
       "evidence": null,
-      "note": "Presence-only. Green here means CONFIGURED, never live-verified."
+      "note": "Run at the candidate SHA in a shell with NO production secrets, so it reports blockers by design (fail-closed). This is NOT evidence about production configuration: the owner must run it against the production environment and record the result. v11 added ai:spend_ceiling as a production blocker."
     },
     {
       "id": "launch_integrity",
       "name": "Launch-state document integrity",
       "command": "npm run launch:verify",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "Runs in CI on every push and pull request."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "npm run launch:verify — OK",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     },
     {
       "id": "hero_contrast",
       "name": "Hero contrast and responsive layout",
       "command": "npm test -- landing-contrast",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "SC-V11-02."
+      "status": "passed_locally",
+      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "evidence": "node --test backend/tests/landing-contrast.test.js — 11 pass / 0 fail",
+      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
     }
   ],
   "owner_evidence": [
@@ -233,12 +233,12 @@
   "verdicts": {
     "capped_beta": {
       "verdict": "NO-GO",
-      "decided_at_utc": "2026-07-27T00:00:00Z",
+      "decided_at_utc": "2026-07-28T00:00:00Z",
       "note": "Recomputed from this file by `npm run launch:gate`. A declared verdict that disagrees with the computed one is an integrity failure."
     },
     "public_paid": {
       "verdict": "NO-GO",
-      "decided_at_utc": "2026-07-27T00:00:00Z",
+      "decided_at_utc": "2026-07-28T00:00:00Z",
       "note": "Requires every capped-beta condition plus live money, email suppression and spend-ceiling evidence."
     }
   },

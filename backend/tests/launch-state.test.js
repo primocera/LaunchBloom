@@ -184,12 +184,27 @@ test('the committed launch state is internally consistent', () => {
   assert.deepEqual(documentProblems(state), []);
 });
 
-test('the committed launch state is honestly NO-GO and pins no candidate yet', () => {
+test('the committed launch state is honestly NO-GO', () => {
   const state = loadState();
-  assert.equal(state.candidate.sha, null);
-  const v = computeVerdicts(state, { head_sha: 'whatever' });
+  // Both tracks must stay NO-GO while the authenticated matrix is skipped,
+  // migration applied-state is unknown and no owner evidence is attached.
+  const v = computeVerdicts(state, { head_sha: state.candidate.sha });
   assert.equal(v.capped_beta.verdict, 'NO-GO');
   assert.equal(v.public_paid.verdict, 'NO-GO');
+  assert.match(v.capped_beta.reasons.join(' '), /e2e_authenticated is skipped/);
+  assert.match(v.capped_beta.reasons.join(' '), /migrations applied-state is unknown/);
+});
+
+test('no required check claims to have passed in CI that CI does not run', () => {
+  const state = loadState();
+  const ciJob = fs.readFileSync(path.join(__dirname, '..', '..', '.github', 'workflows', 'ci.yml'), 'utf8');
+  for (const check of state.checks) {
+    if (check.status !== 'passed_ci') continue;
+    assert.ok(
+      ciJob.includes(check.command),
+      `${check.id} claims passed_ci but "${check.command}" does not appear in the CI workflow`,
+    );
+  }
 });
 
 test('every superseded release document carries a banner pointing at the canonical state', () => {
@@ -204,7 +219,10 @@ test('every superseded release document carries a banner pointing at the canonic
 
 test('the rendered launch status stays in sync with the canonical data', () => {
   const state = loadState();
-  const expected = render(state, { head_sha: state.candidate.head_at_generation });
+  // Rendered as if HEAD were the candidate, so the committed document is
+  // deterministic. Live drift is reported by `npm run launch:gate`, which
+  // reads the real HEAD.
+  const expected = render(state, { head_sha: state.candidate.sha || state.candidate.head_at_generation });
   const onDisk = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'LAUNCH_STATE.md'), 'utf8');
   assert.equal(onDisk, expected, 'docs/LAUNCH_STATE.md is stale — run `npm run launch:render`');
 });
