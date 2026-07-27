@@ -79,9 +79,18 @@ function AccountBlock() {
   );
 }
 
-export default function Sidebar({ onCollapse }) {
+// `mobileOpen` slides the drawer in below the mobile breakpoint; `onNavigate`
+// closes it after a tap, since the drawer overlays the page it navigated to.
+export default function Sidebar({ onCollapse, mobileOpen = false, onNavigate }) {
   return (
-    <aside className="sidebar">
+    <aside
+      className={mobileOpen ? 'sidebar is-mobile-open' : 'sidebar'}
+      id="app-sidebar"
+      onClick={(e) => {
+        // Any link or button inside the drawer ends the drawer's job.
+        if (onNavigate && e.target.closest('a, button')) onNavigate();
+      }}
+    >
       <div className="sidebar-head">
         <Link to="/" className="brand" style={{ textDecoration: 'none' }}>
           <div className="brand-mark"><BloomMark /></div>

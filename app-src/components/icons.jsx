@@ -54,6 +54,18 @@ export const ExpandIcon = () => (
   </svg>
 );
 
+export const MenuIcon = () => (
+  <svg {...base} width="20" height="20">
+    <path d="M3 6h18M3 12h18M3 18h18" />
+  </svg>
+);
+
+export const CloseIcon = () => (
+  <svg {...base} width="20" height="20">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
+
 export const AttachIcon = () => (
   <svg {...base} width={18} height={18} strokeWidth={1.6}>
     <path d="M21.4 11.05l-9.19 9.2a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />

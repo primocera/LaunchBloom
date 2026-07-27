@@ -16,6 +16,8 @@
     "test:e2e": "playwright test",
     "check:app-fresh": "node scripts/check-app-fresh.mjs",
     "check": "npm run lint && npm test && npm run build:app && npm run check:app-fresh",
+    "_comment_verify_prices": "Read-only. Verifies what each Stripe price COSTS, not merely that its id is set. Run with the LIVE key before launch.",
+    "verify-prices": "node backend/scripts/verify-stripe-prices.js",
     "release:check": "node backend/scripts/release-check.js",
     "release:evidence": "node backend/scripts/release-check.js --evidence",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js"

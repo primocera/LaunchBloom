@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import { ExpandIcon } from './components/icons';
+import { CloseIcon, ExpandIcon, MenuIcon } from './components/icons';
+import { BRAND } from './brand';
 import { useAuth } from './lib/auth';
 import { api } from './lib/api';
 import Dashboard from './routes/Dashboard';
@@ -131,6 +132,19 @@ function ShellNotices() {
 function AppShell() {
   const { account, loading } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  // Below 820px the sidebar is an off-canvas drawer. It holds the ONLY copies
+  // of the main nav, the workspace switcher and Sign out, so without this a
+  // phone had no navigation and no way to end a session at all.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Escape closes the drawer — a nav overlay must be dismissable from the
+  // keyboard, and on mobile browsers a stuck overlay traps the whole page.
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setMobileNavOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileNavOpen]);
 
   if (loading) return null;
   if (!account) return <Navigate to="/app/login" replace />;
@@ -138,9 +152,36 @@ function AppShell() {
   return (
     <div className={collapsed ? 'shell is-collapsed' : 'shell'}>
       <a className="skip-link" href="#main-content">Skip to main content</a>
-      {!collapsed && <Sidebar onCollapse={() => setCollapsed(true)} />}
+      {/* Kept mounted while the drawer is open even if desktop-collapsed, or
+          the menu button would have nothing to reveal. */}
+      {(!collapsed || mobileNavOpen) && (
+        <Sidebar
+          onCollapse={() => setCollapsed(true)}
+          mobileOpen={mobileNavOpen}
+          onNavigate={() => setMobileNavOpen(false)}
+        />
+      )}
+      {mobileNavOpen && (
+        <button
+          className="mobile-nav-backdrop"
+          aria-label="Close menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
 
       <main className="main" id="main-content">
+        <div className="mobile-topbar">
+          <button
+            className="mobile-nav-toggle"
+            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileNavOpen}
+            aria-controls="app-sidebar"
+            onClick={() => setMobileNavOpen((v) => !v)}
+          >
+            {mobileNavOpen ? <CloseIcon /> : <MenuIcon />}
+          </button>
+          <span className="mobile-topbar-brand">{BRAND.name}</span>
+        </div>
         <ShellNotices />
         {collapsed && (
           <button
