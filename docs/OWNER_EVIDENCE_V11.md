@@ -26,6 +26,13 @@ plan and refund yourself at the end.
 **Candidate SHA under test:** `__________`  ·  **Environment:** production
 **Run started (UTC):** `__________`  ·  **Operator:** `__________`
 
+> **Already done, unrecorded (owner report, 2026-07-28):** a live trial was
+> started, granted access, and was cancelled. That covers rows 1 and 3 in
+> substance. It is not yet evidence, because the sheet needs the observed
+> Stripe state and an evidence ref per row — so when you do the full pass,
+> re-do rows 1 and 3 with the Stripe dashboard open rather than crossing them
+> off from memory.
+
 | # | Transition | Expected app state | Expected Stripe state | Expected email | Observed | Evidence ref |
 |---|---|---|---|---|---|---|
 | 1 | Checkout → trial starts | plan `trial`, charge date shown | `trialing`, trial_end set | trial-started | `______` | `______` |
@@ -57,7 +64,20 @@ Prove that an unsubscribe suppresses **optional** mail while **billing and
 security** mail still arrives. Both halves are required: suppressing everything
 is a compliance failure in the other direction.
 
+> **Already known (owner report, 2026-07-28):** Resend mail is arriving, so
+> delivery — keys, domain, from-address, outbox worker — works. That is the
+> precondition for this section, not the section. Every row below is about
+> suppression, and none of them is answered by "mail arrives".
+
 **Precondition — `036_email_suppressions.sql` is applied:** `__________`
+
+> Indirect evidence it already is: `sendLifecycleEmail` writes
+> `email_events.category`, a column added by `036`. If the column is missing
+> the insert fails and the function returns `duplicate` **without sending**, so
+> no lifecycle email could arrive at all. If the mail you received was a
+> lifecycle email — trial started, cancellation, welcome — rather than only the
+> signup verification mail, `036` is applied. Confirm it properly with
+> `CHECK_APPLIED.sql`; this is an inference, not a schema read.
 (if it is not applied, unsubscribe writes fail and marketing mail fails closed —
 safe, but not the intended behaviour, and this test would pass for the wrong
 reason)

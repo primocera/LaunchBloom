@@ -217,7 +217,13 @@ function main() {
       for (const p of problems) console.error(`  - ${p}`);
       process.exit(1);
     }
-    fs.writeFileSync(RENDER_PATH, render(state, observed), 'utf8');
+    // Rendered against the pinned candidate, not the live HEAD, so the
+    // committed document is deterministic — otherwise every commit that lands
+    // after the freeze (including the gate documents themselves) rewrites it
+    // and the sync test fails for a reason that is not about launch truth.
+    // Live drift is reported by `npm run launch:gate`, which reads real HEAD.
+    const pinned = { head_sha: state.candidate.sha || state.candidate.head_at_generation || observed.head_sha };
+    fs.writeFileSync(RENDER_PATH, render(state, pinned), 'utf8');
     console.log(`Wrote ${path.relative(ROOT, RENDER_PATH)}`);
     process.exit(0);
   }

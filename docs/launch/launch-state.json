@@ -43,6 +43,7 @@
       "last_run_utc": null,
       "verified_by": null,
       "contradiction": "docs/GO_NO_GO_V10.md states 034/035/036 were verified applied on 2026-07-26. docs/CONFIGURED_STATE.md states, for the same date, that 034/035/036 are NOT applied. Both cannot be true and neither can be settled from the repository, so applied-state is UNKNOWN until the owner re-runs CHECK_APPLIED.sql and records the result here.",
+      "owner_report_2026_07_28": "The owner reports a live Stripe trial started, granted access and was cancelled, and that Resend mail is arriving. If any lifecycle email arrived (trial_started, cancellation_scheduled, welcome), that is INDIRECT evidence that 036 IS applied: sendLifecycleEmail inserts email_events.category, a column added by 036, and a failed insert returns 'duplicate' without sending — so with 036 missing, no lifecycle mail could arrive at all. This narrows the contradiction toward GO_NO_GO_V10 and against CONFIGURED_STATE, but it is an inference from observed behaviour, not a schema read: 034 and 035 remain untested by it, 037 is new and unapplied, and applied_verification stays UNKNOWN until CHECK_APPLIED.sql is run.",
       "owner_action": "Run backend/migrations/CHECK_APPLIED.sql in the production Supabase SQL editor. Record the run timestamp and any rows with applied = false. Note that 037_beta_feedback.sql is new in v11 and is NOT covered by CHECK_APPLIED.sql yet — verify it separately."
     }
   },
@@ -170,7 +171,7 @@
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal",
       "evidence_ref": null,
-      "note": "Owner-only. Claude Code must never perform a live charge or refund."
+      "note": "Owner-only. Claude Code must never perform a live charge or refund. 2026-07-28: the owner reports a live trial started, granted access, and was cancelled — that is real evidence for rows 1 and 3 of docs/OWNER_EVIDENCE_V11.md section A, but it is unrecorded (no observed Stripe state, no evidence refs) and leaves rows 2 and 4-9 unrun. Row 7 (a late payment_failed arriving after recovery) is the transition this item exists for and cannot be reached by starting and cancelling a trial."
     },
     {
       "id": "resend_suppression",
@@ -181,7 +182,7 @@
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036",
       "evidence_ref": null,
-      "note": "Owner-only, against live Resend. Depends on 036 actually being applied."
+      "note": "Owner-only, against live Resend. Depends on 036 actually being applied. 2026-07-28: the owner reports mail is arriving. That proves DELIVERY works (Resend keys, domain, from-address, outbox) and is a precondition for this test, but it is not the test: this item asks whether an unsubscribe SUPPRESSES optional mail while billing and security mail still arrives. Section B rows 2-6 are unrun."
     },
     {
       "id": "ai_spend_ceiling",
