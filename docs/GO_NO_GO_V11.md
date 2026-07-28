@@ -114,8 +114,9 @@ Stated plainly rather than buried.
 - **Production configuration is unverified.** `release-check` run here has no
   production secrets and reports blockers by design. That is the fail-closed
   behaviour working; it is not evidence about production.
-- **Migration `037` is not covered by `CHECK_APPLIED.sql`** and must be
-  verified separately after it is applied.
+- **Migration applied-state is unverified.** `CHECK_APPLIED.sql` covers the
+  full `001`–`037` range, including `037`'s unique index, but it has not been
+  run against the database from here and cannot be.
 
 ---
 

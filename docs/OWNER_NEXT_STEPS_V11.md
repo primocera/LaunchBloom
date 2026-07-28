@@ -26,8 +26,11 @@ not. Nothing in the repository can settle it, so the launch record says
 2. Run backend/migrations/037_beta_feedback.sql
 3. Run backend/migrations/CHECK_APPLIED.sql
 4. Note every row where applied = false
-5. Confirm the beta_feedback table exists (037 is not in CHECK_APPLIED.sql yet)
 ```
+
+`CHECK_APPLIED.sql` now covers `037` too, so one run reports the whole
+`001`–`037` range. Order matters: apply `037` first, or its row comes back
+`false` and tells you nothing you did not already know.
 
 Then record it in `docs/launch/launch-state.json`:
 

@@ -72,4 +72,8 @@ select * from (
   select '035_handoff_packet' as migration, ((select count(*) from information_schema.columns where table_name='campaigns' and column_name in ('last_handoff_fingerprint','last_handoff_at','last_handoff_format')) = 3) as applied
   union all
   select '036_email_suppressions' as migration, (to_regclass('public.email_suppressions') is not null and (select count(*) from information_schema.columns where table_name='email_events' and column_name in ('category')) = 1) as applied
+  union all
+  -- v11: the table alone is not enough — the unique index is what stops a
+  -- second answer for the same moment double-counting the beta cohort.
+  select '037_beta_feedback' as migration, (to_regclass('public.beta_feedback') is not null and (select count(*) from information_schema.columns where table_name='beta_feedback' and column_name in ('moment','job_done','manual_work','price_view','notes')) = 5 and exists (select 1 from pg_indexes where schemaname='public' and indexname='beta_feedback_once_idx')) as applied
 ) t order by migration;

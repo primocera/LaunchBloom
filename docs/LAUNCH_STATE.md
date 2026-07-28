@@ -38,7 +38,7 @@ different risk decisions and are decided separately.
 
   docs/GO_NO_GO_V10.md states 034/035/036 were verified applied on 2026-07-26. docs/CONFIGURED_STATE.md states, for the same date, that 034/035/036 are NOT applied. Both cannot be true and neither can be settled from the repository, so applied-state is UNKNOWN until the owner re-runs CHECK_APPLIED.sql and records the result here.
 
-  *Owner action:* Run backend/migrations/CHECK_APPLIED.sql in the production Supabase SQL editor. Record the run timestamp and any rows with applied = false. Note that 037_beta_feedback.sql is new in v11 and is NOT covered by CHECK_APPLIED.sql yet — verify it separately.
+  *Owner action:* Run backend/migrations/CHECK_APPLIED.sql in the production Supabase SQL editor. Record the run timestamp and any rows with applied = false. Apply 037_beta_feedback.sql first; CHECK_APPLIED.sql now covers it (table, all five answer columns and the beta_feedback_once_idx unique index), so a single run reports the whole 001-037 range.
 
 Presence in `backend/migrations` is not applied-ness. `release-check`
 reads the filesystem and never connects to a database, so it can never
