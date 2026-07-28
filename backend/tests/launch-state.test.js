@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { integrityProblems, computeVerdicts, STATUSES } = require('../lib/launch-state');
+const { integrityProblems, computeVerdicts, STATUSES, CHECK_PASSING, EVIDENCE_PASSING } = require('../lib/launch-state');
 const { loadState, documentProblems, render } = require('../scripts/launch-state');
 
 const SHA = 'a'.repeat(40);
@@ -59,6 +59,47 @@ test('a stale SHA is a deterministic NO-GO — later commits invalidate evidence
   assert.equal(v.public_paid.verdict, 'NO-GO');
   assert.equal(v.capped_beta.verdict, 'NO-GO');
   assert.match(v.public_paid.reasons.join(' '), /stale/);
+});
+
+// Recording evidence about a candidate necessarily writes files, and those
+// writes were themselves marking the candidate stale — so a fully-evidenced
+// release could never reach GO. These fix the narrow exemption that resolves
+// it, and its limits.
+test('documentation-only drift does not invalidate a candidate', () => {
+  const v = computeVerdicts(VALID, { head_sha: 'b'.repeat(40), code_changes: [] });
+  assert.equal(v.capped_beta.verdict, 'GO');
+  assert.equal(v.public_paid.verdict, 'GO');
+});
+
+test('any code change does invalidate it, and names what moved', () => {
+  const v = computeVerdicts(VALID, {
+    head_sha: 'b'.repeat(40),
+    code_changes: ['backend/lib/ai.js', 'app-src/routes/Landing.jsx'],
+  });
+  assert.equal(v.capped_beta.verdict, 'NO-GO');
+  assert.match(v.capped_beta.reasons.join(' '), /2 code file\(s\) changed/);
+  assert.match(v.capped_beta.reasons.join(' '), /backend\/lib\/ai\.js/);
+});
+
+test('when git cannot answer, drift is treated as invalidating', () => {
+  for (const code_changes of [undefined, null]) {
+    const v = computeVerdicts(VALID, { head_sha: 'b'.repeat(40), code_changes });
+    assert.equal(v.capped_beta.verdict, 'NO-GO', 'unknown drift must never be read as safe');
+    assert.match(v.capped_beta.reasons.join(' '), /stale/);
+  }
+});
+
+test('the exemption covers docs only — never code, config or the bundle', () => {
+  const { codeChangesSince } = require('../scripts/launch-state');
+  assert.equal(typeof codeChangesSince, 'function');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'launch-state.js'), 'utf8');
+  const list = source.match(/const NON_CODE = \[([^\]]*)\]/);
+  assert.ok(list, 'the exempt-path list must stay explicit and greppable');
+  // app/ is the committed bundle users are served — exempting it would let a
+  // rebuilt frontend ship under evidence gathered for a different one.
+  for (const forbidden of ['app/', 'backend', 'app-src', 'e2e', 'api/', 'package.json']) {
+    assert.ok(!list[1].includes(forbidden), `${forbidden} must never be exempt from invalidating a candidate`);
+  }
 });
 
 test('an unpinned candidate cannot reach GO', () => {
@@ -218,21 +259,45 @@ test('the committed launch state is internally consistent', () => {
   assert.deepEqual(documentProblems(state), []);
 });
 
-test('the committed launch state is honestly NO-GO', () => {
+// 2026-07-28: capped_beta reached GO. Every reason it used to carry went away
+// because the underlying fact changed and was written down with an evidence
+// reference — migrations verified against the production database, production
+// configuration answered by /api/admin/readiness in production mode, the spend
+// ceiling confirmed live. That is the only route to GO this system allows.
+test('capped beta is GO on evidence, and every passing check is pinned to the candidate', () => {
   const state = loadState();
-  // Both tracks must stay NO-GO while the authenticated matrix is skipped and
-  // production configuration is unverified. (Migration applied-state was also
-  // a reason until 2026-07-28, when the owner ran CHECK_APPLIED.sql against
-  // production; that reason is gone because the fact changed, which is the
-  // only way a reason is allowed to disappear.)
-  const v = computeVerdicts(state, { head_sha: state.candidate.sha });
-  assert.equal(v.capped_beta.verdict, 'NO-GO');
+  const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
+  assert.equal(v.capped_beta.verdict, 'GO', `still blocked by: ${v.capped_beta.reasons.join('; ')}`);
+
+  // A GO is only as good as its pinning: no check may claim a pass on evidence
+  // gathered at some other commit, and none may pass with nothing behind it.
+  for (const check of state.checks) {
+    if (!CHECK_PASSING.includes(check.status)) continue;
+    assert.equal(check.observed_at_sha, state.candidate.sha, `${check.id} is pinned to the wrong commit`);
+    assert.ok(check.evidence, `${check.id} claims a pass with no evidence`);
+  }
+  // Live-system claims must name a document a human can go and read.
+  for (const e of state.owner_evidence) {
+    if (!EVIDENCE_PASSING.includes(e.status)) continue;
+    assert.ok(e.evidence_ref, `${e.id} claims ${e.status} with no evidence_ref`);
+    assert.ok(
+      fs.existsSync(path.join(__dirname, '..', '..', e.evidence_ref)),
+      `${e.id} points at ${e.evidence_ref}, which does not exist`,
+    );
+  }
+});
+
+test('public paid launch stays NO-GO, and says why', () => {
+  const state = loadState();
+  const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
   assert.equal(v.public_paid.verdict, 'NO-GO');
-  assert.match(v.capped_beta.reasons.join(' '), /release_config is failed/);
-  // The authenticated matrix was scoped to public launch on 2026-07-28 (see the
-  // check's scope_rationale). It must still block that track, or scoping would
-  // have been a way to delete a red check rather than to place it.
-  assert.match(v.public_paid.reasons.join(' '), /e2e_authenticated is skipped/);
+  const why = v.public_paid.reasons.join(' ');
+  // The authenticated matrix was scoped to public launch (see the check's
+  // scope_rationale). It must still block that track, or scoping would have
+  // been a way to delete a red check rather than to place it.
+  assert.match(why, /e2e_authenticated is skipped/);
+  assert.match(why, /live_money_rehearsal is not_run/);
+  assert.match(why, /resend_suppression is not_run/);
 });
 
 test('no required check claims to have passed in CI that CI does not run', () => {

@@ -2,24 +2,24 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-07-28T00:00:00Z",
+  "generated_at_utc": "2026-07-28T10:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "v11",
-    "sha": "86d1f2cc82688c23f258b3667564201394599603",
+    "sha": "1145bae235409de042f72478663f7963746d936f",
     "state": "frozen",
-    "environment_class": "local",
+    "environment_class": "production",
     "baseline_sha": "445d29e488d198ceaacceac59950697c00b9765c",
     "head_at_generation": "77009bc749582195211c7453e4177ff0f355db79",
     "bundle": {
-      "build_hash": "index-B3BfQ7jf",
+      "build_hash": "index-BjggCPPF",
       "files": [
-        "index-B3BfQ7jf.js",
-        "index-BX-HQ_o_.css"
+        "index-BjggCPPF.js",
+        "index-l3T_G2oJ.css"
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "Frozen after SC-V11-00..07. The gate documents that follow this commit are themselves commits, so HEAD moves past the candidate the moment they land — `npm run launch:gate` will report the drift, which is the mechanism working, not a fault. Any code change creates a new candidate and every check pinned to this SHA stops counting."
+    "explanation": "Re-pinned 2026-07-28 after the hero revert. Every required check was re-run at this exact commit, and the production configuration gate was answered by /api/admin/readiness on the live deployment. Documentation-only commits after this point do not invalidate the candidate (launch-state.js codeChangesSince); any change under backend/, app-src/, app/, e2e/, api/ or a config file does."
   },
   "drift_from_baseline": [
     {
@@ -53,9 +53,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
-      "evidence": "npm run lint — 0 errors, 59 pre-existing warnings",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
+      "evidence": "npm run lint — 0 errors, 59 warnings (pre-existing)",
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "unit",
@@ -63,9 +63,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
-      "evidence": "npm test — 562 pass / 0 fail / 0 skipped",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
+      "evidence": "npm test — 564 pass / 0 fail / 0 skipped",
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "build",
@@ -73,9 +73,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
       "evidence": "npm run build:app — success",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "bundle_fresh",
@@ -83,9 +83,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
       "evidence": "npm run check:app-fresh — app/ matches app-src/ at HEAD",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "e2e_public",
@@ -93,16 +93,18 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
-      "evidence": "npx playwright test — 54 pass / 0 fail (chromium + mobile projects)",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
+      "evidence": "npx playwright test — 52 pass / 0 fail",
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "e2e_authenticated",
       "name": "Authenticated seeded browser matrix",
       "command": "npm run test:e2e:auth",
       "required": true,
-      "required_for": ["public_paid"],
+      "required_for": [
+        "public_paid"
+      ],
       "scope_rationale": "Scoped to public launch on 2026-07-28. The owner has walked the signed-in product in production — signup, login, Stripe trial, access, cancel, AI generation and lifecycle email — and it works (docs/evidence/2026-07-28-owner-production-walkthrough.md). Calling the core journey unproven after that would be the gate wrong in the cautious direction, which is still wrong. What the matrix adds over one person clicking the happy path is phone and keyboard operation, cross-account isolation driven in a real browser, and the failure paths (session expiry, provider timeout mid-generation, reload during export). A supervised cohort of invited accounts with the owner watching can absorb those; strangers arriving unannounced cannot. So it stays required for public_paid.",
       "status": "skipped",
       "observed_at_sha": null,
@@ -115,19 +117,19 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
       "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "release_config",
       "name": "Production configuration gate",
       "command": "npm run release:check",
       "required": true,
-      "status": "failed",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "Run at the candidate SHA in a shell with NO production secrets, so it reports blockers by design (fail-closed). This is NOT evidence about production configuration: the owner must run it against the production environment and record the result. v11 added ai:spend_ceiling as a production blocker."
+      "status": "passed_locally",
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
+      "evidence": "GET /api/admin/readiness on the live production deployment, 2026-07-28: mode=production, ready=true, blockers=0, external=0. All 13 checks ok, including launch:config \"all launch-config requirements met\", stripe:price_allowlist \"all live prices set\", cron:secret set, email:delivery configured and ai:spend_ceiling \"daily ceiling set to $15\". Live signals: outbox_backlog 0, webhook_failures_24h 0, ai_spend_24h 0 against a $15 ceiling.",
+      "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets."
     },
     {
       "id": "launch_integrity",
@@ -135,9 +137,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
       "evidence": "npm run launch:verify — OK",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "hero_contrast",
@@ -145,9 +147,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "86d1f2cc82688c23f258b3667564201394599603",
-      "evidence": "node --test backend/tests/landing-contrast.test.js — 11 pass / 0 fail",
-      "note": "Run locally at the candidate SHA. Not CI-verified: browser and export suites are not part of the lean CI job by design."
+      "observed_at_sha": "1145bae235409de042f72478663f7963746d936f",
+      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail (records the accepted AA shortfall)",
+      "note": "Re-run locally at the re-pinned candidate 1145bae. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     }
   ],
   "owner_evidence": [
@@ -199,14 +201,14 @@
     {
       "id": "ai_spend_ceiling",
       "title": "AI_SPEND_DAILY_CEILING_USD set in production",
-      "status": "configured",
+      "status": "observed",
       "required_for": [
         "capped_beta",
         "public_paid"
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling",
-      "evidence_ref": null,
-      "note": "2026-07-28: owner set AI_SPEND_DAILY_CEILING_USD = 15 (first set to 5, then reconciled). Recorded as `configured`, not `observed`: nobody has run release:check in the production environment to confirm the value is live there. What this variable is: an ALARM only, read by /api/admin/readiness to compute spend_over_ceiling. It does not stop generation. The brake is MAX_AI_CALLS_PER_DAY = 300 (a single global pool, not per account), which at ~$0.044 per claude-haiku-4-5 call permits roughly $13/day — so a 15 alarm sits just above what the brake can physically allow, and the two now agree. The cap was deliberately NOT lowered to 120: it is global, so a tight value fails closed on paying customers during a busy day. Per-account cost is bounded by backend/lib/plan-limits.js, which is the real economic control (starter 30 actions ~= $1.32 on $12.99, pro 120 ~= $5.28 on $24.99, studio 400 ~= $17.60 on $59.00 — 70-90% gross margin)."
+      "evidence_ref": "docs/evidence/2026-07-28-production-readiness.md",
+      "note": "Confirmed live 2026-07-28: /api/admin/readiness reports ai_spend_ceiling_usd 15 and ai:spend_ceiling ok in production mode. Still an ALARM, not a brake — see the evidence file."
     }
   ],
   "blockers": [
@@ -247,17 +249,18 @@
     {
       "id": "P1-no-spend-ceiling",
       "severity": "P1",
-      "status": "open",
+      "status": "closed",
       "title": "No daily AI spend ceiling is configured in production",
       "owner": "owner",
-      "closure": "Set AI_SPEND_DAILY_CEILING_USD in the production environment. SC-V11-06 made its absence a hard production release blocker; the value itself is still owner-only."
+      "closure": "Closed: AI_SPEND_DAILY_CEILING_USD=15 confirmed live by /api/admin/readiness on 2026-07-28.",
+      "closed_at_utc": "2026-07-28T10:00:00Z"
     }
   ],
   "verdicts": {
     "capped_beta": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-07-28T00:00:00Z",
-      "note": "Recomputed from this file by `npm run launch:gate`. A declared verdict that disagrees with the computed one is an integrity failure."
+      "verdict": "GO",
+      "decided_at_utc": "2026-07-28T10:00:00Z",
+      "note": "GO for a capped, supervised beta only — 15-25 invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required check ran at candidate 1145bae, migrations are verified applied against production, production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe. This is NOT permission to open public signup. Two known gaps ride along deliberately: the authenticated browser matrix has never run (phone, keyboard, cross-account isolation, failure paths) and hero text does not meet WCAG AA. Both are accepted at this cohort size because a named owner is watching and the cap is hard; neither is acceptable for strangers."
     },
     "public_paid": {
       "verdict": "NO-GO",

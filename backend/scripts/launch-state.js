@@ -43,6 +43,33 @@ function headSha() {
   catch { return null; }
 }
 
+// Paths that cannot change what the product does. Recording evidence about a
+// candidate necessarily writes files, and those writes were themselves marking
+// the candidate stale — so a fully-evidenced release could never reach GO, and
+// the gate's most important state was the one it could not express.
+//
+// What actually invalidates evidence is a change to the thing the evidence
+// describes. Deliberately narrow: `docs/` and the two prompt packs only. A
+// change under backend/, app-src/, app/, e2e/, api/ or any config file is code
+// and still invalidates everything.
+const NON_CODE = [/^docs\//, /\.docx$/];
+
+/**
+ * Files changed between the candidate and HEAD that could alter behaviour.
+ * Returns [] when the tree only moved in documentation, and null when git
+ * cannot answer — in which case the caller must assume the worst.
+ */
+function codeChangesSince(sha) {
+  if (!sha) return null;
+  try {
+    const out = execSync(`git diff --name-only ${sha}..HEAD`, { encoding: 'utf8', cwd: ROOT });
+    return out.split('\n').map((l) => l.trim()).filter(Boolean)
+      .filter((f) => !NON_CODE.some((re) => re.test(f)));
+  } catch {
+    return null; // unknown never means safe
+  }
+}
+
 // Integrity checks that need the filesystem, kept out of the pure module:
 // the manifest's claims about other documents must actually hold on disk.
 function documentProblems(state, root = ROOT) {
@@ -207,7 +234,10 @@ function render(state, observed) {
 function main() {
   const mode = process.argv[2] || 'verify';
   const state = loadState();
-  const observed = { head_sha: headSha() };
+  const observed = {
+    head_sha: headSha(),
+    code_changes: codeChangesSince(state.candidate && state.candidate.sha),
+  };
 
   const problems = [...integrityProblems(state), ...documentProblems(state)];
 
@@ -263,4 +293,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { loadState, documentProblems, render, headSha, SUPERSEDED_MARKER };
+module.exports = { loadState, documentProblems, render, headSha, codeChangesSince, SUPERSEDED_MARKER };

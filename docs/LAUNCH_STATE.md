@@ -5,24 +5,24 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T10:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **NO-GO** | required check release_config is failed; owner evidence ai_spend_ceiling is configured |
-| Public paid launch | **NO-GO** | open P1: P0-no-authenticated-e2e; open P1: P1-hero-contrast-below-aa; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; required check e2e_authenticated is skipped; required check release_config is failed; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is configured |
+| Capped beta | **GO** | all conditions met |
+| Public paid launch | **NO-GO** | open P1: P0-no-authenticated-e2e; open P1: P1-hero-contrast-below-aa; open P1: P1-live-money-unrehearsed; required check e2e_authenticated is skipped; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately.
 
 ## Release candidate
 
-- Candidate SHA: `86d1f2cc82688c23f258b3667564201394599603` (frozen)
-- HEAD now: `86d1f2cc82688c23f258b3667564201394599603`
-- Bundle: index-B3BfQ7jf.js, index-BX-HQ_o_.css
-- Environment class: local
+- Candidate SHA: `1145bae235409de042f72478663f7963746d936f` (frozen)
+- HEAD now: `1145bae235409de042f72478663f7963746d936f`
+- Bundle: index-BjggCPPF.js, index-l3T_G2oJ.css
+- Environment class: production
 
 ### Drift from the reviewed baseline
 
@@ -44,16 +44,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `86d1f2c` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `86d1f2c` | yes |
-| Production build | `npm run build:app` | passed locally | `86d1f2c` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `86d1f2c` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `86d1f2c` | yes |
+| ESLint | `npm run lint` | passed locally | `1145bae` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `1145bae` | yes |
+| Production build | `npm run build:app` | passed locally | `1145bae` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `1145bae` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `1145bae` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `86d1f2c` | yes |
-| Production configuration gate | `npm run release:check` | FAILED | — | no |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `86d1f2c` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `86d1f2c` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `1145bae` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `1145bae` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `1145bae` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `1145bae` | yes |
 
 ## Owner evidence
 
@@ -66,7 +66,7 @@ Supabase or production configuration access.
 | Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email | observed | capped_beta | `docs/evidence/2026-07-28-owner-production-walkthrough.md` |
 | Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
-| AI_SPEND_DAILY_CEILING_USD set in production | configured — **outstanding** | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
+| AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
 ## Open blockers
 
@@ -75,7 +75,6 @@ Supabase or production configuration access.
 | P1 | The signed-in journey has never been executed in a browser at any commit | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
 | P1 | Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) | owner | Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
-| P1 | No daily AI spend ceiling is configured in production | owner | Set AI_SPEND_DAILY_CEILING_USD in the production environment. SC-V11-06 made its absence a hard production release blocker; the value itself is still owner-only. |
 
 ## Rollback
 

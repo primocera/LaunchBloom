@@ -162,8 +162,25 @@ function computeVerdicts(state, observed = {}) {
   if (!candidate.sha) {
     shared.push('no release candidate is pinned (candidate.sha is null)');
   } else if (observed.head_sha && observed.head_sha !== candidate.sha) {
-    // A later commit invalidates every piece of evidence collected before it.
-    shared.push(`candidate ${candidate.sha} is stale: HEAD is ${observed.head_sha}`);
+    // A later commit invalidates evidence — but only if it could change what
+    // the evidence describes. Recording the evidence is itself a commit, so
+    // treating every commit as invalidating made a fully-evidenced release
+    // unreachable: the act of writing down a GO produced a NO-GO.
+    //
+    // `code_changes` is supplied by the CLI (git). `undefined` means nobody
+    // looked, and `null` means git could not answer — both fall back to the
+    // strict rule, because unknown never means safe.
+    const codeChanges = observed.code_changes;
+    if (Array.isArray(codeChanges) && codeChanges.length === 0) {
+      // Documentation-only drift. Evidence still describes the shipped code.
+    } else if (Array.isArray(codeChanges)) {
+      shared.push(
+        `candidate ${candidate.sha} is stale: ${codeChanges.length} code file(s) changed since it was pinned `
+        + `(${codeChanges.slice(0, 3).join(', ')}${codeChanges.length > 3 ? ', …' : ''})`,
+      );
+    } else {
+      shared.push(`candidate ${candidate.sha} is stale: HEAD is ${observed.head_sha}`);
+    }
   }
 
   if (!EVIDENCE_PASSING.includes(applied.status)) {
