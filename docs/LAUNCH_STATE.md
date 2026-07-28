@@ -19,8 +19,8 @@ different risk decisions and are decided separately.
 
 ## Release candidate
 
-- Candidate SHA: `87bf12d5cf5376857c7d1d8a102063bd0146e0c6` (frozen)
-- HEAD now: `87bf12d5cf5376857c7d1d8a102063bd0146e0c6`
+- Candidate SHA: `e2ba23bc6a3793219519a920c255a39f56aaa7aa` (frozen)
+- HEAD now: `e2ba23bc6a3793219519a920c255a39f56aaa7aa`
 - Bundle: index-BjggCPPF.js, index-l3T_G2oJ.css
 - Environment class: production
 
@@ -44,16 +44,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `87bf12d` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `87bf12d` | yes |
-| Production build | `npm run build:app` | passed locally | `87bf12d` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `87bf12d` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `87bf12d` | yes |
+| ESLint | `npm run lint` | passed locally | `e2ba23b` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `e2ba23b` | yes |
+| Production build | `npm run build:app` | passed locally | `e2ba23b` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `e2ba23b` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `e2ba23b` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `87bf12d` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `87bf12d` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `87bf12d` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `87bf12d` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `e2ba23b` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `e2ba23b` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `e2ba23b` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `e2ba23b` | yes |
 
 ## Owner evidence
 

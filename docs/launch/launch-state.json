@@ -6,7 +6,7 @@
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "v11",
-    "sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+    "sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "445d29e488d198ceaacceac59950697c00b9765c",
@@ -19,7 +19,7 @@
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "Re-pinned 2026-07-28 to 87bf12d. Includes the auth callback fix (a PKCE ?code= signup is a signup) found while testing unsubscribe, and the focus-ring flake fix. Every required check re-run at this commit. Documentation-only commits do not invalidate it; anything under backend/, app-src/, app/, e2e/, api/ or config does."
+    "explanation": "Re-pinned 2026-07-28 to the commit that recorded the accepted risks. All required checks re-run at this commit. Documentation-only commits do not invalidate it; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
     {
@@ -53,9 +53,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "npm run lint — 0 errors, 59 warnings (pre-existing)",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "unit",
@@ -63,9 +63,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
-      "evidence": "npm test — 572 pass / 0 fail / 0 skipped",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "evidence": "npm test — 575 pass / 0 fail / 0 skipped",
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "build",
@@ -73,9 +73,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "npm run build:app — success",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "bundle_fresh",
@@ -83,9 +83,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "npm run check:app-fresh — app/ matches app-src/ at HEAD",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "e2e_public",
@@ -93,9 +93,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "npx playwright test — 52 pass / 0 fail, counted explicitly across three consecutive full runs after two flake fixes",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "e2e_authenticated",
@@ -125,9 +125,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "release_config",
@@ -135,7 +135,7 @@
       "command": "npm run release:check",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "GET /api/admin/readiness on the live production deployment, 2026-07-28: mode=production, ready=true, blockers=0, external=0. All 13 checks ok, including launch:config \"all launch-config requirements met\", stripe:price_allowlist \"all live prices set\", cron:secret set, email:delivery configured and ai:spend_ceiling \"daily ceiling set to $15\". Live signals: outbox_backlog 0, webhook_failures_24h 0, ai_spend_24h 0 against a $15 ceiling.",
       "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets."
     },
@@ -145,9 +145,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "npm run launch:verify — OK",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "hero_contrast",
@@ -155,9 +155,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
       "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail (records the accepted AA shortfall after the hero revert)",
-      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     }
   ],
   "owner_evidence": [
