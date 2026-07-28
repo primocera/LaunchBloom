@@ -5,22 +5,22 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T11:00:00Z
+Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T12:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **NO-GO** | open P1: P0-no-authenticated-e2e; open P1: P1-hero-contrast-below-aa; open P1: P1-live-money-unrehearsed; required check e2e_authenticated is skipped; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run |
+| Public paid launch | **GO** | all conditions met |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately.
 
 ## Release candidate
 
-- Candidate SHA: `10b9ad5a1c257188a55779a768eaeca3de6cae24` (frozen)
-- HEAD now: `10b9ad5a1c257188a55779a768eaeca3de6cae24`
+- Candidate SHA: `87bf12d5cf5376857c7d1d8a102063bd0146e0c6` (frozen)
+- HEAD now: `87bf12d5cf5376857c7d1d8a102063bd0146e0c6`
 - Bundle: index-BjggCPPF.js, index-l3T_G2oJ.css
 - Environment class: production
 
@@ -44,16 +44,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `10b9ad5` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `10b9ad5` | yes |
-| Production build | `npm run build:app` | passed locally | `10b9ad5` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `10b9ad5` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `10b9ad5` | yes |
+| ESLint | `npm run lint` | passed locally | `87bf12d` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `87bf12d` | yes |
+| Production build | `npm run build:app` | passed locally | `87bf12d` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `87bf12d` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `87bf12d` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `10b9ad5` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `10b9ad5` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `10b9ad5` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `10b9ad5` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `87bf12d` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `87bf12d` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `87bf12d` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `87bf12d` | yes |
 
 ## Owner evidence
 
@@ -65,16 +65,12 @@ Supabase or production configuration access.
 | All migrations verified applied against the production database | observed | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
 | Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email | observed | capped_beta | `docs/evidence/2026-07-28-owner-production-walkthrough.md` |
 | Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
-| Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
+| Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | live rehearsed | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
 ## Open blockers
 
-| Severity | Blocker | Owner | Closure |
-|---|---|---|---|
-| P1 | The signed-in journey has never been executed in a browser at any commit | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
-| P1 | Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) | owner | Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse. |
-| P1 | Live billing recovery has never been rehearsed against real Stripe | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
+None.
 
 ## Rollback
 

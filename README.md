@@ -25,7 +25,7 @@ the code.
 | File | What it tells you |
 |---|---|
 | [`docs/CONFIGURED_STATE.md`](docs/CONFIGURED_STATE.md) | What is already configured in production (Stripe, Resend, legal config, cron). Verified from the live readiness endpoint, with a date. |
-| [`docs/GO_NO_GO_V10.md`](docs/GO_NO_GO_V10.md) | The current release gate: what is proven, what is outstanding, what is deliberately deferred. |
+| [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | The current release gate: what is proven, what was accepted as risk, what is outstanding. Generated from `docs/launch/launch-state.json`. |
 
 **Please phrase prompts as "verify X, build only the gap"** rather than
 "build X". Recent examples where the ask was already satisfied:
@@ -116,15 +116,40 @@ automatically.
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | Architecture and rules for AI coding agents |
 | [`docs/CONFIGURED_STATE.md`](docs/CONFIGURED_STATE.md) | What is already set up in production |
-| [`docs/GO_NO_GO_V10.md`](docs/GO_NO_GO_V10.md) | Current release gate and open risks |
+| [`docs/GO_NO_GO_V10.md`](docs/GO_NO_GO_V10.md) | Historical v10 gate (SUPERSEDED) |
 | [`docs/V10_PLAN.md`](docs/V10_PLAN.md) | The v10 execution plan |
 | [`docs/GOLDEN_EVAL_V10.md`](docs/GOLDEN_EVAL_V10.md) | What the quality gate does and does not measure |
 | [`docs/LIFECYCLE_EMAIL_V10.md`](docs/LIFECYCLE_EMAIL_V10.md) | Every email, its trigger, dedupe key and category |
-| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal |
+| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal (still outstanding) |
+| [`docs/HANDOFF_V12.md`](docs/HANDOFF_V12.md) | **Start here.** State at launch, accepted risks, what v12 should pick up |
+| [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | Generated launch truth — never edit by hand |
+| [`docs/RUNBOOK_AUTH_E2E.md`](docs/RUNBOOK_AUTH_E2E.md) | Running the signed-in browser matrix |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) · [`DEVELOPMENT.md`](DEVELOPMENT.md) | Deploy and local setup |
 
 ## Status
 
-Pre-launch. Automated gates are green; a live charge → cancel → recover →
-refund rehearsal with owner-recorded evidence is required before public launch.
-See [`docs/GO_NO_GO_V10.md`](docs/GO_NO_GO_V10.md) for the current verdict.
+**Live.** Public paid signup is open as of 2026-07-28.
+
+The launch verdict is computed, not declared — from
+[`docs/launch/launch-state.json`](docs/launch/launch-state.json), by
+`npm run launch:gate`. Both tracks are GO, but not on the same footing:
+
+| Track | Verdict | On what |
+|---|---|---|
+| Capped beta | GO | evidence |
+| Public paid launch | GO | evidence **plus three accepted risks** |
+
+Proven against production: migrations `001`–`037` applied, configuration
+verified via `/api/admin/readiness` (`mode: production`, 13/13, 0 blockers),
+unsubscribe suppression honoured in both directions, and a daily AI spend
+ceiling live.
+
+Accepted rather than proven, each signed and dated in the record: no automated
+signed-in browser matrix, hero text below WCAG AA, and no nine-transition live
+billing rehearsal. Each item keeps its real status — `skipped`, `open`,
+`not_run` — so the record still says what is true, and withdrawing any
+acceptance returns the verdict to NO-GO on its own.
+
+Start with [`docs/HANDOFF_V12.md`](docs/HANDOFF_V12.md) for the full picture and
+what to pick up next. Earlier GO/NO-GO documents (`v9`, `v10`) are historical
+and carry SUPERSEDED banners.

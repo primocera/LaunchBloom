@@ -41,6 +41,37 @@ const CHECK_PASSING = Object.freeze(['passed_ci', 'passed_locally']);
 const EVIDENCE_PASSING = Object.freeze(['live_rehearsed', 'observed']);
 
 const SEVERITIES = Object.freeze(['P0', 'P1', 'P2']);
+const BLOCKER_STATUSES = Object.freeze(['open', 'closed', 'accepted']);
+
+// A risk the owner has decided to ship with. This is NOT a way to make a red
+// item green: the item keeps its real status everywhere it is displayed, and
+// `accepted` is visibly different from `closed`. What it does is let a launch
+// proceed on a stated, attributed decision instead of on a quietly edited fact.
+//
+// It costs something on purpose — a named person, a date and a rationale that
+// survives in the record — because a risk nobody is willing to sign is one
+// nobody has actually weighed.
+const ACCEPTANCE_FIELDS = Object.freeze(['accepted_by', 'accepted_at_utc', 'rationale']);
+
+function acceptanceProblems(kind, id, acc) {
+  if (!isPlainObject(acc)) return [`${kind} ${id}: accepted_risk must be an object`];
+  const missing = ACCEPTANCE_FIELDS.filter((f) => !acc[f]);
+  const out = missing.map((f) => `${kind} ${id}: accepted risk has no ${f}`);
+  if (acc.rationale && String(acc.rationale).trim().length < 40) {
+    out.push(`${kind} ${id}: accepted risk needs a real rationale, not a placeholder`);
+  }
+  for (const track of list(acc.tracks)) {
+    if (!VERDICT_TRACKS.includes(track)) out.push(`${kind} ${id}: accepted risk names unknown track ${track}`);
+  }
+  if (!list(acc.tracks).length) out.push(`${kind} ${id}: accepted risk must name the tracks it applies to`);
+  return out;
+}
+
+/** True when this item's risk has been accepted for `track`. */
+function acceptedFor(item, track) {
+  const acc = item && item.accepted_risk;
+  return isPlainObject(acc) && list(acc.tracks).includes(track);
+}
 const VERDICT_TRACKS = Object.freeze(['capped_beta', 'public_paid']);
 
 const isPlainObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -74,6 +105,7 @@ function integrityProblems(state) {
     checkIds.add(id);
     if (!STATUSES.includes(c.status)) bad(`check ${id}: unknown status ${JSON.stringify(c.status)}`);
     if (typeof c.required !== 'boolean') bad(`check ${id}: required must be a boolean`);
+    if (c.accepted_risk) for (const p of acceptanceProblems('check', id, c.accepted_risk)) bad(p);
     for (const track of list(c.required_for)) {
       if (!VERDICT_TRACKS.includes(track)) bad(`check ${id}: unknown verdict track ${track}`);
     }
@@ -100,6 +132,7 @@ function integrityProblems(state) {
     if (evidenceIds.has(id)) bad(`duplicate owner evidence id: ${id}`);
     evidenceIds.add(id);
     if (!STATUSES.includes(e.status)) bad(`evidence ${id}: unknown status ${JSON.stringify(e.status)}`);
+    if (e.accepted_risk) for (const p of acceptanceProblems('evidence', id, e.accepted_risk)) bad(p);
     if (EVIDENCE_PASSING.includes(e.status) && !e.evidence_ref) {
       bad(`evidence ${id}: claims ${e.status} but carries no evidence reference`);
     }
@@ -111,7 +144,8 @@ function integrityProblems(state) {
   for (const b of list(state.blockers)) {
     if (!b || !b.id) { bad('a blocker has no id'); continue; }
     if (!SEVERITIES.includes(b.severity)) bad(`blocker ${b.id}: unknown severity ${JSON.stringify(b.severity)}`);
-    if (!['open', 'closed'].includes(b.status)) bad(`blocker ${b.id}: status must be open or closed`);
+    if (!BLOCKER_STATUSES.includes(b.status)) bad(`blocker ${b.id}: status must be one of ${BLOCKER_STATUSES.join(', ')}`);
+    if (b.status === 'accepted') for (const p of acceptanceProblems('blocker', b.id, b.accepted_risk)) bad(p);
   }
 
   const mig = isPlainObject(state.migrations) ? state.migrations : null;
@@ -187,19 +221,11 @@ function computeVerdicts(state, observed = {}) {
     shared.push(`migrations applied-state is ${applied.status || 'unknown'} (must be verified against the database)`);
   }
 
-  for (const b of blockers) {
-    if (b.status === 'open' && (b.severity === 'P0' || b.severity === 'P1')) {
-      shared.push(`open ${b.severity}: ${b.id}`);
-    }
-  }
+  const openBlockers = blockers.filter((b) => b.status === 'open' && (b.severity === 'P0' || b.severity === 'P1'));
 
   const out = {};
   for (const track of VERDICT_TRACKS) {
-    const reasons = shared.filter((r) => {
-      // P1s block the public paid launch but not a capped, supported beta.
-      if (track === 'capped_beta' && r.startsWith('open P1:')) return false;
-      return true;
-    });
+    const reasons = [...shared];
     // A required check may be required for both tracks (the default, and what
     // `required: true` alone means) or scoped with `required_for`. Some proof
     // is genuinely a public-launch condition rather than a beta one: a
@@ -207,19 +233,24 @@ function computeVerdicts(state, observed = {}) {
     // different risk than strangers arriving unannounced. Scoping is a stated
     // decision recorded in the check's note — it is not a way to make a red
     // check disappear, and a check with no `required_for` still blocks both.
+    for (const b of openBlockers) {
+      if (track === 'capped_beta' && b.severity === 'P1') continue;
+      if (acceptedFor(b, track)) continue;
+      reasons.push(`open ${b.severity}: ${b.id}`);
+    }
     for (const c of checks) {
       if (!c.required) continue;
       const scope = list(c.required_for);
       if (scope.length && !scope.includes(track)) continue;
-      if (!CHECK_PASSING.includes(c.status)) {
-        reasons.push(`required check ${c.id} is ${c.status}`);
-      }
+      if (CHECK_PASSING.includes(c.status)) continue;
+      if (acceptedFor(c, track)) continue;
+      reasons.push(`required check ${c.id} is ${c.status}`);
     }
     for (const e of evidence) {
       if (!list(e.required_for).includes(track)) continue;
-      if (!EVIDENCE_PASSING.includes(e.status)) {
-        reasons.push(`owner evidence ${e.id} is ${e.status}`);
-      }
+      if (EVIDENCE_PASSING.includes(e.status)) continue;
+      if (acceptedFor(e, track)) continue;
+      reasons.push(`owner evidence ${e.id} is ${e.status}`);
     }
     out[track] = { verdict: reasons.length ? 'NO-GO' : 'GO', reasons };
   }
@@ -228,6 +259,8 @@ function computeVerdicts(state, observed = {}) {
 
 module.exports = {
   SCHEMA_VERSION,
+  BLOCKER_STATUSES,
+  acceptedFor,
   STATUSES,
   CHECK_PASSING,
   EVIDENCE_PASSING,

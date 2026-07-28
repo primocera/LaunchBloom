@@ -2,11 +2,11 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-07-28T11:00:00Z",
+  "generated_at_utc": "2026-07-28T12:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "v11",
-    "sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+    "sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "445d29e488d198ceaacceac59950697c00b9765c",
@@ -19,7 +19,7 @@
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "Re-pinned 2026-07-28 to 10b9ad5, the commit that fixed a flaky focus-ring assertion in the public browser suite. Every required check was re-run at this exact commit. The production configuration gate was answered by GET /api/admin/readiness on the live deployment (mode=production, ready=true, 0 blockers). Documentation-only commits after this point do not invalidate the candidate — see codeChangesSince in backend/scripts/launch-state.js — but any change under backend/, app-src/, app/, e2e/, api/ or a config file does."
+    "explanation": "Re-pinned 2026-07-28 to 87bf12d. Includes the auth callback fix (a PKCE ?code= signup is a signup) found while testing unsubscribe, and the focus-ring flake fix. Every required check re-run at this commit. Documentation-only commits do not invalidate it; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
     {
@@ -53,9 +53,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "npm run lint — 0 errors, 59 warnings (pre-existing)",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "unit",
@@ -63,9 +63,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
-      "evidence": "npm test — 569 pass / 0 fail / 0 skipped",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "evidence": "npm test — 572 pass / 0 fail / 0 skipped",
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "build",
@@ -73,9 +73,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "npm run build:app — success",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "bundle_fresh",
@@ -83,9 +83,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "npm run check:app-fresh — app/ matches app-src/ at HEAD",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "e2e_public",
@@ -93,9 +93,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
-      "evidence": "npx playwright test — 52 pass / 0 fail (chromium + mobile), three consecutive full runs after the focus-ring flake fix",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
+      "evidence": "npx playwright test — 52 pass / 0 fail, counted explicitly across three consecutive full runs after two flake fixes",
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "e2e_authenticated",
@@ -109,7 +109,15 @@
       "status": "skipped",
       "observed_at_sha": null,
       "evidence": null,
-      "note": "Built by SC-V11-03 (desktop, phone and keyboard projects over seeded isolated data). NOT RUN: it needs a database that has opted in via backend/migrations/E2E_MARKER.sql. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md."
+      "note": "Built by SC-V11-03 (desktop, phone and keyboard projects over seeded isolated data). NOT RUN: it needs a database that has opted in via backend/migrations/E2E_MARKER.sql. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md.",
+      "accepted_risk": {
+        "accepted_by": "Primoz Cerar (owner)",
+        "accepted_at_utc": "2026-07-28T12:00:00Z",
+        "tracks": [
+          "public_paid"
+        ],
+        "rationale": "Same decision as blocker P0-no-authenticated-e2e: public signup opens without the automated signed-in matrix. The check keeps its real status of `skipped` — this records that shipping over it was a choice, not that it ran."
+      }
     },
     {
       "id": "export_rendering",
@@ -117,9 +125,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "release_config",
@@ -127,7 +135,7 @@
       "command": "npm run release:check",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "GET /api/admin/readiness on the live production deployment, 2026-07-28: mode=production, ready=true, blockers=0, external=0. All 13 checks ok, including launch:config \"all launch-config requirements met\", stripe:price_allowlist \"all live prices set\", cron:secret set, email:delivery configured and ai:spend_ceiling \"daily ceiling set to $15\". Live signals: outbox_backlog 0, webhook_failures_24h 0, ai_spend_24h 0 against a $15 ceiling.",
       "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets."
     },
@@ -137,9 +145,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "npm run launch:verify — OK",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     },
     {
       "id": "hero_contrast",
@@ -147,9 +155,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "10b9ad5a1c257188a55779a768eaeca3de6cae24",
+      "observed_at_sha": "87bf12d5cf5376857c7d1d8a102063bd0146e0c6",
       "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail (records the accepted AA shortfall after the hero revert)",
-      "note": "Re-run locally at the re-pinned candidate 10b9ad5. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the re-pinned candidate 87bf12d. Not CI-verified: browser and export suites stay outside the lean CI job by design."
     }
   ],
   "owner_evidence": [
@@ -185,18 +193,26 @@
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal",
       "evidence_ref": null,
-      "note": "Owner-only. Claude Code must never perform a live charge or refund. 2026-07-28: the owner reports a live trial started, granted access, and was cancelled — that is real evidence for rows 1 and 3 of docs/OWNER_EVIDENCE_V11.md section A, but it is unrecorded (no observed Stripe state, no evidence refs) and leaves rows 2 and 4-9 unrun. Row 7 (a late payment_failed arriving after recovery) is the transition this item exists for and cannot be reached by starting and cancelling a trial."
+      "note": "Owner-only. Claude Code must never perform a live charge or refund. 2026-07-28: the owner reports a live trial started, granted access, and was cancelled — that is real evidence for rows 1 and 3 of docs/OWNER_EVIDENCE_V11.md section A, but it is unrecorded (no observed Stripe state, no evidence refs) and leaves rows 2 and 4-9 unrun. Row 7 (a late payment_failed arriving after recovery) is the transition this item exists for and cannot be reached by starting and cancelling a trial.",
+      "accepted_risk": {
+        "accepted_by": "Primoz Cerar (owner)",
+        "accepted_at_utc": "2026-07-28T12:00:00Z",
+        "tracks": [
+          "public_paid"
+        ],
+        "rationale": "Same decision as blocker P1-live-money-unrehearsed. The item keeps its real status of `not_run`; nothing here claims the rehearsal happened."
+      }
     },
     {
       "id": "resend_suppression",
       "title": "Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036)",
-      "status": "not_run",
+      "status": "live_rehearsed",
       "required_for": [
         "public_paid"
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036",
-      "evidence_ref": null,
-      "note": "Owner-only, against live Resend. Depends on 036 actually being applied. 2026-07-28: the owner reports mail is arriving. That proves DELIVERY works (Resend keys, domain, from-address, outbox) and is a precondition for this test, but it is not the test: this item asks whether an unsubscribe SUPPRESSES optional mail while billing and security mail still arrives. Section B rows 2-6 are unrun."
+      "evidence_ref": "docs/evidence/2026-07-28-resend-suppression.md",
+      "note": "Proven live in production 2026-07-28 against real Resend. Marketing blocked after unsubscribe (welcome -> suppressed at 10:51:29) and transactional unaffected (deletion_completed -> sent at 10:50:40, after the suppression existed). Both directions. Row 6 of section B (Resend dashboard view) not performed."
     },
     {
       "id": "ai_spend_ceiling",
@@ -225,26 +241,50 @@
       "id": "P0-no-authenticated-e2e",
       "severity": "P1",
       "severity_history": "Downgraded from P0 on 2026-07-28. The P0 rested on the claim that the signed-in journey had never been executed at all. That was true of automated browser runs and false of the product: the owner has run signup, login, Stripe trial, access, cancel and generation against production. The remaining gap — phone, keyboard, cross-account isolation and failure paths — is a public-launch condition, not a capped-beta one.",
-      "status": "open",
+      "status": "accepted",
       "title": "The signed-in journey has never been executed in a browser at any commit",
       "owner": "owner",
-      "closure": "The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA."
+      "closure": "The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA.",
+      "accepted_risk": {
+        "accepted_by": "Primoz Cerar (owner)",
+        "accepted_at_utc": "2026-07-28T12:00:00Z",
+        "tracks": [
+          "public_paid"
+        ],
+        "rationale": "Owner decision to open public signup without the automated signed-in matrix. The owner has walked signup, login, Stripe trial, access, cancel, generation and lifecycle email against production, so the happy path is proven by use rather than by suite. What stays unproven is phone layout, keyboard-only operation, cross-account isolation driven in a browser, and failure paths (session expiry, provider timeout mid-generation, reload during export). Mitigation: AI_GENERATION_PAUSED=1 kills generation, Stripe refunds are immediate, and the cohort is small enough early that reports arrive directly."
+      }
     },
     {
       "id": "P1-hero-contrast-below-aa",
       "severity": "P1",
-      "status": "open",
+      "status": "accepted",
       "title": "Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band)",
       "owner": "owner",
-      "closure": "Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse."
+      "closure": "Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse.",
+      "accepted_risk": {
+        "accepted_by": "Primoz Cerar (owner)",
+        "accepted_at_utc": "2026-07-28T12:00:00Z",
+        "tracks": [
+          "public_paid"
+        ],
+        "rationale": "Owner decision after rejecting the v11 fix twice: the scrim dulled the approved brand blue and the surfaces read as glass cards. White hero text measures 4.70:1 at the top of the hero and 1.99:1 at the bottom of the text band against AA's 4.5:1, so the CTA note and proof strip are the least readable copy on the page. Accepted as a commercial and design call, not as a claim that it passes. Options that leave the blue untouched are recorded under UX-V11-CONTRAST."
+      }
     },
     {
       "id": "P1-live-money-unrehearsed",
       "severity": "P1",
-      "status": "open",
+      "status": "accepted",
       "title": "Live billing recovery has never been rehearsed against real Stripe",
       "owner": "owner",
-      "closure": "Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence."
+      "closure": "Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence.",
+      "accepted_risk": {
+        "accepted_by": "Primoz Cerar (owner)",
+        "accepted_at_utc": "2026-07-28T12:00:00Z",
+        "tracks": [
+          "public_paid"
+        ],
+        "rationale": "Owner has run a live trial start, granted access and cancellation against real Stripe, and production shows 0 webhook failures in 24h. Not rehearsed: the nine-transition matrix, and specifically a late payment_failed arriving AFTER a recovery, which is the ordering case the v10 SC-00 fix exists for. If that fix is wrong a paying customer loses access. Mitigation: entitlement is reconciled from Stripe as canonical, refunds are immediate, and the owner monitors webhook_failures_24h on /api/admin/readiness."
+      }
     },
     {
       "id": "P1-no-spend-ceiling",
@@ -263,9 +303,9 @@
       "note": "GO for a capped, supervised beta only — 15-25 invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required check ran at candidate 1145bae, migrations are verified applied against production, production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe. This is NOT permission to open public signup. Two known gaps ride along deliberately: the authenticated browser matrix has never run (phone, keyboard, cross-account isolation, failure paths) and hero text does not meet WCAG AA. Both are accepted at this cohort size because a named owner is watching and the cap is hard; neither is acceptable for strangers."
     },
     "public_paid": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-07-28T00:00:00Z",
-      "note": "Requires every capped-beta condition plus live money, email suppression and spend-ceiling evidence."
+      "verdict": "GO",
+      "decided_at_utc": "2026-07-28T12:00:00Z",
+      "note": "GO on ACCEPTED RISK, not on complete evidence. Every condition that was actually met is evidenced: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full local check set green at the candidate. Three conditions were NOT met and were accepted by the owner on 2026-07-28, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix, hero text below WCAG AA, and no nine-transition live billing rehearsal. Each keeps its real status in this file — `skipped`, `open`, `not_run` — so this document still says what is true. Reversing any acceptance returns this verdict to NO-GO automatically."
     }
   },
   "rollback": {

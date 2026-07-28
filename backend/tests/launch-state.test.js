@@ -287,18 +287,27 @@ test('capped beta is GO on evidence, and every passing check is pinned to the ca
   }
 });
 
-test('public paid launch stays NO-GO, and says why', () => {
+test('public paid launch is GO on accepted risk, not on complete evidence', () => {
   const state = loadState();
   const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
-  assert.equal(v.public_paid.verdict, 'NO-GO');
-  const why = v.public_paid.reasons.join(' ');
-  // The authenticated matrix was scoped to public launch (see the check's
-  // scope_rationale). It must still block that track, or scoping would have
-  // been a way to delete a red check rather than to place it.
-  assert.match(why, /e2e_authenticated is skipped/);
-  assert.match(why, /live_money_rehearsal is not_run/);
-  assert.match(why, /resend_suppression is not_run/);
+  assert.equal(v.public_paid.verdict, 'GO');
+
+  // The GO rests on three explicit acceptances. Each must still be a recorded
+  // decision with a named owner — if any is removed, this verdict must fall
+  // back to NO-GO on its own, without anybody editing the verdict.
+  const accepted = state.blockers.filter((b) => b.status === 'accepted');
+  assert.ok(accepted.length >= 3, 'the public launch GO rests on accepted risks that must stay visible');
+
+  const stripped = clone(state);
+  for (const b of stripped.blockers) { if (b.status === 'accepted') { b.status = 'open'; delete b.accepted_risk; } }
+  for (const c of stripped.checks) delete c.accepted_risk;
+  for (const e of stripped.owner_evidence) delete e.accepted_risk;
+  const without = computeVerdicts(stripped, { head_sha: state.candidate.sha, code_changes: [] });
+  assert.equal(without.public_paid.verdict, 'NO-GO', 'withdrawing the acceptances must reverse the verdict');
+  assert.match(without.public_paid.reasons.join(' '), /e2e_authenticated is skipped/);
+  assert.match(without.public_paid.reasons.join(' '), /live_money_rehearsal is not_run/);
 });
+
 
 test('no required check claims to have passed in CI that CI does not run', () => {
   const state = loadState();
@@ -330,4 +339,55 @@ test('the rendered launch status stays in sync with the canonical data', () => {
   const expected = render(state, { head_sha: state.candidate.sha || state.candidate.head_at_generation });
   const onDisk = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'LAUNCH_STATE.md'), 'utf8');
   assert.equal(onDisk, expected, 'docs/LAUNCH_STATE.md is stale — run `npm run launch:render`');
+});
+
+// --- accepted risk --------------------------------------------------------
+// The one mechanism that can turn a red item green. It exists so a launch can
+// proceed on a stated decision instead of a quietly edited fact — which means
+// it has to cost something, and it must never rewrite the underlying status.
+
+test('an accepted risk unblocks only the tracks it names', () => {
+  const state = clone(VALID);
+  state.checks[1].status = 'skipped';
+  state.checks[1].observed_at_sha = null;
+  state.checks[1].evidence = null;
+  state.checks[1].accepted_risk = {
+    accepted_by: 'owner', accepted_at_utc: '2026-07-28T00:00:00Z', tracks: ['public_paid'],
+    rationale: 'a rationale long enough to be a real argument rather than a placeholder',
+  };
+  state.verdicts.capped_beta.verdict = 'NO-GO';
+  const v = computeVerdicts(state, { head_sha: SHA });
+  assert.equal(v.public_paid.verdict, 'GO', 'the named track is unblocked');
+  assert.equal(v.capped_beta.verdict, 'NO-GO', 'an unnamed track is not');
+});
+
+test('an accepted risk never rewrites the underlying status', () => {
+  const state = loadState();
+  const check = state.checks.find((c) => c.id === 'e2e_authenticated');
+  assert.equal(check.status, 'skipped', 'the matrix has still never run and must still say so');
+  const money = state.owner_evidence.find((e) => e.id === 'live_money_rehearsal');
+  assert.equal(money.status, 'not_run');
+  for (const b of state.blockers.filter((x) => x.status === 'accepted')) {
+    assert.ok(b.accepted_risk.rationale.length >= 40, `${b.id} needs a real rationale`);
+    assert.ok(b.accepted_risk.accepted_by, `${b.id} must name who accepted it`);
+  }
+});
+
+test('acceptance without a named person, date, tracks or a real rationale is rejected', () => {
+  const base = {
+    accepted_by: 'owner', accepted_at_utc: '2026-07-28T00:00:00Z', tracks: ['public_paid'],
+    rationale: 'a rationale long enough to be a real argument rather than a placeholder',
+  };
+  for (const [field, expected] of [['accepted_by', /no accepted_by/], ['accepted_at_utc', /no accepted_at_utc/]]) {
+    const state = clone(VALID);
+    state.blockers.push({ id: 'B', severity: 'P1', status: 'accepted', title: 't', owner: 'o', closure: 'c', accepted_risk: { ...base, [field]: undefined } });
+    assert.match(integrityProblems(state).join(' '), expected);
+  }
+  const thin = clone(VALID);
+  thin.blockers.push({ id: 'B', severity: 'P1', status: 'accepted', title: 't', owner: 'o', closure: 'c', accepted_risk: { ...base, rationale: 'because' } });
+  assert.match(integrityProblems(thin).join(' '), /needs a real rationale/);
+
+  const untracked = clone(VALID);
+  untracked.blockers.push({ id: 'B', severity: 'P1', status: 'accepted', title: 't', owner: 'o', closure: 'c', accepted_risk: { ...base, tracks: [] } });
+  assert.match(integrityProblems(untracked).join(' '), /must name the tracks/);
 });
