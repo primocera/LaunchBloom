@@ -16,6 +16,21 @@ const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 
+// The gate reads process.env, but only server.js loaded backend/.env — so run
+// from a shell this script reported EVERY variable missing and always printed
+// BLOCKED, whatever was configured. A gate that is red no matter what is worse
+// than no gate: it teaches you to ignore it, and it made a genuine production
+// misconfiguration indistinguishable from running the command.
+//
+// `override: false` is the point: a real environment (CI, Vercel, an exported
+// shell) always wins over the local file, so this can only ever fill in gaps —
+// it can never mask what production actually has set. Loaded before
+// launch-config, which reads process.env at require time.
+require('dotenv').config({
+  path: path.join(__dirname, '..', '.env'),
+  override: false,
+});
+
 const { launchMode, launchConfigProblems } = require('../lib/launch-config');
 const { RULES_VERSION } = require('../lib/consistency');
 const { DEPENDENCIES_VERSION } = require('../lib/brief-impact');
