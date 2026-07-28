@@ -7,13 +7,17 @@
 // creates isolated synthetic data for one test run and deletes it again by run
 // id.
 //
-// It is fail-closed in three independent ways, because a seeding endpoint that
+// It is fail-closed in four independent ways, because a seeding endpoint that
 // reaches production is a data-loss incident:
 //
 //   1. server.js mounts it only when E2E_SEED_ENABLED === '1'.
 //   2. It refuses to load at all when launchMode() is 'production'.
 //   3. Every request must carry the E2E_SEED_SECRET, which must be long enough
 //      to not be guessable.
+//   4. The target database must contain public.e2e_seed_marker. Guards 1-3
+//      describe the process, not the database — a local run pointed at the
+//      production project passes all three — so the database itself has to
+//      opt in. See backend/migrations/E2E_MARKER.sql.
 //
 // It does NOT bypass authorization anywhere else: it creates rows and a real
 // Supabase Auth user, and the tests then sign in through the ordinary login
@@ -44,6 +48,34 @@ function seedingAllowed() {
   return null;
 }
 
+// The three checks above all describe the PROCESS. None of them describes the
+// DATABASE, and that gap was real: a local run with SUPABASE_URL pointed at the
+// production project passes every one of them, because NODE_ENV is not
+// production and the Stripe key is blank. It would then create rows — and real
+// auth users — in production.
+//
+// So the target database must opt in to being seeded, from inside itself:
+// public.e2e_seed_marker exists only where backend/migrations/E2E_MARKER.sql was
+// deliberately run. Production never has it, and no environment variable can
+// fake it. Fails closed on any error, including a missing table.
+let markerCache = null;
+
+async function seedTargetAllowed() {
+  if (markerCache !== null) return markerCache;
+  try {
+    const { error } = await supabase.from('e2e_seed_marker').select('id').limit(1).single();
+    markerCache = error
+      ? 'target database has no e2e_seed_marker row — run backend/migrations/E2E_MARKER.sql against the NON-PRODUCTION project only'
+      : null;
+  } catch {
+    markerCache = 'could not verify the target database is a seeding target';
+  }
+  return markerCache;
+}
+
+// Tests reset the cache when they change the environment under test.
+function _resetMarkerCache() { markerCache = null; }
+
 // Timing-safe comparison: a seeding secret is a credential like any other.
 function secretMatches(provided) {
   const expected = process.env.E2E_SEED_SECRET || '';
@@ -53,12 +85,16 @@ function secretMatches(provided) {
   return crypto.timingSafeEqual(a, b);
 }
 
-function guard(req, res, next) {
+async function guard(req, res, next) {
   const problem = seedingAllowed();
   if (problem) return res.status(404).json({ error: 'Not found' }); // never advertise the endpoint
   if (!secretMatches(req.get('x-e2e-seed-secret'))) {
     return res.status(401).json({ error: 'Seed secret required.' });
   }
+  // Checked after the secret so an unauthenticated caller learns nothing about
+  // the database, but before any write.
+  const wrongTarget = await seedTargetAllowed();
+  if (wrongTarget) return res.status(409).json({ error: wrongTarget });
   next();
 }
 
@@ -204,5 +240,7 @@ router.delete('/api/e2e/seed/:runId', guard, async (req, res) => {
 
 module.exports = router;
 module.exports.seedingAllowed = seedingAllowed;
+module.exports.seedTargetAllowed = seedTargetAllowed;
+module.exports._resetMarkerCache = _resetMarkerCache;
 module.exports.RUN_PREFIX = RUN_PREFIX;
 module.exports.SEED_DOMAIN = SEED_DOMAIN;

@@ -70,6 +70,44 @@ test('seeding is allowed only when every condition holds at once', () => {
   });
 });
 
+// The gap this closes was real, and it was in the v11 work itself: guards 1-3
+// all describe the process. A local run with SUPABASE_URL pointed at the
+// production project passes every one of them — NODE_ENV is not production and
+// the Stripe key is blank — and would then write rows and auth users into
+// production. The database has to opt in from inside itself.
+test('the target database must opt in, so the harness cannot be pointed at production', async () => {
+  const source = fs.readFileSync(seedPath, 'utf8');
+
+  // Guards 1-3 are all environment-derived. If the target check were too, the
+  // same wrong export that points at production would also satisfy it.
+  assert.match(source, /e2e_seed_marker/, 'the guard must read a marker from the target database');
+  assert.ok(
+    !/E2E_SEED_TARGET|E2E_ALLOW_PROD|process\.env\.[A-Z_]*MARKER/.test(source),
+    'the target check must not be satisfiable by setting an environment variable',
+  );
+
+  // Every write path is behind the same guard.
+  for (const route of [/router\.post\('\/api\/e2e\/seed', guard/, /router\.delete\('\/api\/e2e\/seed\/:runId', guard/]) {
+    assert.match(source, route, 'every seed route must run the guard');
+  }
+
+  // Fails closed: a missing table, or any error reading it, must refuse.
+  await withEnv({ ...NON_PRODUCTION, E2E_SEED_ENABLED: '1', E2E_SEED_SECRET: LONG_SECRET }, async (router) => {
+    router._resetMarkerCache();
+    const problem = await router.seedTargetAllowed();
+    assert.ok(problem, 'with no reachable marker table, seeding must refuse');
+    assert.match(problem, /E2E_MARKER\.sql|seeding target/);
+  });
+
+  // The marker file must not be a numbered migration — numbered migrations get
+  // applied everywhere, which would hand production the opt-in.
+  const marker = path.join(ROOT, 'backend', 'migrations', 'E2E_MARKER.sql');
+  assert.ok(fs.existsSync(marker), 'backend/migrations/E2E_MARKER.sql must exist');
+  const numbered = fs.readdirSync(path.join(ROOT, 'backend', 'migrations'))
+    .filter((f) => /^\d{3}_/.test(f) && /e2e_seed_marker/i.test(fs.readFileSync(path.join(ROOT, 'backend', 'migrations', f), 'utf8')));
+  assert.deepEqual(numbered, [], 'the marker must never be created by a numbered migration');
+});
+
 test('seeded identities can never receive mail', () => {
   const router = withEnv({ ...NON_PRODUCTION, E2E_SEED_ENABLED: '1', E2E_SEED_SECRET: LONG_SECRET }, (r) => r);
   // .invalid is reserved by RFC 2606 and is guaranteed not to resolve, so a

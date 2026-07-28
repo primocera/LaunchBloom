@@ -33,7 +33,7 @@ different risk decisions and are decided separately.
 
 ## Migrations
 
-- On disk: 38 files, range 001-037. 37 numbered migrations plus CHECK_APPLIED.sql (a verification query, not a migration).
+- On disk: 39 files, range 001-037. 37 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only — applying it to production would hand production the opt-in).
 - **Applied to the database: observed** — source `backend/migrations/CHECK_APPLIED.sql`, last run 2026-07-28T00:00:00Z.
 
 Presence in `backend/migrations` is not applied-ness. `release-check`

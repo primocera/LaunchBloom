@@ -13,17 +13,49 @@ because it is optional. Not running it is a release blocker.
 
 ## What you need
 
-A **non-production** Supabase project with the full migration set applied. The
-seed endpoint refuses to run under a production launch mode, so pointing this at
-the live project cannot work even by accident.
+A **non-production** Supabase database with the full migration set applied, plus
+`backend/migrations/E2E_MARKER.sql` run **against that database only**.
+
+> **Corrected 2026-07-28.** This runbook previously said pointing the harness at
+> the live project "cannot work even by accident". That was wrong. The seed
+> endpoint's other guards check the *process* — launch mode, an enable flag, a
+> secret — and a local run with `SUPABASE_URL` set to production passes all of
+> them, because `NODE_ENV` is not production and the Stripe key is blank. It
+> would have created rows and real auth users in production. The marker table
+> fixes it: the database opts in from inside itself, and no environment variable
+> can fake that.
 
 | Variable | Purpose |
 |---|---|
-| `SUPABASE_URL` | the non-production project |
+| `SUPABASE_URL` | the non-production database |
 | `SUPABASE_ANON_KEY` | sign-in from the browser |
 | `SUPABASE_SERVICE_ROLE_KEY` | seeding and cleanup |
 | `E2E_SEED_SECRET` | 24+ characters; authenticates every seed request |
 | `E2E_AUTH=1` | adds the authenticated projects to the Playwright config |
+
+## Getting a database if you are on the Supabase free plan
+
+You do not need a paid plan, and you should not use the production project.
+
+**Option A — a second free Supabase project.** The free plan includes two active
+projects per organization, so this usually costs nothing. Create it, run every
+numbered migration `001`–`037`, then run `E2E_MARKER.sql`. Takes about ten
+minutes and matches production most closely.
+
+**Option B — a local Supabase stack.** Free and completely isolated, but needs
+Docker Desktop (which on Windows 10 Home means WSL 2):
+
+```bash
+npm i -D supabase
+npx supabase init
+npx supabase start          # prints SUPABASE_URL and local anon/service keys
+# apply 001-037, then E2E_MARKER.sql, against the printed connection
+```
+
+**Not an option: the production project.** The suite creates auth users and
+deletes workspaces. Cleanup is prefix-scoped so it would not remove your real
+data, but it writes real rows to the database your customers depend on, and a
+half-finished run leaves them there. The marker table now refuses this outright.
 
 Stripe, Resend and Anthropic keys are **deliberately blanked** by the config.
 No test can spend money, send mail or call a model; entitlement states are
