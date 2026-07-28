@@ -186,13 +186,16 @@ test('the committed launch state is internally consistent', () => {
 
 test('the committed launch state is honestly NO-GO', () => {
   const state = loadState();
-  // Both tracks must stay NO-GO while the authenticated matrix is skipped,
-  // migration applied-state is unknown and no owner evidence is attached.
+  // Both tracks must stay NO-GO while the authenticated matrix is skipped and
+  // production configuration is unverified. (Migration applied-state was also
+  // a reason until 2026-07-28, when the owner ran CHECK_APPLIED.sql against
+  // production; that reason is gone because the fact changed, which is the
+  // only way a reason is allowed to disappear.)
   const v = computeVerdicts(state, { head_sha: state.candidate.sha });
   assert.equal(v.capped_beta.verdict, 'NO-GO');
   assert.equal(v.public_paid.verdict, 'NO-GO');
   assert.match(v.capped_beta.reasons.join(' '), /e2e_authenticated is skipped/);
-  assert.match(v.capped_beta.reasons.join(' '), /migrations applied-state is unknown/);
+  assert.match(v.capped_beta.reasons.join(' '), /release_config is failed/);
 });
 
 test('no required check claims to have passed in CI that CI does not run', () => {

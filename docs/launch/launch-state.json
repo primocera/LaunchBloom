@@ -38,13 +38,12 @@
     "on_disk_count": 38,
     "on_disk_note": "37 numbered migrations plus CHECK_APPLIED.sql (a verification query, not a migration).",
     "applied_verification": {
-      "status": "unknown",
+      "status": "observed",
       "source": "backend/migrations/CHECK_APPLIED.sql",
-      "last_run_utc": null,
-      "verified_by": null,
-      "contradiction": "docs/GO_NO_GO_V10.md states 034/035/036 were verified applied on 2026-07-26. docs/CONFIGURED_STATE.md states, for the same date, that 034/035/036 are NOT applied. Both cannot be true and neither can be settled from the repository, so applied-state is UNKNOWN until the owner re-runs CHECK_APPLIED.sql and records the result here.",
-      "owner_report_2026_07_28": "The owner reports a live Stripe trial started, granted access and was cancelled, and that Resend mail is arriving. If any lifecycle email arrived (trial_started, cancellation_scheduled, welcome), that is INDIRECT evidence that 036 IS applied: sendLifecycleEmail inserts email_events.category, a column added by 036, and a failed insert returns 'duplicate' without sending — so with 036 missing, no lifecycle mail could arrive at all. This narrows the contradiction toward GO_NO_GO_V10 and against CONFIGURED_STATE, but it is an inference from observed behaviour, not a schema read: 034 and 035 remain untested by it, 037 is new and unapplied, and applied_verification stays UNKNOWN until CHECK_APPLIED.sql is run.",
-      "owner_action": "Run backend/migrations/CHECK_APPLIED.sql in the production Supabase SQL editor. Record the run timestamp and any rows with applied = false. Apply 037_beta_feedback.sql first; CHECK_APPLIED.sql now covers it (table, all five answer columns and the beta_feedback_once_idx unique index), so a single run reports the whole 001-037 range."
+      "last_run_utc": "2026-07-28T00:00:00Z",
+      "verified_by": "owner",
+      "evidence_ref": "docs/evidence/2026-07-28-migrations-applied.md",
+      "resolution": "The owner applied 037_beta_feedback.sql and ran CHECK_APPLIED.sql against the production database on 2026-07-28. Every row returned applied = true across the full 001-037 range, including 037's table, five bounded answer columns and beta_feedback_once_idx. This resolves the contradiction previously recorded here: docs/GO_NO_GO_V10.md was correct that 034/035/036 are applied and docs/CONFIGURED_STATE.md was wrong. CONFIGURED_STATE.md is already superseded; its migration table should now be read as known-incorrect rather than merely stale. Owner-attested — the query output is not captured in the repository, which is noted as a limit in the evidence file. Structure only: this proves the schema exists, not that the application uses it correctly (that is the authenticated matrix, still unrun)."
     }
   },
   "checks": [
@@ -153,14 +152,14 @@
     {
       "id": "migrations_applied",
       "title": "All migrations verified applied against the production database",
-      "status": "unknown",
+      "status": "observed",
       "required_for": [
         "capped_beta",
         "public_paid"
       ],
       "runbook": "backend/migrations/CHECK_APPLIED.sql",
-      "evidence_ref": null,
-      "note": "Blocked on the 034/035/036 contradiction recorded under migrations.applied_verification."
+      "evidence_ref": "docs/evidence/2026-07-28-migrations-applied.md",
+      "note": "Closed 2026-07-28. Full 001-037 range reports applied = true against the production database. The 034/035/036 contradiction is resolved in favour of docs/GO_NO_GO_V10.md."
     },
     {
       "id": "live_money_rehearsal",
@@ -201,10 +200,11 @@
     {
       "id": "P0-migration-truth",
       "severity": "P0",
-      "status": "open",
+      "status": "closed",
+      "closed_at_utc": "2026-07-28T00:00:00Z",
       "title": "Migration applied-state is contradicted between two release documents",
       "owner": "owner",
-      "closure": "Re-run CHECK_APPLIED.sql against production and record the result in migrations.applied_verification."
+      "closure": "Closed: owner applied 037 and ran CHECK_APPLIED.sql against production on 2026-07-28. All rows 001-037 applied = true. Evidence: docs/evidence/2026-07-28-migrations-applied.md."
     },
     {
       "id": "P0-no-authenticated-e2e",

@@ -11,8 +11,8 @@ Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T00:00
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **NO-GO** | required check e2e_authenticated is skipped; required check release_config is failed; migrations applied-state is unknown (must be verified against the database); open P0: P0-migration-truth; open P0: P0-no-authenticated-e2e; owner evidence migrations_applied is unknown; owner evidence ai_spend_ceiling is not_run |
-| Public paid launch | **NO-GO** | required check e2e_authenticated is skipped; required check release_config is failed; migrations applied-state is unknown (must be verified against the database); open P0: P0-migration-truth; open P0: P0-no-authenticated-e2e; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; owner evidence migrations_applied is unknown; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is not_run |
+| Capped beta | **NO-GO** | required check e2e_authenticated is skipped; required check release_config is failed; open P0: P0-no-authenticated-e2e; owner evidence ai_spend_ceiling is not_run |
+| Public paid launch | **NO-GO** | required check e2e_authenticated is skipped; required check release_config is failed; open P0: P0-no-authenticated-e2e; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is not_run |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately.
@@ -34,11 +34,7 @@ different risk decisions and are decided separately.
 ## Migrations
 
 - On disk: 38 files, range 001-037. 37 numbered migrations plus CHECK_APPLIED.sql (a verification query, not a migration).
-- **Applied to the database: UNKNOWN** — source `backend/migrations/CHECK_APPLIED.sql`, last run never recorded.
-
-  docs/GO_NO_GO_V10.md states 034/035/036 were verified applied on 2026-07-26. docs/CONFIGURED_STATE.md states, for the same date, that 034/035/036 are NOT applied. Both cannot be true and neither can be settled from the repository, so applied-state is UNKNOWN until the owner re-runs CHECK_APPLIED.sql and records the result here.
-
-  *Owner action:* Run backend/migrations/CHECK_APPLIED.sql in the production Supabase SQL editor. Record the run timestamp and any rows with applied = false. Apply 037_beta_feedback.sql first; CHECK_APPLIED.sql now covers it (table, all five answer columns and the beta_feedback_once_idx unique index), so a single run reports the whole 001-037 range.
+- **Applied to the database: observed** — source `backend/migrations/CHECK_APPLIED.sql`, last run 2026-07-28T00:00:00Z.
 
 Presence in `backend/migrations` is not applied-ness. `release-check`
 reads the filesystem and never connects to a database, so it can never
@@ -66,7 +62,7 @@ Supabase or production configuration access.
 
 | Evidence | Status | Required for | Runbook |
 |---|---|---|---|
-| All migrations verified applied against the production database | UNKNOWN — **outstanding** | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
+| All migrations verified applied against the production database | observed | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
 | Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | not run — **outstanding** | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
@@ -75,7 +71,6 @@ Supabase or production configuration access.
 
 | Severity | Blocker | Owner | Closure |
 |---|---|---|---|
-| P0 | Migration applied-state is contradicted between two release documents | owner | Re-run CHECK_APPLIED.sql against production and record the result in migrations.applied_verification. |
 | P0 | The signed-in journey has never been executed in a browser at any commit | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 | P1 | No daily AI spend ceiling is configured in production | owner | Set AI_SPEND_DAILY_CEILING_USD in the production environment. SC-V11-06 made its absence a hard production release blocker; the value itself is still owner-only. |

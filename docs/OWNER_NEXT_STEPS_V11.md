@@ -10,9 +10,18 @@ the reasons disappear.
 
 ---
 
-## 1 · Apply the migrations, then prove they are applied · **P0**
+## 1 · ~~Apply the migrations, then prove they are applied~~ · **DONE 2026-07-28**
 
-Two things are unknown and one is new.
+> Closed. `037` applied, `CHECK_APPLIED.sql` run against production, every row
+> `001`–`037` reports `applied = true`. The `034`/`035`/`036` contradiction is
+> resolved in favour of `GO_NO_GO_V10.md` — `CONFIGURED_STATE.md`'s migration
+> table was wrong. Evidence: `docs/evidence/2026-07-28-migrations-applied.md`.
+> Worth doing once: paste the query output into that file, so the claim ships
+> with something a reader can check.
+>
+> The original instructions are kept below for the next time a migration lands.
+
+Two things were unknown and one was new.
 
 **Unknown:** `GO_NO_GO_V10.md` said migrations `034`–`036` were verified applied
 on 2026-07-26. `CONFIGURED_STATE.md` said, for the same date, that they were

@@ -26,9 +26,14 @@ reasons are not the same for each.
 | Blocker | Owner | Closure |
 |---|---|---|
 | Authenticated E2E has never run | owner | non-production Supabase project + `E2E_SEED_SECRET`, then `npm run test:e2e:auth` (`docs/RUNBOOK_AUTH_E2E.md`) |
-| Migration applied-state is unknown | owner | re-run `CHECK_APPLIED.sql` against production; also verify new `037` |
 | Production configuration unverified | owner | run `npm run release:check` in the production environment |
 | `AI_SPEND_DAILY_CEILING_USD` unset | owner | set it; it is now a hard production release blocker |
+
+**Closed 2026-07-28 —** migration applied-state. The owner applied `037` and
+ran `CHECK_APPLIED.sql` against production; all rows `001`–`037` report
+`applied = true`. That resolves the `034`/`035`/`036` contradiction in favour of
+`GO_NO_GO_V10.md`: `CONFIGURED_STATE.md`'s migration table was wrong, not merely
+stale. Evidence: `docs/evidence/2026-07-28-migrations-applied.md`.
 
 ### Additionally for public paid launch
 
