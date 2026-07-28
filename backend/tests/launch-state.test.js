@@ -148,6 +148,40 @@ test('an open P0 blocks both tracks; an open P1 blocks only the public paid laun
   assert.equal(v.public_paid.verdict, 'NO-GO');
 });
 
+// Scoping a required check to fewer tracks is the one mechanism here that could
+// be used to make a red check vanish. These fix what it may and may not do.
+test('a required check scoped to one track still blocks that track', () => {
+  const state = clone(VALID);
+  state.checks[1].required_for = ['public_paid'];
+  state.checks[1].scope_rationale = 'a stated reason';
+  state.checks[1].status = 'skipped';
+  state.checks[1].observed_at_sha = null;
+  state.checks[1].evidence = null;
+  state.verdicts.public_paid.verdict = 'NO-GO';
+
+  const v = computeVerdicts(state, { head_sha: SHA });
+  assert.equal(v.capped_beta.verdict, 'GO', 'the track it was scoped away from is unaffected');
+  assert.equal(v.public_paid.verdict, 'NO-GO');
+  assert.match(v.public_paid.reasons.join(' '), /e2e_authenticated is skipped/);
+});
+
+test('narrowing a check to fewer tracks requires a written rationale', () => {
+  const state = clone(VALID);
+  state.checks[1].required_for = ['public_paid'];
+  assert.match(integrityProblems(state).join(' '), /no scope_rationale/);
+});
+
+test('a check with no required_for still blocks every track', () => {
+  const state = clone(VALID);
+  delete state.checks[1].required_for;
+  state.checks[1].status = 'failed';
+  state.checks[1].observed_at_sha = null;
+  state.checks[1].evidence = null;
+  const v = computeVerdicts(state, { head_sha: SHA });
+  assert.equal(v.capped_beta.verdict, 'NO-GO');
+  assert.equal(v.public_paid.verdict, 'NO-GO');
+});
+
 test('evidence borrowed from another commit is an integrity failure', () => {
   const state = clone(VALID);
   state.checks[0].observed_at_sha = 'c'.repeat(40);
@@ -194,8 +228,11 @@ test('the committed launch state is honestly NO-GO', () => {
   const v = computeVerdicts(state, { head_sha: state.candidate.sha });
   assert.equal(v.capped_beta.verdict, 'NO-GO');
   assert.equal(v.public_paid.verdict, 'NO-GO');
-  assert.match(v.capped_beta.reasons.join(' '), /e2e_authenticated is skipped/);
   assert.match(v.capped_beta.reasons.join(' '), /release_config is failed/);
+  // The authenticated matrix was scoped to public launch on 2026-07-28 (see the
+  // check's scope_rationale). It must still block that track, or scoping would
+  // have been a way to delete a red check rather than to place it.
+  assert.match(v.public_paid.reasons.join(' '), /e2e_authenticated is skipped/);
 });
 
 test('no required check claims to have passed in CI that CI does not run', () => {

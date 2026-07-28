@@ -102,10 +102,12 @@
       "name": "Authenticated seeded browser matrix",
       "command": "npm run test:e2e:auth",
       "required": true,
+      "required_for": ["public_paid"],
+      "scope_rationale": "Scoped to public launch on 2026-07-28. The owner has walked the signed-in product in production — signup, login, Stripe trial, access, cancel, AI generation and lifecycle email — and it works (docs/evidence/2026-07-28-owner-production-walkthrough.md). Calling the core journey unproven after that would be the gate wrong in the cautious direction, which is still wrong. What the matrix adds over one person clicking the happy path is phone and keyboard operation, cross-account isolation driven in a real browser, and the failure paths (session expiry, provider timeout mid-generation, reload during export). A supervised cohort of invited accounts with the owner watching can absorb those; strangers arriving unannounced cannot. So it stays required for public_paid.",
       "status": "skipped",
       "observed_at_sha": null,
       "evidence": null,
-      "note": "Built by SC-V11-03 (desktop, phone and keyboard projects over seeded isolated data). NOT RUN here: it needs a non-production Supabase project and an E2E_SEED_SECRET, which this environment does not have. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md."
+      "note": "Built by SC-V11-03 (desktop, phone and keyboard projects over seeded isolated data). NOT RUN: it needs a database that has opted in via backend/migrations/E2E_MARKER.sql. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md."
     },
     {
       "id": "export_rendering",
@@ -162,6 +164,17 @@
       "note": "Closed 2026-07-28. Full 001-037 range reports applied = true against the production database. The 034/035/036 contradiction is resolved in favour of docs/GO_NO_GO_V10.md."
     },
     {
+      "id": "owner_production_walkthrough",
+      "title": "Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email",
+      "status": "observed",
+      "required_for": [
+        "capped_beta"
+      ],
+      "runbook": "docs/evidence/2026-07-28-owner-production-walkthrough.md",
+      "evidence_ref": "docs/evidence/2026-07-28-owner-production-walkthrough.md",
+      "note": "Owner-attested, one person and one device on the happy path, not pinned to the v11 candidate. Sufficient for a supervised capped beta; explicitly not sufficient for public paid launch, which still requires the authenticated matrix."
+    },
+    {
       "id": "live_money_rehearsal",
       "title": "Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence",
       "status": "not_run",
@@ -186,14 +199,14 @@
     {
       "id": "ai_spend_ceiling",
       "title": "AI_SPEND_DAILY_CEILING_USD set in production",
-      "status": "not_run",
+      "status": "configured",
       "required_for": [
         "capped_beta",
         "public_paid"
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling",
       "evidence_ref": null,
-      "note": "Now enforced: npm run release:check fails a production release when AI_SPEND_DAILY_CEILING_USD is absent, zero, negative, non-numeric or absurd (backend/tests/spend-ceiling-gate.test.js). Still unset in production."
+      "note": "2026-07-28: owner reports AI_SPEND_DAILY_CEILING_USD = 5. Recorded as `configured`, not `observed`: nobody has yet run release:check in the production environment to confirm the value is actually live there. IMPORTANT MISMATCH — this variable is only read by /api/admin/readiness to compute spend_over_ceiling. It does NOT stop generation. The hard brake is MAX_AI_CALLS_PER_DAY, currently 300, which at ~$0.044 per claude-haiku-4-5 call (8000 max output tokens) permits roughly $13/day. A $5 alarm therefore fires at ~115 calls while the brake allows 300, so it will alert on ordinary beta days. Reconcile: either raise the alarm to ~15, or lower MAX_AI_CALLS_PER_DAY to ~120 so $5 is the true worst case."
     }
   ],
   "blockers": [
@@ -208,7 +221,8 @@
     },
     {
       "id": "P0-no-authenticated-e2e",
-      "severity": "P0",
+      "severity": "P1",
+      "severity_history": "Downgraded from P0 on 2026-07-28. The P0 rested on the claim that the signed-in journey had never been executed at all. That was true of automated browser runs and false of the product: the owner has run signup, login, Stripe trial, access, cancel and generation against production. The remaining gap — phone, keyboard, cross-account isolation and failure paths — is a public-launch condition, not a capped-beta one.",
       "status": "open",
       "title": "The signed-in journey has never been executed in a browser at any commit",
       "owner": "owner",

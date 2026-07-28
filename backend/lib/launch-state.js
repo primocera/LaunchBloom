@@ -74,6 +74,14 @@ function integrityProblems(state) {
     checkIds.add(id);
     if (!STATUSES.includes(c.status)) bad(`check ${id}: unknown status ${JSON.stringify(c.status)}`);
     if (typeof c.required !== 'boolean') bad(`check ${id}: required must be a boolean`);
+    for (const track of list(c.required_for)) {
+      if (!VERDICT_TRACKS.includes(track)) bad(`check ${id}: unknown verdict track ${track}`);
+    }
+    // Scoping a check to fewer tracks is a risk decision, so it must be argued
+    // in writing next to the check itself.
+    if (list(c.required_for).length && list(c.required_for).length < VERDICT_TRACKS.length && !c.scope_rationale) {
+      bad(`check ${id}: required_for narrows the tracks but gives no scope_rationale`);
+    }
 
     if (CHECK_PASSING.includes(c.status)) {
       // A pass with nothing behind it is a headline, not evidence.
@@ -158,13 +166,6 @@ function computeVerdicts(state, observed = {}) {
     shared.push(`candidate ${candidate.sha} is stale: HEAD is ${observed.head_sha}`);
   }
 
-  for (const c of checks) {
-    if (!c.required) continue;
-    if (!CHECK_PASSING.includes(c.status)) {
-      shared.push(`required check ${c.id} is ${c.status}`);
-    }
-  }
-
   if (!EVIDENCE_PASSING.includes(applied.status)) {
     shared.push(`migrations applied-state is ${applied.status || 'unknown'} (must be verified against the database)`);
   }
@@ -182,6 +183,21 @@ function computeVerdicts(state, observed = {}) {
       if (track === 'capped_beta' && r.startsWith('open P1:')) return false;
       return true;
     });
+    // A required check may be required for both tracks (the default, and what
+    // `required: true` alone means) or scoped with `required_for`. Some proof
+    // is genuinely a public-launch condition rather than a beta one: a
+    // supervised cohort of invited accounts with a named owner watching is a
+    // different risk than strangers arriving unannounced. Scoping is a stated
+    // decision recorded in the check's note — it is not a way to make a red
+    // check disappear, and a check with no `required_for` still blocks both.
+    for (const c of checks) {
+      if (!c.required) continue;
+      const scope = list(c.required_for);
+      if (scope.length && !scope.includes(track)) continue;
+      if (!CHECK_PASSING.includes(c.status)) {
+        reasons.push(`required check ${c.id} is ${c.status}`);
+      }
+    }
     for (const e of evidence) {
       if (!list(e.required_for).includes(track)) continue;
       if (!EVIDENCE_PASSING.includes(e.status)) {

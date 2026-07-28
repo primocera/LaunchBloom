@@ -11,8 +11,8 @@ Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T00:00
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **NO-GO** | required check e2e_authenticated is skipped; required check release_config is failed; open P0: P0-no-authenticated-e2e; owner evidence ai_spend_ceiling is not_run |
-| Public paid launch | **NO-GO** | required check e2e_authenticated is skipped; required check release_config is failed; open P0: P0-no-authenticated-e2e; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is not_run |
+| Capped beta | **NO-GO** | required check release_config is failed; owner evidence ai_spend_ceiling is configured |
+| Public paid launch | **NO-GO** | open P1: P0-no-authenticated-e2e; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; required check e2e_authenticated is skipped; required check release_config is failed; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is configured |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately.
@@ -63,15 +63,16 @@ Supabase or production configuration access.
 | Evidence | Status | Required for | Runbook |
 |---|---|---|---|
 | All migrations verified applied against the production database | observed | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
+| Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email | observed | capped_beta | `docs/evidence/2026-07-28-owner-production-walkthrough.md` |
 | Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
-| AI_SPEND_DAILY_CEILING_USD set in production | not run — **outstanding** | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
+| AI_SPEND_DAILY_CEILING_USD set in production | configured — **outstanding** | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
 ## Open blockers
 
 | Severity | Blocker | Owner | Closure |
 |---|---|---|---|
-| P0 | The signed-in journey has never been executed in a browser at any commit | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
+| P1 | The signed-in journey has never been executed in a browser at any commit | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 | P1 | No daily AI spend ceiling is configured in production | owner | Set AI_SPEND_DAILY_CEILING_USD in the production environment. SC-V11-06 made its absence a hard production release blocker; the value itself is still owner-only. |
 
