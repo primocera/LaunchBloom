@@ -120,7 +120,12 @@ test.describe('hero interaction states', () => {
     await page.goto('/');
     for (const selector of ['.lp-hero-actions .lp-cta', '.lp-cta-ghost']) {
       const el = page.locator(selector);
-      const before = await el.boundingBox();
+
+      // Layout position, not boundingBox(): boundingBox() is viewport-relative
+      // and tabbing scrolls the control into view, so the box legitimately
+      // "moves". offsetLeft/offsetTop describe layout, which is what "the
+      // outline must not reflow the button" actually means.
+      const layout = () => el.evaluate((n) => ({ x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight }));
 
       // Reach the control with the KEYBOARD, not el.focus(). The rings are
       // :focus-visible, whose heuristic depends on the browser's current input
@@ -140,10 +145,16 @@ test.describe('hero interaction states', () => {
       });
       expect(style.style, `${selector} has no focus outline`).not.toBe('none');
       expect(parseFloat(style.width)).toBeGreaterThanOrEqual(2);
-      const after = await el.boundingBox();
-      // An outline must not reflow the button.
-      expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+      // An outline is drawn outside the box and must not reflow it — position
+      // and size both, since padding or a border would change the latter.
+      //
+      // Both measurements are taken AFTER tabbing, so the reveal animations
+      // have settled for both. Measuring the unfocused state first compared a
+      // mid-animation layout against a settled one and failed intermittently.
+      const focused = await layout();
+      await el.evaluate((n) => n.blur());
+      const blurred = await layout();
+      expect(focused, `${selector} reflowed when focused`).toEqual(blurred);
     }
   });
 
