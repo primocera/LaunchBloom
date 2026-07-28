@@ -121,7 +121,19 @@ test.describe('hero interaction states', () => {
     for (const selector of ['.lp-hero-actions .lp-cta', '.lp-cta-ghost']) {
       const el = page.locator(selector);
       const before = await el.boundingBox();
-      await el.focus();
+
+      // Reach the control with the KEYBOARD, not el.focus(). The rings are
+      // :focus-visible, whose heuristic depends on the browser's current input
+      // modality — after any pointer interaction, programmatic focus does not
+      // match, so this test passed alone and failed in a full run. Tabbing sets
+      // keyboard modality explicitly and also proves the control is genuinely
+      // reachable, which is the property worth asserting anyway.
+      await page.keyboard.press('Tab');
+      for (let i = 0; i < 40 && !(await el.evaluate((n) => n === document.activeElement)); i += 1) {
+        await page.keyboard.press('Tab');
+      }
+      expect(await el.evaluate((n) => n === document.activeElement), `${selector} is not reachable by Tab`).toBe(true);
+
       const style = await el.evaluate((node) => {
         const s = getComputedStyle(node);
         return { width: s.outlineWidth, style: s.outlineStyle };
