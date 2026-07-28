@@ -161,6 +161,26 @@ app.use(apiLimiter, evidenceRouter);
 const libraryRouter = require('./routes/library');
 app.use(apiLimiter, libraryRouter);
 
+// Capped-beta feedback (v11 SC-07) — bounded categories only; optional free
+// text stays in beta_feedback and never reaches analytics.
+const feedbackRouter = require('./routes/feedback');
+app.use(apiLimiter, feedbackRouter);
+
+// v11 SC-03 — seed/reset for the authenticated browser matrix. Mounted ONLY
+// when explicitly enabled, and the router itself refuses to answer in
+// production or without a sufficiently long secret. Nothing about it is
+// reachable in a normal deployment.
+if (process.env.E2E_SEED_ENABLED === '1') {
+  const e2eSeedRouter = require('./routes/e2e-seed');
+  const problem = e2eSeedRouter.seedingAllowed();
+  if (problem) {
+    console.warn(`[e2e-seed] NOT mounted: ${problem}`);
+  } else {
+    app.use(apiLimiter, e2eSeedRouter);
+    console.warn('[e2e-seed] mounted — this must never happen in production');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------

@@ -14,12 +14,18 @@
     "test:integration": "node --test \"backend/tests/*.test.js\"",
     "_comment_e2e": "Playwright runs LOCALLY (not in CI — CI stays lean by design). One-time setup: npx playwright install chromium",
     "test:e2e": "playwright test",
+    "_comment_e2e_auth": "v11 SC-03: the signed-in matrix. Needs a NON-PRODUCTION Supabase project — see docs/RUNBOOK_AUTH_E2E.md. Not running it is a release blocker, not a pass.",
+    "test:e2e:auth": "node scripts/e2e-auth.mjs",
     "check:app-fresh": "node scripts/check-app-fresh.mjs",
     "check": "npm run lint && npm test && npm run build:app && npm run check:app-fresh",
     "_comment_verify_prices": "Read-only. Verifies what each Stripe price COSTS, not merely that its id is set. Run with the LIVE key before launch.",
     "verify-prices": "node backend/scripts/verify-stripe-prices.js",
     "release:check": "node backend/scripts/release-check.js",
     "release:evidence": "node backend/scripts/release-check.js --evidence",
+    "_comment_launch": "docs/launch/launch-state.json is the single release truth. `verify` checks the document is trustworthy (CI-safe, must stay green); `gate` recomputes GO/NO-GO and stays red until the evidence exists; `render` regenerates docs/LAUNCH_STATE.md.",
+    "launch:verify": "node backend/scripts/launch-state.js verify",
+    "launch:gate": "node backend/scripts/launch-state.js gate",
+    "launch:render": "node backend/scripts/launch-state.js render",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js"
   },
   "dependencies": {

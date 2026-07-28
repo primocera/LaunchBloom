@@ -274,10 +274,21 @@ function pdfText(s) {
 }
 
 function wrap(text, width) {
-  const words = String(text).split(/\s+/).filter(Boolean);
   const lines = [];
   let line = '';
-  for (const w of words) {
+  for (const word of String(text).split(/\s+/).filter(Boolean)) {
+    // v11 SC-05: a word longer than the line was previously emitted whole and
+    // ran off the right margin — a long URL in `proof`, or an unbroken
+    // campaign name, was clipped by the page edge in every PDF reader. There
+    // is no soft-wrap in a PDF content stream, so oversized words are broken
+    // here or they are lost.
+    let w = word;
+    while (w.length > width) {
+      if (line) { lines.push(line); line = ''; }
+      lines.push(w.slice(0, width));
+      w = w.slice(width);
+    }
+    if (!w) continue;
     if (line && (line + ' ' + w).length > width) { lines.push(line); line = w; }
     else line = line ? `${line} ${w}` : w;
   }

@@ -1,5 +1,9 @@
 # GO / NO-GO — Scalvya v9 Release Candidate
 
+> **SUPERSEDED — historical record, not current truth.** This gate belongs to
+> commit `20673ae`. Current launch truth lives in `docs/LAUNCH_STATE.md`,
+> generated from `docs/launch/launch-state.json`.
+
 **Status legend (kept distinct, never conflated):** `PASSED LOCALLY` · `CONFIGURED`
 · `VERIFY IN CI` · `OBSERVED LIVE` · `OUTSTANDING (owner)`.
 

@@ -44,6 +44,10 @@ const WORKSPACE_TABLES = [
   'positioning_outputs',
   'onboarding_answers',
   'brand_profiles',
+  // v11 SC-07: beta feedback holds an optional free-text note the user wrote,
+  // so it is unambiguously their data — it must leave with an export and go
+  // with an erasure.
+  'beta_feedback',
   // ── operational rows scoped to the workspace ──
   // usage_events and analytics_events carry no customer content (analytics is
   // redacted at write time), but they are workspace-identifiable, so erasure

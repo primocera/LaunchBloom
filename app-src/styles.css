@@ -969,7 +969,11 @@ button {
   color: var(--text-muted);
 }
 
-.login-card input {
+/* v11 SC-01: text fields only. This rule used to match every input in the
+   card, so the consent checkboxes were stretched to the full card width and
+   their labels displaced. Scoping it is the fix; the checkbox styling below
+   is deliberately independent of it. */
+.login-card input:not([type='checkbox']) {
   width: 100%;
   padding: 11px 13px;
   font: inherit;
@@ -980,9 +984,47 @@ button {
   outline: none;
 }
 
-.login-card input:focus {
+.login-card input:not([type='checkbox']):focus {
   border-color: var(--accent-ring);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* The consent row. The <label> wraps the control, so the whole row — at least
+   44px tall — is the interactive target, without inflating the 18px box. */
+.login-card .consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 11px 0;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.login-card .consent input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  /* flex-basis/shrink pinned so no future flex rule can stretch it again */
+  flex: 0 0 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.login-card .consent input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+
+/* The label text wraps naturally instead of overflowing the card. */
+.login-card .consent > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .btn-primary {

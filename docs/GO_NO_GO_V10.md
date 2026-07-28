@@ -1,5 +1,14 @@
 # GO / NO-GO — Scalvya v10 Release Candidate
 
+> **SUPERSEDED — historical record, not current truth.** This gate belongs to
+> commit `fd354ad`. Current launch truth lives in `docs/LAUNCH_STATE.md`,
+> generated from `docs/launch/launch-state.json`. In particular, this file's
+> claim that migrations `034`–`036` were verified applied on 2026-07-26
+> contradicts `docs/CONFIGURED_STATE.md` for the same date; the contradiction is
+> unresolved and applied-state is recorded as **unknown** until the owner
+> re-runs `CHECK_APPLIED.sql`. Do not cite anything below as evidence for a v11
+> commit.
+
 **Status legend (kept distinct, never conflated):** `TESTED LOCALLY` ·
 `CONFIGURED` · `VERIFIED IN CI` · `REHEARSED LIVE` · `OBSERVED OVER TIME` ·
 `OUTSTANDING (owner)`.

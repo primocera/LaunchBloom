@@ -1292,3 +1292,103 @@ textarea:focus-visible,
   .campaign-tabs { overflow-x: auto; flex-wrap: nowrap; }
   .campaign-tab { white-space: nowrap; }
 }
+
+/* ── v11 SC-07: the capped-beta feedback moment ───────────────────────────
+   Sits under the handoff exports. Visually subordinate to the work it asks
+   about, dismissible, and never in the way of an export. */
+.feedback-moment {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-top: 18px;
+  background: var(--sc-bg, #f8f7f4);
+  border: 1px solid var(--sc-border, #e5e7eb);
+  border-radius: 12px;
+}
+
+.feedback-moment.is-done {
+  display: block;
+  font-size: 13.5px;
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.feedback-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.feedback-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.feedback-dismiss {
+  font: inherit;
+  font-size: 13px;
+  color: var(--sc-muted, #6b7280);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.feedback-q {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.feedback-q legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.feedback-option {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-height: 32px;
+  padding: 3px 0;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.feedback-option input[type='radio'] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin: 2px 0 0;
+  cursor: pointer;
+}
+
+.feedback-notes {
+  display: grid;
+  gap: 6px;
+  font-size: 13.5px;
+}
+
+.feedback-notes textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13.5px;
+  border: 1px solid var(--sc-border, #e5e7eb);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.feedback-notes small {
+  color: var(--sc-muted, #6b7280);
+}
+
+.feedback-err {
+  margin: 0;
+  font-size: 13px;
+  color: #9b2c2c;
+}
