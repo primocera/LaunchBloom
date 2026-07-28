@@ -281,18 +281,37 @@ router.get('/api/auth/callback', async (req, res) => {
     setSessionCookies(res, session);
 
     const isRecovery = flow === 'recovery' || type === 'recovery';
-    if (!isRecovery && type === 'signup') {
-      track('verified', { userId: session.user && session.user.id });
+
+    // 2026-07-28: every branch below used to require `type === 'signup'`, which
+    // only exists on the token_hash form of the link. Supabase's default
+    // template sends `{{ .ConfirmationURL }}` → `?code=…` with NO `type`, so on
+    // a real deployment a confirmed signup fired NOTHING: no welcome email
+    // (email_events had not one `welcome` row in production history), no
+    // `verified` analytics event — which silently zeroes that row of the beta
+    // funnel — and the new account landed on /app instead of Brand Profile
+    // onboarding. One missing query parameter, three broken outcomes.
+    //
+    // A first verification is a signup whichever link form carried it, so it is
+    // now derived from the account rather than from the URL. The welcome email
+    // is deduped on `welcome:<user id>`, so treating an ambiguous callback as a
+    // signup can never send twice.
+    const user = session.user || null;
+    const createdAt = user && user.created_at ? Date.parse(user.created_at) : NaN;
+    const isFreshAccount = Number.isFinite(createdAt) && Date.now() - createdAt < 24 * 3600 * 1000;
+    const isSignup = type === 'signup' || (!type && isFreshAccount);
+
+    if (!isRecovery && isSignup) {
+      track('verified', { userId: user && user.id });
       // Idempotent welcome email (v5 Prompt 14) — never blocks the redirect.
-      if (session.user && session.user.email) {
+      if (user && user.email) {
         const { sendLifecycleEmail } = require('../lib/lifecycle-email');
-        sendLifecycleEmail('welcome', session.user.id, session.user.email).catch(() => {});
+        sendLifecycleEmail('welcome', user.id, user.email).catch(() => {});
       }
     }
     // New signups land on Brand Profile onboarding (v5 Prompt 2) — account and
     // profile first; the Stripe trial starts only at the first generation.
     if (isRecovery) return res.redirect(`${appUrl()}/app/reset-password`);
-    if (type === 'signup') return res.redirect(`${appUrl()}/app/brand?welcome=1`);
+    if (isSignup) return res.redirect(`${appUrl()}/app/brand?welcome=1`);
     return res.redirect(`${appUrl()}/app`);
   } catch (e) {
     return res.redirect(loginErr);

@@ -7,6 +7,7 @@ const { stubModule, makeFakeSupabase } = require('./helpers');
 
 // Configurable auth-client behaviour per test.
 const authState = {
+  exchangeCode: { data: { session: null }, error: { message: 'x' } },
   signUp: { data: { session: null, user: { id: 'u1' } }, error: null },
   signIn: { data: null, error: { message: 'Invalid', code: 'invalid_credentials' } },
   verifyOtp: { data: { session: null }, error: { message: 'bad' } },
@@ -25,7 +26,7 @@ fakeSupabase.authClient = () => ({
     resetPasswordForEmail: async () => ({ error: null }),
     resend: async () => ({ error: null }),
     verifyOtp: async () => authState.verifyOtp,
-    exchangeCodeForSession: async () => ({ data: { session: null }, error: { message: 'x' } }),
+    exchangeCodeForSession: async () => authState.exchangeCode,
   },
 });
 fakeSupabase.adminClient = () => ({
@@ -125,4 +126,59 @@ test('callback with a valid signup link sets cookies and redirects to onboarding
   assert.match(r.headers.location, /\/app\/brand\?welcome=1$/);
   const cookies = r.headers['set-cookie'] || [];
   assert.ok(cookies.some((c) => c.startsWith('sb_access=')));
+});
+
+// 2026-07-28 — Supabase's default template sends `{{ .ConfirmationURL }}`, i.e.
+// `?code=…` with NO `type`. Every signup consequence used to hang off
+// `type === 'signup'`, so on a real deployment a confirmed signup sent no
+// welcome email, fired no `verified` event and skipped onboarding. Production
+// email_events contained not a single `welcome` row, which is how it surfaced.
+test('a PKCE ?code= signup is treated as a signup, not as a plain sign-in', async () => {
+  authState.exchangeCode = {
+    data: {
+      session: {
+        access_token: 'AAA',
+        refresh_token: 'RRR',
+        user: { id: 'u-new', email: 'new@example.com', created_at: new Date().toISOString() },
+      },
+    },
+    error: null,
+  };
+  const r = await request(app).get('/api/auth/callback?code=abc123');
+  assert.equal(r.status, 302);
+  assert.match(r.headers.location, /\/app\/brand\?welcome=1$/,
+    'a freshly created account must land on Brand Profile onboarding, whichever link form carried it');
+});
+
+test('a ?code= sign-in by an established account is not mistaken for a signup', async () => {
+  const old = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+  authState.exchangeCode = {
+    data: {
+      session: {
+        access_token: 'AAA',
+        refresh_token: 'RRR',
+        user: { id: 'u-old', email: 'old@example.com', created_at: old },
+      },
+    },
+    error: null,
+  };
+  const r = await request(app).get('/api/auth/callback?code=abc123');
+  assert.equal(r.status, 302);
+  assert.match(r.headers.location, /\/app$/, 'an existing account must not be re-onboarded');
+});
+
+test('a recovery link is never treated as a signup, whichever form it arrives in', async () => {
+  authState.exchangeCode = {
+    data: {
+      session: {
+        access_token: 'AAA',
+        refresh_token: 'RRR',
+        user: { id: 'u-r', email: 'r@example.com', created_at: new Date().toISOString() },
+      },
+    },
+    error: null,
+  };
+  const r = await request(app).get('/api/auth/callback?code=abc123&flow=recovery');
+  assert.equal(r.status, 302);
+  assert.match(r.headers.location, /\/app\/reset-password$/);
 });
