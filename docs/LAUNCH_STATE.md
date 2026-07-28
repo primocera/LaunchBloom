@@ -12,7 +12,7 @@ Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T00:00
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **NO-GO** | required check release_config is failed; owner evidence ai_spend_ceiling is configured |
-| Public paid launch | **NO-GO** | open P1: P0-no-authenticated-e2e; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; required check e2e_authenticated is skipped; required check release_config is failed; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is configured |
+| Public paid launch | **NO-GO** | open P1: P0-no-authenticated-e2e; open P1: P1-hero-contrast-below-aa; open P1: P1-live-money-unrehearsed; open P1: P1-no-spend-ceiling; required check e2e_authenticated is skipped; required check release_config is failed; owner evidence live_money_rehearsal is not_run; owner evidence resend_suppression is not_run; owner evidence ai_spend_ceiling is configured |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately.
@@ -73,6 +73,7 @@ Supabase or production configuration access.
 | Severity | Blocker | Owner | Closure |
 |---|---|---|---|
 | P1 | The signed-in journey has never been executed in a browser at any commit | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
+| P1 | Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) | owner | Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 | P1 | No daily AI spend ceiling is configured in production | owner | Set AI_SPEND_DAILY_CEILING_USD in the production environment. SC-V11-06 made its absence a hard production release blocker; the value itself is still owner-only. |
 

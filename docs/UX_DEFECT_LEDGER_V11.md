@@ -13,8 +13,40 @@ credentials (see `docs/RUNBOOK_AUTH_E2E.md`).
 | 2 | `/app/signup` consent rows | P1 | `.login-card input { width: 100% }` matched the consent checkboxes, stretching them across the card and displacing their labels. | Text-input rule scoped with `:not([type='checkbox'])`; consent row pins an 18px box and a 44px label target. | measured geometry at 320/375/768/1440 in `e2e/signup-conversion.spec.js` |
 | 3 | `/app/signup` verification screen | P1 | "Open it on this device" described a same-device restriction the backend does not have — verification uses a device-independent token hash. | Cross-device wording plus honest expiry/reuse guidance. | `backend/tests/signup-conversion.test.js` |
 | 4 | `/app/signup` errors | P1 | Errors were loose text at the bottom of the form, unassociated with any field and unannounced. | `role="alert"`, `aria-invalid` and `aria-describedby` on the field that caused it. | both suites |
-| 5 | Landing hero helper text and proof strip | P0 | White text measured 4.10:1 at 26% and 2.49:1 at 62% of the gradient; helper copy and proof cards visibly disappeared in the lighter zone. | Localized in-hero scrim plus a shared `--hero-surface` token for helper/proof content that passes AA even over pure white. | `backend/tests/landing-contrast.test.js` (computed), `e2e/hero-contrast.spec.js` (rendered) |
+| 5 | Landing hero helper text and proof strip | P0 | White text measured 4.10:1 at 26% and 2.49:1 at 62% of the gradient; helper copy and proof cards visibly disappeared in the lighter zone. | ~~Localized in-hero scrim plus a shared `--hero-surface` token.~~ **Reverted 2026-07-28 — see UX-V11-CONTRAST below.** | — |
 | 6 | Hero CTAs | P2 | Hover was a transform only — invisible under reduced motion — and focus had no ring. | Distinct hover backgrounds and non-reflowing focus outlines. | `e2e/hero-contrast.spec.js` |
+
+## Open — accepted risk
+
+### UX-V11-CONTRAST · hero text does not meet WCAG AA · P1
+
+**Status:** open, accepted by the owner for the capped beta. Blocks nothing for
+an invited cohort; still open for public paid launch.
+
+White hero text on the restored sky gradient measures **4.70:1 at the top of
+the hero, falling to 1.99:1 at the bottom of the text band**. AA for normal
+text is 4.5:1, so no part of the hero band reaches it. The lowest content — the
+CTA note and the proof strip — is the least readable, which is the copy that
+has to do the persuading.
+
+**Why it is open rather than fixed.** v11 fixed it with a navy scrim over the
+hero and opaque surfaces behind the helper and proof text. The owner rejected
+both: the scrim dulled the approved blue — the same objection that produced
+commit `445d29e`, "restore the original v9 hero blue" — and the surfaces read
+as glass cards. The v11 prompt pack was explicit that working surfaces were not
+to be changed, and the landing page was working. Reverted on 2026-07-28.
+
+**How it is held.** `backend/tests/landing-contrast.test.js` pins the measured
+ratios and fails if the hero gets *worse*, and asserts the scrim and surface
+tokens do not silently return. So the shortfall is recorded and monitored, not
+forgotten.
+
+**If it is ever fixed**, the options that do not touch the blue are: darken only
+the last two gradient stops rather than overlaying the whole hero; move the CTA
+note and proof strip below the sky onto the white section; or raise the helper
+text weight and size so it qualifies as large text (3:1). None of these were
+attempted — the revert was the instruction, and picking a different unrequested
+redesign would repeat the original mistake.
 
 ## Added, not a defect fix
 

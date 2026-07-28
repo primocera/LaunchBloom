@@ -1,10 +1,15 @@
-// v11 SC-02 — hero readability in a real browser.
+// Hero rendering in a real browser.
 //
 // The stylesheet test (backend/tests/landing-contrast.test.js) does the contrast
-// arithmetic. This file asserts the things arithmetic on a stylesheet cannot
-// see: which rule actually won the cascade, whether the scrim really paints,
-// and whether any of it overlaps, clips or overflows at real widths and zoom.
-// A cascade conflict is exactly how the hero eyebrow shipped at 1.10:1 before.
+// arithmetic. This file asserts what arithmetic on a stylesheet cannot see:
+// which rule actually won the cascade, and whether anything overlaps, clips or
+// overflows at real widths and zoom. A cascade conflict is exactly how the hero
+// eyebrow shipped at 1.10:1 before.
+//
+// 2026-07-28: the v11 scrim and glass surfaces were reverted at the owner's
+// request, so the tests that asserted them are gone rather than weakened. The
+// remaining contrast shortfall is recorded in the stylesheet test and tracked
+// as UX-V11-CONTRAST — it is an accepted risk, not an unnoticed one.
 
 const { test, expect } = require('@playwright/test');
 
@@ -35,32 +40,6 @@ test.describe('hero text renders as the stylesheet intends', () => {
       expect(c.a, `${name} is translucent (${color}) — alpha over a gradient is what broke AA before`).toBe(1);
       expect([c.r, c.g, c.b], `${name} resolved to ${color}, not white — a later rule won the cascade`)
         .toEqual([255, 255, 255]);
-    }
-  });
-
-  test('the localized scrim actually paints behind the hero', async ({ page }) => {
-    await page.goto('/');
-    const scrim = await page.locator('.lp-hero').evaluate((el) => {
-      const s = getComputedStyle(el, '::before');
-      return { image: s.backgroundImage, pointer: s.pointerEvents, z: s.zIndex };
-    });
-    expect(scrim.image).toContain('linear-gradient');
-    expect(scrim.image).not.toBe('none');
-    expect(scrim.pointer).toBe('none');
-    expect(Number(scrim.z)).toBeLessThan(0);
-  });
-
-  test('helper and proof surfaces are opaque enough to carry their own text', async ({ page }) => {
-    await page.goto('/');
-    for (const selector of ['.lp-cta-note', '.lp-proof-strip li']) {
-      const bg = await page.locator(selector).first().evaluate((el) => getComputedStyle(el).backgroundColor);
-      const c = rgbaParts(bg);
-      expect(c, `${selector} has no background`).not.toBeNull();
-      // Below ~0.7 the gradient behind starts to determine the ratio again.
-      expect(c.a, `${selector} background ${bg} is too transparent to be background-independent`)
-        .toBeGreaterThanOrEqual(0.7);
-      // A dark surface, not a white veil.
-      expect(c.r + c.g + c.b).toBeLessThan(255);
     }
   });
 
@@ -162,17 +141,13 @@ test.describe('hero interaction states', () => {
     for (const { name, selector } of HERO_TEXT) {
       await expect(page.locator(selector).first(), `${name} is hidden under reduced motion`).toBeVisible();
     }
-    const scrim = await page.locator('.lp-hero').evaluate((el) => getComputedStyle(el, '::before').backgroundImage);
-    expect(scrim, 'the scrim must not depend on motion').toContain('linear-gradient');
   });
 
-  test('forced colors keeps all hero content and drops the scrim', async ({ page }) => {
+  test('forced colors keeps all hero content', async ({ page }) => {
     await page.emulateMedia({ forcedColors: 'active' });
     await page.goto('/');
     for (const { name, selector } of HERO_TEXT) {
       await expect(page.locator(selector).first(), `${name} vanished in forced-colors mode`).toBeVisible();
     }
-    const display = await page.locator('.lp-hero').evaluate((el) => getComputedStyle(el, '::before').display);
-    expect(display).toBe('none');
   });
 });

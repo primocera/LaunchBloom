@@ -229,6 +229,14 @@
       "closure": "The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA."
     },
     {
+      "id": "P1-hero-contrast-below-aa",
+      "severity": "P1",
+      "status": "open",
+      "title": "Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band)",
+      "owner": "owner",
+      "closure": "Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse."
+    },
+    {
       "id": "P1-live-money-unrehearsed",
       "severity": "P1",
       "status": "open",
