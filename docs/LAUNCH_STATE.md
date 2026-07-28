@@ -5,7 +5,7 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T10:00:00Z
+Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T11:00:00Z
 
 ## Verdict
 
@@ -19,8 +19,8 @@ different risk decisions and are decided separately.
 
 ## Release candidate
 
-- Candidate SHA: `1145bae235409de042f72478663f7963746d936f` (frozen)
-- HEAD now: `1145bae235409de042f72478663f7963746d936f`
+- Candidate SHA: `10b9ad5a1c257188a55779a768eaeca3de6cae24` (frozen)
+- HEAD now: `10b9ad5a1c257188a55779a768eaeca3de6cae24`
 - Bundle: index-BjggCPPF.js, index-l3T_G2oJ.css
 - Environment class: production
 
@@ -44,16 +44,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `1145bae` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `1145bae` | yes |
-| Production build | `npm run build:app` | passed locally | `1145bae` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `1145bae` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `1145bae` | yes |
+| ESLint | `npm run lint` | passed locally | `10b9ad5` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `10b9ad5` | yes |
+| Production build | `npm run build:app` | passed locally | `10b9ad5` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `10b9ad5` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `10b9ad5` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `1145bae` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `1145bae` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `1145bae` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `1145bae` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `10b9ad5` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `10b9ad5` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `10b9ad5` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `10b9ad5` | yes |
 
 ## Owner evidence
 
