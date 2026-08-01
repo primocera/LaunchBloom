@@ -243,8 +243,9 @@ export default function Landing() {
           <h1>Turn one offer into a launch-ready campaign.</h1>
           <p className="lp-sub">
             {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
-            agencies — and solo founders running their own launch. Turn one approved brief into
-            connected website copy, emails, social posts and ads, ready for review.
+            agencies: keep one offer&rsquo;s positioning, claims and CTA consistent across every
+            channel you deliver for a client. Solo founders run their own launch the same way.
+            Turn one approved brief into connected website copy, emails, social posts and ads.
             Launch-ready means structured, connected and ready for your review — publishing stays in your hands.
           </p>
 
@@ -253,7 +254,7 @@ export default function Landing() {
               Create my campaign
             </Link>
             <a className="lp-cta-ghost" href="#example">
-              See a real example
+              See an example
             </a>
           </div>
 

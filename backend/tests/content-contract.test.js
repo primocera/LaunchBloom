@@ -190,6 +190,47 @@ test('hero defines launch-ready and signup routes to first activation', () => {
   assert.match(signup, /navigate\('\/app\/brand\?welcome=1'\)/, 'fresh signups must land in Brand Profile first run');
 });
 
+// ── v12 SC-V12-06: agency-first conversion, without fabricated proof ─────────
+
+test('the hero leads with the primary ICP and the expensive consistency problem', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const sub = landing.match(/<p className="lp-sub">([\s\S]*?)<\/p>/);
+  assert.ok(sub, 'the hero supporting paragraph must exist');
+  const copy = sub[1].replace(/\s+/g, ' ');
+
+  const agencyAt = copy.search(/freelance marketers and boutique\s*agencies/i);
+  const soloAt = copy.search(/solo founders/i);
+  assert.ok(agencyAt >= 0, 'the primary ICP (freelance marketers and boutique agencies) must appear');
+  assert.ok(soloAt >= 0, 'solo founders must stay visible as the secondary ICP');
+  assert.ok(agencyAt < soloAt, 'the primary ICP must lead; solo founders come after');
+
+  // The expensive problem the primary ICP pays to solve: consistency across channels.
+  assert.match(copy, /consistent across/i, 'the hero must name the cross-channel consistency problem');
+  assert.match(copy, /positioning, claims and CTA/i, 'the problem must be concrete, not generic');
+  // Responsibility stays with the human; launch-ready never implies published.
+  assert.match(copy, /publishing stays in your hands/i, 'the hero must keep publishing as the user\'s responsibility');
+});
+
+test('the landing page invents no proof — no logos, counts, testimonials, time-saved, urgency', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const banned = [
+    [/trusted by/i, 'a "trusted by" social-proof claim'],
+    [/\btestimonials?\b/i, 'a testimonial'],
+    [/\b\d[\d,]*\+?\s*(customers|users|marketers|agencies|founders|brands|teams)\b/i, 'a fabricated usage count'],
+    [/thousands of (customers|users|marketers|agencies|founders|brands)/i, 'a vague usage count'],
+    [/save[sd]?\s+(you\s+)?\d+\s*(hours|hrs|minutes|mins)/i, 'a time-saved claim'],
+    [/\b\d+x\s+(faster|more)/i, 'a multiplier performance claim'],
+    [/rated\s*\d(\.\d)?|\d(\.\d)?\s*\/\s*5/i, 'a rating claim'],
+    [/limited time|only\s+\d+\s+(spots|seats)\s+left|act now|ends (soon|tonight)/i, 'a false-urgency claim'],
+  ];
+  for (const [re, what] of banned) {
+    assert.ok(!re.test(landing), `landing must not include ${what}`);
+  }
+  // The one on-page example must stay labelled as synthetic, not a real result.
+  assert.match(landing, /example data|synthetic|not a customer result/i,
+    'the product preview must be labelled as an example, not a real customer outcome');
+});
+
 test('Email studio discloses cost and says Scalvya does not send', () => {
   const email = read(path.join(APP_SRC, 'routes', 'studios', 'EmailFlowStudio.jsx'));
   assert.match(email, /Generate emails · 1 AI action/);
