@@ -126,16 +126,34 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
     // Live signals — counts only, each defended so a missing table degrades
     // to null rather than failing the whole readiness report.
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const reservationCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const countOf = async (fn) => { try { const { count } = await fn(); return count || 0; } catch { return null; } };
-    const [outboxBacklog, webhookFailures, spendRows] = await Promise.all([
+    const [outboxBacklog, webhookFailures, reservationLeakage, spendRows] = await Promise.all([
       countOf(() => supabase.from('email_outbox').select('id', { count: 'exact', head: true }).neq('status', 'sent')),
       countOf(() => supabase.from('stripe_events').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('created_at', since)),
+      // Reservation leakage: AI-spend reservations still 'reserved' well past a
+      // normal generation — a leak means the daily brake is being consumed by
+      // calls that never finalized or released.
+      countOf(() => supabase.from('usage_events').select('id', { count: 'exact', head: true }).eq('status', 'reserved').lt('created_at', reservationCutoff)),
       supabase.from('ai_spend_ledger').select('amount_usd').gte('created_at', since).then((r) => r.data || [], () => []),
     ]);
     const spend24h = Array.isArray(spendRows)
       ? Math.round(spendRows.reduce((s, r) => s + (Number(r.amount_usd) || 0), 0) * 100) / 100
       : null;
     const ceiling = Number(process.env.AI_SPEND_DAILY_CEILING_USD || 0) || null;
+
+    const live = {
+      outbox_backlog: outboxBacklog,
+      webhook_failures_24h: webhookFailures,
+      reservation_leakage: reservationLeakage,
+      ai_spend_24h_usd: spend24h,
+      ai_spend_ceiling_usd: ceiling,
+      spend_over_ceiling: ceiling != null && spend24h != null ? spend24h > ceiling : null,
+    };
+    // Classify the raw counts into ok/warn/stop against explicit thresholds so a
+    // reader (or a pager) does not have to remember what "too high" means.
+    const { classifyReadiness } = require('../lib/readiness-thresholds');
+    const { signals, status } = classifyReadiness(live);
 
     await audit(req, 'readiness');
     res.json({
@@ -144,13 +162,9 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       blockers: blockers.length,
       external: external.length,
       checks, // presence booleans + detail strings, no secret values
-      live: {
-        outbox_backlog: outboxBacklog,
-        webhook_failures_24h: webhookFailures,
-        ai_spend_24h_usd: spend24h,
-        ai_spend_ceiling_usd: ceiling,
-        spend_over_ceiling: ceiling != null && spend24h != null ? spend24h > ceiling : null,
-      },
+      live,
+      signals,
+      operational_status: status, // 'ok' | 'warn' | 'stop'
       note: 'Automated readiness is not a paid-launch GO. A live low-value charge + cancel/recover ' +
         'rehearsal with owner-recorded evidence is required (see docs/RUNBOOK_TRANSACTION_REHEARSAL.md).',
     });

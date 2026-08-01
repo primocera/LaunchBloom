@@ -26,6 +26,7 @@ const { planFor } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { ensureWorkspace } = require('./workspaces');
 const { track } = require('../lib/analytics');
+const { signupDecision, capIsActive, MESSAGES: COHORT_MESSAGES } = require('../lib/cohort-control');
 
 const router = express.Router();
 
@@ -93,22 +94,20 @@ router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
       return res.status(400).json({ error: 'Please accept the Terms and Privacy Policy to continue.' });
     }
 
-    // v10 SC-07: the capped beta stops taking new accounts by itself. Enforced
-    // server-side so it cannot be bypassed from the client, and counted from
-    // real workspace rows rather than a maintained tally that could drift.
-    // Unset or 0 = uncapped (normal operation outside the beta).
-    const cap = Number(process.env.BETA_INVITE_CAP || 0);
-    if (cap > 0) {
+    // v10 SC-07 / v12 SC-V12-07: cohort control, enforced server-side and
+    // FAIL-CLOSED. An emergency stop (SIGNUP_PAUSED), a misconfigured cap, or a
+    // count we cannot verify all refuse signups rather than silently opening
+    // them. Unset or 0 = uncapped normal operation. See lib/cohort-control.js.
+    let cohortCount = null;
+    if (capIsActive(process.env)) {
       const { count, error: capErr } = await supabase
         .from('workspaces').select('id', { count: 'exact', head: true });
-      // Fail OPEN: a counting failure must not lock legitimate users out of a
-      // product that is otherwise accepting signups.
-      if (!capErr && (count || 0) >= cap) {
-        return res.status(403).json({
-          error: 'The beta is currently full. Leave your email with support and we will let you know when a place opens.',
-          code: 'BETA_FULL',
-        });
-      }
+      // null on error → signupDecision fails closed (cannot verify the cap).
+      cohortCount = capErr ? null : (count || 0);
+    }
+    const decision = signupDecision(process.env, cohortCount);
+    if (!decision.allow) {
+      return res.status(403).json({ error: COHORT_MESSAGES[decision.code], code: decision.code });
     }
 
     const client = supabase.authClient();
