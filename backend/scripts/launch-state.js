@@ -323,7 +323,34 @@ function main() {
     process.exit(go ? 0 : 1);
   }
 
-  console.error(`Unknown mode: ${mode}. Use verify | gate | render.`);
+  // v12 SC-V12-05: fail-closed code-drift detection for the release-candidate
+  // workflow. Evidence is pinned to candidate.sha; if any PRODUCT file changed
+  // between that commit and HEAD, the evidence no longer describes the shipped
+  // code and this exits non-zero. Documentation-only drift (the NON_CODE
+  // allowlist) is exempt — and that allowlist can never include product code,
+  // which backend/tests/launch-state.test.js enforces.
+  if (mode === 'drift') {
+    const sha = state.candidate && state.candidate.sha;
+    if (!sha) {
+      console.log('\nCode drift: no candidate pinned — nothing to compare.\n');
+      process.exit(0);
+    }
+    const changes = observed.code_changes;
+    if (changes === null) {
+      console.error('\nCode drift: UNKNOWN — git could not diff the candidate against HEAD. Treating as drift.\n');
+      process.exit(1);
+    }
+    if (changes.length === 0) {
+      console.log(`\nCode drift: none — HEAD matches candidate ${sha} except for documentation.\n`);
+      process.exit(0);
+    }
+    console.error(`\nCode drift: ${changes.length} product file(s) changed since candidate ${sha} was pinned:`);
+    for (const f of changes) console.error(`  - ${f}`);
+    console.error('\nEvidence pinned to the old candidate is stale. Cut a new candidate (SC-V12-08).\n');
+    process.exit(1);
+  }
+
+  console.error(`Unknown mode: ${mode}. Use verify | gate | render | drift.`);
   process.exit(2);
 }
 

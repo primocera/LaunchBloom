@@ -96,8 +96,12 @@ test('the exemption covers docs only — never code, config or the bundle', () =
   const list = source.match(/const NON_CODE = \[([^\]]*)\]/);
   assert.ok(list, 'the exempt-path list must stay explicit and greppable');
   // app/ is the committed bundle users are served — exempting it would let a
-  // rebuilt frontend ship under evidence gathered for a different one.
-  for (const forbidden of ['app/', 'backend', 'app-src', 'e2e', 'api/', 'package.json']) {
+  // rebuilt frontend ship under evidence gathered for a different one. Config,
+  // workflow and lockfile changes are code too: they change what runs.
+  for (const forbidden of [
+    'app/', 'backend', 'app-src', 'e2e', 'api/', 'package.json', 'package-lock',
+    '.github', 'config', 'playwright', 'eslint', 'vite', '.env',
+  ]) {
     assert.ok(!list[1].includes(forbidden), `${forbidden} must never be exempt from invalidating a candidate`);
   }
 });
@@ -345,14 +349,41 @@ test('public paid launch is CONDITIONAL GO on accepted risk, never a full GO', (
 
 test('no required check claims to have passed in CI that CI does not run', () => {
   const state = loadState();
-  const ciJob = fs.readFileSync(path.join(__dirname, '..', '..', '.github', 'workflows', 'ci.yml'), 'utf8');
+  // passed_ci is legitimate only when the exact command runs in a committed
+  // workflow — the lean ci.yml OR the fail-closed release-candidate workflow.
+  const workflowsDir = path.join(__dirname, '..', '..', '.github', 'workflows');
+  const workflows = fs.readdirSync(workflowsDir)
+    .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))
+    .map((f) => fs.readFileSync(path.join(workflowsDir, f), 'utf8'))
+    .join('\n');
   for (const check of state.checks) {
     if (check.status !== 'passed_ci') continue;
     assert.ok(
-      ciJob.includes(check.command),
-      `${check.id} claims passed_ci but "${check.command}" does not appear in the CI workflow`,
+      workflows.includes(check.command),
+      `${check.id} claims passed_ci but "${check.command}" does not appear in any CI workflow`,
     );
   }
+});
+
+test('the release-candidate workflow runs the launch-critical set, fail-closed, with evidence', () => {
+  const rc = fs.readFileSync(
+    path.join(__dirname, '..', '..', '.github', 'workflows', 'release-candidate.yml'), 'utf8',
+  );
+  // Every launch-critical command the manifest can cite as passed_ci must run here.
+  for (const cmd of [
+    'npm run lint', 'npm run launch:verify', 'npm test', 'npm run build:app',
+    'npm run check:app-fresh', 'npm run test:export', 'npm run test:e2e', 'npm run launch:drift',
+  ]) {
+    assert.ok(rc.includes(cmd), `release-candidate workflow must run ${cmd}`);
+  }
+  // Release-candidate mode (skips are hard failures) and refusal of the wrong target.
+  assert.match(rc, /RC_GATE: '1'/, 'the workflow must run in release-candidate mode');
+  assert.match(rc, /E2E_FORBIDDEN_SUPABASE_REFS/, 'the authenticated job must be able to refuse a forbidden target');
+  // Evidence artifacts are named with the candidate SHA and the run id.
+  assert.match(rc, /rc-evidence-\$\{\{ github\.sha \}\}-\$\{\{ github\.run_id \}\}/);
+  // Owner-only live checks are stated as NOT RUN, never passed.
+  assert.match(rc, /Owner-only live checks: NOT RUN/);
+  assert.match(rc, /Authenticated matrix NOT RUN/);
 });
 
 test('every superseded release document carries a banner pointing at the canonical state', () => {

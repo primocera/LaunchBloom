@@ -1,0 +1,193 @@
+# v12 SC-V12-05 — the reproducible, fail-closed release-candidate gate.
+#
+# Ordinary CI (ci.yml) stays lean and non-flaky and must NOT be mistaken for
+# launch approval. THIS workflow runs the full launch-critical set at one commit,
+# fails closed on any missing requirement or skipped required test, and uploads
+# raw evidence named with the candidate SHA and run id. It does not itself
+# declare a candidate or a verdict — SC-V12-08 does that from the manifest.
+#
+# Triggered manually, or by pushing a release branch. Not on every PR: it is
+# heavier than the lean gate and is meant for a deliberate candidate.
+name: release-candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release/**'
+      - 'rc/**'
+
+# Release-candidate mode: the authenticated runner treats any skipped required
+# test as a hard failure (scripts/e2e-auth.mjs reads RC_GATE).
+env:
+  RC_GATE: '1'
+
+jobs:
+  # Everything that needs no secrets. All required; any non-zero fails the gate.
+  candidate-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, so code-drift detection can diff the candidate
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Launch-state integrity
+        run: npm run launch:verify
+
+      - name: Unit / contract / safety tests
+        run: npm test
+
+      - name: Production frontend build
+        run: npm run build:app
+
+      - name: Stale-bundle check (app/ matches app-src/)
+        run: npm run check:app-fresh
+
+      - name: Export integrity (DOCX / PDF / ZIP)
+        run: npm run test:export
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Public browser suite (all configured viewports)
+        run: npm run test:e2e
+
+      - name: Code-drift check (evidence must describe HEAD, not a stale candidate)
+        run: npm run launch:drift
+
+      # Raw evidence, named with the candidate SHA and this run's id. No secrets,
+      # no database dumps, no user content — only test output and reports.
+      - name: Assemble evidence manifest
+        if: always()
+        run: |
+          mkdir -p rc-evidence
+          {
+            echo "candidate_sha=${GITHUB_SHA}"
+            echo "workflow_run_id=${GITHUB_RUN_ID}"
+            echo "ref=${GITHUB_REF}"
+            echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "checks=lint,launch:verify,test,build:app,check:app-fresh,test:export,test:e2e,launch:drift"
+          } > "rc-evidence/summary-${GITHUB_SHA}.txt"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-evidence-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            rc-evidence/
+            test-results/
+            playwright-report/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # The authenticated matrix. It needs a NON-PRODUCTION Supabase project, so it
+  # runs only when those secrets are configured. When they are absent the job is
+  # visibly NOT RUN — never a pass — and is not launch evidence.
+  authenticated-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detect non-production E2E secrets
+        id: cfg
+        env:
+          SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_SEED_SECRET: ${{ secrets.E2E_SEED_SECRET }}
+        run: |
+          missing=""
+          for v in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY E2E_SEED_SECRET; do
+            if [ -z "${!v}" ]; then missing="$missing $v"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "missing=$missing" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Playwright Chromium
+        if: steps.cfg.outputs.available == 'true'
+        run: npx playwright install --with-deps chromium
+
+      # RC_GATE=1: any skipped required test fails. The runner also REFUSES a
+      # production or other-app target via E2E_FORBIDDEN_SUPABASE_REFS.
+      - name: Authenticated matrix (release-candidate mode)
+        if: steps.cfg.outputs.available == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_SEED_SECRET: ${{ secrets.E2E_SEED_SECRET }}
+          E2E_FORBIDDEN_SUPABASE_REFS: ${{ vars.E2E_FORBIDDEN_SUPABASE_REFS }}
+          RC_GATE: '1'
+        run: npm run test:e2e:auth
+
+      - name: Upload authenticated evidence
+        if: steps.cfg.outputs.available == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-auth-evidence-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # Loud NOT RUN when the non-production project is not configured. Record
+      # e2e_authenticated as `skipped` in the manifest — never `passed_ci`.
+      - name: Authenticated matrix NOT RUN (non-production project unavailable)
+        if: steps.cfg.outputs.available != 'true'
+        run: |
+          echo "::warning::authenticated E2E NOT RUN — non-production Supabase secrets unavailable. This job is NOT launch evidence."
+          {
+            echo "### Authenticated E2E: NOT RUN"
+            echo ""
+            echo "Missing:${{ steps.cfg.outputs.missing }}"
+            echo ""
+            echo "Record \`e2e_authenticated\` as \`skipped\` in docs/launch/launch-state.json."
+            echo "public paid stays at most CONDITIONAL GO. See docs/RUNBOOK_AUTH_E2E.md."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Owner-only live checks can never run in CI without live secrets and human
+  # action. This job states plainly that they are NOT RUN, so a green workflow
+  # can never be cited as evidence that they happened.
+  owner-live-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: State owner-only live checks as NOT RUN
+        run: |
+          {
+            echo "### Owner-only live checks: NOT RUN in CI (by design)"
+            echo ""
+            echo "These require live Stripe/Resend/production access and a human, and"
+            echo "are never automated here:"
+            echo "- live billing recovery + refund rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md)"
+            echo "- production configuration gate (npm run release:evidence, owner-run)"
+            echo "- migrations applied-state verification against production"
+            echo ""
+            echo "A green release-candidate workflow is NOT a full GO. See SC-V12-08."
+          } >> "$GITHUB_STEP_SUMMARY"

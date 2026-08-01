@@ -25,7 +25,10 @@
     "_comment_launch": "docs/launch/launch-state.json is the single release truth. `verify` checks the document is trustworthy (CI-safe, must stay green); `gate` recomputes GO/NO-GO and stays red until the evidence exists; `render` regenerates docs/LAUNCH_STATE.md.",
     "launch:verify": "node backend/scripts/launch-state.js verify",
     "launch:gate": "node backend/scripts/launch-state.js gate",
+    "launch:drift": "node backend/scripts/launch-state.js drift",
     "launch:render": "node backend/scripts/launch-state.js render",
+    "_comment_export_integrity": "DOCX/PDF/ZIP structural validation and bounds — the export path that protects the paid deliverable.",
+    "test:export": "node --test backend/tests/handoff-export-integrity.test.js",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js"
   },
   "dependencies": {
