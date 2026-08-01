@@ -132,12 +132,13 @@ automatically.
 
 The launch verdict is computed, not declared — from
 [`docs/launch/launch-state.json`](docs/launch/launch-state.json), by
-`npm run launch:gate`. Both tracks are GO, but not on the same footing:
+`npm run launch:gate`. The two tracks are not on the same footing, and accepted
+risk never produces a full GO:
 
 | Track | Verdict | On what |
 |---|---|---|
 | Capped beta | GO | evidence |
-| Public paid launch | GO | evidence **plus three accepted risks** |
+| Public paid launch | CONDITIONAL GO | evidence, with three required conditions riding on accepted risk |
 
 Proven against production: migrations `001`–`037` applied, configuration
 verified via `/api/admin/readiness` (`mode: production`, 13/13, 0 blockers),

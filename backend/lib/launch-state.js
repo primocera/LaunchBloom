@@ -43,6 +43,17 @@ const EVIDENCE_PASSING = Object.freeze(['live_rehearsed', 'observed']);
 const SEVERITIES = Object.freeze(['P0', 'P1', 'P2']);
 const BLOCKER_STATUSES = Object.freeze(['open', 'closed', 'accepted']);
 
+// The closed vocabulary of verdicts. Anything outside this set is not a verdict
+// this system knows how to defend, so the manifest may not declare it.
+//
+//   GO              every required condition for the track is actually met.
+//   CONDITIONAL GO  no unaccepted blocker remains, but the launch proceeds over
+//                   one or more required conditions that are only bypassed by a
+//                   valid accepted_risk — never because they were satisfied.
+//   NO-GO           at least one required condition is unmet without a valid
+//                   scoped acceptance.
+const VERDICTS = Object.freeze(['GO', 'CONDITIONAL GO', 'NO-GO']);
+
 // A risk the owner has decided to ship with. This is NOT a way to make a red
 // item green: the item keeps its real status everywhere it is displayed, and
 // `accepted` is visibly different from `closed`. What it does is let a launch
@@ -170,7 +181,9 @@ function integrityProblems(state) {
   for (const track of VERDICT_TRACKS) {
     const declared = isPlainObject(state.verdicts) ? state.verdicts[track] : null;
     if (!isPlainObject(declared)) { bad(`verdicts.${track} missing`); continue; }
-    if (declared.verdict !== computed[track].verdict) {
+    if (!VERDICTS.includes(declared.verdict)) {
+      bad(`verdicts.${track}: unknown verdict ${JSON.stringify(declared.verdict)} (must be one of ${VERDICTS.join(', ')})`);
+    } else if (declared.verdict !== computed[track].verdict) {
       bad(`verdicts.${track}: declared ${declared.verdict}, computed ${computed[track].verdict}`);
     }
   }
@@ -180,9 +193,51 @@ function integrityProblems(state) {
 
 // --- verdict --------------------------------------------------------------
 
-// Deterministic GO/NO-GO per track, with the exact reasons. Capped beta and an
-// unrestricted public paid launch are different risk decisions, so they are
-// computed separately and never share a conclusion.
+// One accepted-risk entry as it will be reported back to the caller. The item
+// keeps its real status — a check that is `skipped` still reads `skipped` here.
+// `risk_id` is what makes two records the same logical risk: the P0 blocker and
+// the check that measures it are one risk seen from two places, and must be
+// counted once.
+function acceptedEntry(kind, item) {
+  const acc = (item && item.accepted_risk) || {};
+  return {
+    risk_id: acc.risk_id || `${kind}:${item.id}`,
+    kind,
+    id: item.id,
+    status: item.status,
+    severity: item.severity || null,
+    title: item.title || item.name || null,
+    owner: item.owner || null,
+    closure: item.closure || null,
+    accepted_by: acc.accepted_by || null,
+  };
+}
+
+// Fold entries that describe the same logical risk into one. A blocker is the
+// canonical face of a risk (it carries the owner and the closure requirement),
+// so it wins as the representative; the check and evidence that measure the same
+// risk are recorded as additional sources rather than as separate risks.
+const RISK_KIND_RANK = Object.freeze({ blocker: 0, check: 1, evidence: 2 });
+function dedupeRisks(entries) {
+  const byId = new Map();
+  for (const e of entries) {
+    const ref = `${e.kind}:${e.id}`;
+    const cur = byId.get(e.risk_id);
+    if (!cur) { byId.set(e.risk_id, { ...e, sources: [ref] }); continue; }
+    const sources = cur.sources.includes(ref) ? cur.sources : [...cur.sources, ref];
+    if (RISK_KIND_RANK[e.kind] < RISK_KIND_RANK[cur.kind]) {
+      byId.set(e.risk_id, { ...e, sources });
+    } else {
+      cur.sources = sources;
+    }
+  }
+  return [...byId.values()];
+}
+
+// Deterministic GO / CONDITIONAL GO / NO-GO per track, with the exact reasons
+// and the accepted risks the verdict rests on. Capped beta and an unrestricted
+// public paid launch are different risk decisions, so they are computed
+// separately and never share a conclusion.
 function computeVerdicts(state, observed = {}) {
   const candidate = isPlainObject(state && state.candidate) ? state.candidate : {};
   const checks = list(state && state.checks);
@@ -221,11 +276,15 @@ function computeVerdicts(state, observed = {}) {
     shared.push(`migrations applied-state is ${applied.status || 'unknown'} (must be verified against the database)`);
   }
 
-  const openBlockers = blockers.filter((b) => b.status === 'open' && (b.severity === 'P0' || b.severity === 'P1'));
+  const blocking = blockers.filter((b) => b.severity === 'P0' || b.severity === 'P1');
 
   const out = {};
   for (const track of VERDICT_TRACKS) {
     const reasons = [...shared];
+    // Accepted required conditions bypassed for this track. These never satisfy
+    // a condition — they record that the launch proceeds *over* an unmet one.
+    // A non-empty list is exactly what separates CONDITIONAL GO from GO.
+    const acceptedRaw = [];
     // A required check may be required for both tracks (the default, and what
     // `required: true` alone means) or scoped with `required_for`. Some proof
     // is genuinely a public-launch condition rather than a beta one: a
@@ -233,9 +292,16 @@ function computeVerdicts(state, observed = {}) {
     // different risk than strangers arriving unannounced. Scoping is a stated
     // decision recorded in the check's note — it is not a way to make a red
     // check disappear, and a check with no `required_for` still blocks both.
-    for (const b of openBlockers) {
+    for (const b of blocking) {
+      // A P1 is not a capped-beta condition; it only bears on the public launch.
       if (track === 'capped_beta' && b.severity === 'P1') continue;
-      if (acceptedFor(b, track)) continue;
+      if (b.status === 'closed') continue;
+      if (b.status === 'accepted') {
+        if (acceptedFor(b, track)) acceptedRaw.push(acceptedEntry('blocker', b));
+        continue;
+      }
+      // status === 'open'
+      if (acceptedFor(b, track)) { acceptedRaw.push(acceptedEntry('blocker', b)); continue; }
       reasons.push(`open ${b.severity}: ${b.id}`);
     }
     for (const c of checks) {
@@ -243,16 +309,22 @@ function computeVerdicts(state, observed = {}) {
       const scope = list(c.required_for);
       if (scope.length && !scope.includes(track)) continue;
       if (CHECK_PASSING.includes(c.status)) continue;
-      if (acceptedFor(c, track)) continue;
+      if (acceptedFor(c, track)) { acceptedRaw.push(acceptedEntry('check', c)); continue; }
       reasons.push(`required check ${c.id} is ${c.status}`);
     }
     for (const e of evidence) {
       if (!list(e.required_for).includes(track)) continue;
       if (EVIDENCE_PASSING.includes(e.status)) continue;
-      if (acceptedFor(e, track)) continue;
+      if (acceptedFor(e, track)) { acceptedRaw.push(acceptedEntry('evidence', e)); continue; }
       reasons.push(`owner evidence ${e.id} is ${e.status}`);
     }
-    out[track] = { verdict: reasons.length ? 'NO-GO' : 'GO', reasons };
+
+    const accepted_risks = dedupeRisks(acceptedRaw);
+    let verdict;
+    if (reasons.length) verdict = 'NO-GO';
+    else if (accepted_risks.length) verdict = 'CONDITIONAL GO';
+    else verdict = 'GO';
+    out[track] = { verdict, reasons, accepted_risks };
   }
   return out;
 }
@@ -265,6 +337,7 @@ module.exports = {
   CHECK_PASSING,
   EVIDENCE_PASSING,
   SEVERITIES,
+  VERDICTS,
   VERDICT_TRACKS,
   integrityProblems,
   computeVerdicts,

@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { integrityProblems, computeVerdicts, STATUSES, CHECK_PASSING, EVIDENCE_PASSING } = require('../lib/launch-state');
+const { integrityProblems, computeVerdicts, STATUSES, VERDICTS, CHECK_PASSING, EVIDENCE_PASSING } = require('../lib/launch-state');
 const { loadState, documentProblems, render } = require('../scripts/launch-state');
 
 const SHA = 'a'.repeat(40);
@@ -251,6 +251,28 @@ test('statuses outside the vocabulary are rejected', () => {
   assert.ok(!STATUSES.includes('green'));
 });
 
+test('a declared GO that should be CONDITIONAL GO is an integrity failure', () => {
+  const state = clone(VALID);
+  // A required check bypassed by a valid acceptance: the honest verdict is
+  // CONDITIONAL GO, but the document still declares a full GO.
+  state.checks[1].status = 'skipped';
+  state.checks[1].observed_at_sha = null;
+  state.checks[1].evidence = null;
+  state.checks[1].accepted_risk = {
+    accepted_by: 'owner', accepted_at_utc: '2026-07-28T00:00:00Z', tracks: ['public_paid'],
+    rationale: 'a rationale long enough to be a real argument rather than a placeholder',
+  };
+  // capped_beta genuinely stays GO; only public_paid is misdeclared.
+  assert.match(integrityProblems(state).join(' '), /declared GO, computed CONDITIONAL GO/);
+});
+
+test('a verdict string outside the closed vocabulary is rejected', () => {
+  const state = clone(VALID);
+  state.verdicts.public_paid.verdict = 'SHIP IT';
+  assert.match(integrityProblems(state).join(' '), /unknown verdict "SHIP IT"/);
+  assert.ok(!VERDICTS.includes('SHIP IT'));
+});
+
 // --- the real manifest ----------------------------------------------------
 
 test('the committed launch state is internally consistent', () => {
@@ -287,16 +309,28 @@ test('capped beta is GO on evidence, and every passing check is pinned to the ca
   }
 });
 
-test('public paid launch is GO on accepted risk, not on complete evidence', () => {
+test('public paid launch is CONDITIONAL GO on accepted risk, never a full GO', () => {
   const state = loadState();
   const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
-  assert.equal(v.public_paid.verdict, 'GO');
+  // The accepted risks make a full GO impossible; the honest verdict is conditional.
+  assert.equal(v.public_paid.verdict, 'CONDITIONAL GO');
+  assert.notEqual(v.public_paid.verdict, 'GO');
 
-  // The GO rests on three explicit acceptances. Each must still be a recorded
-  // decision with a named owner — if any is removed, this verdict must fall
-  // back to NO-GO on its own, without anybody editing the verdict.
+  // Three logical risks carry it: authenticated-e2e, hero-contrast and
+  // live-money. Each surfaces from more than one record (a blocker plus the
+  // check or evidence that measures it) and must be deduplicated to one.
+  const ids = v.public_paid.accepted_risks.map((r) => r.risk_id).sort();
+  assert.deepEqual(ids, ['authenticated-e2e', 'hero-contrast', 'live-money']);
+  const authRisk = v.public_paid.accepted_risks.find((r) => r.risk_id === 'authenticated-e2e');
+  assert.ok(
+    authRisk.sources.includes('blocker:P0-no-authenticated-e2e') && authRisk.sources.includes('check:e2e_authenticated'),
+    'the blocker and the check it measures are the same logical risk, counted once',
+  );
+
+  // Each acceptance is still a recorded decision with a named owner — if all are
+  // removed, this verdict must fall back to NO-GO on its own.
   const accepted = state.blockers.filter((b) => b.status === 'accepted');
-  assert.ok(accepted.length >= 3, 'the public launch GO rests on accepted risks that must stay visible');
+  assert.ok(accepted.length >= 3, 'the public launch verdict rests on accepted risks that must stay visible');
 
   const stripped = clone(state);
   for (const b of stripped.blockers) { if (b.status === 'accepted') { b.status = 'open'; delete b.accepted_risk; } }
@@ -341,12 +375,35 @@ test('the rendered launch status stays in sync with the canonical data', () => {
   assert.equal(onDisk, expected, 'docs/LAUNCH_STATE.md is stale — run `npm run launch:render`');
 });
 
+test('the rendered output lists accepted risks and never claims all conditions met for a CONDITIONAL GO', () => {
+  const state = loadState();
+  const doc = render(state, { head_sha: state.candidate.sha });
+  const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
+  assert.equal(v.public_paid.verdict, 'CONDITIONAL GO', 'this test assumes the manifest is conditional');
+
+  // The conditional verdict must not read as a clean pass.
+  const verdictSection = doc.slice(doc.indexOf('## Verdict'), doc.indexOf('## Release candidate'));
+  assert.ok(verdictSection.includes('CONDITIONAL GO'));
+  assert.ok(
+    !/CONDITIONAL GO.*all conditions met/.test(verdictSection),
+    'a CONDITIONAL GO must never be rendered as "all conditions met"',
+  );
+
+  // Every accepted risk the verdict rests on is named, with its real status.
+  assert.match(doc, /Unresolved blockers and accepted risks/);
+  for (const r of v.public_paid.accepted_risks) {
+    assert.ok(doc.includes(r.risk_id), `rendered doc must name accepted risk ${r.risk_id}`);
+  }
+  // "Accepted" is shown as distinct from "closed".
+  assert.match(doc, /ACCEPTED \(not closed\)/);
+});
+
 // --- accepted risk --------------------------------------------------------
 // The one mechanism that can turn a red item green. It exists so a launch can
 // proceed on a stated decision instead of a quietly edited fact — which means
 // it has to cost something, and it must never rewrite the underlying status.
 
-test('an accepted risk unblocks only the tracks it names', () => {
+test('one correctly scoped accepted required risk returns CONDITIONAL GO for only that track', () => {
   const state = clone(VALID);
   state.checks[1].status = 'skipped';
   state.checks[1].observed_at_sha = null;
@@ -355,10 +412,49 @@ test('an accepted risk unblocks only the tracks it names', () => {
     accepted_by: 'owner', accepted_at_utc: '2026-07-28T00:00:00Z', tracks: ['public_paid'],
     rationale: 'a rationale long enough to be a real argument rather than a placeholder',
   };
+  state.verdicts.public_paid.verdict = 'CONDITIONAL GO';
   state.verdicts.capped_beta.verdict = 'NO-GO';
   const v = computeVerdicts(state, { head_sha: SHA });
-  assert.equal(v.public_paid.verdict, 'GO', 'the named track is unblocked');
-  assert.equal(v.capped_beta.verdict, 'NO-GO', 'an unnamed track is not');
+  // The named track proceeds, but on accepted risk — never a full GO.
+  assert.equal(v.public_paid.verdict, 'CONDITIONAL GO', 'the named track proceeds on accepted risk');
+  assert.equal(v.public_paid.accepted_risks.length, 1);
+  assert.equal(v.public_paid.accepted_risks[0].status, 'skipped', 'the underlying status is untouched');
+  // An unnamed track gets no benefit from the acceptance and stays NO-GO.
+  assert.equal(v.capped_beta.verdict, 'NO-GO', 'an unnamed track is not unblocked');
+});
+
+test('removing the acceptance returns the track to NO-GO', () => {
+  const accepted = clone(VALID);
+  accepted.checks[1].status = 'skipped';
+  accepted.checks[1].observed_at_sha = null;
+  accepted.checks[1].evidence = null;
+  accepted.checks[1].accepted_risk = {
+    accepted_by: 'owner', accepted_at_utc: '2026-07-28T00:00:00Z', tracks: ['public_paid'],
+    rationale: 'a rationale long enough to be a real argument rather than a placeholder',
+  };
+  assert.equal(computeVerdicts(accepted, { head_sha: SHA }).public_paid.verdict, 'CONDITIONAL GO');
+
+  const withdrawn = clone(accepted);
+  delete withdrawn.checks[1].accepted_risk;
+  const v = computeVerdicts(withdrawn, { head_sha: SHA });
+  assert.equal(v.public_paid.verdict, 'NO-GO', 'withdrawing the acceptance reverses the verdict');
+  assert.match(v.public_paid.reasons.join(' '), /e2e_authenticated is skipped/);
+});
+
+test('a full GO is impossible while any required condition rides on accepted risk', () => {
+  const state = clone(VALID);
+  state.checks[1].status = 'skipped';
+  state.checks[1].observed_at_sha = null;
+  state.checks[1].evidence = null;
+  state.checks[1].accepted_risk = {
+    accepted_by: 'owner', accepted_at_utc: '2026-07-28T00:00:00Z', tracks: ['public_paid', 'capped_beta'],
+    rationale: 'a rationale long enough to be a real argument rather than a placeholder',
+  };
+  const v = computeVerdicts(state, { head_sha: SHA });
+  for (const track of ['public_paid', 'capped_beta']) {
+    assert.equal(v[track].verdict, 'CONDITIONAL GO', `${track} may proceed but never as a full GO`);
+    assert.notEqual(v[track].verdict, 'GO');
+  }
 });
 
 test('an accepted risk never rewrites the underlying status', () => {

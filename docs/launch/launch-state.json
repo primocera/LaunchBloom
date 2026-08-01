@@ -111,6 +111,7 @@
       "evidence": null,
       "note": "Built by SC-V11-03 (desktop, phone and keyboard projects over seeded isolated data). NOT RUN: it needs a database that has opted in via backend/migrations/E2E_MARKER.sql. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md.",
       "accepted_risk": {
+        "risk_id": "authenticated-e2e",
         "accepted_by": "Primoz Cerar (owner)",
         "accepted_at_utc": "2026-07-28T12:00:00Z",
         "tracks": [
@@ -195,6 +196,7 @@
       "evidence_ref": null,
       "note": "Owner-only. Claude Code must never perform a live charge or refund. 2026-07-28: the owner reports a live trial started, granted access, and was cancelled — that is real evidence for rows 1 and 3 of docs/OWNER_EVIDENCE_V11.md section A, but it is unrecorded (no observed Stripe state, no evidence refs) and leaves rows 2 and 4-9 unrun. Row 7 (a late payment_failed arriving after recovery) is the transition this item exists for and cannot be reached by starting and cancelling a trial.",
       "accepted_risk": {
+        "risk_id": "live-money",
         "accepted_by": "Primoz Cerar (owner)",
         "accepted_at_utc": "2026-07-28T12:00:00Z",
         "tracks": [
@@ -246,6 +248,7 @@
       "owner": "owner",
       "closure": "The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA.",
       "accepted_risk": {
+        "risk_id": "authenticated-e2e",
         "accepted_by": "Primoz Cerar (owner)",
         "accepted_at_utc": "2026-07-28T12:00:00Z",
         "tracks": [
@@ -262,6 +265,7 @@
       "owner": "owner",
       "closure": "Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse.",
       "accepted_risk": {
+        "risk_id": "hero-contrast",
         "accepted_by": "Primoz Cerar (owner)",
         "accepted_at_utc": "2026-07-28T12:00:00Z",
         "tracks": [
@@ -278,6 +282,7 @@
       "owner": "owner",
       "closure": "Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence.",
       "accepted_risk": {
+        "risk_id": "live-money",
         "accepted_by": "Primoz Cerar (owner)",
         "accepted_at_utc": "2026-07-28T12:00:00Z",
         "tracks": [
@@ -303,9 +308,9 @@
       "note": "GO for a capped, supervised beta only — 15-25 invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required check ran at candidate 1145bae, migrations are verified applied against production, production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe. This is NOT permission to open public signup. Two known gaps ride along deliberately: the authenticated browser matrix has never run (phone, keyboard, cross-account isolation, failure paths) and hero text does not meet WCAG AA. Both are accepted at this cohort size because a named owner is watching and the cap is hard; neither is acceptable for strangers."
     },
     "public_paid": {
-      "verdict": "GO",
+      "verdict": "CONDITIONAL GO",
       "decided_at_utc": "2026-07-28T12:00:00Z",
-      "note": "GO on ACCEPTED RISK, not on complete evidence. Every condition that was actually met is evidenced: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full local check set green at the candidate. Three conditions were NOT met and were accepted by the owner on 2026-07-28, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix, hero text below WCAG AA, and no nine-transition live billing rehearsal. Each keeps its real status in this file — `skipped`, `open`, `not_run` — so this document still says what is true. Reversing any acceptance returns this verdict to NO-GO automatically."
+      "note": "CONDITIONAL GO on ACCEPTED RISK, not a full GO. Every condition that was actually met is evidenced: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full local check set green at the candidate. Three required conditions were NOT met and were accepted by the owner on 2026-07-28, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e), hero text below WCAG AA (risk hero-contrast), and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status in this file — `skipped`, `open`, `not_run` — so this document still says what is true. Because required P0/P1 conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing any acceptance returns this verdict to NO-GO automatically."
     }
   },
   "rollback": {

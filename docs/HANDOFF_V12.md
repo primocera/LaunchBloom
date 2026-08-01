@@ -9,14 +9,19 @@ any disagreement.
 | Track | Verdict | On what |
 |---|---|---|
 | Capped beta | **GO** | evidence |
-| Public paid launch | **GO** | evidence **plus three accepted risks** |
+| Public paid launch | **CONDITIONAL GO** | evidence, with three required conditions riding on accepted risk |
 
 Public launch is **not** fully evidenced, and the record says so rather than
-implying otherwise. Three conditions were not met and the owner accepted them
-on 2026-07-28, each with a named rationale in `blockers[].accepted_risk`. Every
-accepted item keeps its true status — `skipped`, `open`, `not_run` — so the
-document still states what is actually the case. Withdrawing any acceptance
-returns the verdict to NO-GO automatically; a test asserts exactly that.
+implying otherwise. As of v12 (SC-V12-01) accepted risk no longer produces a
+full GO: because three required P0/P1 conditions are only bypassed by accepted
+risk, the honest verdict is **CONDITIONAL GO**, not GO. The three conditions
+(`authenticated-e2e`, `hero-contrast`, `live-money`) were not met and the owner
+accepted them on 2026-07-28, each with a named rationale in
+`blockers[].accepted_risk`. Every accepted item keeps its true status —
+`skipped`, `open`, `not_run` — so the document still states what is actually the
+case. Withdrawing any acceptance returns the verdict to NO-GO automatically; a
+test asserts exactly that, and a full GO is impossible while any acceptance
+stands.
 
 ## What is proven, and how
 

@@ -133,12 +133,26 @@ function render(state, observed) {
   p('| Track | Verdict | Why |');
   p('|---|---|---|');
   for (const track of ['capped_beta', 'public_paid']) {
-    const reasons = v[track].reasons.length ? v[track].reasons.join('; ') : 'all conditions met';
-    p(`| ${track === 'capped_beta' ? 'Capped beta' : 'Public paid launch'} | **${v[track].verdict}** | ${reasons} |`);
+    const t = v[track];
+    let why;
+    if (t.verdict === 'NO-GO') {
+      why = t.reasons.join('; ');
+    } else if (t.verdict === 'CONDITIONAL GO') {
+      // Never "all conditions met": a conditional launch proceeds over unmet
+      // conditions that are only bypassed by an accepted risk.
+      why = `no unaccepted blocker remains, but proceeds on accepted risk: ${t.accepted_risks.map((r) => r.risk_id).join(', ')}`;
+    } else {
+      why = 'all conditions met';
+    }
+    p(`| ${track === 'capped_beta' ? 'Capped beta' : 'Public paid launch'} | **${t.verdict}** | ${why} |`);
   }
   p();
   p('A capped, supported beta and an unrestricted public paid launch are');
-  p('different risk decisions and are decided separately.');
+  p('different risk decisions and are decided separately. **GO** means every');
+  p('required condition is met; **CONDITIONAL GO** means no unaccepted blocker');
+  p('remains but the launch proceeds over one or more required conditions that');
+  p('are only bypassed by a recorded accepted risk — not satisfied; **NO-GO**');
+  p('means at least one required condition is unmet without a valid acceptance.');
   p();
 
   p('## Release candidate');
@@ -198,16 +212,38 @@ function render(state, observed) {
   }
   p();
 
-  p('## Open blockers');
+  p('## Unresolved blockers and accepted risks');
   p();
-  const open = (state.blockers || []).filter((b) => b.status === 'open');
-  if (!open.length) p('None.');
+  p('Accepted is neither closed nor passed. Every item below keeps its real');
+  p('status; an acceptance only records that a launch was allowed to proceed');
+  p('over it, and never that it was resolved.');
+  p();
+  const unresolved = (state.blockers || []).filter((b) => b.status === 'open' || b.status === 'accepted');
+  if (!unresolved.length) p('None.');
   else {
-    p('| Severity | Blocker | Owner | Closure |');
-    p('|---|---|---|---|');
-    for (const b of open) p(`| ${b.severity} | ${b.title} | ${b.owner} | ${b.closure} |`);
+    p('| Severity | Item | Status | Owner | Closure requirement |');
+    p('|---|---|---|---|---|');
+    for (const b of unresolved) {
+      const status = b.status === 'accepted' ? 'ACCEPTED (not closed)' : 'OPEN';
+      p(`| ${b.severity} | ${b.title} | ${status} | ${b.owner} | ${b.closure} |`);
+    }
   }
   p();
+  // The accepted risks each verdict actually rests on, computed rather than
+  // narrated, so a CONDITIONAL GO can never be read as a clean GO.
+  for (const track of ['capped_beta', 'public_paid']) {
+    const risks = v[track].accepted_risks;
+    if (!risks.length) continue;
+    const heading = track === 'capped_beta' ? 'Capped beta' : 'Public paid launch';
+    p(`**${heading} (${v[track].verdict}) rests on these accepted risks:**`);
+    p();
+    for (const r of risks) {
+      p(`- \`${r.risk_id}\` — ${r.title || r.id} — underlying status **${r.status}**`
+        + `${r.severity ? ` (${r.severity})` : ''}, accepted by ${r.accepted_by || 'unknown'}`
+        + ` (sources: ${r.sources.join(', ')})`);
+    }
+    p();
+  }
 
   p('## Rollback');
   p();

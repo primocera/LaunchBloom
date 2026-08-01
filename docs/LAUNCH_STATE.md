@@ -12,10 +12,14 @@ Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T12:00
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **GO** | all conditions met |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, hero-contrast, live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
-different risk decisions and are decided separately.
+different risk decisions and are decided separately. **GO** means every
+required condition is met; **CONDITIONAL GO** means no unaccepted blocker
+remains but the launch proceeds over one or more required conditions that
+are only bypassed by a recorded accepted risk — not satisfied; **NO-GO**
+means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
@@ -68,9 +72,23 @@ Supabase or production configuration access.
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | live rehearsed | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
-## Open blockers
+## Unresolved blockers and accepted risks
 
-None.
+Accepted is neither closed nor passed. Every item below keeps its real
+status; an acceptance only records that a launch was allowed to proceed
+over it, and never that it was resolved.
+
+| Severity | Item | Status | Owner | Closure requirement |
+|---|---|---|---|---|
+| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
+| P1 | Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) | ACCEPTED (not closed) | owner | Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse. |
+| P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
+
+**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
+
+- `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
+- `hero-contrast` — Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-hero-contrast-below-aa)
+- `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
 
 ## Rollback
 
