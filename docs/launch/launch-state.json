@@ -2,35 +2,35 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-07-28T12:00:00Z",
+  "generated_at_utc": "2026-08-01T12:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
-    "branch": "v11",
-    "sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+    "branch": "v12",
+    "sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
     "state": "frozen",
     "environment_class": "production",
-    "baseline_sha": "445d29e488d198ceaacceac59950697c00b9765c",
-    "head_at_generation": "77009bc749582195211c7453e4177ff0f355db79",
+    "baseline_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+    "head_at_generation": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
     "bundle": {
-      "build_hash": "index-BjggCPPF",
+      "build_hash": "index-qFOY7l5f",
       "files": [
-        "index-BjggCPPF.js",
-        "index-l3T_G2oJ.css"
+        "index-qFOY7l5f.js",
+        "index-OkR4Xfg_.css"
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "Re-pinned 2026-07-28 to the commit that recorded the accepted risks. All required checks re-run at this commit. Documentation-only commits do not invalidate it; anything under backend/, app-src/, app/, e2e/, api/ or config does."
+    "explanation": "New v12 candidate cut 2026-08-01 after merging SC-V12-01..07 (truthful verdicts, hero AA fix, authenticated-E2E hardening, billing state machine, release-candidate workflow, agency-first copy, scale-safe cohort/observability). All automated checks re-run at this commit. The previous frozen candidate was e2ba23b (v11); its evidence is not reused here except where the manifest states it is safe. Documentation-only commits do not invalidate this candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
     {
-      "sha": "0ba7362",
-      "subject": "fix(billing): isolate Scalvya webhooks on the shared Stripe account",
-      "closes_requirement": "Part 1 of handoff-scalvya.md — Scalvya was processing Mellowa's Stripe events. Verify at candidate freeze; do not re-implement."
+      "sha": "45fbdfd",
+      "subject": "fix(landing): SC-V12-02 hero meets WCAG AA without a scrim or dulling the blue",
+      "closes_requirement": "Closes P1-hero-contrast-below-aa: white hero text now measures a uniform 4.70:1 across the text band (backend/tests/landing-contrast.test.js now REQUIRES AA)."
     },
     {
-      "sha": "77009bc",
-      "subject": "fix(app): give phones a navigation drawer and a reachable Sign out",
-      "closes_requirement": "Partially pre-closes mobile navigation findings in SC-V11-04. Verify before changing app shell navigation."
+      "sha": "f577be3",
+      "subject": "feat(billing): SC-V12-04 subscription state machine, webhook ordering and live-rehearsal prep",
+      "closes_requirement": "Makes entitlement reconciliation explicit and adds refund/dispute handling and PII-free ops signals; the late-payment_failed-after-recovery guard is unchanged and still tested."
     }
   ],
   "migrations": {
@@ -43,6 +43,7 @@
       "last_run_utc": "2026-07-28T00:00:00Z",
       "verified_by": "owner",
       "evidence_ref": "docs/evidence/2026-07-28-migrations-applied.md",
+      "carried_forward_note": "v12 SC-V12-08: this evidence is safely carried forward to candidate beea612. `git diff e2ba23b..beea612 -- backend/migrations/` is EMPTY — v12 added no migration and changed no SQL, so the applied 001-037 schema is byte-identical to what was verified on 2026-07-28. This is the manifest 'explicitly and safely proving otherwise'; it is the only owner evidence carried across the code change without re-running.",
       "resolution": "The owner applied 037_beta_feedback.sql and ran CHECK_APPLIED.sql against the production database on 2026-07-28. Every row returned applied = true across the full 001-037 range, including 037's table, five bounded answer columns and beta_feedback_once_idx. This resolves the contradiction previously recorded here: docs/GO_NO_GO_V10.md was correct that 034/035/036 are applied and docs/CONFIGURED_STATE.md was wrong. CONFIGURED_STATE.md is already superseded; its migration table should now be read as known-incorrect rather than merely stale. Owner-attested — the query output is not captured in the repository, which is noted as a limit in the evidence file. Structure only: this proves the schema exists, not that the application uses it correctly (that is the authenticated matrix, still unrun)."
     }
   },
@@ -53,9 +54,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
       "evidence": "npm run lint — 0 errors, 59 warnings (pre-existing)",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "unit",
@@ -63,9 +64,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
-      "evidence": "npm test — 575 pass / 0 fail / 0 skipped",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
+      "evidence": "npm test — 626 pass / 0 fail / 0 skipped at candidate beea612",
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "build",
@@ -73,9 +74,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
       "evidence": "npm run build:app — success",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "bundle_fresh",
@@ -83,9 +84,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
       "evidence": "npm run check:app-fresh — app/ matches app-src/ at HEAD",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "e2e_public",
@@ -93,9 +94,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
-      "evidence": "npx playwright test — 52 pass / 0 fail, counted explicitly across three consecutive full runs after two flake fixes",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
+      "evidence": "npx playwright test — 52 pass / 0 fail at candidate beea612 (desktop + mobile projects; 320/375/768/1024/1440 + 200% zoom, reduced motion, no horizontal scroll)",
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "e2e_authenticated",
@@ -126,9 +127,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
       "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "release_config",
@@ -136,9 +137,9 @@
       "command": "npm run release:check",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
       "evidence": "GET /api/admin/readiness on the live production deployment, 2026-07-28: mode=production, ready=true, blockers=0, external=0. All 13 checks ok, including launch:config \"all launch-config requirements met\", stripe:price_allowlist \"all live prices set\", cron:secret set, email:delivery configured and ai:spend_ceiling \"daily ceiling set to $15\". Live signals: outbox_backlog 0, webhook_failures_24h 0, ai_spend_24h 0 against a $15 ceiling.",
-      "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets."
+      "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets. v12 SC-V12-08 carry-forward: the config-gate code (backend/scripts/release-check.js) and the required env set are UNCHANGED in v12 (only backend/routes/admin.js readiness OUTPUT gained signal fields), so the 2026-07-28 production result of 13/13 still holds for identical configuration. OWNER ACTION post-deploy: re-run GET /api/admin/readiness against the deployed v12 candidate to reconfirm mode=production and 0 blockers."
     },
     {
       "id": "launch_integrity",
@@ -146,9 +147,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
       "evidence": "npm run launch:verify — OK",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "hero_contrast",
@@ -156,9 +157,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
-      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail (records the accepted AA shortfall after the hero revert)",
-      "note": "Re-run locally at the re-pinned candidate e2ba23b. Not CI-verified: browser and export suites stay outside the lean CI job by design."
+      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
+      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate beea612. v12 SC-V12-02 FIXED the defect: the test now REQUIRES WCAG AA across the full text band and passes (uniform 4.70:1), and asserts the approved --sky-top blue is unchanged and no scrim/glass surface exists.",
+      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     }
   ],
   "owner_evidence": [
@@ -183,7 +184,7 @@
       ],
       "runbook": "docs/evidence/2026-07-28-owner-production-walkthrough.md",
       "evidence_ref": "docs/evidence/2026-07-28-owner-production-walkthrough.md",
-      "note": "Owner-attested, one person and one device on the happy path, not pinned to the v11 candidate. Sufficient for a supervised capped beta; explicitly not sufficient for public paid launch, which still requires the authenticated matrix."
+      "note": "Owner-attested, one person and one device on the happy path. v12 SC-V12-08 carry-forward: the walked paths (signup, login, Stripe trial, access, cancel, generation, lifecycle email) are behavior-equivalent under v12 — cohort-control defaults to uncapped identical behavior (backend/lib/cohort-control.js), entitlement is preserved (webhook/planFor refactor covered by 28 passing billing tests), and generation/trial/cancel code is unchanged. Sufficient for a supervised capped beta; explicitly not sufficient for public paid launch, which still requires the authenticated matrix. OWNER ACTION post-deploy: a quick re-walk of the signed-in product on the deployed v12 candidate is recommended as belt-and-suspenders."
     },
     {
       "id": "live_money_rehearsal",
@@ -260,19 +261,11 @@
     {
       "id": "P1-hero-contrast-below-aa",
       "severity": "P1",
-      "status": "accepted",
+      "status": "closed",
+      "closed_at_utc": "2026-08-01T00:00:00Z",
       "title": "Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band)",
       "owner": "owner",
-      "closure": "Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse.",
-      "accepted_risk": {
-        "risk_id": "hero-contrast",
-        "accepted_by": "Primoz Cerar (owner)",
-        "accepted_at_utc": "2026-07-28T12:00:00Z",
-        "tracks": [
-          "public_paid"
-        ],
-        "rationale": "Owner decision after rejecting the v11 fix twice: the scrim dulled the approved brand blue and the surfaces read as glass cards. White hero text measures 4.70:1 at the top of the hero and 1.99:1 at the bottom of the text band against AA's 4.5:1, so the CTA note and proof strip are the least readable copy on the page. Accepted as a commercial and design call, not as a claim that it passes. Options that leave the blue untouched are recorded under UX-V11-CONTRAST."
-      }
+      "closure": "CLOSED by v12 SC-V12-02 at candidate beea612. The approved --sky-top blue (#2f6ceb, unchanged) is held flat across the whole text band (0-70%) and the wash to white is delayed below it, so white hero copy measures a uniform 4.70:1 (>= AA 4.5) everywhere it renders — no scrim, no glass surface. backend/tests/landing-contrast.test.js now REQUIRES AA across the sampled band (and asserts the token is unchanged and no scrim/glass exists); e2e/hero-contrast.spec.js confirms it at 320-1440px and 200% zoom. The previous v11 candidate still carried this as an accepted risk; it is resolved here, not accepted."
     },
     {
       "id": "P1-live-money-unrehearsed",
@@ -304,20 +297,20 @@
   "verdicts": {
     "capped_beta": {
       "verdict": "GO",
-      "decided_at_utc": "2026-07-28T10:00:00Z",
-      "note": "GO for a capped, supervised beta only — 15-25 invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required check ran at candidate 1145bae, migrations are verified applied against production, production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe. This is NOT permission to open public signup. Two known gaps ride along deliberately: the authenticated browser matrix has never run (phone, keyboard, cross-account isolation, failure paths) and hero text does not meet WCAG AA. Both are accepted at this cohort size because a named owner is watching and the cap is hard; neither is acceptable for strangers."
+      "decided_at_utc": "2026-08-01T12:00:00Z",
+      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required automated check ran at the v12 candidate beea612 (lint, 626 unit tests, build, fresh bundle, 52 public browser journeys, export integrity, launch integrity), migrations are verified applied against production (unchanged in v12 — no SQL added), production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe (behavior-equivalent under v12). This is NOT permission to open public signup. v12 note: the hero WCAG AA gap that rode along in v11 is now FIXED and closed; the remaining public-launch gap (the authenticated browser matrix) is a public_paid condition, not a capped-beta one. OWNER ACTION post-deploy: re-run /api/admin/readiness and a quick signed-in re-walk against the deployed candidate to reconfirm."
     },
     "public_paid": {
       "verdict": "CONDITIONAL GO",
-      "decided_at_utc": "2026-07-28T12:00:00Z",
-      "note": "CONDITIONAL GO on ACCEPTED RISK, not a full GO. Every condition that was actually met is evidenced: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full local check set green at the candidate. Three required conditions were NOT met and were accepted by the owner on 2026-07-28, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e), hero text below WCAG AA (risk hero-contrast), and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status in this file — `skipped`, `open`, `not_run` — so this document still says what is true. Because required P0/P1 conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing any acceptance returns this verdict to NO-GO automatically."
+      "decided_at_utc": "2026-08-01T12:00:00Z",
+      "note": "CONDITIONAL GO on ACCEPTED RISK, not a full GO. Every condition that was actually met is evidenced at the v12 candidate: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full automated check set green (lint, 626 unit, build, fresh bundle, 52 browser journeys, export integrity, launch integrity). The v11 hero-contrast risk is now RESOLVED (SC-V12-02) and no longer rides along. TWO required conditions remain unmet and accepted by the owner, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e) and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status — `skipped`, `not_run`. Because required P0/P1 conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing either acceptance returns this verdict to NO-GO automatically. OWNER ACTIONS to reach full GO: run the authenticated matrix against a disposable non-production project (docs/RUNBOOK_AUTH_E2E.md) and complete the live billing rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md)."
     }
   },
   "rollback": {
     "reference": "docs/RUNBOOK_INCIDENTS.md",
-    "code": "v11 commits are independent and additive; revert the offending commit and rebuild app/.",
-    "data": "No destructive migration is introduced by v11. Additive migrations are safe to leave applied when application code is rolled back.",
-    "flags": "BETA_INVITE_CAP unset reopens signup; it fails open by design."
+    "code": "v12 commits are independent and additive; revert the offending commit and rebuild app/. SC-V12-01..07 each landed as one focused commit.",
+    "data": "No migration is introduced by v12 (git diff against the v11 candidate over backend/migrations/ is empty). Nothing to roll back at the data layer.",
+    "flags": "Kill switches (all reversible env vars): AI_GENERATION_PAUSED=1 stops generation; SIGNUP_PAUSED=1 stops new signups; BETA_INVITE_CAP caps the cohort and FAILS CLOSED on a missing/invalid value (v12 SC-V12-07). See docs/RUNBOOK_INCIDENTS.md."
   },
   "superseded_documents": [
     {

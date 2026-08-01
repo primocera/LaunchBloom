@@ -5,14 +5,14 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v11` · generated 2026-07-28T12:00:00Z
+Repository `primocera/LaunchBloom` · branch `v12` · generated 2026-08-01T12:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, hero-contrast, live-money |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -23,17 +23,17 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `e2ba23bc6a3793219519a920c255a39f56aaa7aa` (frozen)
-- HEAD now: `e2ba23bc6a3793219519a920c255a39f56aaa7aa`
-- Bundle: index-BjggCPPF.js, index-l3T_G2oJ.css
+- Candidate SHA: `1e465433ac7f4d78ecb7d80fa2a47aac11880bb8` (frozen)
+- HEAD now: `1e465433ac7f4d78ecb7d80fa2a47aac11880bb8`
+- Bundle: index-qFOY7l5f.js, index-OkR4Xfg_.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
 
 | Commit | Subject | Already closes |
 |---|---|---|
-| `0ba7362` | fix(billing): isolate Scalvya webhooks on the shared Stripe account | Part 1 of handoff-scalvya.md — Scalvya was processing Mellowa's Stripe events. Verify at candidate freeze; do not re-implement. |
-| `77009bc` | fix(app): give phones a navigation drawer and a reachable Sign out | Partially pre-closes mobile navigation findings in SC-V11-04. Verify before changing app shell navigation. |
+| `45fbdfd` | fix(landing): SC-V12-02 hero meets WCAG AA without a scrim or dulling the blue | Closes P1-hero-contrast-below-aa: white hero text now measures a uniform 4.70:1 across the text band (backend/tests/landing-contrast.test.js now REQUIRES AA). |
+| `f577be3` | feat(billing): SC-V12-04 subscription state machine, webhook ordering and live-rehearsal prep | Makes entitlement reconciliation explicit and adds refund/dispute handling and PII-free ops signals; the late-payment_failed-after-recovery guard is unchanged and still tested. |
 
 ## Migrations
 
@@ -48,16 +48,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `e2ba23b` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `e2ba23b` | yes |
-| Production build | `npm run build:app` | passed locally | `e2ba23b` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `e2ba23b` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `e2ba23b` | yes |
+| ESLint | `npm run lint` | passed locally | `1e46543` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `1e46543` | yes |
+| Production build | `npm run build:app` | passed locally | `1e46543` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `1e46543` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `1e46543` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `e2ba23b` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `e2ba23b` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `e2ba23b` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `e2ba23b` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `1e46543` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `1e46543` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `1e46543` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `1e46543` | yes |
 
 ## Owner evidence
 
@@ -81,21 +81,19 @@ over it, and never that it was resolved.
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
 | P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
-| P1 | Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) | ACCEPTED (not closed) | owner | Accepted for the capped beta on 2026-07-28: the v11 fix (in-hero scrim plus opaque helper/proof surfaces) was reverted because it dulled the approved blue and read as glass cards. Open for public paid launch. Options that leave the blue alone are listed under UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md. Held by backend/tests/landing-contrast.test.js, which pins the measured ratios and fails if the hero gets worse. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
 **Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
 
 - `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
-- `hero-contrast` — Landing hero text does not meet WCAG AA (4.70:1 at the top, 1.99:1 at the bottom of the text band) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-hero-contrast-below-aa)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
 
 ## Rollback
 
 - **reference:** docs/RUNBOOK_INCIDENTS.md
-- **code:** v11 commits are independent and additive; revert the offending commit and rebuild app/.
-- **data:** No destructive migration is introduced by v11. Additive migrations are safe to leave applied when application code is rolled back.
-- **flags:** BETA_INVITE_CAP unset reopens signup; it fails open by design.
+- **code:** v12 commits are independent and additive; revert the offending commit and rebuild app/. SC-V12-01..07 each landed as one focused commit.
+- **data:** No migration is introduced by v12 (git diff against the v11 candidate over backend/migrations/ is empty). Nothing to roll back at the data layer.
+- **flags:** Kill switches (all reversible env vars): AI_GENERATION_PAUSED=1 stops generation; SIGNUP_PAUSED=1 stops new signups; BETA_INVITE_CAP caps the cohort and FAILS CLOSED on a missing/invalid value (v12 SC-V12-07). See docs/RUNBOOK_INCIDENTS.md.
 
 ## Superseded documents
 

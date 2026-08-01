@@ -34,27 +34,35 @@ stands.
 | AI spend bounded | ceiling live at $15; brake is `MAX_AI_CALLS_PER_DAY=300` ≈ $13/day |
 | Code health at candidate | 575 unit tests, 52 browser journeys, lint 0 errors, bundle fresh |
 
-## The three accepted risks — v12's actual backlog
+## v12 candidate cut (2026-08-01) — one risk resolved, two remain
 
-**1 · No automated signed-in browser matrix.** Built (`e2e/authenticated/`,
-desktop + phone + keyboard) and never executed, at any commit. Unproven: phone
-layout, keyboard-only operation, cross-account isolation driven in a browser,
-and failure paths — session expiry, provider timeout mid-generation, reload
-during export. Blocked on a database that has opted in via
-`backend/migrations/E2E_MARKER.sql`; the free plan allows a second project.
+> **A new v12 candidate `beea612` is frozen.** SC-V12-01..07 merged; the
+> canonical `docs/launch/launch-state.json` and `docs/LAUNCH_STATE.md` are the
+> current truth and win over anything below. Verdict: **capped beta GO, public
+> paid CONDITIONAL GO** on two accepted risks. Automated gate green at the
+> candidate: lint 0 errors, 626 unit, 52 public browser journeys, export
+> integrity, bundle fresh, launch integrity OK.
+
+**1 · No automated signed-in browser matrix (still accepted → CONDITIONAL GO).**
+Built (`e2e/authenticated/`, desktop + phone + keyboard) and hardened in
+SC-V12-03 (PASS/FAIL/BLOCKED, DB-marker guard, refusal of production/Mellowa,
+RC_GATE skip-is-failure, machine-readable evidence, real two-account isolation)
+but not executed — it needs a disposable non-production Supabase project (a new
+free Supabase **org** yields two more free slots; Mellowa's project is refused).
 `docs/RUNBOOK_AUTH_E2E.md`.
 
-**2 · Hero text below WCAG AA.** 4.70:1 at the top of the hero, 1.99:1 at the
-bottom of the text band, against 4.5:1. The v11 fix (scrim + opaque surfaces)
-was **reverted at the owner's instruction** — it dulled the approved blue and
-read as glass cards. **Do not re-apply it.** Options that leave the blue alone
-are written down under UX-V11-CONTRAST in `docs/UX_DEFECT_LEDGER_V11.md`.
+**2 · Hero text below WCAG AA — FIXED in v12 (SC-V12-02), no longer a risk.**
+The approved `--sky-top` blue is held flat across the text band and the wash to
+white delayed below it, so white hero copy measures a uniform 4.70:1 (≥ AA)
+with no scrim and no glass surface. `backend/tests/landing-contrast.test.js` now
+REQUIRES AA; blocker `P1-hero-contrast-below-aa` is **closed**.
 
-**3 · Live billing never rehearsed end to end.** Trial start, access and cancel
-were run live; the nine-transition matrix was not. The case that matters is a
-late `payment_failed` arriving *after* a recovery — Stripe guarantees neither
-ordering nor exactly-once delivery, and if the v10 SC-00 fix is wrong a paying
-customer loses access. `docs/OWNER_EVIDENCE_V11.md` §A.
+**3 · Live billing never rehearsed end to end (still accepted → CONDITIONAL
+GO).** SC-V12-04 made entitlement reconciliation explicit, added refund/dispute
+handling and PII-free ops signals, and re-confirmed the late-`payment_failed`-
+after-recovery guard in tests — but the nine-transition live rehearsal is
+owner-only and unrun. `docs/RUNBOOK_TRANSACTION_REHEARSAL.md` (ordered
+charge→cancel→reactivate→failed→recovery→late-failure→refund sequence).
 
 ## Defects found and fixed in v11
 
