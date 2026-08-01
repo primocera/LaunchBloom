@@ -9,6 +9,7 @@ const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
+const { entitlementFor, ENTITLING_STATUSES } = require('../lib/subscription-state');
 
 /**
  * Stripe price id → OfferFlow plan name, built from env at startup.
@@ -105,22 +106,21 @@ async function planFor(email) {
       .from('subscriptions')
       .select('status, stripe_price_id')
       .eq('customer_id', customer.id)
-      .in('status', ['active', 'trialing'])
+      .in('status', ENTITLING_STATUSES)
       .limit(1)
       .single();
 
-    // A subscription still inside its 3-day free trial gets the limited 'trial'
-    // plan regardless of which price it is on; it upgrades to the real plan once
-    // Stripe flips the status to 'active'.
+    // Entitlement is decided by the canonical state machine, so planFor() and
+    // the webhook handler can never disagree about what a status grants. A
+    // trialing row is the limited 'trial' plan on any price; an active row maps
+    // its price to a plan, or grants nothing for an unmapped price.
     if (sub) {
-      if (sub.status === 'trialing') return 'trial';
-      const mapped = pricePlans()[sub.stripe_price_id];
-      if (!mapped) {
+      const plan = entitlementFor(sub, pricePlans());
+      if (!plan && sub.status === 'active') {
         // Never silently grant a plan for an unmapped price (v5 Prompt 1).
         console.error(`[planFor] active subscription with unknown price id "${sub.stripe_price_id}" for ${email} — check STRIPE_PRICE_* env vars`);
-        return null;
       }
-      return mapped;
+      if (plan) return plan;
     }
 
     // Succeeded one-time payment = lifetime access

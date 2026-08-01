@@ -57,6 +57,39 @@ Journey 13 is the v10 SC-00 regression: replay a `invoice.payment_failed` whose
 `stripe events resend <evt_id>`). Covered locally by
 `backend/tests/webhook-ordering.test.js`; this row is the live confirmation.
 
+## SC-V12-04 · Ordered recovery sequence (run as one continuous rehearsal)
+
+Run these transitions **in order on a single subscription**, using a real
+low-value Scalvya plan, only after the owner deliberately starts the run. Record
+the observed app entitlement (`/api/admin/readiness` and a signed-in check of
+`planFor`) and the lifecycle email for each. **$ = costs real money; C = requires
+explicit owner confirmation before proceeding.** Never put secrets, full customer
+identifiers or card data in evidence.
+
+| Step | Action | Cost/Confirm | Expected Stripe state | Expected app entitlement | Expected email | Evidence |
+|---|---|---|---|---|---|---|
+| A | Start eligible trial | C | `trialing` | `trial` limits | `trial_started` | |
+| B | Trial converts to paid | $ | `active` | mapped plan | `payment_succeeded` | |
+| C | Cancel at period end | C | `active`, `cancel_at_period_end=true` | plan held to period end | `cancellation_scheduled` | |
+| D | Reactivate (undo cancel) | C | `active`, `cancel_at_period_end=false` | plan continues | (none required) | |
+| E | Force a failed payment | $ | `past_due` | **entitlement withheld** | `payment_failed` | |
+| F | Recover (pay open invoice) | $ | `active` | plan restored | `payment_recovered` | |
+| G | Replay a LATE `payment_failed` (created before F) | C | **stays `active`** | **entitlement NOT revoked** | (none) | |
+| H | Refund the last charge | $, C | `active` unless you also cancel | unchanged by the refund alone | (none) | |
+
+**Abort conditions — stop the run and follow Rollback below if:**
+- entitlement is granted while `past_due` (step E), or withheld while `active`;
+- step G flips the subscription back to `past_due` (the regression);
+- any step sends a duplicate email or double-charges;
+- `/api/admin/readiness` shows `webhook_failures_24h > 0` attributable to the run.
+
+**What proves G:** the operator log shows a
+`ops-signal {"signal":"reconciliation_correction",…"reason":"stale_out_of_order_skipped"}`
+line for the late event and the row stays `active`. Covered locally by
+`backend/tests/webhook-ordering.test.js` and `webhook-lifecycle.test.js`; this
+sequence is the live confirmation. Refunds and disputes are acknowledged but
+change no entitlement on their own (`backend/tests/webhook-lifecycle.test.js`).
+
 ## Rollback (per journey)
 
 If any journey above lands in a wrong state, the customer comes first and the

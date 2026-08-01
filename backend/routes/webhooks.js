@@ -11,6 +11,8 @@ const supabase = require('../lib/supabase');
 const { track } = require('../lib/analytics');
 // v5 Prompt 14: idempotent lifecycle emails (no-ops without RESEND_API_KEY).
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
+// v12 SC-V12-04: structured, PII-free operational signals.
+const { opsSignal } = require('../lib/ops-signal');
 
 /**
  * Derive { planLabel, price, interval } from a Stripe subscription so lifecycle
@@ -127,6 +129,9 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
   } catch (err) {
     console.error(`Error handling event ${event.type} [${event.id}]:`, err);
     await markFailed(event.id, err.message).catch(() => {});
+    // Structured signal for the readiness endpoint / log drain — no PII, only
+    // the opaque event id and type.
+    opsSignal('webhook_failed', { event_id: event.id, event_type: event.type, severity: 'error' });
     // 5xx so Stripe retries — durable processing did NOT complete.
     return res.status(500).json({ error: 'Processing failed, please retry' });
   }
@@ -197,13 +202,22 @@ async function handleEvent(event) {
   const data = event.data.object;
   const eventAt = event.created ? new Date(event.created * 1000).toISOString() : new Date().toISOString();
 
+  // A foreign event is acknowledged and dropped — never processed, never thrown
+  // on, and it emits an INFO signal (not a failure alert), because a Mellowa or
+  // Frost event landing here is expected on a shared Stripe account.
+  const ignoreForeign = () => {
+    opsSignal('foreign_event_ignored', {
+      event_id: event.id, event_type: event.type, subscription_id: data.subscription || data.id, severity: 'info',
+    });
+  };
+
   switch (event.type) {
     case 'checkout.session.completed':
       // Only sessions our checkout created (payments.js stamps this metadata).
       // A foreign product's checkout for the same email would otherwise
       // overwrite our customers.stripe_customer_id with a foreign customer id.
       if (!data.metadata?.scalvya && !data.metadata?.app_user_id) {
-        console.log(`Ignoring foreign checkout.session.completed ${data.id}`);
+        ignoreForeign();
         return;
       }
       await onCheckoutSessionCompleted(data);
@@ -211,38 +225,54 @@ async function handleEvent(event) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
       if (!isOurSubscription(data)) {
-        console.log(`Ignoring foreign subscription event for ${data.id}`);
+        ignoreForeign();
         return;
       }
       await onSubscriptionUpdated(data, eventAt, event.type, event.data.previous_attributes || {});
       break;
     case 'customer.subscription.deleted':
       if (!isOurSubscription(data)) {
-        console.log(`Ignoring foreign subscription delete for ${data.id}`);
+        ignoreForeign();
         return;
       }
       await onSubscriptionDeleted(data, eventAt);
       break;
     case 'customer.subscription.trial_will_end':
       if (!isOurSubscription(data)) {
-        console.log(`Ignoring foreign trial_will_end for ${data.id}`);
+        ignoreForeign();
         return;
       }
       await onTrialWillEnd(data);
       break;
     case 'invoice.paid':
       if (!(await isOurInvoice(data))) {
-        console.log(`Ignoring foreign invoice.paid ${data.id}`);
+        ignoreForeign();
         return;
       }
       await onInvoicePaid(data, eventAt);
       break;
     case 'invoice.payment_failed':
       if (!(await isOurInvoice(data))) {
-        console.log(`Ignoring foreign invoice.payment_failed ${data.id}`);
+        ignoreForeign();
         return;
       }
       await onInvoicePaymentFailed(data, eventAt);
+      break;
+    // A refund or a dispute does NOT itself change the subscription status, so
+    // it must not change entitlement here — the status transition Stripe sends
+    // (e.g. customer.subscription.deleted) is what does. We acknowledge it,
+    // record a signal for the operator, and make no data mutation. Foreign ones
+    // are dropped exactly like any other foreign event.
+    case 'charge.refunded':
+      if (!isOurCharge(data)) { ignoreForeign(); return; }
+      opsSignal('charge_refunded', { event_id: event.id, event_type: event.type, charge_id: data.id, severity: 'info' });
+      break;
+    case 'charge.dispute.created':
+    case 'charge.dispute.closed':
+      if (!isOurCharge(data)) { ignoreForeign(); return; }
+      opsSignal('charge_dispute', {
+        event_id: event.id, event_type: event.type, dispute_id: data.id, charge_id: data.charge, severity: 'warn',
+      });
       break;
     case 'customer.created':
     case 'customer.updated':
@@ -251,6 +281,15 @@ async function handleEvent(event) {
     default:
       console.log(`Unhandled event type: ${event.type}`);
   }
+}
+
+/** A charge/dispute is ours iff it carries our checkout metadata stamp or is
+ *  tied to a subscription we already mirror. Unknown → foreign (fail safe). */
+function isOurCharge(object) {
+  const meta = object?.metadata;
+  if (meta && Object.prototype.hasOwnProperty.call(meta, 'app_user_id')) return true;
+  if (meta && meta.scalvya) return true;
+  return false;
 }
 
 /**
@@ -304,7 +343,10 @@ async function onCheckoutSessionCompleted(session) {
 async function onSubscriptionUpdated(subscription, eventAt, eventType, previous = {}) {
   // Out-of-order guard: a newer event already wrote this row.
   if (await isStaleSubscriptionEvent(subscription.id, eventAt)) {
-    console.log(`Skipping stale subscription event for ${subscription.id}`);
+    opsSignal('reconciliation_correction', {
+      event_type: eventType, subscription_id: subscription.id,
+      reason: 'stale_out_of_order_skipped', severity: 'info',
+    });
     return;
   }
 
@@ -379,7 +421,10 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
 
 async function onSubscriptionDeleted(subscription, eventAt) {
   if (await isStaleSubscriptionEvent(subscription.id, eventAt)) {
-    console.log(`Skipping stale subscription delete for ${subscription.id}`);
+    opsSignal('reconciliation_correction', {
+      event_type: 'customer.subscription.deleted', subscription_id: subscription.id,
+      reason: 'stale_out_of_order_skipped', severity: 'info',
+    });
     return;
   }
 
@@ -414,7 +459,10 @@ async function onInvoicePaid(invoice, eventAt) {
   if (!invoice.subscription) return;
 
   if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
-    console.log(`Skipping stale invoice.paid for ${invoice.subscription}`);
+    opsSignal('reconciliation_correction', {
+      event_type: 'invoice.paid', subscription_id: invoice.subscription, invoice_id: invoice.id,
+      reason: 'stale_out_of_order_skipped', severity: 'info',
+    });
     return;
   }
 
@@ -493,7 +541,12 @@ async function onInvoicePaymentFailed(invoice, eventAt) {
   // recovery invoice.paid must not flip a recovered subscription back to
   // past_due — that would revoke entitlement the customer has paid for.
   if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
-    console.log(`Skipping stale invoice.payment_failed for ${invoice.subscription}`);
+    // The regression this guards: a late payment_failed delivered after recovery
+    // would otherwise revoke paid access. Record the correction for the operator.
+    opsSignal('reconciliation_correction', {
+      event_type: 'invoice.payment_failed', subscription_id: invoice.subscription, invoice_id: invoice.id,
+      reason: 'stale_out_of_order_skipped', severity: 'warn',
+    });
     return;
   }
 
