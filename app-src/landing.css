@@ -56,25 +56,32 @@
 .lp-sky {
   position: relative;
   overflow: hidden;
-  /* Saturated at the top, bleaching to white where the next section starts.
-     This is the original v9 palette, restored by owner decision on 2026-07-26.
+  /* Saturated open sky at the top, washing to white where the next section
+     starts. The approved blue is --sky-top (#2f6ceb), unchanged.
 
-     Known accessibility trade-off, recorded rather than hidden: white text
-     measures 4.70:1 on the top stop (passes AA), 4.10:1 at 26% and 2.49:1 at
-     62% (both below the 4.5 AA threshold for normal text). v10 SC-05 had
-     darkened these stops to 6.70/6.2/4.70; the owner preferred the original
-     blue. Reaching AA on this palette needs roughly a 30% black scrim, which
-     darkens the hero anyway and defeats the purpose.
+     v12 SC-V12-02 fixes the real WCAG AA defect without a scrim and without
+     dulling the blue. The earlier palette lightened THROUGH the hero (4.70:1
+     at the top, 4.10:1 at 26%, then 2.49:1 at 62% and 1.99:1 by 70%), so the
+     CTA note and proof strip — the lowest hero copy — were the least readable
+     text on the page. The owner rejected the v11 navy scrim and glass surfaces
+     for dulling the blue, so neither is used here.
 
-     Hero copy remains OPAQUE white (not translucent) — that costs nothing
-     visually and is strictly better than the v9 alpha values, which measured
-     as low as 2.07:1. */
+     Instead the approved blue is HELD flat across the whole text band (0-70%),
+     where white hero copy, the CTA disclosure and the proof strip render, so
+     white text measures a uniform 4.70:1 (>= AA's 4.5) everywhere it appears.
+     The fade toward pale blue and white is delayed to BELOW the text band
+     (70-100%), which keeps the open-sky character and the section transition
+     while making the hero accessible. Verified by backend/tests/
+     landing-contrast.test.js, which samples the full band and requires AA.
+
+     Hero copy is OPAQUE white (never translucent): alpha over a gradient is
+     what produced the worst historical ratios. */
   background: linear-gradient(
     180deg,
     var(--sky-top) 0%,
-    #3d78ee 26%,
-    #7ba4f3 62%,
-    #cfdefa 85%,
+    var(--sky-top) 70%,
+    #7ba4f3 82%,
+    #cfdefa 92%,
     #ffffff 100%
   );
 }

@@ -6,10 +6,11 @@
 // overflows at real widths and zoom. A cascade conflict is exactly how the hero
 // eyebrow shipped at 1.10:1 before.
 //
-// 2026-07-28: the v11 scrim and glass surfaces were reverted at the owner's
-// request, so the tests that asserted them are gone rather than weakened. The
-// remaining contrast shortfall is recorded in the stylesheet test and tracked
-// as UX-V11-CONTRAST — it is an accepted risk, not an unnoticed one.
+// v12 SC-V12-02: the contrast defect is fixed without a scrim and without
+// touching the approved blue — --sky-top is held flat across the text band and
+// the wash to white is delayed below it. The stylesheet test now REQUIRES AA
+// across the band; this file proves the cascade still resolves every hero style
+// to opaque white and the sky stays blue-dominant at real widths.
 
 const { test, expect } = require('@playwright/test');
 

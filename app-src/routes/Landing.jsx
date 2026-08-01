@@ -243,9 +243,8 @@ export default function Landing() {
           <h1>Turn one offer into a launch-ready campaign.</h1>
           <p className="lp-sub">
             {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
-            agencies — and for solo founders running their own launch. Turn one approved brief into
-            connected website copy, emails, social posts and ads, with review checks and a
-            client-ready handoff.
+            agencies — and solo founders running their own launch. Turn one approved brief into
+            connected website copy, emails, social posts and ads, ready for review.
             Launch-ready means structured, connected and ready for your review — publishing stays in your hands.
           </p>
 

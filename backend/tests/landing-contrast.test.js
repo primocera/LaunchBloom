@@ -84,35 +84,15 @@ function declaration(selector, prop) {
   return value;
 }
 
-// The owner restored the original v9 palette on 2026-07-26, accepting that the
-// lower gradient stops fall below WCAG AA for normal text. That is a product
-// decision, so this test no longer fails the build for it — but it PINS the
-// measured ratios, so the palette cannot silently get worse, and any change
-// forces a deliberate re-measurement here.
-const RECORDED = [
-  { hex: '#2f6ceb', position: 0, ratio: 4.70, meetsAA: true },
-  { hex: '#3d78ee', position: 26, ratio: 4.10, meetsAA: false },
-  { hex: '#7ba4f3', position: 62, ratio: 2.49, meetsAA: false },
-];
+// The approved top blue. v12 SC-V12-02 holds this colour across the whole text
+// band rather than lightening through it, so the fix must never change it.
+const APPROVED_SKY_TOP = '#2f6ceb';
 
-test('the hero gradient matches the recorded palette and has not got worse', () => {
-  const stops = skyStops();
-  const white = [255, 255, 255];
-
-  for (const expected of RECORDED) {
-    const stop = stops.find((s) => s.position === expected.position);
-    assert.ok(stop, `no gradient stop at ${expected.position}% — the palette changed; re-measure and update RECORDED`);
-    const actual = contrast(white, hexToRgb(stop.hex));
-    assert.ok(
-      actual >= expected.ratio - 0.01,
-      `stop at ${expected.position}% is now ${actual.toFixed(2)}:1, worse than the recorded ${expected.ratio}:1`
-    );
-  }
-
-  // The h1 sits on the top stop. That one is not negotiable — if the headline
-  // itself drops below AA the hero is unreadable, not merely imperfect.
-  const top = stops.find((s) => s.position === 0);
-  assert.ok(contrast(white, hexToRgb(top.hex)) >= AA_NORMAL, 'the top stop must meet AA — the headline sits on it');
+test('the approved top blue token is unchanged', () => {
+  const vars = cssVariables();
+  assert.equal(vars['--sky-top'], APPROVED_SKY_TOP, '--sky-top is the approved brand blue and must not change');
+  const top = skyStops().find((s) => s.position === 0);
+  assert.equal(top.hex, APPROVED_SKY_TOP, 'the first gradient stop must be the approved blue — the headline sits on it');
 });
 
 test('hero text is opaque, because alpha over a gradient is what broke AA', () => {
@@ -160,24 +140,25 @@ test('the ghost CTA is legible: a dark scrim, never a white veil', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2026-07-28 — the v11 hero scrim was REVERTED at the owner's instruction.
+// v12 SC-V12-02 — the hero contrast defect is FIXED, and this suite now proves
+// WCAG AA instead of recording a shortfall.
 //
-// v11 SC-02 added a navy scrim over the hero and gave the helper note and proof
-// strip their own opaque surfaces, which did make white text pass AA. The owner
-// rejected both: the scrim dulled the approved blue (the same objection that
-// produced commit 445d29e, "restore the original v9 hero blue") and the
-// surfaces read as glass cards. The v11 prompt pack said not to change what was
-// already working, and the landing page was working.
+// History: v11 SC-02 added a navy scrim and glass surfaces, which passed AA but
+// dulled the approved blue and read as cards; the owner reverted both, and the
+// bare v9 palette lightened through the hero to as low as 1.99:1 at the bottom
+// of the text band. That was an accepted, recorded risk — not a solved problem.
 //
-// So these tests no longer assert AA in the hero. Deleting them instead would
-// erase the measurement along with the design, and the shortfall is real — it
-// is now an accepted, recorded risk, not a solved problem. What they do
-// instead: pin the measured ratios so nobody discovers this by accident, and
-// fail if the hero gets WORSE than the state the owner approved.
+// SC-V12-02 solves it without a scrim and without touching the approved blue:
+// --sky-top is HELD flat across the whole text band (0-70%) and the wash to
+// white is delayed to below it. White hero copy therefore measures a uniform
+// 4.70:1 (>= AA) everywhere it renders. These tests sample the full band and
+// REQUIRE AA — a lightened stop inside the band, a re-introduced scrim or a new
+// glass surface fails the build.
 //
-// Tracked as UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md and as
-// owner_evidence hero_contrast_accepted in docs/launch/launch-state.json:
-// accepted for the capped beta, open for public paid launch.
+// The canonical release blocker P1-hero-contrast-below-aa / risk hero-contrast
+// stays open until the new candidate is cut (SC-V12-08) and these tests are
+// recorded at that SHA; the previous frozen candidate still carried the
+// accepted risk. Tracked as UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md.
 // ---------------------------------------------------------------------------
 
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -206,50 +187,34 @@ function skyColourAt(position, stops) {
   return hexToRgb(last.hex);
 }
 
-// Measured on 2026-07-28 against the restored hero, sampling every 2% of the
-// text band. White text on the bare sky: 4.70:1 at the top, decaying to 1.99:1
-// at 70%. AA for normal text is 4.5:1, so the hero does not reach it anywhere.
-const RECORDED_CONTRAST = Object.freeze({ best: 4.70, worst: 1.99, worstAt: 70 });
-
-test('the hero contrast shortfall is recorded, and must not get worse', () => {
+test('white hero text meets WCAG AA across the entire text band', () => {
   const sky = skyStops();
   const white = [255, 255, 255];
 
-  let best = 0;
+  // Sample the complete defined text band at fine intervals — a single stop
+  // check would miss a dip between stops. Every position where white hero copy,
+  // the CTA disclosure or the proof strip can render must clear AA.
   let worst = Infinity;
   let worstAt = 0;
-  for (let pos = 0; pos <= TEXT_BAND_END; pos += 2) {
+  for (let pos = 0; pos <= TEXT_BAND_END; pos += 1) {
     const ratio = contrast(white, skyColourAt(pos, sky));
-    if (ratio > best) best = ratio;
     if (ratio < worst) { worst = ratio; worstAt = pos; }
   }
 
-  // A tolerance, not a range to drift inside: 0.05 absorbs float noise only.
   assert.ok(
-    Math.abs(best - RECORDED_CONTRAST.best) < 0.05,
-    `top-of-hero contrast changed: recorded ${RECORDED_CONTRAST.best}:1, now ${best.toFixed(2)}:1`,
-  );
-  assert.ok(
-    worst >= RECORDED_CONTRAST.worst - 0.05,
-    `the hero got LESS readable: recorded worst ${RECORDED_CONTRAST.worst}:1, now ${worst.toFixed(2)}:1 at ${worstAt}%`,
-  );
-
-  // The honest statement of where this stands. If someone later fixes the hero
-  // properly, this assertion fails and the ledger entry gets closed — which is
-  // the point: a resolved defect should not stay recorded as open.
-  assert.ok(
-    worst < AA_NORMAL,
-    'the hero now passes AA — close UX-V11-CONTRAST in docs/UX_DEFECT_LEDGER_V11.md and update this test',
+    worst >= AA_NORMAL,
+    `white hero text drops to ${worst.toFixed(2)}:1 at ${worstAt}% of the text band, below AA's ${AA_NORMAL}:1`,
   );
 });
 
-test('the reverted hero carries no scrim and no glass surfaces', () => {
-  // The owner rejected both. If either returns it must be a deliberate change
-  // with the ledger entry updated, not a quiet re-application.
-  assert.ok(!/\.lp-hero::before/.test(CSS), 'the hero scrim was reverted and must not reappear silently');
-  assert.ok(!/--hero-scrim|--hero-surface/.test(CSS), 'the v11 hero tokens were reverted and must not reappear silently');
+test('the hero reaches AA without a scrim and without glass surfaces', () => {
+  // The fix must not reintroduce what the owner rejected: no hero scrim, no
+  // glass/opaque surface behind the helper note or proof strip.
+  assert.ok(!/\.lp-hero::before/.test(CSS), 'the hero must not use a scrim pseudo-element to reach AA');
+  assert.ok(!/--hero-scrim|--hero-surface/.test(CSS), 'the reverted v11 hero scrim tokens must not reappear');
 
-  // Back to the values the owner approved.
+  // The proof cards keep their approved DARK tint (a scrim, not a white veil),
+  // and the CTA note has no surface of its own.
   assert.equal(declaration('.lp-proof-strip li', 'background'), 'rgba(0, 0, 0, 0.18)');
   assert.equal(declaration('.lp-cta-note', 'background'), null, '.lp-cta-note must have no surface of its own');
 });

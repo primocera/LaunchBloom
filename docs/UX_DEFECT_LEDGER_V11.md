@@ -16,37 +16,40 @@ credentials (see `docs/RUNBOOK_AUTH_E2E.md`).
 | 5 | Landing hero helper text and proof strip | P0 | White text measured 4.10:1 at 26% and 2.49:1 at 62% of the gradient; helper copy and proof cards visibly disappeared in the lighter zone. | ~~Localized in-hero scrim plus a shared `--hero-surface` token.~~ **Reverted 2026-07-28 — see UX-V11-CONTRAST below.** | — |
 | 6 | Hero CTAs | P2 | Hover was a transform only — invisible under reduced motion — and focus had no ring. | Distinct hover backgrounds and non-reflowing focus outlines. | `e2e/hero-contrast.spec.js` |
 
-## Open — accepted risk
+## Fixed in the v12 candidate — was accepted risk
 
 ### UX-V11-CONTRAST · hero text does not meet WCAG AA · P1
 
-**Status:** open, accepted by the owner for the capped beta. Blocks nothing for
-an invited cohort; still open for public paid launch.
+**Status:** **fixed in the v12 candidate (SC-V12-02).** The previous frozen v11
+candidate (`e2ba23bc…`) still carries this as an accepted risk, and the
+canonical release blocker `P1-hero-contrast-below-aa` / risk `hero-contrast`
+stays open until the new candidate is cut at SC-V12-08 and the new tests are
+recorded at that SHA. Nothing here closes the blocker early.
 
-White hero text on the restored sky gradient measures **4.70:1 at the top of
-the hero, falling to 1.99:1 at the bottom of the text band**. AA for normal
-text is 4.5:1, so no part of the hero band reaches it. The lowest content — the
-CTA note and the proof strip — is the least readable, which is the copy that
-has to do the persuading.
+**The defect (v11 state).** White hero text on the restored sky gradient
+measured **4.70:1 at the top of the hero, falling to 1.99:1 at the bottom of the
+text band** — no part of the band reached AA (4.5:1), and the lowest content
+(CTA note, proof strip) was the least readable. v11 fixed it with a navy scrim
+and opaque surfaces; the owner rejected both for dulling the approved blue
+(objection behind commit `445d29e`) and reading as glass cards, and it was
+reverted 2026-07-28.
 
-**Why it is open rather than fixed.** v11 fixed it with a navy scrim over the
-hero and opaque surfaces behind the helper and proof text. The owner rejected
-both: the scrim dulled the approved blue — the same objection that produced
-commit `445d29e`, "restore the original v9 hero blue" — and the surfaces read
-as glass cards. The v11 prompt pack was explicit that working surfaces were not
-to be changed, and the landing page was working. Reverted on 2026-07-28.
+**The v12 fix, and why it satisfies the earlier constraints.** SC-V12-02 reaches
+AA without a scrim and without touching the approved blue. `--sky-top`
+(`#2f6ceb`) is unchanged and is now **held flat across the whole text band
+(0–70%)**, with the wash toward pale blue and white delayed to below it
+(70–100%). White hero copy therefore measures a uniform **4.70:1 (≥ AA)**
+everywhere it renders, the open-sky character and the section transition are
+preserved, and no scrim or glass surface is introduced. This is one of the
+"options that do not touch the blue" recorded here previously (delay the wash /
+move it below the text band).
 
-**How it is held.** `backend/tests/landing-contrast.test.js` pins the measured
-ratios and fails if the hero gets *worse*, and asserts the scrim and surface
-tokens do not silently return. So the shortfall is recorded and monitored, not
-forgotten.
-
-**If it is ever fixed**, the options that do not touch the blue are: darken only
-the last two gradient stops rather than overlaying the whole hero; move the CTA
-note and proof strip below the sky onto the white section; or raise the helper
-text weight and size so it qualifies as large text (3:1). None of these were
-attempted — the revert was the instruction, and picking a different unrequested
-redesign would repeat the original mistake.
+**How it is held.** `backend/tests/landing-contrast.test.js` now **requires AA**:
+it samples the full text band and fails if any sample drops below 4.5:1, asserts
+the approved `--sky-top` token is unchanged, and asserts no hero scrim or new
+glass surface exists. `e2e/hero-contrast.spec.js` proves the cascade resolves
+every hero style to opaque white and the sky stays blue-dominant at 320–1440px
+and 200% zoom.
 
 ## Added, not a defect fix
 
