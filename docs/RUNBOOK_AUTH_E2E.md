@@ -35,12 +35,20 @@ A **non-production** Supabase database with the full migration set applied, plus
 
 ## Getting a database if you are on the Supabase free plan
 
-You do not need a paid plan, and you should not use the production project.
+You do not need a paid plan, and you must not use the production project — nor
+the Mellowa project, which is *its own* production for a different app. The
+runner refuses both (see "Refusing the wrong target" below).
 
-**Option A — a second free Supabase project.** The free plan includes two active
-projects per organization, so this usually costs nothing. Create it, run every
-numbered migration `001`–`037`, then run `E2E_MARKER.sql`. Takes about ten
-minutes and matches production most closely.
+> **If both free slots are already used** (e.g. Scalvya-prod and Mellowa-prod):
+> the free limit is **two active projects _per organization_, not per account**.
+> Create a **new (free) Supabase organization** and you get two more free
+> project slots at no cost — put the disposable Scalvya-E2E project there. This
+> is the simplest path on Windows and needs no Docker.
+
+**Option A — a second free Supabase project (new org if needed).** The free plan
+includes two active projects per organization. Create the throwaway project, run
+every numbered migration `001`–`037`, then run `E2E_MARKER.sql`. About ten
+minutes, and it matches production most closely.
 
 **Option B — a local Supabase stack.** Free and completely isolated, but needs
 Docker Desktop (which on Windows 10 Home means WSL 2):
@@ -61,6 +69,26 @@ Stripe, Resend and Anthropic keys are **deliberately blanked** by the config.
 No test can spend money, send mail or call a model; entitlement states are
 asserted against the server's refusal rather than by granting a plan.
 
+## Refusing the wrong target (v12 SC-V12-03)
+
+The database marker is the ultimate backstop: seeding fails closed unless the
+target contains `public.e2e_seed_marker`. On top of it, the runner refuses known
+production and other-app projects *before it writes anything*, so a mistyped
+`SUPABASE_URL` never reaches the seeding round-trip.
+
+List the project refs you never want seeded in `E2E_FORBIDDEN_SUPABASE_REFS`
+(comma-separated). A "ref" is the subdomain of the Supabase URL —
+`https://<ref>.supabase.co`:
+
+```bash
+# both of your live projects, so the runner refuses either by mistake
+export E2E_FORBIDDEN_SUPABASE_REFS="scalvyaprodref,mellowaprodref"
+```
+
+If `SUPABASE_URL` resolves to a listed ref the runner exits non-zero with
+`REFUSED`, printing only the *outcome* — never the ref or any key. A local stack
+(`http://127.0.0.1:54321`) has no ref and is allowed; the marker still guards it.
+
 ## Running it
 
 ```bash
@@ -68,13 +96,29 @@ export SUPABASE_URL=...            # non-production project
 export SUPABASE_ANON_KEY=...
 export SUPABASE_SERVICE_ROLE_KEY=...
 export E2E_SEED_SECRET="$(openssl rand -hex 20)"
+export E2E_FORBIDDEN_SUPABASE_REFS="scalvyaprodref,mellowaprodref"   # recommended
 
-E2E_AUTH=1 npx playwright test --project=authenticated
-E2E_AUTH=1 npx playwright test --project=authenticated-mobile
-E2E_AUTH=1 npx playwright test --project=authenticated-keyboard
+npm run test:e2e:auth
 ```
 
-Or all of them: `npm run test:e2e:auth`.
+`npm run test:e2e:auth` runs all three projects (desktop, mobile, keyboard)
+through `scripts/e2e-auth.mjs`, which classifies the outcome as PASS, FAIL,
+BLOCKED (missing env) or REFUSED (forbidden target) and writes redacted evidence
+to `test-results/e2e-auth-evidence.json` — candidate SHA, environment class,
+project names, pass/fail/skip counts and timestamps, no secrets.
+
+### Release-candidate mode
+
+Set `RC_GATE=1` when the run is the release-candidate gate. In that mode **any
+skipped required test is a hard failure**, because a required journey that did
+not execute is not evidence it works:
+
+```bash
+RC_GATE=1 npm run test:e2e:auth
+```
+
+Ordinary local runs (no `RC_GATE`) still fail on a real failure but tolerate a
+skip; the release-candidate workflow (SC-V12-05) sets `RC_GATE=1`.
 
 ## What it does to the database
 
