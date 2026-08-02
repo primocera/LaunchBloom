@@ -19,6 +19,14 @@ export const SYSTEM_MICROCOPY = {
   ai_timeout: 'Generation timed out. No AI action was charged. Try again.',
   daily_cap: 'Generation is temporarily paused while we protect service capacity. Editing and exporting still work.',
   billing_config: 'Checkout is temporarily unavailable. Your workspace and drafts are unaffected.',
+  // v13 SC-P1-10: generation timeout OR provider failure. Failed generations
+  // never count, and the brief survives locally — so retry is always safe.
+  generation_failed: 'Generation didn’t finish. No AI action was charged and your brief is saved. Try again.',
+  // v13 SC-P1-10: a plan usage limit was reached. Facts, not pressure — editing
+  // and exporting stay free, so the user is never stuck.
+  usage_limit: 'You’ve used all of this plan’s generations for the current period. Editing and exporting stay free.',
+  // v13 SC-P1-10: an export/download failed. The reviewed assets are untouched.
+  export_failed: 'We couldn’t export just now. Your reviewed assets are still saved — try again, or copy assets individually.',
   // v13 SC-P0-01: entitlement could not be verified. Nothing was changed and no
   // access was revoked — the user retries, they do not get downgraded.
   plan_unavailable: 'We couldn’t verify your plan right now. No access change was made. Please try again.',
@@ -69,6 +77,8 @@ export function messageForError(err = {}) {
     PLAN_UNAVAILABLE: 'plan_unavailable',
     GENERATION_PAUSED: 'daily_cap',
     LAUNCH_CONFIG_INCOMPLETE: 'billing_config',
+    CHECKOUT_UNAVAILABLE: 'billing_config',
+    UPGRADE: 'usage_limit',
     AI_TIMEOUT: 'ai_timeout',
     TIMEOUT: 'ai_timeout',
   };

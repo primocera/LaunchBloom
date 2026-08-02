@@ -4,6 +4,8 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { download } from '../../lib/export';
 import TrialPaywall from '../../components/TrialPaywall';
+import ErrorState from '../../components/ErrorState';
+import { errorStateFor, usageLimitState, exportFailureState, trackErrorState } from '../../lib/error-states';
 import { CopyBtn } from './common';
 import { STATUS_VALUES, statusLabelFor } from '../../lib/status-labels';
 import {
@@ -366,8 +368,10 @@ export default function GeneratorStudio({
     }
   });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const [upgrade, setUpgrade] = useState(false);
+  // v13 SC-P1-10: one typed state (lib/error-states) for the generate failure
+  // path, plus a separate one anchored to the export button.
+  const [errState, setErrState] = useState(null);
+  const [exportErr, setExportErr] = useState(null);
   const [paywall, setPaywall] = useState(false);
   const [warnings, setWarnings] = useState([]);
   const [announce, setAnnounce] = useState(''); // v5 Prompt 19: SR live region
@@ -421,8 +425,7 @@ export default function GeneratorStudio({
     }
     if (busy) return; // double-click guard; the server key check is the backstop
     setBusy(true);
-    setError(null);
-    setUpgrade(false);
+    setErrState(null);
     setWarnings([]);
     setAnnounce('Creating drafts from your approved brief… this uses one AI action.');
     if (!intentKeyRef.current) {
@@ -441,18 +444,30 @@ export default function GeneratorStudio({
       try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
       setAnnounce(`${fresh.length} draft${fresh.length === 1 ? '' : 's'} created and saved to Library.`);
     } catch (e) {
-      if (e.status === 402 || e.code === 'UPGRADE') {
-        if (isFreePlan || e.plan === 'free') { setPaywall(true); setAnnounce('Start your trial to generate.'); }
-        else { setUpgrade(true); setAnnounce('Plan limit reached.'); }
-      } else { setError(e.message); setAnnounce('Generation failed. You can retry.'); }
+      if ((e.status === 402 || e.code === 'UPGRADE') && (isFreePlan || e.plan === 'free')) {
+        setPaywall(true);
+        setAnnounce('Start your trial to generate.');
+      } else {
+        const st = errorStateFor(e, { context: 'generation' });
+        setErrState(st);
+        setAnnounce(st.category === 'usage_limit' ? 'Plan limit reached.' : 'Generation failed. You can retry.');
+        trackErrorState(api.trackEvent, st, { feature: table || title });
+      }
     } finally {
       setBusy(false);
     }
   }
 
   function exportAll() {
-    const md = (items || []).map((i) => (fullCopy ? fullCopy(i) : JSON.stringify(i, null, 2))).join('\n\n---\n\n');
-    download(`${(table || 'assets')}.md`, md, 'text/markdown');
+    setExportErr(null);
+    try {
+      const md = (items || []).map((i) => (fullCopy ? fullCopy(i) : JSON.stringify(i, null, 2))).join('\n\n---\n\n');
+      download(`${(table || 'assets')}.md`, md, 'text/markdown');
+    } catch (e) {
+      const st = exportFailureState(e);
+      setExportErr(st);
+      trackErrorState(api.trackEvent, st, { feature: table || title });
+    }
   }
 
   function updateItem(updated) {
@@ -535,19 +550,11 @@ export default function GeneratorStudio({
             </p>
           )}
           <p className="flow-muted gen-cost-note" role="status">{outputEstimate({ resultKey })}</p>
-          {error && (
-            <p className="flow-err" role="alert">
-              Generation didn’t finish. No AI action was charged. Your brief is saved.{' '}
-              <button className="account-link" onClick={onGenerate}>Retry</button>
-            </p>
-          )}
-          {upgrade && (
-            <p className="flow-err">
-              You've hit your plan limit for generations.{' '}
-              <button className="account-link" onClick={() => setPaywall(true)}>Upgrade your plan</button>{' '}
-              to keep going.
-            </p>
-          )}
+          <ErrorState
+            state={errState}
+            onRetry={onGenerate}
+            onUpgrade={() => setPaywall(true)}
+          />
           {warnings.length > 0 ? (
             <div className="gen-warnings">
               <strong>Review {warnings.length} issue{warnings.length === 1 ? '' : 's'} before marking ready</strong>
@@ -570,6 +577,7 @@ export default function GeneratorStudio({
               Exports a Markdown draft file. Review facts, links, claims and how it fits your
               platform before publishing — exporting is free and does not use AI actions.
             </p>
+            <ErrorState state={exportErr} onRetry={exportAll} />
           </div>
         )}
 
@@ -589,7 +597,7 @@ export default function GeneratorStudio({
                 renderItem={renderItem}
                 fullCopy={fullCopy}
                 onChange={updateItem}
-                onUpgrade={(e) => (isFreePlan || e.plan === 'free' ? setPaywall(true) : setUpgrade(true))}
+                onUpgrade={(e) => (isFreePlan || e.plan === 'free' ? setPaywall(true) : setErrState(usageLimitState(e)))}
               />
             ))}
           </div>

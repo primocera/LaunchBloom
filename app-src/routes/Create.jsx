@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { totalAssets, sectionPath } from './campaign/shared';
+import ErrorState from '../components/ErrorState';
+import { emptyWorkspaceState } from '../lib/error-states';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -112,15 +114,11 @@ export default function Create() {
           )}
 
           {campaigns && campaigns.length === 0 && !error && (
+            // v13 SC-P1-10: new/empty workspace — guide the one path (Brand
+            // Profile → Campaign Brief → first reviewed asset), not the five
+            // studios. Steps come from the typed empty-workspace state.
             <div className="flow-card">
-              <h3>Create your first campaign</h3>
-              <p className="flow-muted">
-                A campaign holds the offer, audience, goal, dates and CTA that every asset follows.
-                Creating one generates nothing and uses no AI action.
-              </p>
-              <Link className="flow-btn" to="/app/campaigns" style={{ display: 'inline-block', textDecoration: 'none' }}>
-                Create campaign
-              </Link>
+              <ErrorState state={emptyWorkspaceState()} />
             </div>
           )}
 

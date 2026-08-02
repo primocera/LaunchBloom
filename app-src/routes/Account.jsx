@@ -4,6 +4,8 @@ import { useAuth } from '../lib/auth';
 import { api, getActiveWorkspace, setActiveWorkspace } from '../lib/api';
 import { BRAND } from '../brand';
 import TrialPaywall from '../components/TrialPaywall';
+import ErrorState from '../components/ErrorState';
+import { planVerificationState, exportFailureState, trackErrorState } from '../lib/error-states';
 
 // Prompts 8 + 14: account page — profile, billing (plan, trial countdown, next
 // charge, billing portal), usage, data export and account deletion.
@@ -24,6 +26,7 @@ export default function Account() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [exportErr, setExportErr] = useState(null); // v13 SC-P1-10: typed export state
   const [workspaces, setWorkspaces] = useState([]);
   const [renaming, setRenaming] = useState(null); // { id, name } while editing
   const [receipt, setReceipt] = useState(null); // Prompt 27: deletion receipt
@@ -38,7 +41,13 @@ export default function Account() {
       (b) => { if (!isCancelled()) { setBilling(b); setPlanUnavailable(null); } },
       (err) => {
         if (isCancelled()) return;
-        if (err && err.code === 'PLAN_UNAVAILABLE') setPlanUnavailable(err.userMessage);
+        if (err && err.code === 'PLAN_UNAVAILABLE') {
+          // v13 SC-P1-10: typed state — preserve access, offer retry + support,
+          // and never render the user as Free.
+          const st = planVerificationState(err);
+          setPlanUnavailable(st);
+          trackErrorState(api.trackEvent, st, { feature: 'billing' });
+        }
       }
     );
   }
@@ -85,8 +94,14 @@ export default function Account() {
   }
 
   async function exportData() {
-    setError(null);
-    try { await api.exportData(); } catch (err) { setError(err.message); }
+    setExportErr(null);
+    try {
+      await api.exportData();
+    } catch (err) {
+      const st = exportFailureState(err);
+      setExportErr(st);
+      trackErrorState(api.trackEvent, st, { feature: 'account_export' });
+    }
   }
 
   async function deleteAccount() {
@@ -165,10 +180,11 @@ export default function Account() {
 
         {!billing && !planUnavailable && <p className="muted">Loading billing…</p>}
         {!billing && planUnavailable && (
-          <p className="muted">
-            {planUnavailable}{' '}
-            <button className="btn-link" type="button" onClick={retryBilling}>Try again</button>
-          </p>
+          <ErrorState
+            state={planUnavailable}
+            onRetry={retryBilling}
+            supportHref={`mailto:${BRAND.supportEmail}`}
+          />
         )}
 
         {billing && !sub && billing.plan === 'free' && (
@@ -265,6 +281,7 @@ export default function Account() {
           machine-readable archive.
         </p>
         <button className="btn-secondary" onClick={exportData}>Export all account data</button>
+        <ErrorState state={exportErr} onRetry={exportData} supportHref={`mailto:${BRAND.supportEmail}`} />
       </section>
 
       <section className="account-section danger">

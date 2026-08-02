@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { microcopy } from '../lib/microcopy';
+import { checkoutConfigState, planVerificationState, trackErrorState } from '../lib/error-states';
 
 // ---------------------------------------------------------------------------
 // v5 Prompt 2: contextual trial paywall. Shown when a free account attempts
@@ -72,11 +73,19 @@ export default function TrialPaywall({ open, onClose }) {
       if (e.code === 'PLAN_UNAVAILABLE') {
         // v13 SC-P0-01: checkout failed closed — no session, no charge, and no
         // access change. Say so plainly and let the user retry.
-        setError(e.userMessage || microcopy('plan_unavailable'));
+        const st = planVerificationState(e);
+        setError(`${st.message} ${st.reassurance}`.trim());
+        trackErrorState(api.trackEvent, st, { feature: 'checkout' });
+      } else if (e.code === 'CHECKOUT_UNAVAILABLE' || e.code === 'LAUNCH_CONFIG_INCOMPLETE' || e.status === 503) {
+        // v13 SC-P1-10 / SC-P0-03: checkout config unavailable. Confirm no charge
+        // and that the currency has not silently changed.
+        const st = checkoutConfigState(e);
+        setError(`${st.message} ${st.reassurance}`.trim());
+        trackErrorState(api.trackEvent, st, { feature: 'checkout' });
       } else if (e.code === 'ALREADY_SUBSCRIBED') {
         setError('You already have a subscription. Manage your plan from Account & billing.');
       } else {
-        setError(e.message || 'Could not start checkout. Please try again.');
+        setError(e.userMessage || microcopy('unknown', { req_id: e.req_id }));
       }
       setBusy(false);
     }
