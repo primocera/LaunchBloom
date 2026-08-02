@@ -11,7 +11,7 @@ const { stubModule, makeFakeSupabase } = require('./helpers');
 // planFor: customer exists with a trialing subscription
 stubModule('lib/supabase.js', makeFakeSupabase({
   customers: { data: { id: 'cust-1' }, error: null },
-  subscriptions: { data: { status: 'trialing', stripe_price_id: 'price_pro_y' }, error: null },
+  subscriptions: { data: [{ status: 'trialing', stripe_price_id: 'price_pro_y' }], error: null },
 }));
 
 const { planFor, pricePlans } = require('../routes/customers');

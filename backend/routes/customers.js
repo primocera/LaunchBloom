@@ -102,25 +102,32 @@ async function planFor(email) {
 
     if (!customer) return null;
 
-    const { data: sub } = await supabase
+    // A customer can hold more than one entitling row — an old subscription on a
+    // now-retired price sitting beside the current one, or overlapping test subs.
+    // Scan ALL entitling rows, newest first, and return the first whose price
+    // maps to a plan. Picking one arbitrarily (the old `.limit(1)` had no order)
+    // could land on a stale/unmapped row and drop a PAYING user to free even
+    // though a valid current subscription exists. Trialing maps to 'trial' on any
+    // price. Entitlement stays decided by the canonical state machine, so
+    // planFor() and the webhook can never disagree about what a status grants.
+    const { data: subs } = await supabase
       .from('subscriptions')
-      .select('status, stripe_price_id')
+      .select('status, stripe_price_id, stripe_event_at')
       .eq('customer_id', customer.id)
       .in('status', ENTITLING_STATUSES)
-      .limit(1)
-      .single();
+      .order('stripe_event_at', { ascending: false, nullsFirst: false });
 
-    // Entitlement is decided by the canonical state machine, so planFor() and
-    // the webhook handler can never disagree about what a status grants. A
-    // trialing row is the limited 'trial' plan on any price; an active row maps
-    // its price to a plan, or grants nothing for an unmapped price.
-    if (sub) {
-      const plan = entitlementFor(sub, pricePlans());
-      if (!plan && sub.status === 'active') {
-        // Never silently grant a plan for an unmapped price (v5 Prompt 1).
-        console.error(`[planFor] active subscription with unknown price id "${sub.stripe_price_id}" for ${email} — check STRIPE_PRICE_* env vars`);
+    if (subs && subs.length) {
+      const plans = pricePlans();
+      for (const sub of subs) {
+        const plan = entitlementFor(sub, plans);
+        if (plan) return plan;
       }
-      if (plan) return plan;
+      // Entitling subscription(s) exist but none map to a configured price —
+      // never silently grant, but make the misconfiguration loud.
+      if (subs.some((s) => s.status === 'active')) {
+        console.error(`[planFor] entitling subscription(s) for ${email} map to no configured price — check STRIPE_PRICE_* env vars (prices: ${subs.map((s) => s.stripe_price_id).join(', ')})`);
+      }
     }
 
     // Succeeded one-time payment = lifetime access

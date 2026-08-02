@@ -11,7 +11,7 @@ const { stubModule, makeFakeSupabase } = require('./helpers');
 
 stubModule('lib/supabase.js', makeFakeSupabase({
   customers: { data: { id: 'cust-1' }, error: null },
-  subscriptions: { data: { status: 'active', stripe_price_id: 'price_not_in_env' }, error: null },
+  subscriptions: { data: [{ status: 'active', stripe_price_id: 'price_not_in_env' }], error: null },
 }));
 
 const { planFor } = require('../routes/customers');
