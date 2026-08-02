@@ -1352,6 +1352,44 @@
   flex: none;
 }
 
+/* v13 SC-P1-11: the six fields held constant across every generated asset. */
+.lp-coordinated-label {
+  margin: 32px 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted, #6B7280);
+  text-align: center;
+}
+
+.lp-coordinated {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0;
+  text-align: left;
+}
+
+.lp-coordinated-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.lp-coordinated-item dt {
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.lp-coordinated-item dd {
+  margin: 0;
+  color: var(--muted, #6B7280);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .lp-how {
   padding: 56px 24px;
 }

@@ -231,6 +231,47 @@ test('the landing page invents no proof — no logos, counts, testimonials, time
     'the product preview must be labelled as an example, not a real customer outcome');
 });
 
+// ── v13 SC-P1-11: coordination is named, not hand-waved as "AI writes it" ────
+
+test('the landing explains what is coordinated across outputs by field', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const block = landing.slice(landing.indexOf('const COORDINATED'), landing.indexOf('const VALUE_LIST'));
+  for (const field of ['Offer', 'Audience', 'Angle', 'Proof', 'CTA', 'Tone']) {
+    assert.match(block, new RegExp(`'${field}'`), `coordination must name the ${field} field`);
+  }
+  // The value must not collapse back into a generic "AI writes everything" claim.
+  assert.doesNotMatch(landing, /AI writes everything|AI does it all|generates? your entire (business|marketing)/i,
+    'coordination must be concrete, not a generic AI claim');
+});
+
+// ── v13 SC-P1-11: trial, publishing and SEO qualifiers stay honest ──────────
+
+test('the landing keeps the trial, publishing and SEO qualifiers explicit', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  // Trial: free setup, payment method required, 3-day trial starts at generation.
+  assert.match(landing, /a payment method is required for the trial/i, 'trial payment-method requirement must be explicit');
+  assert.match(landing, /trial starts when you choose a plan/i, 'FAQ must state when the trial starts');
+  // Publishing: "Published" is a user-managed status, not an integration.
+  assert.match(landing, /not a publishing integration/i, 'Published must be framed as a user-set status, not an integration');
+  assert.match(landing, /remain responsible for checking and publishing/i, 'publishing responsibility stays with the user');
+  // SEO: ideas only, no volume/ranking data.
+  assert.match(landing, /does not report search volume, difficulty or rankings/i, 'the SEO limitation must be explicit');
+  // Export is defined as a handoff, never a send/publish.
+  assert.match(landing, /does not send, post or publish/i, 'export must be defined as a handoff, not publishing');
+});
+
+test('the FAQ covers the seven required topics', () => {
+  const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
+  const faq = landing.slice(landing.indexOf('const FAQ ='), landing.indexOf('function Faq()'));
+  assert.match(faq, /Who is Scalvya for/i, 'FAQ: who it is for');
+  assert.match(faq, /What does .export. actually mean/i, 'FAQ: what export means');
+  assert.match(faq, /Will Scalvya publish for me/i, 'FAQ: whether it publishes');
+  assert.match(faq, /keyword volume or ranking data/i, 'FAQ: SEO limitation');
+  assert.match(faq, /How is my data handled/i, 'FAQ: data handling');
+  assert.match(faq, /When does the 3-day trial start/i, 'FAQ: trial start');
+  assert.match(faq, /How do I cancel/i, 'FAQ: cancellation');
+});
+
 test('Email studio discloses cost and says Scalvya does not send', () => {
   const email = read(path.join(APP_SRC, 'routes', 'studios', 'EmailFlowStudio.jsx'));
   assert.match(email, /Generate emails · 1 AI action/);

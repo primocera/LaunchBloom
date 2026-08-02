@@ -62,6 +62,19 @@ const PROOF_STEPS = [
   { label: 'Client-ready handoff', detail: 'Word, PDF or bundle' },
 ];
 
+// v13 SC-P1-11: name what is actually held constant across every asset, so the
+// value reads as one coherent campaign rather than a vague generic-AI promise.
+// These six fields are the coordination contract the brief and Brand Profile
+// enforce; nothing here is an outcome claim.
+const COORDINATED = [
+  ['Offer', 'The same package and price in every asset.'],
+  ['Audience', 'Written for one buyer, not a generic reader.'],
+  ['Angle', 'One primary message, not five competing ones.'],
+  ['Proof', 'Only the claims your Brand Profile supports.'],
+  ['CTA', 'One next step, repeated across the campaign.'],
+  ['Tone', 'One voice from the website to the ad.'],
+];
+
 // "What one campaign can include" — deliverables as one connected set.
 const VALUE_LIST = [
   'Website pages',
@@ -99,24 +112,32 @@ function planCard(p) {
 
 const FAQ = [
   {
-    q: 'How is this different from a general AI chat?',
-    a: 'A chat answers one prompt at a time. Scalvya keeps your approved brand facts and campaign brief attached to every asset, then saves outputs with version history and review checks.',
+    q: 'Who is Scalvya for?',
+    a: 'Freelance marketers and boutique agencies who repeatedly turn one offer into coordinated launch assets for a client. Solo founders and small brands run their own launch the same way — one product, one workflow.',
   },
   {
-    q: 'Do I need a finished brand strategy?',
-    a: 'No. Start with the facts you know. Scalvya marks missing proof, prices or restrictions for review instead of inventing them.',
-  },
-  {
-    q: 'What does the free account include?',
-    a: 'You can create your account and prepare your Brand Profile and Campaign Brief without a payment method. Generation starts when you choose a plan and begin the 3-day trial.',
+    q: 'What does “export” actually mean?',
+    a: 'Export packages what you approve as a Word document, PDF or a downloadable bundle you hand off. It moves finished drafts out of Scalvya — it does not send, post or publish them anywhere.',
   },
   {
     q: 'Will Scalvya publish for me?',
-    a: 'No. It creates, organizes and exports review-ready drafts. You remain responsible for checking and publishing them.',
+    a: 'No. It creates, organizes and exports review-ready drafts. “Published” is a status you set yourself to track what you have shipped — it is not a publishing integration. You remain responsible for checking and publishing.',
   },
   {
-    q: 'Does the SEO Studio provide keyword volume or ranking data?',
-    a: 'Not currently. It creates content ideas and a research checklist. Any metric must include a real source and date.',
+    q: 'Does the SEO path provide keyword volume or ranking data?',
+    a: 'Not currently. It generates content ideas and a research checklist. It does not report search volume, difficulty or rankings, and any metric must include a real source and date.',
+  },
+  {
+    q: 'How is my data handled?',
+    a: 'Your Brand Profile, briefs and generated assets stay in your workspace, scoped to your account. Scalvya does not sell your data or use your campaign content to train models. See the Privacy page for the full detail.',
+  },
+  {
+    q: 'When does the 3-day trial start, and what does the free account include?',
+    a: 'Creating an account and preparing your Brand Profile and Campaign Brief is free and needs no payment method. The 3-day trial starts when you choose a plan to begin generating; a payment method is required at that point.',
+  },
+  {
+    q: 'How do I cancel?',
+    a: 'Cancel from your account billing at any time before the displayed charge date to avoid the charge. Exact plan and charge facts are shown from the live pricing catalog on this page.',
   },
 ];
 
@@ -245,7 +266,6 @@ export default function Landing() {
             {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
             agencies: keep one offer&rsquo;s positioning, claims and CTA consistent across every
             channel you deliver for a client. Solo founders run their own launch the same way.
-            Turn one approved brief into connected website copy, emails, social posts and ads.
             Launch-ready means structured, connected and ready for your review — publishing stays in your hands.
           </p>
 
@@ -288,6 +308,17 @@ export default function Landing() {
               drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
               the same approved brand facts and campaign brief.
             </p>
+          </Reveal>
+          <Reveal>
+            <p className="lp-coordinated-label">What stays coordinated across every output</p>
+            <dl className="lp-coordinated">
+              {COORDINATED.map(([term, detail]) => (
+                <div className="lp-coordinated-item" key={term}>
+                  <dt>{term}</dt>
+                  <dd>{detail}</dd>
+                </div>
+              ))}
+            </dl>
           </Reveal>
         </div>
       </section>
