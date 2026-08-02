@@ -69,8 +69,11 @@ async function main() {
           fail(`${label} (${priceId}): base is ${before.currency.toUpperCase()}, not USD — left untouched`);
           continue;
         }
+        // expand currency_options — Stripe omits it from the response otherwise,
+        // which otherwise reads as a false "did not persist" even on success.
         const updated = await stripe.prices.update(priceId, {
           currency_options: { eur: { unit_amount: cents } },
+          expand: ['currency_options'],
         });
         const nowEur = updated.currency_options && updated.currency_options.eur;
         if (nowEur && nowEur.unit_amount === cents) {

@@ -1,5 +1,8 @@
 node_modules/
 .env
+.env.live
+.env.production
+.env.*.local
 
 # internal working files — local only
 OfferFlow_AI_Claude_Code_Prompts.docx
