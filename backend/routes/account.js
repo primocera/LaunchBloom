@@ -18,10 +18,7 @@ const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 const { track } = require('../lib/analytics');
-
-function appUrl() {
-  return (process.env.PUBLIC_URL || BRAND.siteUrl || '').replace(/\/$/, '');
-}
+const { configuredAppUrl } = require('../lib/launch-config');
 
 /** Which interval a stored price id represents, from the env allowlist. */
 function intervalForPrice(priceId) {
@@ -100,8 +97,24 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
 
 // POST /api/account/billing-portal — Stripe Billing Portal session (invoices,
 // card, cancel/reactivate, plan changes) for the signed-in customer.
+//
+// v13 SC-P0-05: this is the ONE canonical portal endpoint. Identity is
+// req.userEmail (never a client-supplied email or customer id) and the return
+// URL comes from validated server configuration only — any returnUrl in the
+// query or body is ignored, so there is no open redirect to reach.
 router.post('/api/account/billing-portal', requireAuth, async (req, res, next) => {
   try {
+    let returnUrl;
+    try {
+      returnUrl = configuredAppUrl('/app/account');
+    } catch (err) {
+      console.error('[billing-portal] return URL misconfigured:', err.message);
+      return res.status(503).json({
+        error: 'Billing is temporarily unavailable. Your workspace and drafts are unaffected.',
+        code: 'LAUNCH_CONFIG_INCOMPLETE',
+        req_id: req.id,
+      });
+    }
     const { data: customer } = await supabase
       .from('customers')
       .select('stripe_customer_id')
@@ -114,7 +127,7 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
     try {
       session = await stripe.billingPortal.sessions.create({
         customer: customer.stripe_customer_id,
-        return_url: `${appUrl()}/app/account`,
+        return_url: returnUrl,
       });
     } catch (err) {
       if (err.code === 'resource_missing') {

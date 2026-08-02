@@ -6,7 +6,6 @@
 
 const express = require('express');
 const router = express.Router();
-const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
 const {
@@ -41,59 +40,19 @@ function pricePlans() {
   return map;
 }
 
-/**
- * POST /api/customers
- * Creates or retrieves a customer record in Supabase and Stripe.
- * Body: { email, name, metadata }
- */
-router.post('/', requireAuth, async (req, res) => {
-  try {
-    const { email, name, metadata = {} } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: 'email is required' });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const { data: existing } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('email', normalizedEmail)
-      .single();
-
-    if (existing) {
-      return res.json(sanitizeCustomer(existing));
-    }
-
-    const stripeCustomer = await stripe.customers.create({
-      email: normalizedEmail,
-      name: name || undefined,
-      metadata: { ...metadata, source: 'launchbloom' },
-    });
-
-    const { data: customer, error } = await supabase
-      .from('customers')
-      .insert({
-        email: normalizedEmail,
-        name: name || null,
-        stripe_customer_id: stripeCustomer.id,
-        metadata,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      await stripe.customers.del(stripeCustomer.id).catch(() => {});
-      return res.status(500).json({ error: 'Failed to save customer' });
-    }
-
-    res.status(201).json(sanitizeCustomer(customer));
-  } catch (err) {
-    console.error('create-customer error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// v13 SC-P0-05 — REMOVED: POST /api/customers.
+// It took the billing email from the request body, so any signed-in user could
+// mint a Stripe customer for someone else's address and forward arbitrary
+// metadata to Stripe. It had no caller (frontend, api/, scripts, tests or
+// docs); the only supported way a customer row is created is payments.js
+// checkout, which derives the email from the session. Do not reintroduce a
+// route that accepts a client-supplied billing identity.
+//
+// v13 SC-P0-05 — REMOVED: GET /api/customers/:id/portal?returnUrl=.
+// It opened a Stripe Billing Portal session with a client-controlled
+// return_url (an open redirect off a trusted billing domain) and was
+// superseded by the canonical POST /api/account/billing-portal, which derives
+// both the customer and the return URL server-side.
 
 // PostgREST returns this code from .single() when the filter matched no row.
 // That is a VERIFIED "no such record", not a failure — everything else is.
@@ -241,52 +200,6 @@ router.get('/:id', requireAuth, async (req, res) => {
     res.json(sanitizeCustomer(customer));
   } catch (err) {
     console.error('get-customer error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/** GET /api/customers/:id/portal — Stripe Billing Portal session. Query: { returnUrl } */
-router.get('/:id/portal', requireAuth, async (req, res) => {
-  try {
-    const { returnUrl } = req.query;
-    if (!returnUrl) {
-      return res.status(400).json({ error: 'returnUrl query parameter is required' });
-    }
-
-    const { data: customer, error } = await supabase
-      .from('customers')
-      .select('stripe_customer_id, email')
-      .eq('id', req.params.id)
-      .single();
-
-    if (customer && customer.email?.toLowerCase() !== req.userEmail.toLowerCase()) {
-      return res.status(404).json({ error: 'Customer or Stripe account not found' });
-    }
-    if (error || !customer?.stripe_customer_id) {
-      return res.status(404).json({ error: 'Customer or Stripe account not found' });
-    }
-
-    let session;
-    try {
-      session = await stripe.billingPortal.sessions.create({
-        customer: customer.stripe_customer_id,
-        return_url: returnUrl,
-      });
-    } catch (err) {
-      if (err.code === 'resource_missing') {
-        // Stale id (test-mode/foreign customer on the shared Stripe account).
-        await supabase
-          .from('customers')
-          .update({ stripe_customer_id: null })
-          .eq('id', req.params.id);
-        return res.status(404).json({ error: 'Customer or Stripe account not found' });
-      }
-      throw err;
-    }
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('billing-portal error:', err);
     res.status(500).json({ error: err.message });
   }
 });

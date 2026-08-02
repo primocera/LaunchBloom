@@ -22,7 +22,7 @@
 //     never a value, so no secret can leak through a config error.
 // ---------------------------------------------------------------------------
 
-const { legalPlaceholders, legalUrls } = require('./brand');
+const { BRAND, legalPlaceholders, legalUrls } = require('./brand');
 
 /** Explicitly-unsafe bypass. Dev/test only — rejected in production. */
 const UNSAFE_BYPASS = 'UNSAFE_SKIP_LAUNCH_CONFIG_CHECK';
@@ -68,6 +68,65 @@ function urlProblem(name, raw, { label = name } = {}) {
   if (LOCAL_HOST.test(host)) return `${label} points at localhost (not a public production URL)`;
   if (PLACEHOLDER_HOST.test(host)) return `${label} uses a placeholder domain`;
   return null;
+}
+
+/**
+ * v13 SC-P0-05 — the ONLY way to build a URL we hand to a redirecting third
+ * party (Stripe Checkout / Billing Portal return_url).
+ *
+ * Request input NEVER reaches this function: the base comes from server
+ * configuration (PUBLIC_URL, else BRAND_URL) and the path is an in-app literal
+ * chosen by the route. The result is rebuilt from the parsed origin, so even a
+ * malformed configured value cannot smuggle a different destination through.
+ *
+ * Rejected: non-absolute and protocol-relative values, any scheme other than
+ * https (http is tolerated for a LOCAL host outside production only, so `npm
+ * run dev` still works), embedded credentials, a configured query/fragment
+ * (open-redirect carrier), localhost/placeholder hosts in production mode, and
+ * any path that is not a plain internal absolute path.
+ *
+ * Throws a 500-tagged Error naming the variable only — never its value.
+ */
+const INTERNAL_PATH = /^\/(?:[A-Za-z0-9\-._~/]*)$/;
+
+function configuredAppUrl(path = '/') {
+  const p = String(path || '/');
+  // `//evil.com` and `/\evil.com` are browser-protocol-relative; %-escapes and
+  // backslashes have no business in a literal we wrote ourselves.
+  if (!INTERNAL_PATH.test(p) || p.startsWith('//') || p.includes('..')) {
+    throw Object.assign(new Error('Invalid application path'), { status: 500 });
+  }
+
+  const raw = String(process.env.PUBLIC_URL || BRAND.siteUrl || '').trim();
+  const bad = (why) => Object.assign(new Error(`PUBLIC_URL ${why}`), { status: 500 });
+  if (!raw) throw bad('is not configured');
+  if (/^\s*\/\//.test(raw)) throw bad('must not be protocol-relative');
+
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw bad('is not a valid absolute URL');
+  }
+
+  const scheme = u.protocol.toLowerCase();
+  const host = u.hostname.toLowerCase();
+  const local = LOCAL_HOST.test(host);
+  const production = launchMode() === 'production' || process.env.NODE_ENV === 'production';
+
+  if (scheme !== 'https:' && !(scheme === 'http:' && local && !production)) {
+    throw bad('must be HTTPS');
+  }
+  if (u.username || u.password) throw bad('must not contain credentials');
+  if (u.search || u.hash) throw bad('must not contain a query string or fragment');
+  if (production && (local || PLACEHOLDER_HOST.test(host))) {
+    throw bad('is not a public production URL');
+  }
+
+  // Rebuild from the parsed origin: whatever the configured string looked like,
+  // the destination is exactly this origin plus our own literal path.
+  const base = `${scheme}//${u.host}${u.pathname}`.replace(/\/+$/, '');
+  return `${base}${p === '/' ? '' : p}`;
 }
 
 /** Every problem that must be resolved before taking real money. */
@@ -194,6 +253,7 @@ function requireLaunchReady(kind) {
 
 module.exports = {
   UNSAFE_BYPASS,
+  configuredAppUrl,
   launchMode,
   launchConfigProblems,
   launchConfigEnforced,
