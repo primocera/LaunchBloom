@@ -166,7 +166,9 @@ export default function Account() {
           </p>
         )}
         {sub && sub.status === 'active' && !sub.cancel_at_period_end && (
-          <p>{planName} renews on <strong>{fmtDate(sub.current_period_end)}</strong>{priceClause}.</p>
+          fmtDate(sub.current_period_end)
+            ? <p>{planName} renews on <strong>{fmtDate(sub.current_period_end)}</strong>{priceClause}.</p>
+            : <p>{planName} is active{priceClause}.</p>
         )}
         {sub && sub.cancel_at_period_end && (
           <p>

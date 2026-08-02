@@ -366,17 +366,25 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     .eq('stripe_customer_id', subscription.customer)
     .single();
 
+  // Stripe moved current_period_start/end OFF the subscription object and ONTO
+  // the subscription item in recent API versions (2025+/2026 dahlia). Read the
+  // top-level field first for older versions, then fall back to the item — else
+  // the renewal date is stored as null and the account page shows "renews on .".
+  const item = subscription.items?.data?.[0];
+  const periodStartUnix = subscription.current_period_start ?? item?.current_period_start ?? null;
+  const periodEndUnix = subscription.current_period_end ?? item?.current_period_end ?? null;
+
   const { error } = await supabase.from('subscriptions').upsert(
     {
       stripe_subscription_id: subscription.id,
       customer_id: customer?.id ?? null,
-      stripe_price_id: subscription.items?.data?.[0]?.price?.id ?? null,
+      stripe_price_id: item?.price?.id ?? null,
       status: subscription.status,
-      current_period_start: subscription.current_period_start
-        ? new Date(subscription.current_period_start * 1000).toISOString()
+      current_period_start: periodStartUnix
+        ? new Date(periodStartUnix * 1000).toISOString()
         : null,
-      current_period_end: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toISOString()
+      current_period_end: periodEndUnix
+        ? new Date(periodEndUnix * 1000).toISOString()
         : null,
       trial_end: subscription.trial_end
         ? new Date(subscription.trial_end * 1000).toISOString()
