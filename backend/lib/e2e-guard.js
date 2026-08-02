@@ -75,6 +75,51 @@ function targetRefusal(env = {}) {
   return null;
 }
 
+// v13 SC-P1-08 — an UNRECOGNIZED target is refused, not treated as local.
+//
+// projectRef() returns null for two very different things: a genuine local
+// Supabase stack (http://127.0.0.1:54321) and any other host we do not
+// recognise — including a production database behind a custom domain or a
+// proxy. Letting the second case through as "local" meant the seeding runner's
+// only remaining protection was the DB marker. The runner now refuses anything
+// that is neither a Supabase project ref (where the denylist applies) nor a
+// loopback/local host.
+const LOCAL_HOSTNAMES = Object.freeze([
+  'localhost', '127.0.0.1', '0.0.0.0', '::1', 'host.docker.internal',
+]);
+
+/** True for a loopback / developer-machine URL. */
+function isLocalUrl(url) {
+  try {
+    const host = new URL(String(url)).hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    return LOCAL_HOSTNAMES.includes(host) || host.endsWith('.local') || host.endsWith('.localhost');
+  } catch {
+    return false;
+  }
+}
+
+/** A refusal reason when SUPABASE_URL is neither a Supabase project nor local. */
+function unrecognizedTargetRefusal(env = {}) {
+  const url = String(env.SUPABASE_URL || '');
+  if (projectRef(url)) return null; // a real project — the denylist decides
+  if (isLocalUrl(url)) return null; // a local stack
+  return 'SUPABASE_URL is neither a recognized Supabase project nor a local stack '
+    + '— refusing to seed an unrecognized target';
+}
+
+/**
+ * A refusal reason when an explicit E2E_BASE_URL points off the machine. The
+ * authenticated matrix starts its own server on 127.0.0.1; pointing it at a
+ * deployed origin would drive a real (possibly production) app.
+ */
+function baseUrlRefusal(env = {}) {
+  const base = String(env.E2E_BASE_URL || '').trim();
+  if (!base) return null;
+  if (isLocalUrl(base)) return null;
+  return 'E2E_BASE_URL points at a non-local origin — the authenticated matrix may only '
+    + 'run against the locally started app';
+}
+
 /** Whether the run is a release-candidate gate, where any skip is a hard failure. */
 function isReleaseGate(env = {}) {
   return String(env.RC_GATE || '') === '1';
@@ -89,7 +134,7 @@ function preflight(env = {}) {
   if (missing.length) {
     return { state: 'BLOCKED', reason: `missing environment: ${missing.join(', ')}` };
   }
-  const refusal = targetRefusal(env);
+  const refusal = targetRefusal(env) || unrecognizedTargetRefusal(env) || baseUrlRefusal(env);
   if (refusal) return { state: 'FORBIDDEN', reason: refusal };
   return { state: 'READY', reason: null };
 }
@@ -154,6 +199,9 @@ module.exports = {
   projectRef,
   forbiddenRefs,
   targetRefusal,
+  isLocalUrl,
+  unrecognizedTargetRefusal,
+  baseUrlRefusal,
   isReleaseGate,
   preflight,
   classifyRun,

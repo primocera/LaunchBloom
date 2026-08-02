@@ -54,6 +54,29 @@ test('the Mellowa project is refused just like Scalvya production', () => {
   assert.equal(guard.preflight(env).state, 'FORBIDDEN');
 });
 
+test('an UNRECOGNIZED target (not a Supabase project, not local) is FORBIDDEN', () => {
+  // v13 SC-P1-08: a production database behind a custom domain or proxy returns
+  // no project ref and must NOT be waved through as if it were a local stack.
+  const env = { ...FULL_ENV, SUPABASE_URL: 'https://db.customer-domain.example/rest/v1' };
+  const pre = guard.preflight(env);
+  assert.equal(pre.state, 'FORBIDDEN');
+  assert.match(pre.reason, /unrecognized target/);
+});
+
+test('a non-local E2E_BASE_URL is FORBIDDEN — the matrix drives only the local app', () => {
+  const env = { ...FULL_ENV, E2E_BASE_URL: 'https://app.scalvya.com' };
+  const pre = guard.preflight(env);
+  assert.equal(pre.state, 'FORBIDDEN');
+  assert.match(pre.reason, /non-local origin/);
+});
+
+test('a local E2E_BASE_URL and a local stack both pass', () => {
+  assert.equal(guard.baseUrlRefusal({ E2E_BASE_URL: 'http://127.0.0.1:4173' }), null);
+  assert.equal(guard.baseUrlRefusal({ E2E_BASE_URL: 'http://localhost:4173' }), null);
+  assert.equal(guard.isLocalUrl('http://127.0.0.1:54321'), true);
+  assert.equal(guard.isLocalUrl('https://app.scalvya.com'), false);
+});
+
 test('projectRef extracts the subdomain and ignores non-Supabase hosts', () => {
   assert.equal(guard.projectRef('https://abcdefgh.supabase.co'), 'abcdefgh');
   assert.equal(guard.projectRef('https://abcdefgh.supabase.co/rest/v1'), 'abcdefgh');
