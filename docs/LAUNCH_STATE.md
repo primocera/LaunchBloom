@@ -5,14 +5,14 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v12` · generated 2026-08-01T12:00:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-02T14:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **NO-GO** | open P0: P0-billing-entitlement-and-renewal |
-| Public paid launch | **NO-GO** | open P0: P0-billing-entitlement-and-renewal |
+| Capped beta | **GO** | all conditions met |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -23,15 +23,17 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `1e465433ac7f4d78ecb7d80fa2a47aac11880bb8` (frozen)
-- HEAD now: `1e465433ac7f4d78ecb7d80fa2a47aac11880bb8`
-- Bundle: index-qFOY7l5f.js, index-OkR4Xfg_.css
+- Candidate SHA: `a11afdacfee8261db260946dbe37668e68a6037e` (frozen)
+- HEAD now: `a11afdacfee8261db260946dbe37668e68a6037e`
+- Bundle: index-BN3b4iRY.js, index-OkR4Xfg_.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
 
 | Commit | Subject | Already closes |
 |---|---|---|
+| `b037394` | fix(billing): planFor must not drop a paying user to free on a stale sub | Closes the P0 half of P0-billing-entitlement-and-renewal: planFor now orders entitling subscriptions so a retired-price row can no longer mask a valid one. Regression test backend/tests/customers-multi-sub.test.js passes (1/1) at this candidate. |
+| `f3917c7` | fix(billing): store renewal date from the subscription item (Stripe 2026 API) | Closes the renewal-date half of P0-billing-entitlement-and-renewal: current_period_end is read from the subscription item on API 2026-04-22.dahlia, so the account no longer stores null / shows 'renews on .'. |
 | `45fbdfd` | fix(landing): SC-V12-02 hero meets WCAG AA without a scrim or dulling the blue | Closes P1-hero-contrast-below-aa: white hero text now measures a uniform 4.70:1 across the text band (backend/tests/landing-contrast.test.js now REQUIRES AA). |
 | `f577be3` | feat(billing): SC-V12-04 subscription state machine, webhook ordering and live-rehearsal prep | Makes entitlement reconciliation explicit and adds refund/dispute handling and PII-free ops signals; the late-payment_failed-after-recovery guard is unchanged and still tested. |
 
@@ -48,16 +50,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `1e46543` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `1e46543` | yes |
-| Production build | `npm run build:app` | passed locally | `1e46543` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `1e46543` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `1e46543` | yes |
+| ESLint | `npm run lint` | passed locally | `a11afda` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `a11afda` | yes |
+| Production build | `npm run build:app` | passed locally | `a11afda` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `a11afda` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `a11afda` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `1e46543` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `1e46543` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `1e46543` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `1e46543` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `a11afda` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `a11afda` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `a11afda` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `a11afda` | yes |
 
 ## Owner evidence
 
@@ -80,11 +82,10 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P0 | A paying customer can be shown Free (planFor masked by a retired-price sub), and the renewal date stores null on Stripe's 2026 API | OPEN | owner | Two billing defects found running real money on 2026-08-02, both FIXED on main but AFTER the frozen candidate, so this candidate still contains them: (1) P0 — planFor took one entitling subscription with no ordering, so a retired-price row masked a valid one and a paying account showed Plan: Free / 0 AI actions; fixed b037394 with regression test backend/tests/customers-multi-sub.test.js. (2) P1 — current_period_end is undefined on Stripe API 2026-04-22.dahlia (moved to the subscription item), stored null, account showed 'renews on .'; fixed f3917c7. To clear this: cut a NEW candidate including b037394 + f3917c7 (and the EUR pricing commits), and reconfirm on the deployed candidate that a live paid account shows its plan and renewal date. Full write-up: docs/BILLING_FINDINGS_2026-08-02.md. |
 | P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
-**Public paid launch (NO-GO) rests on these accepted risks:**
+**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
 
 - `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)

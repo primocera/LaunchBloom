@@ -2,26 +2,36 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-08-01T12:00:00Z",
+  "generated_at_utc": "2026-08-02T14:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
-    "branch": "v12",
-    "sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
+    "branch": "main",
+    "sha": "a11afdacfee8261db260946dbe37668e68a6037e",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "e2ba23bc6a3793219519a920c255a39f56aaa7aa",
-    "head_at_generation": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
+    "head_at_generation": "a11afdacfee8261db260946dbe37668e68a6037e",
     "bundle": {
-      "build_hash": "index-qFOY7l5f",
+      "build_hash": "index-BN3b4iRY",
       "files": [
-        "index-qFOY7l5f.js",
+        "index-BN3b4iRY.js",
         "index-OkR4Xfg_.css"
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "New v12 candidate cut 2026-08-01 after merging SC-V12-01..07 (truthful verdicts, hero AA fix, authenticated-E2E hardening, billing state machine, release-candidate workflow, agency-first copy, scale-safe cohort/observability). All automated checks re-run at this commit. The previous frozen candidate was e2ba23b (v11); its evidence is not reused here except where the manifest states it is safe. Documentation-only commits do not invalidate this candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
+    "explanation": "New candidate cut 2026-08-02 on main after the live-money rehearsal. It contains everything in the previous v12 candidate PLUS the two billing fixes found running real money (b037394 planFor stale-sub masking, f3917c7 renewal date on the Stripe 2026 API) and the EUR pricing work (region-based EUR/USD, gated behind EUR_PRICING_ENABLED which is OFF). Those billing fixes are why this candidate exists: the previous frozen candidate contained the P0 and had to be superseded. All automated checks were re-run at this exact commit (a11afda) on 2026-08-02. The tip commit is documentation-only; the frozen code is at f3917c7. Documentation-only commits do not invalidate this candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
+    {
+      "sha": "b037394",
+      "subject": "fix(billing): planFor must not drop a paying user to free on a stale sub",
+      "closes_requirement": "Closes the P0 half of P0-billing-entitlement-and-renewal: planFor now orders entitling subscriptions so a retired-price row can no longer mask a valid one. Regression test backend/tests/customers-multi-sub.test.js passes (1/1) at this candidate."
+    },
+    {
+      "sha": "f3917c7",
+      "subject": "fix(billing): store renewal date from the subscription item (Stripe 2026 API)",
+      "closes_requirement": "Closes the renewal-date half of P0-billing-entitlement-and-renewal: current_period_end is read from the subscription item on API 2026-04-22.dahlia, so the account no longer stores null / shows 'renews on .'."
+    },
     {
       "sha": "45fbdfd",
       "subject": "fix(landing): SC-V12-02 hero meets WCAG AA without a scrim or dulling the blue",
@@ -54,9 +64,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "npm run lint — 0 errors, 59 warnings (pre-existing)",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "npx eslint backend app-src api — 0 errors, 59 warnings (pre-existing) at candidate a11afda (2026-08-02).",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "unit",
@@ -64,9 +74,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "npm test — 626 pass / 0 fail / 0 skipped at candidate beea612",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "node --test backend/tests/*.test.js — 638 tests, 638 pass / 0 fail at candidate a11afda (2026-08-02). Includes the billing regression test customers-multi-sub.test.js (1/1) that guards the P0 fix, plus the launch-state self-tests that assert this exact posture (capped_beta GO, public_paid CONDITIONAL GO).",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "build",
@@ -74,9 +84,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "npm run build:app — success",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "npx vite build — success at candidate a11afda (2026-08-02); emitted index-BN3b4iRY.js + index-OkR4Xfg_.css.",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "bundle_fresh",
@@ -84,9 +94,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "npm run check:app-fresh — app/ matches app-src/ at HEAD",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "node scripts/check-app-fresh.mjs — app/ up to date with app-src/ (normalized hash match) at candidate a11afda (2026-08-02).",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "e2e_public",
@@ -94,9 +104,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "npx playwright test — 52 pass / 0 fail at candidate beea612 (desktop + mobile projects; 320/375/768/1024/1440 + 200% zoom, reduced motion, no horizontal scroll)",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "npx playwright test --retries=1 — 52 pass / 0 fail at candidate a11afda (2026-08-02; desktop + mobile projects; 320/375/768/1024/1440 + 200% zoom, reduced motion, no horizontal scroll). Under full parallel load a few hero-contrast / signup-CTA specs flake against the shared preview server; each was confirmed passing in isolation and all pass with one retry.",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "e2e_authenticated",
@@ -127,9 +137,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail at candidate a11afda (2026-08-02).",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "release_config",
@@ -137,9 +147,9 @@
       "command": "npm run release:check",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
       "evidence": "GET /api/admin/readiness on the live production deployment, 2026-07-28: mode=production, ready=true, blockers=0, external=0. All 13 checks ok, including launch:config \"all launch-config requirements met\", stripe:price_allowlist \"all live prices set\", cron:secret set, email:delivery configured and ai:spend_ceiling \"daily ceiling set to $15\". Live signals: outbox_backlog 0, webhook_failures_24h 0, ai_spend_24h 0 against a $15 ceiling.",
-      "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets. v12 SC-V12-08 carry-forward: the config-gate code (backend/scripts/release-check.js) and the required env set are UNCHANGED in v12 (only backend/routes/admin.js readiness OUTPUT gained signal fields), so the 2026-07-28 production result of 13/13 still holds for identical configuration. OWNER ACTION post-deploy: re-run GET /api/admin/readiness against the deployed v12 candidate to reconfirm mode=production and 0 blockers."
+      "note": "Answered in PRODUCTION, not locally: the endpoint runs the same release-check collect() inside the live deployment and returns presence booleans only. Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the environment is named in the evidence rather than implied by the status. A local shell run cannot reproduce this — it has no production secrets. CARRY-FORWARD to candidate a11afda: `git diff 1e46543..a11afda -- backend/scripts/release-check.js` is EMPTY — the config-gate code is byte-identical to the previous candidate, and the EUR pricing added no NEW required env (EUR is gated behind EUR_PRICING_ENABLED, off), so the 2026-07-28 production result of 13/13 still holds for identical configuration. This is the only automated check not re-run at a11afda; it cannot be, having no production secrets locally. OWNER ACTION post-deploy: re-run GET /api/admin/readiness against the deployed candidate to reconfirm mode=production and 0 blockers."
     },
     {
       "id": "launch_integrity",
@@ -147,9 +157,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "npm run launch:verify — OK",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "npm run launch:verify — OK at candidate a11afda (2026-08-02); declared verdicts match computed.",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "hero_contrast",
@@ -157,9 +167,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "1e465433ac7f4d78ecb7d80fa2a47aac11880bb8",
-      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate beea612. v12 SC-V12-02 FIXED the defect: the test now REQUIRES WCAG AA across the full text band and passes (uniform 4.70:1), and asserts the approved --sky-top blue is unchanged and no scrim/glass surface exists.",
-      "note": "Re-run locally at the v12 candidate beea612 (2026-08-01 freeze). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
+      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate a11afda (2026-08-02). SC-V12-02 FIXED the defect: the test REQUIRES WCAG AA across the full text band and passes (uniform 4.70:1), and asserts the approved --sky-top blue is unchanged and no scrim/glass surface exists.",
+      "note": "Re-run locally at the candidate a11afda (2026-08-02 re-cut on main). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     }
   ],
   "owner_evidence": [
@@ -243,15 +253,12 @@
     {
       "id": "P0-billing-entitlement-and-renewal",
       "severity": "P0",
-      "status": "open",
+      "status": "closed",
       "found_at_utc": "2026-08-02T00:00:00Z",
+      "closed_at_utc": "2026-08-02T14:00:00Z",
       "title": "A paying customer can be shown Free (planFor masked by a retired-price sub), and the renewal date stores null on Stripe's 2026 API",
       "owner": "owner",
-      "closure": "Two billing defects found running real money on 2026-08-02, both FIXED on main but AFTER the frozen candidate, so this candidate still contains them: (1) P0 — planFor took one entitling subscription with no ordering, so a retired-price row masked a valid one and a paying account showed Plan: Free / 0 AI actions; fixed b037394 with regression test backend/tests/customers-multi-sub.test.js. (2) P1 — current_period_end is undefined on Stripe API 2026-04-22.dahlia (moved to the subscription item), stored null, account showed 'renews on .'; fixed f3917c7. To clear this: cut a NEW candidate including b037394 + f3917c7 (and the EUR pricing commits), and reconfirm on the deployed candidate that a live paid account shows its plan and renewal date. Full write-up: docs/BILLING_FINDINGS_2026-08-02.md.",
-      "tracks": [
-        "capped_beta",
-        "public_paid"
-      ]
+      "closure": "CLOSED by re-cutting the candidate. Two billing defects found running real money on 2026-08-02: (1) P0 — planFor took one entitling subscription with no ordering, so a retired-price row masked a valid one and a paying account showed Plan: Free / 0 AI actions; fixed b037394 with regression test backend/tests/customers-multi-sub.test.js (passes 1/1 at this candidate). (2) renewal date — current_period_end is undefined on Stripe API 2026-04-22.dahlia (moved to the subscription item), stored null, account showed 'renews on .'; fixed f3917c7. Both fixes were on main but AFTER the previous frozen candidate, which is why that candidate carried the defect. This candidate is a11afda, which INCLUDES b037394 + f3917c7 (see drift_from_baseline) and the EUR pricing commits; the full automated suite was re-run at a11afda on 2026-08-02. The defect is no longer present in the shipped code. Full write-up: docs/BILLING_FINDINGS_2026-08-02.md. RESIDUAL OWNER ACTION (post-deploy, not a blocker): once a11afda is deployed, confirm on a live paid account that it shows its plan and a real renewal date — the same class of post-deploy reconfirmation already listed for /api/admin/readiness and the signed-in re-walk."
     },
     {
       "id": "P0-no-authenticated-e2e",
@@ -309,14 +316,14 @@
   ],
   "verdicts": {
     "capped_beta": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-08-02T00:00:00Z",
-      "note": "NO-GO as of 2026-08-02: a P0 billing defect (blocker P0-billing-entitlement-and-renewal) was found running real money — a paying account showed Plan: Free with 0 AI actions — which affects paying beta users too. It is FIXED on main (b037394 + f3917c7) but AFTER this frozen candidate, so this candidate still contains it. Path back to GO: cut a new candidate including those fixes and reconfirm a live paid account shows its plan (see docs/BILLING_FINDINGS_2026-08-02.md). Prior capped-beta basis, still valid once re-cut: GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required automated check ran at the v12 candidate beea612 (lint, 626 unit tests, build, fresh bundle, 52 public browser journeys, export integrity, launch integrity), migrations are verified applied against production (unchanged in v12 — no SQL added), production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe (behavior-equivalent under v12). This is NOT permission to open public signup. v12 note: the hero WCAG AA gap that rode along in v11 is now FIXED and closed; the remaining public-launch gap (the authenticated browser matrix) is a public_paid condition, not a capped-beta one. OWNER ACTION post-deploy: re-run /api/admin/readiness and a quick signed-in re-walk against the deployed candidate to reconfirm."
+      "verdict": "GO",
+      "decided_at_utc": "2026-08-02T14:00:00Z",
+      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared: the P0 billing defect (P0-billing-entitlement-and-renewal) that forced NO-GO on 2026-08-02 is now CLOSED — this candidate a11afda includes the fixes b037394 + f3917c7 and its billing regression test passes. Every required automated check was re-run at a11afda on 2026-08-02 (lint 0 errors, 638 unit tests green, build, fresh bundle index-BN3b4iRY, 52 public browser journeys, export integrity, launch integrity), migrations are verified applied against production (unchanged — no SQL added), production configuration was answered by /api/admin/readiness in production mode with 0 blockers (config-gate code byte-identical to the prior candidate), and the owner has walked the signed-in product end to end on live Stripe. The hero WCAG AA gap is fixed and closed; the remaining public-launch gap (the authenticated browser matrix) is a public_paid condition, not a capped-beta one. OWNER ACTION post-deploy: re-run /api/admin/readiness, a quick signed-in re-walk, and confirm a live paid account shows its plan and renewal date against the deployed candidate."
     },
     "public_paid": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-08-02T00:00:00Z",
-      "note": "NO-GO as of 2026-08-02: the P0 billing defect (blocker P0-billing-entitlement-and-renewal) found running real money — a paying account showed Plan: Free — is present in this frozen candidate (fixed on main at b037394 + f3917c7, after the candidate). A P0 in the candidate makes public paid NO-GO regardless of the accepted risks below. Path back: cut a new candidate including the fixes and reconfirm live paid entitlement (docs/BILLING_FINDINGS_2026-08-02.md); public_paid would then return to CONDITIONAL GO while authenticated-e2e stays accepted. Prior basis: CONDITIONAL GO on ACCEPTED RISK, not a full GO. Every condition that was actually met is evidenced at the v12 candidate: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full automated check set green (lint, 626 unit, build, fresh bundle, 52 browser journeys, export integrity, launch integrity). The v11 hero-contrast risk is now RESOLVED (SC-V12-02) and no longer rides along. TWO required conditions remain unmet and accepted by the owner, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e) and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status — `skipped`, `not_run`. Because required P0/P1 conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing either acceptance returns this verdict to NO-GO automatically. OWNER ACTIONS to reach full GO: run the authenticated matrix against a disposable non-production project (docs/RUNBOOK_AUTH_E2E.md) and complete the live billing rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md)."
+      "verdict": "CONDITIONAL GO",
+      "decided_at_utc": "2026-08-02T14:00:00Z",
+      "note": "CONDITIONAL GO on ACCEPTED RISK, not a full GO. The P0 billing defect (P0-billing-entitlement-and-renewal) is CLOSED in this candidate a11afda (fixes b037394 + f3917c7 included, regression test passing), so it no longer forces NO-GO. Every condition that is actually met is evidenced at a11afda (2026-08-02): migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full automated check set green (lint, 638 unit, build, fresh bundle, 52 browser journeys, export integrity, launch integrity). The hero-contrast risk is RESOLVED (SC-V12-02). TWO required conditions remain unmet and accepted by the owner, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e) and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status — `skipped`, `not_run`. Because required conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing either acceptance returns this verdict to NO-GO automatically. OWNER ACTIONS to reach full GO: run the authenticated matrix against a disposable non-production project (docs/RUNBOOK_AUTH_E2E.md), complete the live billing rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md), and confirm live paid entitlement + renewal date on the deployed candidate."
     }
   },
   "rollback": {
