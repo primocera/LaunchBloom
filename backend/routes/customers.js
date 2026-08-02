@@ -10,7 +10,7 @@ const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
 const {
-  entitlementFor,
+  resolveCanonicalEntitlement,
   ENTITLING_STATUSES,
   EntitlementUnavailableError,
   isEntitlementUnavailable,
@@ -110,6 +110,22 @@ function redactEmail(email) {
 }
 
 /**
+ * v13 SC-P0-02 — one redacted, structured billing anomaly line per impossible
+ * state. Access is NOT changed by this; it is an operations signal only. The
+ * email is masked (correlatable, not identifying) and every other field is an
+ * opaque Stripe id, so this is safe to ship to a log drain.
+ */
+function reportBillingAnomaly(email, anomaly) {
+  console.error(JSON.stringify({
+    code: 'BILLING_ANOMALY',
+    level: 'error',
+    source: 'resolveEntitlement',
+    email: redactEmail(email),
+    ...anomaly,
+  }));
+}
+
+/**
  * The explicit entitlement result model (v13 SC-P0-01). Exactly one of:
  *
  *   { state: 'free',        plan: null }  verified: no entitling subscription
@@ -135,43 +151,28 @@ async function resolveEntitlement(email) {
     if (!customer) return { state: 'free', plan: null };
 
     // A customer can hold more than one entitling row — an old subscription on a
-    // now-retired price sitting beside the current one, or overlapping test subs.
-    // Scan ALL entitling rows, newest first, and return the first whose price
-    // maps to a plan. Picking one arbitrarily (the old `.limit(1)` had no order)
-    // could land on a stale/unmapped row and drop a PAYING user to free even
-    // though a valid current subscription exists. Trialing maps to 'trial' on any
-    // price. Entitlement stays decided by the canonical state machine, so
-    // planFor() and the webhook can never disagree about what a status grants.
+    // now-retired price sitting beside the current one, a trialing row beside a
+    // paid one, or overlapping test subs. The canonical policy (v13 SC-P0-02,
+    // docs/decisions/2026-08-02-canonical-entitlement.md) is HIGHEST VALID
+    // ENTITLEMENT WINS, decided by a pure resolver whose answer does not depend
+    // on database row order. The ORDER BY below is only a stable read; the
+    // resolver re-sorts. Entitlement stays decided by the canonical state
+    // machine, so planFor() and the webhook can never disagree.
     const { data: subs, error: subsErr } = await supabase
       .from('subscriptions')
-      .select('status, stripe_price_id, stripe_event_at')
+      .select('status, stripe_price_id, stripe_subscription_id, stripe_event_at')
       .eq('customer_id', customer.id)
       .in('status', ENTITLING_STATUSES)
       .order('stripe_event_at', { ascending: false, nullsFirst: false });
 
     if (readFailed(subsErr)) throw new EntitlementUnavailableError(subsErr);
 
-    let unmapped = false;
-    if (subs && subs.length) {
-      const plans = pricePlans();
-      for (const sub of subs) {
-        const plan = entitlementFor(sub, plans);
-        if (plan) return { state: 'entitled', plan };
-      }
-      // Entitling subscription(s) exist but none map to a configured price —
-      // never silently grant, but make the misconfiguration loud and alertable.
-      // Redacted: the end user never sees this, and ops never sees the identity.
-      unmapped = true;
-      console.error(JSON.stringify({
-        code: 'STRIPE_PRICE_UNMAPPED',
-        level: 'error',
-        source: 'planFor',
-        email: redactEmail(email),
-        statuses: subs.map((s) => s.status),
-        price_ids: subs.map((s) => s.stripe_price_id),
-        hint: 'check STRIPE_PRICE_* env vars',
-      }));
-    }
+    const canonical = resolveCanonicalEntitlement(subs || [], pricePlans());
+    // Anomalies are reported but never change access: an overlapping customer
+    // keeps the safest valid plan while operations reconciles the duplicate.
+    for (const anomaly of canonical.anomalies) reportBillingAnomaly(email, anomaly);
+    if (canonical.plan) return { state: 'entitled', plan: canonical.plan };
+    const unmapped = canonical.unmapped;
 
     // Succeeded one-time payment = lifetime access
     const { data: payment, error: paymentErr } = await supabase
