@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
-const { pricePlans, resolveEntitlement } = require('./customers');
+const { resolveEntitlement } = require('./customers');
 const { planUnavailableBody } = require('../lib/subscription-state');
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
@@ -43,7 +43,6 @@ function resolveBaseUrl() {
   const configured = (process.env.PUBLIC_URL || '').trim().replace(/\/$/, '');
   if (configured) {
     try {
-      // eslint-disable-next-line no-new
       new URL(configured);
       return configured;
     } catch {

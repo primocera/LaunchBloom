@@ -58,7 +58,6 @@ export default function KitDetail() {
 
   async function regenerate(section) {
     const label = TABS.find(([s]) => s === section)?.[1] || section;
-    // eslint-disable-next-line no-alert
     if (!window.confirm(`Replace the current ${label}? The existing version will be lost.`)) return;
     setBusy(section);
     setError(null);
@@ -196,7 +195,7 @@ function sectionText(id, data) {
   return items
     .map((it) =>
       Object.entries(it)
-        .filter(([k, v]) => typeof v !== 'object' || Array.isArray(v))
+        .filter(([, v]) => typeof v !== 'object' || Array.isArray(v))
         .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' | ') : v}`)
         .join('\n')
     )

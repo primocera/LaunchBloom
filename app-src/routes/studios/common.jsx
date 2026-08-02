@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { useRequestGuard } from '../../lib/use-request-guard';
 import '../../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -38,17 +39,52 @@ export function useKits() {
   const [kits, setKits] = useState(null);
   const [kitId, setKitId] = useState(null);
   const [error, setError] = useState(null);
+  const begin = useRequestGuard();
 
   useEffect(() => {
+    const isCurrent = begin();
     api.launchKits()
       .then((r) => {
+        if (!isCurrent()) return;
         setKits(r.launch_kits);
         if (r.launch_kits[0]) setKitId(r.launch_kits[0].id);
       })
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e) => { if (isCurrent()) setError(e.message); });
+  }, [begin]);
 
   return { kits, kitId, setKitId, error, setError };
+}
+
+/**
+ * v13 SC-P1-07 — the one loader every legacy studio shares.
+ *
+ * The four studios previously ran `useEffect(() => { setItems(null); load(); },
+ * [kitId])` with `load` suppressed out of the dependency list. Switching kits
+ * (the StudioShell select changes `kitId` without remounting the route) could
+ * therefore show the previous kit's items if the older request resolved last,
+ * and a response arriving after navigation set state on an unmounted route.
+ *
+ * `reload` is a stable useCallback keyed on (table, kitId), so the effect below
+ * has a complete dependency list and still fires exactly once per kit change.
+ */
+export function useStudioItems(table, kitId) {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState(null);
+  const begin = useRequestGuard();
+
+  const reload = useCallback(() => {
+    const isCurrent = begin();
+    setItems(null);
+    setError(null);
+    if (!kitId) return;
+    api.items(table, kitId)
+      .then((r) => { if (isCurrent()) setItems(r.items); })
+      .catch((e) => { if (isCurrent()) setError(e.message); });
+  }, [begin, table, kitId]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  return { items, setItems, error, setError, reload };
 }
 
 export function CopyBtn({ text, label = 'Copy' }) {
@@ -85,7 +121,6 @@ export function useRegenerate(kitId, section, onDone) {
   const [error, setError] = useState(null);
 
   async function regenerate() {
-    // eslint-disable-next-line no-alert
     if (!window.confirm('Replace the current version? The existing content will be lost.')) return;
     setBusy(true);
     setError(null);

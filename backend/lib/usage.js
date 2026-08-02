@@ -45,7 +45,7 @@ async function windowStart(email, plan) {
         .single();
       if (sub && sub.current_period_start) return sub.current_period_start;
     }
-  } catch (e) {
+  } catch {
     /* fall through to calendar month */
   }
   return monthStart();

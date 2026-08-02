@@ -196,7 +196,7 @@ router.post('/api/auth/logout', json, async (req, res) => {
   if (token) {
     try {
       await supabase.adminClient().auth.admin.signOut(token, 'global');
-    } catch (e) {
+    } catch {
       /* best-effort revocation; cookie is cleared regardless */
     }
   }
@@ -212,7 +212,7 @@ router.post('/api/auth/forgot-password', loginLimiter, json, async (req, res) =>
       await supabase.authClient().auth.resetPasswordForEmail(email, {
         redirectTo: `${callbackUrl()}?flow=recovery`,
       });
-    } catch (e) {
+    } catch {
       /* swallow — never reveal whether the account exists */
     }
   }
@@ -245,7 +245,7 @@ router.post('/api/auth/resend-verification', loginLimiter, json, async (req, res
         email,
         options: { emailRedirectTo: callbackUrl() },
       });
-    } catch (e) {
+    } catch {
       /* swallow */
     }
   }
@@ -312,7 +312,7 @@ router.get('/api/auth/callback', async (req, res) => {
     if (isRecovery) return res.redirect(`${appUrl()}/app/reset-password`);
     if (isSignup) return res.redirect(`${appUrl()}/app/brand?welcome=1`);
     return res.redirect(`${appUrl()}/app`);
-  } catch (e) {
+  } catch {
     return res.redirect(loginErr);
   }
 });

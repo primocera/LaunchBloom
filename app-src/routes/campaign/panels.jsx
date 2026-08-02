@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
+import { useRequestGuard } from '../../lib/use-request-guard';
 import { download } from '../../lib/export';
 import { CHANNEL_SUGGESTS, REQUIREMENT_OPTIONS, STUDIO_BY_TABLE } from './shared';
 import FeedbackMoment from '../../components/FeedbackMoment';
@@ -216,10 +217,15 @@ export function HandoffExports({ campaign }) {
   const [confirmReminders, setConfirmReminders] = useState(false);
   const slug = (campaign.name || 'campaign').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'campaign';
 
-  function load() {
-    api.campaignHandoff(campaign.id).then((r) => setH(r.handoff)).catch((e) => setError(e.message));
-  }
-  useEffect(load, [campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const campaignId = campaign.id;
+  const begin = useRequestGuard();
+  const load = useCallback(() => {
+    const isCurrent = begin();
+    api.campaignHandoff(campaignId)
+      .then((r) => { if (isCurrent()) setH(r.handoff); })
+      .catch((e) => { if (isCurrent()) setError(e.message); });
+  }, [begin, campaignId]);
+  useEffect(() => { setH(null); setError(null); load(); }, [load]);
 
   async function record(format) {
     try { await api.recordHandoff(campaign.id, h.fingerprint, format); load(); } catch { /* never blocks the download */ }

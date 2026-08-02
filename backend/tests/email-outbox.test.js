@@ -3,7 +3,6 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('path');
 
 process.env.SESSION_SECRET = 'test-secret-for-unit-tests';
 process.env.RESEND_API_KEY = 'test-key'; // worker path needs a provider client

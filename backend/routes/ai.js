@@ -16,7 +16,7 @@
 
 const express = require('express');
 const supabase = require('../lib/supabase');
-const { planGate, limitsFor, usageFor } = require('../lib/plan-limits');
+const { planGate, usageFor } = require('../lib/plan-limits');
 const { idempotent } = require('../lib/idempotency');
 const { generateJson } = require('../lib/ai');
 const { brandContextFor } = require('../lib/brand-profile');

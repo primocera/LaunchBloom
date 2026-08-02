@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../lib/api';
-import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate } from './common';
+import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
 
 // ---------------------------------------------------------------------------
 // Prompt 21: the Ads Starter Kit Studio. ad_ideas grouped into the spec's
@@ -28,21 +28,11 @@ const EDIT_FIELDS = ['hook', 'headline', 'primary_text', 'visual_direction', 'ct
 
 export default function AdsStudio() {
   const { kits, kitId, setKitId, error: kitsError } = useKits();
-  const [items, setItems] = useState(null);
+  const { items, setItems, error, setError, reload } = useStudioItems('ad_ideas', kitId);
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState({});
-  const [error, setError] = useState(null);
 
-  function load() {
-    if (!kitId) return;
-    api.items('ad_ideas', kitId)
-      .then((r) => setItems(r.items))
-      .catch((e) => setError(e.message));
-  }
-
-  useEffect(() => { setItems(null); load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [kitId]);
-
-  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'ads_kit', load);
+  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'ads_kit', reload);
 
   async function patch(item, updates) {
     try {

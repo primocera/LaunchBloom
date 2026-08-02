@@ -206,7 +206,8 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 function sanitizeCustomer(customer) {
   // Never expose Stripe internals to clients
-  const { stripe_customer_id, ...safe } = customer;
+  const safe = { ...customer };
+  delete safe.stripe_customer_id;
   return safe;
 }
 

@@ -81,7 +81,7 @@ async function readUsage() {
     const { data } = await supabase.storage.from(BUCKET).download(KEY);
     if (!data) return {};
     return JSON.parse(Buffer.from(await data.arrayBuffer()).toString('utf8'));
-  } catch (e) {
+  } catch {
     return {};
   }
 }

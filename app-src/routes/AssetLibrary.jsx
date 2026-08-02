@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useRequestGuard } from '../lib/use-request-guard';
 import { download, assetsCsv } from '../lib/export';
 import { STATUS_LABEL } from '../lib/status-labels';
 // v10 SC-02: one drawer, shared with the campaign Assets tab.
@@ -47,12 +48,23 @@ export default function AssetLibrary() {
     api.campaigns().then((r) => setCampaigns(r.campaigns || [])).catch(() => setCampaigns([]));
   }, []);
 
-  function load() {
-    const params = { page, per: 25 };
-    for (const k of FILTER_KEYS) if (filters[k]) params[k] = filters[k];
-    api.library(params).then(setData).catch((e) => setError(e.message));
-  }
-  useEffect(load, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  // v13 SC-P1-07: the query string IS the authoritative input, and it changes
+  // without remounting the route. `query` is the serialized form so the loader
+  // is keyed on the value, not on the (new-every-render) filters object; the
+  // guard drops a slow page-1 response that lands after page 2 was requested.
+  const query = searchParams.toString();
+  const begin = useRequestGuard();
+  const load = useCallback(() => {
+    const isCurrent = begin();
+    const sp = new URLSearchParams(query);
+    const params = { page: Math.max(1, parseInt(sp.get('page'), 10) || 1), per: 25 };
+    for (const k of FILTER_KEYS) if (sp.get(k)) params[k] = sp.get(k);
+    setError(null);
+    api.library(params)
+      .then((d) => { if (isCurrent()) setData(d); })
+      .catch((e) => { if (isCurrent()) setError(e.message); });
+  }, [begin, query]);
+  useEffect(() => { load(); }, [load]);
 
   function setFilter(key, value) {
     const next = new URLSearchParams(searchParams);

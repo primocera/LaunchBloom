@@ -108,7 +108,6 @@ test('scorecard reconciles to the fixture with numerator/denominator/window', as
 });
 
 test('scorecard requires admin', async () => {
-  const fake2 = { ...fakeSupabase };
   const prev = process.env.ADMIN_EMAILS;
   process.env.ADMIN_EMAILS = 'someoneelse@app.com';
   try {

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
-import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate } from './common';
+import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
 
 // ---------------------------------------------------------------------------
 // Prompt 19: the Content Plan Studio. content_items for the current kit with
@@ -23,25 +23,15 @@ const MIX = [
 
 export default function ContentStudio() {
   const { kits, kitId, setKitId, error: kitsError } = useKits();
-  const [items, setItems] = useState(null);
+  const { items, setItems, error, setError, reload } = useStudioItems('content_items', kitId);
   const [view, setView] = useState('list'); // list | calendar
   const [fPlatform, setFPlatform] = useState('');
   const [fType, setFType] = useState('');
   const [fStatus, setFStatus] = useState('');
   const [editing, setEditing] = useState(null); // item id being edited
   const [draft, setDraft] = useState({});
-  const [error, setError] = useState(null);
 
-  function load() {
-    if (!kitId) return;
-    api.items('content_items', kitId)
-      .then((r) => setItems(r.items))
-      .catch((e) => setError(e.message));
-  }
-
-  useEffect(() => { setItems(null); load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [kitId]);
-
-  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'content_plan', load);
+  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'content_plan', reload);
 
   async function setStatus(item, status) {
     try {

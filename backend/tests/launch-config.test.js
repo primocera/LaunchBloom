@@ -223,7 +223,7 @@ test('SC-P0-04: valid production config passes and prints no secret values', () 
 });
 
 test('fully configured production passes', () => {
-  const { mod, restore } = fresh({
+  const { restore } = fresh({
     NODE_ENV: 'production',
     STRIPE_SECRET_KEY: 'sk_live_x',
     PUBLIC_URL: 'https://launchbloom.app',

@@ -49,7 +49,7 @@ async function getBrandProfile(workspaceId) {
       .eq('workspace_id', workspaceId)
       .single();
     return (data && data.data) || null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

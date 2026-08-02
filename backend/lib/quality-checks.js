@@ -127,7 +127,7 @@ function scoreContentPlanQuality(plan = {}, offer = {}) {
 }
 
 /** Email sequence quality per the spec's four questions. */
-function scoreEmailSequenceQuality(seq = {}, offer = {}) {
+function scoreEmailSequenceQuality(seq = {}, _offer = {}) {
   const items = Array.isArray(seq.items) ? seq.items : [];
   const sorted = [...items].sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
   const firstSell = sorted.findIndex((i) => /offer|sale|buy|price|reveal/i.test(`${i.email_type} ${i.main_angle}`));

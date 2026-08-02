@@ -28,7 +28,7 @@ async function readJson(key, fallback) {
     const { data } = await supabase.storage.from(BUCKET).download(key);
     if (!data) return fallback;
     return JSON.parse(Buffer.from(await data.arrayBuffer()).toString('utf8'));
-  } catch (e) {
+  } catch {
     return fallback;
   }
 }

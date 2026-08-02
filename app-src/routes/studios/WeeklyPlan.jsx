@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../lib/api';
-import { NoKit, StudioShell, useKits, useRegenerate } from './common';
+import { NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
 
 // ---------------------------------------------------------------------------
 // Prompt 23: the Weekly Action Plan. weekly_tasks grouped into the spec's
@@ -27,23 +27,13 @@ const REVIEW_QUESTIONS = [
 
 export default function WeeklyPlan() {
   const { kits, kitId, setKitId, error: kitsError } = useKits();
-  const [items, setItems] = useState(null);
+  const { items, setItems, error, setError, reload } = useStudioItems('weekly_tasks', kitId);
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState({});
   const [adding, setAdding] = useState(false);
   const [newTask, setNewTask] = useState({ task_title: '', task_description: '', task_type: 'content', priority: 'medium' });
-  const [error, setError] = useState(null);
 
-  function load() {
-    if (!kitId) return;
-    api.items('weekly_tasks', kitId)
-      .then((r) => setItems(r.items))
-      .catch((e) => setError(e.message));
-  }
-
-  useEffect(() => { setItems(null); load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [kitId]);
-
-  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'weekly_plan', load);
+  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'weekly_plan', reload);
 
   async function patch(item, updates) {
     try {

@@ -9,11 +9,10 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../lib/supabase');
 const stripe = require('../lib/stripe');
-const { BRAND } = require('../lib/brand');
 const { requireAuth } = require('../lib/auth');
 const { clearSessionCookies } = require('../lib/session');
 const { ensureWorkspace } = require('./workspaces');
-const { planFor, pricePlans } = require('./customers');
+const { planFor } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
@@ -208,7 +207,7 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
             try {
               await stripe.subscriptions.cancel(sub.id);
               canceled++;
-            } catch (e) {
+            } catch {
               failures++;
             }
           }
@@ -218,7 +217,7 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       } else {
         step('stripe_cancellation', 'ok', 'no billing account');
       }
-    } catch (e) {
+    } catch {
       step('stripe_cancellation', 'failed', 'billing lookup failed — cancellation not confirmed');
     }
 
@@ -234,13 +233,13 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
         try {
           await deleteWorkspaceData(ws.id);
           await supabase.from('workspaces').delete().eq('id', ws.id);
-        } catch (e) {
+        } catch {
           wsFailures++;
         }
       }
       if (wsFailures > 0) step('workspace_data', 'failed', `${wsFailures} of ${owned.length} workspace(s) could not be fully deleted`);
       else step('workspace_data', 'ok', `${owned.length} workspace(s) deleted`);
-    } catch (e) {
+    } catch {
       step('workspace_data', 'failed', 'workspace lookup failed');
     }
 

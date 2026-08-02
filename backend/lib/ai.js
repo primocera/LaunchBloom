@@ -335,7 +335,7 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
       let parsed;
       try {
         parsed = JSON.parse(textBlock.text);
-      } catch (e) {
+      } catch {
         throw aiError('AI returned invalid JSON.', 'AI_INVALID_JSON', 502);
       }
 

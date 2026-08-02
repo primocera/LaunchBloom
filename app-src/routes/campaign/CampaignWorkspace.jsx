@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import AssetDrawer, { statusLabel } from '../../components/AssetDrawer';
@@ -8,6 +8,7 @@ import {
 } from './shared';
 import { campaignSummary, campaignNextAction, readinessGroups } from '../../lib/campaign-next-action';
 import { safeInternalPath } from '../../lib/safe-path';
+import { useRequestGuard } from '../../lib/use-request-guard';
 import {
   Deliverables, BriefImpact, PackagePreview, HandoffExports, SaveTemplate,
 } from './panels';
@@ -34,19 +35,27 @@ export default function CampaignWorkspace() {
   // v10 SC-02: a detail route fetches the detail endpoint. This used to pull
   // the entire campaign list and .find() the one it wanted, so opening one
   // campaign cost every campaign in the workspace and grew with the account.
-  function load() {
+  //
+  // v13 SC-P1-07: the workspace switches campaigns without remounting (the
+  // route param changes), so a slow response for the previous campaign must
+  // never land on the new one — hence the stale guard.
+  const begin = useRequestGuard();
+  const load = useCallback(() => {
+    const isCurrent = begin();
     setError(null);
+    setCampaign(undefined);
     api.campaign(campaignId)
-      .then(({ campaign: c }) => setCampaign(c || null))
+      .then(({ campaign: c }) => { if (isCurrent()) setCampaign(c || null); })
       .catch((e) => {
+        if (!isCurrent()) return;
         // 404 is "not in your workspace"; anything else is a recoverable error
         // and must not masquerade as a missing campaign.
         if (e.status === 404) { setCampaign(null); return; }
         setError(e.message);
         setCampaign(null);
       });
-  }
-  useEffect(load, [campaignId]);
+  }, [begin, campaignId]);
+  useEffect(() => { load(); }, [load]);
 
   // Route-view analytics: section code + coarse state only, never names/content.
   useEffect(() => {
@@ -265,6 +274,9 @@ function BriefSection({ campaign, onChange }) {
 // and no share link.
 
 function AssetsSection({ campaign }) {
+  // The authoritative input for both loaders below: `campaign` is a fresh
+  // object on every parent render, its id is not.
+  const campaignIdForAssets = campaign.id;
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState(null);
   const [review, setReview] = useState(null);
@@ -283,16 +295,25 @@ function AssetsSection({ campaign }) {
     setParams(next, { replace: !a });
   };
 
-  function load() {
+  const beginAssets = useRequestGuard();
+  const load = useCallback(() => {
+    const isCurrent = beginAssets();
     setError(null);
-    api.library({ campaign_id: campaign.id, per: 100 })
-      .then((d) => setItems(d.items || []))
-      .catch((e) => { setItems([]); setError(e.message); });
-  }
-  useEffect(load, [campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setItems(null);
+    api.library({ campaign_id: campaignIdForAssets, per: 100 })
+      .then((d) => { if (isCurrent()) setItems(d.items || []); })
+      .catch((e) => { if (isCurrent()) { setItems([]); setError(e.message); } });
+  }, [beginAssets, campaignIdForAssets]);
+  useEffect(() => { load(); }, [load]);
+
+  const beginReview = useRequestGuard();
   useEffect(() => {
-    api.campaignReview(campaign.id).then((r) => setReview(r.review)).catch(() => setReview(null));
-  }, [campaign.id]);
+    const isCurrent = beginReview();
+    setReview(null);
+    api.campaignReview(campaignIdForAssets)
+      .then((r) => { if (isCurrent()) setReview(r.review); })
+      .catch(() => { if (isCurrent()) setReview(null); });
+  }, [beginReview, campaignIdForAssets]);
 
   const blockers = blockersByAsset(review);
 

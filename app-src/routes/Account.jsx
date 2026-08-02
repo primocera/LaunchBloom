@@ -16,11 +16,6 @@ function fmtDate(iso) {
   }
 }
 
-function daysLeft(iso) {
-  if (!iso) return null;
-  const ms = new Date(iso).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-}
 
 export default function Account() {
   const { account, logout } = useAuth();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -27,7 +27,7 @@ import '../../flow.css';
 
 /** One form control. Supported types: text, textarea, number, select, checkboxes. */
 export function FormField({ field, value, onChange, warning }) {
-  const { name, label, type = 'text', options = [], placeholder, required } = field;
+  const { label, type = 'text', options = [], placeholder, required } = field;
   const warn = warning ? <span className="gen-field-warn" role="alert">{warning}</span> : null;
 
   if (type === 'checkboxes') {
@@ -143,14 +143,20 @@ const REGEN_MODES = [
  * or conflicting CTA/URL) without spending an AI action on a full rewrite.
  */
 function StructuredEdits({ table, item, onChange, onUpgrade }) {
-  const specs = structuredFieldsFor(table);
+  const specs = useMemo(() => structuredFieldsFor(table), [table]);
   const [draft, setDraft] = useState(() => Object.fromEntries(specs.map(([f]) => [f, item[f] || ''])));
   const [saving, setSaving] = useState(null); // field being saved
   const [err, setErr] = useState(null);
 
-  useEffect(() => {
+  // v13 SC-P1-07: reset the draft when a different item is shown. React's
+  // documented "adjust state during render" pattern rather than an effect with
+  // a suppressed dependency list — no extra commit, no stale-draft flash, and
+  // (unlike depending on `item`) typing is not wiped by an unrelated re-render.
+  const [seedId, setSeedId] = useState(item.id);
+  if (seedId !== item.id) {
+    setSeedId(item.id);
     setDraft(Object.fromEntries(specs.map(([f]) => [f, item[f] || ''])));
-  }, [item.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   if (!specs.length) return null;
 

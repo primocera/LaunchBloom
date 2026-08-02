@@ -21,7 +21,6 @@ function redact(obj, depth = 0) {
 
 function log(level, msg, meta = {}) {
   const line = { ts: new Date().toISOString(), level, msg, ...redact(meta) };
-  // eslint-disable-next-line no-console
   (level === 'error' ? console.error : console.log)(JSON.stringify(line));
 }
 

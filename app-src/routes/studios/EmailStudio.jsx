@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../lib/api';
-import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate } from './common';
+import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
 
 // ---------------------------------------------------------------------------
 // Prompt 20: the Email Sequence Studio. Sequence timeline of the 7 emails
@@ -37,21 +37,11 @@ function emailText(item) {
 
 export default function EmailStudio() {
   const { kits, kitId, setKitId, error: kitsError } = useKits();
-  const [items, setItems] = useState(null);
+  const { items, setItems, error, setError, reload } = useStudioItems('email_items', kitId);
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState({});
-  const [error, setError] = useState(null);
 
-  function load() {
-    if (!kitId) return;
-    api.items('email_items', kitId)
-      .then((r) => setItems(r.items))
-      .catch((e) => setError(e.message));
-  }
-
-  useEffect(() => { setItems(null); load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [kitId]);
-
-  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'email_sequence', load);
+  const { regenerate, busy: regenBusy, error: regenError } = useRegenerate(kitId, 'email_sequence', reload);
 
   async function patch(item, updates) {
     try {

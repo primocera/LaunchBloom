@@ -779,7 +779,7 @@ router.get('/api/campaigns/:id/review-packet', requireAuth, async (req, res, nex
           properties: { required: gap.required_total, unresolved: q.blocking.length },
         });
       }
-    } catch (_) { /* funnel emission must never block the export */ }
+    } catch { /* funnel emission must never block the export */ }
     if (req.query.format === 'html') {
       res.type('html').send(packetHtml(campaign, md));
     } else {
@@ -948,7 +948,7 @@ router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, ne
     const campaign = await ownedCampaign(ws, req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    const { FORMATS, ExportTooLarge, safeFilename } = require('../lib/handoff-docs');
+    const { FORMATS, safeFilename } = require('../lib/handoff-docs');
     const format = String(req.query.format || 'docx').toLowerCase();
     const spec = FORMATS[format];
     if (!spec) {
@@ -1172,7 +1172,9 @@ router.post('/api/campaigns/:id/duplicate', requireAuth, async (req, res, next) 
     const campaign = await ownedCampaign(ws, req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    const { id, created_at, updated_at, strategy, brief_approved, archived, asset_counts, workspace_id, ...brief } = campaign;
+    // Server-owned columns that must never be copied onto the duplicate.
+    const NOT_COPIED = ['id', 'created_at', 'updated_at', 'strategy', 'brief_approved', 'archived', 'asset_counts', 'workspace_id'];
+    const brief = Object.fromEntries(Object.entries(campaign).filter(([k]) => !NOT_COPIED.includes(k)));
     const { data, error } = await supabase
       .from('campaigns')
       .insert({ ...brief, name: `${campaign.name} (copy)`, workspace_id: ws.id, status: 'draft' })

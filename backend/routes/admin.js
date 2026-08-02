@@ -85,7 +85,7 @@ router.get('/api/admin/user', requireAuth, requireAdmin, async (req, res) => {
       workspaces: workspaces || [],
       recent_usage: usage,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Lookup failed', req_id: req.id });
   }
 });
@@ -106,7 +106,7 @@ router.get('/api/admin/health', requireAuth, requireAdmin, async (req, res) => {
       webhook_failures: webhookFails.count || 0,
       failed_generations: genFails.count || 0,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Health lookup failed', req_id: req.id });
   }
 });
@@ -168,7 +168,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       note: 'Automated readiness is not a paid-launch GO. A live low-value charge + cancel/recover ' +
         'rehearsal with owner-recorded evidence is required (see docs/RUNBOOK_TRANSACTION_REHEARSAL.md).',
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Readiness lookup failed', req_id: req.id });
   }
 });
@@ -183,7 +183,7 @@ router.get('/api/admin/failed-generations', requireAuth, requireAdmin, async (re
       .eq('status', 'released').gte('created_at', since)
       .order('created_at', { ascending: false }).limit(100);
     res.json({ window: '7d', items: data || [] });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Lookup failed', req_id: req.id });
   }
 });
@@ -198,7 +198,7 @@ router.get('/api/admin/stuck-reservations', requireAuth, requireAdmin, async (re
       .eq('status', 'reserved').lt('created_at', cutoff)
       .order('created_at', { ascending: true }).limit(100);
     res.json({ older_than: '15m', items: data || [] });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Lookup failed', req_id: req.id });
   }
 });
@@ -249,7 +249,7 @@ router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
       disclosure: 'Internal decision aid. These numbers are not benchmarks, are not ' +
         'statistically significant at beta scale, and must not be shown to customers or used as proof.',
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Cohort lookup failed', req_id: req.id });
   }
 });
@@ -389,7 +389,7 @@ router.get('/api/admin/scorecard', requireAuth, requireAdmin, async (req, res) =
         cancellation_reasons: cancelReasons,
       },
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Scorecard failed', req_id: req.id });
   }
 });
@@ -406,7 +406,7 @@ router.get('/api/admin/email-outbox', requireAuth, requireAdmin, async (req, res
       .order('created_at', { ascending: false })
       .limit(100);
     res.json({ items: data || [] });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Lookup failed', req_id: req.id });
   }
 });
