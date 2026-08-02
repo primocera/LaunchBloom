@@ -450,6 +450,9 @@ export default function Landing() {
               </Reveal>
             ))}
           </div>
+          {catalog?.currency_note && (
+            <p className="lp-price-definition">{catalog.currency_note}</p>
+          )}
           <p className="lp-price-definition">
             {catalog?.ai_action_definition || 'One AI action is one successful generation or regeneration. Failed generations, editing, copying and exporting do not count.'}
             {catalog?.included_free ? ` ${catalog.included_free}` : ''}

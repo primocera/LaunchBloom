@@ -122,6 +122,14 @@ function publicCatalog() {
     yearly_badge: `Save up to ${maxSavingsPct()}%`,
     ai_action_definition: AI_ACTION_DEFINITION,
     included_free: INCLUDED_FREE,
+    // Prices are written in USD (see PRICES). Stripe Adaptive Pricing, when the
+    // owner has enabled it, shows buyers outside the US their local currency at
+    // checkout and owns the conversion. The customer-facing note is gated on
+    // ADAPTIVE_PRICING_ENABLED so we never promise local-currency checkout the
+    // Stripe account is not actually doing — false until the toggle is on.
+    currency_note: process.env.ADAPTIVE_PRICING_ENABLED === '1'
+      ? 'Prices shown in USD. Customers outside the US are billed in their local currency at checkout.'
+      : null,
   };
 }
 

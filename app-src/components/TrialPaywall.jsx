@@ -155,6 +155,8 @@ export default function TrialPaywall({ open, onClose }) {
           )}
         </p>
 
+        {catalog?.currency_note && <p className="paywall-footer">{catalog.currency_note}</p>}
+
         <button type="button" className="paywall-close" onClick={onClose} aria-label="Close">×</button>
       </div>
     </div>
