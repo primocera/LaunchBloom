@@ -8,8 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { publicCatalog, missingStripeEnv } = require('../lib/plan-catalog');
+const { currencyForRequest } = require('../lib/currency');
 
-function plansHandler(_req, res) {
+function plansHandler(req, res) {
   const missing = missingStripeEnv();
   if (missing.length) {
     // Optional by default so the app runs before Stripe prices / a real domain
@@ -19,8 +20,14 @@ function plansHandler(_req, res) {
       return res.status(500).json({ error: 'Pricing is not configured.', code: 'CONFIG' });
     }
   }
-  res.set('Cache-Control', 'public, max-age=300');
-  res.json(publicCatalog());
+  // The catalog now varies by the buyer's region (EUR vs USD). A shared/CDN
+  // cache keyed only on the URL would hand a US visitor a cached EUR page and
+  // vice versa, so this response is per-client `private` and also Varies on the
+  // geo header. Never `public` again while pricing is region-dependent.
+  const currency = currencyForRequest(req);
+  res.set('Cache-Control', 'private, max-age=300');
+  res.vary('X-Vercel-IP-Country');
+  res.json(publicCatalog(currency));
 }
 
 router.get('/api/plans', plansHandler);

@@ -53,7 +53,8 @@ test('savings are calculated exactly from 12 monthly payments', () => {
 test('every plan has a price and both Stripe env names', () => {
   const { plans } = publicCatalog();
   for (const p of plans) {
-    assert.ok(PRICES[p.plan].monthly > 0 && PRICES[p.plan].yearly > 0);
+    assert.ok(PRICES[p.plan].usd.monthly > 0 && PRICES[p.plan].usd.yearly > 0);
+    assert.ok(PRICES[p.plan].eur.monthly > 0 && PRICES[p.plan].eur.yearly > 0);
     assert.match(p.stripe_env.monthly, /^STRIPE_PRICE_.+_MONTHLY$/);
     assert.match(p.stripe_env.yearly, /^STRIPE_PRICE_.+_YEARLY$/);
     assert.ok(p.price.display.monthly.startsWith('$'));

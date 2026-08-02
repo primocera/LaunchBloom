@@ -27,8 +27,9 @@ require('dotenv').config();
 const Stripe = require('stripe');
 const { PRICES, STRIPE_ENV } = require('../lib/plan-catalog');
 
-// The app quotes USD everywhere (landing, paywall, account, emails, legal).
-const EXPECTED_CURRENCY = 'usd';
+// The app quotes USD (base) and EUR (EU/EEA) — every Stripe Price must carry
+// BOTH: USD as the price's own currency and EUR under currency_options.eur.
+const BASE_CURRENCY = 'usd';
 const EXPECTED_INTERVAL = { monthly: 'month', yearly: 'year' };
 
 function fail(msg) { console.error(`  ✗ ${msg}`); }
@@ -49,7 +50,7 @@ async function main() {
   const livemode = !key.startsWith('sk_test');
   console.log(`Stripe account : ${account.id}`);
   console.log(`Mode           : ${livemode ? 'LIVE' : 'TEST'}`);
-  console.log(`Expected       : ${EXPECTED_CURRENCY.toUpperCase()}\n`);
+  console.log(`Expected       : ${BASE_CURRENCY.toUpperCase()} base + EUR currency_options\n`);
 
   if (!livemode) {
     console.log('NOTE: this is a TEST-mode key. Test prices say nothing about what\n' +
@@ -60,7 +61,8 @@ async function main() {
   for (const [plan, intervals] of Object.entries(STRIPE_ENV)) {
     for (const [interval, envVar] of Object.entries(intervals)) {
       const priceId = process.env[envVar];
-      const expectedAmount = PRICES[plan][interval];
+      const expectedUsd = PRICES[plan].usd[interval];
+      const expectedEur = PRICES[plan].eur[interval];
       const label = `${plan}/${interval}`;
 
       if (!priceId) {
@@ -71,21 +73,31 @@ async function main() {
 
       let price;
       try {
-        price = await stripe.prices.retrieve(priceId);
+        // currency_options is not returned by default — it must be expanded.
+        price = await stripe.prices.retrieve(priceId, { expand: ['currency_options'] });
       } catch (err) {
         problems.push(`${label}: ${priceId} could not be fetched (${err.code || err.message})`);
         fail(`${label}: ${priceId} — ${err.code || err.message}`);
         continue;
       }
 
-      const actualAmount = price.unit_amount / 100;
+      const actualUsd = price.unit_amount / 100;
       const issues = [];
 
-      if (price.currency !== EXPECTED_CURRENCY) {
-        issues.push(`currency is ${price.currency.toUpperCase()}, app displays ${EXPECTED_CURRENCY.toUpperCase()}`);
+      // Base currency: USD.
+      if (price.currency !== BASE_CURRENCY) {
+        issues.push(`base currency is ${price.currency.toUpperCase()}, expected ${BASE_CURRENCY.toUpperCase()}`);
       }
-      if (actualAmount !== expectedAmount) {
-        issues.push(`charges ${actualAmount}, app displays ${expectedAmount}`);
+      if (actualUsd !== expectedUsd) {
+        issues.push(`USD charges ${actualUsd}, app displays ${expectedUsd}`);
+      }
+      // EUR must be present under currency_options and match the catalog, or an
+      // EU checkout (which sets currency:'eur') fails outright.
+      const eurOpt = price.currency_options && price.currency_options.eur;
+      if (!eurOpt) {
+        issues.push("EUR is not configured on this price (add it via Stripe → the price → 'Add another currency')");
+      } else if (eurOpt.unit_amount / 100 !== expectedEur) {
+        issues.push(`EUR charges ${eurOpt.unit_amount / 100}, app displays ${expectedEur}`);
       }
       if (price.recurring?.interval !== EXPECTED_INTERVAL[interval]) {
         issues.push(`bills per ${price.recurring?.interval || 'one-time'}, expected per ${EXPECTED_INTERVAL[interval]}`);
@@ -98,7 +110,7 @@ async function main() {
         problems.push(`${label}: ${issues.join('; ')}`);
         fail(`${label} (${priceId}) — ${issues.join('; ')}`);
       } else {
-        ok(`${label} — ${price.currency.toUpperCase()} ${actualAmount}/${price.recurring.interval}`);
+        ok(`${label} — USD ${actualUsd} + EUR ${eurOpt.unit_amount / 100} /${price.recurring.interval}`);
       }
     }
   }

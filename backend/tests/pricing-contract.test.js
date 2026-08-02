@@ -9,12 +9,30 @@ const path = require('path');
 const { PRICES, publicCatalog, INCLUDED_FREE } = require('../lib/plan-catalog');
 const { PLAN_LIMITS } = require('../lib/plan-limits');
 
-test('canonical USD prices are unchanged (owner approval required to move them)', () => {
+test('canonical prices are unchanged in both currencies (owner approval required to move them)', () => {
   assert.deepEqual(PRICES, {
-    starter: { monthly: 12.99, yearly: 99 },
-    pro: { monthly: 24.99, yearly: 199 },
-    studio: { monthly: 59, yearly: 499 },
+    starter: { usd: { monthly: 12.99, yearly: 99 }, eur: { monthly: 11.31, yearly: 86 } },
+    pro: { usd: { monthly: 24.99, yearly: 199 }, eur: { monthly: 21.76, yearly: 173 } },
+    studio: { usd: { monthly: 59, yearly: 499 }, eur: { monthly: 51.37, yearly: 434 } },
   });
+});
+
+test('EUR catalog quotes euros and USD catalog quotes dollars — displayed = charged', () => {
+  const usd = publicCatalog('usd');
+  const eur = publicCatalog('eur');
+  assert.equal(usd.currency, 'usd');
+  assert.equal(eur.currency, 'eur');
+  for (const p of usd.plans) {
+    assert.ok(p.price.display.monthly.startsWith('$'), `${p.plan} USD display not $`);
+    assert.equal(p.price.currency, 'usd');
+  }
+  for (const p of eur.plans) {
+    assert.ok(p.price.display.monthly.startsWith('€'), `${p.plan} EUR display not €`);
+    assert.equal(p.price.currency, 'eur');
+    assert.equal(p.price.monthly, PRICES[p.plan].eur.monthly);
+  }
+  // An unknown currency falls back to USD, never throws.
+  assert.equal(publicCatalog('gbp').currency, 'usd');
 });
 
 test('catalog limits come live from PLAN_LIMITS — no second source of truth', () => {

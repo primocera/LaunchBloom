@@ -10,6 +10,7 @@ const supabase = require('../lib/supabase');
 const { pricePlans, planFor } = require('./customers');
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
+const { currencyForRequest } = require('../lib/currency');
 
 const VALID_PLANS = ['starter', 'pro', 'studio'];
 const VALID_INTERVALS = ['monthly', 'yearly'];
@@ -205,8 +206,15 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // 3-day free trial for first-time subscribers only (no double-trialing).
     const giveTrial = !(await hadTrialOrActiveSubscription(email));
 
+    // Region currency (EUR for EU/EEA, USD otherwise). The price must carry this
+    // currency via Stripe currency_options or Stripe rejects the session — that
+    // rejection is desirable: better a clear 400 here than charging an EU card
+    // in USD, which fails after 3DS looking like a card decline.
+    const currency = currencyForRequest(req);
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
+      currency,
       line_items: [{ price: priceId, quantity: 1 }],
       customer: customerId,
       client_reference_id: userId || undefined,

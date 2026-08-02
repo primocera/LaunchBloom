@@ -110,6 +110,34 @@ test('first-time subscriber gets a 3-day trial; redirect uses PUBLIC_URL', async
   assert.ok(lastCheckout.success_url.startsWith('https://app.example.com/'));
 });
 
+test('checkout currency follows the buyer region when EUR pricing is enabled', async () => {
+  process.env.EUR_PRICING_ENABLED = '1';
+  try {
+    reset();
+    const eu = await request(app).post('/api/payments/create-checkout-session')
+      .set(...AUTHED).set('x-vercel-ip-country', 'DE').send({ plan: 'starter', interval: 'monthly' });
+    assert.equal(eu.status, 200);
+    assert.equal(lastCheckout.currency, 'eur');
+
+    reset();
+    const us = await request(app).post('/api/payments/create-checkout-session')
+      .set(...AUTHED).set('x-vercel-ip-country', 'US').send({ plan: 'starter', interval: 'monthly' });
+    assert.equal(us.status, 200);
+    assert.equal(lastCheckout.currency, 'usd');
+  } finally {
+    delete process.env.EUR_PRICING_ENABLED;
+  }
+});
+
+test('with EUR pricing disabled (default), an EU buyer is still charged USD', async () => {
+  delete process.env.EUR_PRICING_ENABLED;
+  reset();
+  const eu = await request(app).post('/api/payments/create-checkout-session')
+    .set(...AUTHED).set('x-vercel-ip-country', 'DE').send({ plan: 'starter', interval: 'monthly' });
+  assert.equal(eu.status, 200);
+  assert.equal(lastCheckout.currency, 'usd');
+});
+
 test('an already-subscribed user is blocked (no duplicate subscription)', async () => {
   reset();
   state.currentPlan = 'pro';

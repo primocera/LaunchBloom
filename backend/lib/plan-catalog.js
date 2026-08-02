@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 const { PLAN_LIMITS } = require('./plan-limits');
+const { SUPPORTED } = require('./currency');
 
 // One successful user-triggered generation or regeneration = one AI action.
 const AI_ACTION_DEFINITION =
@@ -22,12 +23,17 @@ const STRIPE_ENV = {
   studio: { monthly: 'STRIPE_PRICE_STUDIO_MONTHLY', yearly: 'STRIPE_PRICE_STUDIO_YEARLY' },
 };
 
-// Display prices (USD — Stripe charges in USD, primary market is the US).
-// The only place prices are written down outside Stripe.
+// Canonical prices, per currency — the only place amounts are written outside
+// Stripe. USD is the base; EUR amounts are the USD amounts converted at the ECB
+// reference rate 1 USD = 0.8707 EUR (2026-07-31), monthly rounded to cents and
+// yearly to whole euros. This is a fixed, owner-approved snapshot — NOT a live
+// rate — so the displayed price always equals the charged price. Each Stripe
+// Price must carry both currencies (currency_options); verify-stripe-prices.js
+// asserts Stripe matches this table for both.
 const PRICES = {
-  starter: { monthly: 12.99, yearly: 99 },
-  pro: { monthly: 24.99, yearly: 199 },
-  studio: { monthly: 59, yearly: 499 },
+  starter: { usd: { monthly: 12.99, yearly: 99 }, eur: { monthly: 11.31, yearly: 86 } },
+  pro: { usd: { monthly: 24.99, yearly: 199 }, eur: { monthly: 21.76, yearly: 173 } },
+  studio: { usd: { monthly: 59, yearly: 499 }, eur: { monthly: 51.37, yearly: 434 } },
 };
 
 // v8 LB-S08: value comms reframed around jobs completed — capacity (campaigns,
@@ -60,9 +66,21 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
-/** Exact yearly saving vs 12 monthly payments: { amount, pct } (pct to 1dp). */
-function yearlySavings(plan) {
-  const p = PRICES[plan];
+function safeCurrency(currency) {
+  return SUPPORTED.includes(currency) ? currency : 'usd';
+}
+
+const CURRENCY_SYMBOL = { usd: '$', eur: '€' };
+
+/** Format an amount in the given currency: "$12.99", "€86", "€11.31". */
+function money(amount, currency = 'usd') {
+  const sym = CURRENCY_SYMBOL[safeCurrency(currency)];
+  return Number.isInteger(amount) ? `${sym}${amount}` : `${sym}${amount.toFixed(2)}`;
+}
+
+/** Exact yearly saving vs 12 monthly payments, in `currency`: { amount, pct }. */
+function yearlySavings(plan, currency = 'usd') {
+  const p = PRICES[plan] && PRICES[plan][safeCurrency(currency)];
   if (!p) return null;
   const twelveMonths = round2(p.monthly * 12);
   const amount = round2(twelveMonths - p.yearly);
@@ -71,22 +89,20 @@ function yearlySavings(plan) {
 }
 
 /** Highest savings percentage across plans, rounded down for the badge (never overstates). */
-function maxSavingsPct() {
-  return Math.max(...Object.keys(PRICES).map((p) => Math.floor(yearlySavings(p).pct)));
-}
-
-function usd(n) {
-  return Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`;
+function maxSavingsPct(currency = 'usd') {
+  return Math.max(...Object.keys(PRICES).map((p) => Math.floor(yearlySavings(p, currency).pct)));
 }
 
 /**
  * Serializable catalog for GET /api/plans and any UI. Limits are read live
  * from PLAN_LIMITS — this function cannot disagree with enforcement.
  */
-function publicCatalog() {
+function publicCatalog(currency = 'usd') {
+  const cur = safeCurrency(currency);
   const plans = Object.keys(PRICES).map((key) => {
     const limits = PLAN_LIMITS[key];
-    const savings = yearlySavings(key);
+    const savings = yearlySavings(key, cur);
+    const amt = PRICES[key][cur];
     return {
       plan: key,
       label: limits.label,
@@ -94,21 +110,23 @@ function publicCatalog() {
       jobs: PLAN_META[key].jobs,
       badge: PLAN_META[key].badge || null,
       price: {
-        monthly: PRICES[key].monthly,
-        yearly: PRICES[key].yearly,
-        display: { monthly: usd(PRICES[key].monthly), yearly: usd(PRICES[key].yearly) },
+        currency: cur,
+        monthly: amt.monthly,
+        yearly: amt.yearly,
+        display: { monthly: money(amt.monthly, cur), yearly: money(amt.yearly, cur) },
       },
       stripe_env: STRIPE_ENV[key],
       workspaces: limits.workspaces,
       ai_actions: limits.ai_actions,
       launch_kits: limits.launch_kits,
       can_export: limits.can_export,
-      yearly_savings: { amount: savings.amount, display: usd(savings.amount), pct: savings.pct },
+      yearly_savings: { amount: savings.amount, display: money(savings.amount, cur), pct: savings.pct },
     };
   });
 
   const trial = PLAN_LIMITS.trial;
   return {
+    currency: cur,
     plans,
     trial: {
       days: 3,
@@ -119,17 +137,18 @@ function publicCatalog() {
       disclosure: "Payment method required. Cancel before your trial ends and you won't be charged.",
       eyebrow: 'Start with 3 days free',
     },
-    yearly_badge: `Save up to ${maxSavingsPct()}%`,
+    yearly_badge: `Save up to ${maxSavingsPct(cur)}%`,
     ai_action_definition: AI_ACTION_DEFINITION,
     included_free: INCLUDED_FREE,
-    // Prices are written in USD (see PRICES). Stripe Adaptive Pricing, when the
-    // owner has enabled it, shows buyers outside the US their local currency at
-    // checkout and owns the conversion. The customer-facing note is gated on
-    // ADAPTIVE_PRICING_ENABLED so we never promise local-currency checkout the
-    // Stripe account is not actually doing — false until the toggle is on.
-    currency_note: process.env.ADAPTIVE_PRICING_ENABLED === '1'
-      ? 'Prices shown in USD. Customers outside the US are billed in their local currency at checkout.'
-      : null,
+    // Region-based pricing note. Only shown once EUR pricing is actually live
+    // (EUR_PRICING_ENABLED=1); while off, everyone is billed USD so a "EU pays
+    // EUR" note would be false. When on, the displayed price equals the charged
+    // price in both currencies, so this is a plain location statement.
+    currency_note: process.env.EUR_PRICING_ENABLED !== '1'
+      ? null
+      : cur === 'eur'
+        ? 'Shown in EUR based on your location. Customers outside the EU are billed in USD.'
+        : 'Shown in USD. Customers in the EU/EEA are billed in EUR.',
   };
 }
 
@@ -152,6 +171,7 @@ module.exports = {
   INCLUDED_FREE,
   STRIPE_ENV,
   AI_ACTION_DEFINITION,
+  money,
   yearlySavings,
   maxSavingsPct,
   publicCatalog,
