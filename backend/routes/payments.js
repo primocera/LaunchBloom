@@ -7,7 +7,8 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
-const { pricePlans, planFor } = require('./customers');
+const { pricePlans, resolveEntitlement } = require('./customers');
+const { planUnavailableBody } = require('../lib/subscription-state');
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
 const { currencyForRequest } = require('../lib/currency');
@@ -191,7 +192,14 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 
     // Block duplicate concurrent subscriptions — send existing subscribers to
     // the billing portal to change plans instead of stacking a second one.
-    const currentPlan = await planFor(email);
+    // v13 SC-P0-01: FAIL CLOSED. If entitlement cannot be verified (Supabase
+    // down) or an entitling subscription exists on a price we cannot map, we do
+    // NOT create a Checkout Session — an unverified "no plan" is exactly how a
+    // paying customer ends up with a second subscription.
+    const { state, plan: currentPlan } = await resolveEntitlement(email);
+    if (state === 'unavailable' || state === 'unmapped') {
+      return res.status(503).json(planUnavailableBody());
+    }
     if (currentPlan) {
       return res.status(409).json({
         error: 'You already have an active subscription. Manage or change your plan from billing.',

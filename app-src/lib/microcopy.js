@@ -19,6 +19,9 @@ export const SYSTEM_MICROCOPY = {
   ai_timeout: 'Generation timed out. No AI action was charged. Try again.',
   daily_cap: 'Generation is temporarily paused while we protect service capacity. Editing and exporting still work.',
   billing_config: 'Checkout is temporarily unavailable. Your workspace and drafts are unaffected.',
+  // v13 SC-P0-01: entitlement could not be verified. Nothing was changed and no
+  // access was revoked — the user retries, they do not get downgraded.
+  plan_unavailable: 'We couldn’t verify your plan right now. No access change was made. Please try again.',
   webhook_delay: 'Payment received. Plan access may take a moment to update. Refresh or contact support with request {req_id}.',
   unknown: 'Something went wrong. Try again. If it continues, share request {req_id} with support.',
 };
@@ -63,6 +66,7 @@ export function messageForError(err = {}) {
     retry_after: formatRetryAfter(err.retry_after ?? err.retryAfter),
   };
   const byCode = {
+    PLAN_UNAVAILABLE: 'plan_unavailable',
     GENERATION_PAUSED: 'daily_cap',
     LAUNCH_CONFIG_INCOMPLETE: 'billing_config',
     AI_TIMEOUT: 'ai_timeout',

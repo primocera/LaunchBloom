@@ -62,6 +62,37 @@ customer content), and when to escalate.
 | Auth / abuse | `SIGNUP_PAUSED=1` | login rate-limit hits; `signals` overall; signup 403 codes (`BETA_FULL`, `SIGNUP_PAUSED`, `COHORT_*`) | credential-stuffing, or the cohort cap is bypassed |
 | Export | none (export is read-only, no AI spend); re-run the export | `check:app-fresh`; export-integrity test in the release-candidate workflow | a paid deliverable renders corrupt or truncated |
 
+## Entitlement verification unavailable (`PLAN_UNAVAILABLE`) — v13 SC-P0-01
+
+When the plan lookup itself fails (Supabase unreachable/erroring), the system
+answers **"we could not verify"**, never "you are on the free plan".
+
+- **API:** `503` with `{ code: 'PLAN_UNAVAILABLE', retryable: true }` and the
+  copy *"We couldn’t verify your plan right now. No access change was made.
+  Please try again."* No raw provider text is returned.
+- **Checkout fails closed:** `POST /api/payments/create-checkout-session`
+  creates **no** Stripe Checkout Session and no Stripe customer in this state,
+  so an outage can never produce a duplicate subscription. Same for an entitling
+  subscription sitting on a price id that maps to no plan.
+- **Reads are non-destructive:** `verify-plan` returns `active: null` (never
+  `false`), and the app keeps the access it is already showing.
+- **Retry behaviour:** the app retries `/api/auth/me` once automatically
+  (~1.5 s) and then stops and shows an explicit "Try again" action — bounded, no
+  indefinite spinner. Account → Plan & billing shows the same notice + retry.
+
+**Inspect (read-only):** `plan_unavailable` log lines (path + `req_id`),
+`PLAN_LOOKUP_FAILED` (redacted email + message) and `STRIPE_PRICE_UNMAPPED`
+(redacted email, statuses, price ids) — the last one is a **configuration**
+alert: a live price id is missing from the `STRIPE_PRICE_*` env vars. Fix the env
+var; do not grant plans by hand.
+
+**Escalate when:** `plan_unavailable` persists after Supabase recovers, or
+`STRIPE_PRICE_UNMAPPED` fires for a real customer (they are being blocked from
+checkout and read as unmapped until the env var is corrected).
+
+**Support reply:** confirm no charge and no access change occurred, ask them to
+retry, and quote the `req_id` from their error notice.
+
 ## External processors
 
 Adopt an external log/alert processor **only after** its subprocessor and

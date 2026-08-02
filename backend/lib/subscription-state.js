@@ -78,7 +78,47 @@ function isStale(storedEventAtIso, incomingEventAtIso) {
   return new Date(storedEventAtIso) > new Date(incomingEventAtIso);
 }
 
+// ---------------------------------------------------------------------------
+// v13 SC-P0-01 — "we could not verify" is its own state, never "verified free".
+//
+// A transient Supabase/provider failure used to be swallowed and returned as
+// null, i.e. indistinguishable from "this account has no subscription". That
+// let a paying customer render as Free and let checkout create a SECOND
+// subscription. Billing-critical callers now fail closed on this error instead:
+// they change nothing and ask the user to retry.
+// ---------------------------------------------------------------------------
+
+const PLAN_UNAVAILABLE_CODE = 'PLAN_UNAVAILABLE';
+const PLAN_UNAVAILABLE_MESSAGE =
+  'We couldn’t verify your plan right now. No access change was made. Please try again.';
+
+class EntitlementUnavailableError extends Error {
+  constructor(cause) {
+    super('entitlement verification unavailable');
+    this.name = 'EntitlementUnavailableError';
+    this.code = PLAN_UNAVAILABLE_CODE;
+    this.retryable = true;
+    this.status = 503;
+    if (cause) this.cause = cause;
+  }
+}
+
+/** True for the "verification unavailable" error, however it was rethrown. */
+function isEntitlementUnavailable(err) {
+  return !!err && err.code === PLAN_UNAVAILABLE_CODE;
+}
+
+/** The single 503 body every caller returns for the unavailable state. */
+function planUnavailableBody() {
+  return { error: PLAN_UNAVAILABLE_MESSAGE, code: PLAN_UNAVAILABLE_CODE, retryable: true };
+}
+
 module.exports = {
+  PLAN_UNAVAILABLE_CODE,
+  PLAN_UNAVAILABLE_MESSAGE,
+  EntitlementUnavailableError,
+  isEntitlementUnavailable,
+  planUnavailableBody,
   KNOWN_STATUSES,
   ENTITLING_STATUSES,
   isEntitled,

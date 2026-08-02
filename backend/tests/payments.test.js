@@ -35,6 +35,12 @@ stubModule('lib/supabase.js', fakeSupabase);
 // supabase; simpler to stub the whole customers module's planFor.
 const customers = require('../routes/customers');
 customers.planFor = async () => state.currentPlan;
+// v13 SC-P0-01: checkout reads the explicit entitlement state, so it can tell
+// "verified free" apart from "could not verify".
+customers.resolveEntitlement = async () => ({
+  state: state.entitlementState || (state.currentPlan ? 'entitled' : 'free'),
+  plan: state.currentPlan,
+});
 
 // Fake Stripe: record checkout payload + customer creation.
 let lastCheckout = null;
@@ -75,6 +81,7 @@ function reset() {
   state.currentPlan = null;
   state.hadTrial = false;
   state.rejectEur = false;
+  state.entitlementState = null;
   lastCheckout = null;
   createdCustomers = 0;
 }
@@ -175,6 +182,29 @@ test('an already-subscribed user is blocked (no duplicate subscription)', async 
     .set(...AUTHED).send({ plan: 'starter', interval: 'monthly' });
   assert.equal(r.status, 409);
   assert.equal(r.body.code, 'ALREADY_SUBSCRIBED');
+});
+
+// v13 SC-P0-01 — checkout FAILS CLOSED when entitlement cannot be verified.
+test('checkout creates no Stripe session when the plan lookup is unavailable', async () => {
+  reset();
+  state.entitlementState = 'unavailable';
+  const r = await request(app).post('/api/payments/create-checkout-session')
+    .set(...AUTHED).send({ plan: 'starter', interval: 'monthly' });
+  assert.equal(r.status, 503);
+  assert.equal(r.body.code, 'PLAN_UNAVAILABLE');
+  assert.equal(r.body.retryable, true);
+  assert.equal(lastCheckout, null, 'no Stripe Checkout Session may be created');
+  assert.equal(createdCustomers, 0, 'no Stripe customer may be created either');
+  assert.ok(!/supabase|postgres|PGRST/i.test(r.body.error), 'no raw provider text');
+});
+
+test('checkout also fails closed when an entitling subscription is on an unmapped price', async () => {
+  reset();
+  state.entitlementState = 'unmapped';
+  const r = await request(app).post('/api/payments/create-checkout-session')
+    .set(...AUTHED).send({ plan: 'starter', interval: 'monthly' });
+  assert.equal(r.status, 503);
+  assert.equal(lastCheckout, null);
 });
 
 test('cancel-subscription requires auth', async () => {

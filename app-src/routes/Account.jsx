@@ -25,6 +25,7 @@ function daysLeft(iso) {
 export default function Account() {
   const { account, logout } = useAuth();
   const [billing, setBilling] = useState(null);
+  const [planUnavailable, setPlanUnavailable] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -35,13 +36,30 @@ export default function Account() {
   // marketing page's #pricing anchor dropped them on the landing page instead.
   const [paywall, setPaywall] = useState(false);
 
+  // v13 SC-P0-01: a 503 PLAN_UNAVAILABLE must not render the user as Free and
+  // must not spin forever — show the recoverable notice with an explicit retry.
+  function loadBilling(isCancelled = () => false) {
+    return api.billing().then(
+      (b) => { if (!isCancelled()) { setBilling(b); setPlanUnavailable(null); } },
+      (err) => {
+        if (isCancelled()) return;
+        if (err && err.code === 'PLAN_UNAVAILABLE') setPlanUnavailable(err.userMessage);
+      }
+    );
+  }
+
+  function retryBilling() {
+    setPlanUnavailable(null);
+    loadBilling();
+  }
+
   function loadWorkspaces() {
     api.workspaces().then(({ workspaces: list }) => setWorkspaces(list)).catch(() => {});
   }
 
   useEffect(() => {
     let cancelled = false;
-    api.billing().then((b) => !cancelled && setBilling(b)).catch(() => {});
+    loadBilling(() => cancelled);
     loadWorkspaces();
     return () => { cancelled = true; };
   }, []);
@@ -150,7 +168,13 @@ export default function Account() {
         <h2>Plan &amp; billing</h2>
         <p><strong>Plan:</strong> {planName}</p>
 
-        {!billing && <p className="muted">Loading billing…</p>}
+        {!billing && !planUnavailable && <p className="muted">Loading billing…</p>}
+        {!billing && planUnavailable && (
+          <p className="muted">
+            {planUnavailable}{' '}
+            <button className="btn-link" type="button" onClick={retryBilling}>Try again</button>
+          </p>
+        )}
 
         {billing && !sub && billing.plan === 'free' && (
           <>

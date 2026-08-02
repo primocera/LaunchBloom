@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 process.env.SESSION_SECRET = 'test-secret-for-unit-tests';
 
 const { stubModule } = require('./helpers');
+const { EntitlementUnavailableError, isEntitlementUnavailable, planUnavailableBody } = require('../lib/subscription-state');
 
 // Stateful supabase: a real usage_events ledger; workspaces get-or-create
 // returns a fixed workspace; customers/subscriptions empty (lifetime window).
@@ -80,7 +81,11 @@ stubModule('lib/supabase.js', ledger);
 // Fixed plan for the caller.
 const customers = require('../routes/customers');
 let currentPlan = 'trial';
-customers.planFor = async () => currentPlan;
+let planUnverifiable = false; // v13 SC-P0-01: simulate a Supabase lookup failure
+customers.planFor = async () => {
+  if (planUnverifiable) throw new EntitlementUnavailableError();
+  return currentPlan;
+};
 
 const { planGate } = require('../lib/plan-limits');
 
@@ -91,6 +96,12 @@ function appWith(handler, feature = 'positioning') {
   const app = express();
   app.use(express.json());
   app.post('/gen', planGate(feature), handler);
+  // Mirrors server.js: an unverifiable entitlement becomes a retryable 503,
+  // never a silent downgrade to the free plan's limits.
+  app.use((err, _req, res, _next) => {
+    if (isEntitlementUnavailable(err)) return res.status(503).json(planUnavailableBody());
+    res.status(500).json({ error: 'Internal server error' });
+  });
   return app;
 }
 
@@ -137,4 +148,21 @@ test('free plan (0 actions) is blocked immediately', async () => {
   const app = appWith((req, res) => res.json({ ok: true }));
   const r = await request(app).post('/gen').set(...AUTHED).send({});
   assert.equal(r.status, 402);
+});
+
+// v13 SC-P0-01 — an unverifiable plan must not be metered as 'free'.
+test('planGate fails closed (503) when entitlement cannot be verified', async () => {
+  ledger._events.length = 0;
+  planUnverifiable = true;
+  try {
+    let routeRan = false;
+    const app = appWith((req, res) => { routeRan = true; res.json({ ok: true }); });
+    const r = await request(app).post('/gen').set(...AUTHED).send({});
+    assert.equal(r.status, 503);
+    assert.equal(r.body.code, 'PLAN_UNAVAILABLE');
+    assert.equal(routeRan, false, 'the generation must not run on an unverified plan');
+    assert.equal(ledger._events.length, 0, 'no usage may be reserved or charged');
+  } finally {
+    planUnverifiable = false;
+  }
 });

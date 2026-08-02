@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useFocusTrap } from '../lib/use-focus-trap';
+import { microcopy } from '../lib/microcopy';
 
 // ---------------------------------------------------------------------------
 // v5 Prompt 2: contextual trial paywall. Shown when a free account attempts
@@ -68,7 +69,11 @@ export default function TrialPaywall({ open, onClose }) {
       const data = await api.checkout(plan, interval);
       window.location.href = data.url; // leave busy=true until we navigate away
     } catch (e) {
-      if (e.code === 'ALREADY_SUBSCRIBED') {
+      if (e.code === 'PLAN_UNAVAILABLE') {
+        // v13 SC-P0-01: checkout failed closed — no session, no charge, and no
+        // access change. Say so plainly and let the user retry.
+        setError(e.userMessage || microcopy('plan_unavailable'));
+      } else if (e.code === 'ALREADY_SUBSCRIBED') {
         setError('You already have a subscription. Manage your plan from Account & billing.');
       } else {
         setError(e.message || 'Could not start checkout. Please try again.');

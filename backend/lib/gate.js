@@ -9,6 +9,7 @@
 
 const authLib = require('./auth');
 const { isPlanActive } = require('../routes/customers');
+const { isEntitlementUnavailable } = require('./subscription-state');
 
 const planCache = new Map(); // email -> { active, ts }
 
@@ -21,6 +22,9 @@ async function planActiveCached(email) {
     planCache.set(email, { active, ts: Date.now() });
     return active;
   } catch (e) {
+    // v13 SC-P0-01: "could not verify" is NOT "not paid" — let it propagate so
+    // the route answers 503 instead of silently metering a paying user.
+    if (isEntitlementUnavailable(e)) throw e;
     return false;
   }
 }

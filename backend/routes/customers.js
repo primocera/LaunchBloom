@@ -9,7 +9,13 @@ const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
 const { requireAuth } = require('../lib/auth');
-const { entitlementFor, ENTITLING_STATUSES } = require('../lib/subscription-state');
+const {
+  entitlementFor,
+  ENTITLING_STATUSES,
+  EntitlementUnavailableError,
+  isEntitlementUnavailable,
+  planUnavailableBody,
+} = require('../lib/subscription-state');
 
 /**
  * Stripe price id → OfferFlow plan name, built from env at startup.
@@ -89,18 +95,44 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-/** 'trial' | 'starter' | 'pro' | 'studio' | null for an email - single source of plan truth. */
-async function planFor(email) {
+// PostgREST returns this code from .single() when the filter matched no row.
+// That is a VERIFIED "no such record", not a failure — everything else is.
+const NO_ROWS = 'PGRST116';
+
+function readFailed(error) {
+  return !!error && error.code !== NO_ROWS;
+}
+
+/** Mask an email for logs: keeps it correlatable without printing the identity. */
+function redactEmail(email) {
+  const [user = '', domain = ''] = String(email).split('@');
+  return `${user.slice(0, 2)}***@${domain}`;
+}
+
+/**
+ * The explicit entitlement result model (v13 SC-P0-01). Exactly one of:
+ *
+ *   { state: 'free',        plan: null }  verified: no entitling subscription
+ *   { state: 'entitled',    plan: 'trial'|'starter'|'pro'|'studio' }
+ *   { state: 'unmapped',    plan: null }  verified entitling sub, price not in env
+ *   { state: 'unavailable', plan: null }  could NOT verify (db/provider failure)
+ *
+ * 'unavailable' must never be collapsed into 'free' by a caller. planFor()
+ * throws EntitlementUnavailableError for it so a caller cannot ignore it by
+ * accident; use resolveEntitlement() directly when the state matters.
+ */
+async function resolveEntitlement(email) {
   email = (email || '').trim().toLowerCase();
-  if (!email) return null;
+  if (!email) return { state: 'free', plan: null };
   try {
-    const { data: customer } = await supabase
+    const { data: customer, error: customerErr } = await supabase
       .from('customers')
       .select('id')
       .eq('email', email)
       .single();
 
-    if (!customer) return null;
+    if (readFailed(customerErr)) throw new EntitlementUnavailableError(customerErr);
+    if (!customer) return { state: 'free', plan: null };
 
     // A customer can hold more than one entitling row — an old subscription on a
     // now-retired price sitting beside the current one, or overlapping test subs.
@@ -110,28 +142,39 @@ async function planFor(email) {
     // though a valid current subscription exists. Trialing maps to 'trial' on any
     // price. Entitlement stays decided by the canonical state machine, so
     // planFor() and the webhook can never disagree about what a status grants.
-    const { data: subs } = await supabase
+    const { data: subs, error: subsErr } = await supabase
       .from('subscriptions')
       .select('status, stripe_price_id, stripe_event_at')
       .eq('customer_id', customer.id)
       .in('status', ENTITLING_STATUSES)
       .order('stripe_event_at', { ascending: false, nullsFirst: false });
 
+    if (readFailed(subsErr)) throw new EntitlementUnavailableError(subsErr);
+
+    let unmapped = false;
     if (subs && subs.length) {
       const plans = pricePlans();
       for (const sub of subs) {
         const plan = entitlementFor(sub, plans);
-        if (plan) return plan;
+        if (plan) return { state: 'entitled', plan };
       }
       // Entitling subscription(s) exist but none map to a configured price —
-      // never silently grant, but make the misconfiguration loud.
-      if (subs.some((s) => s.status === 'active')) {
-        console.error(`[planFor] entitling subscription(s) for ${email} map to no configured price — check STRIPE_PRICE_* env vars (prices: ${subs.map((s) => s.stripe_price_id).join(', ')})`);
-      }
+      // never silently grant, but make the misconfiguration loud and alertable.
+      // Redacted: the end user never sees this, and ops never sees the identity.
+      unmapped = true;
+      console.error(JSON.stringify({
+        code: 'STRIPE_PRICE_UNMAPPED',
+        level: 'error',
+        source: 'planFor',
+        email: redactEmail(email),
+        statuses: subs.map((s) => s.status),
+        price_ids: subs.map((s) => s.stripe_price_id),
+        hint: 'check STRIPE_PRICE_* env vars',
+      }));
     }
 
     // Succeeded one-time payment = lifetime access
-    const { data: payment } = await supabase
+    const { data: payment, error: paymentErr } = await supabase
       .from('payments')
       .select('id')
       .eq('customer_id', customer.id)
@@ -139,15 +182,43 @@ async function planFor(email) {
       .limit(1)
       .single();
 
-    return payment ? 'pro' : null;
+    if (readFailed(paymentErr)) throw new EntitlementUnavailableError(paymentErr);
+    if (payment) return { state: 'entitled', plan: 'pro' };
+
+    return { state: unmapped ? 'unmapped' : 'free', plan: null };
   } catch (e) {
-    return null;
+    if (isEntitlementUnavailable(e)) return { state: 'unavailable', plan: null };
+    // Any other throw (network reset, proxy blow-up) is equally "we do not
+    // know" — it is never evidence that the customer is on the free plan.
+    console.error(JSON.stringify({
+      code: 'PLAN_LOOKUP_FAILED',
+      level: 'error',
+      source: 'resolveEntitlement',
+      email: redactEmail(email),
+      message: (e && e.message) || String(e),
+    }));
+    return { state: 'unavailable', plan: null };
   }
+}
+
+/**
+ * 'trial' | 'starter' | 'pro' | 'studio' | null — the single source of plan
+ * truth. THROWS EntitlementUnavailableError when the lookup could not be
+ * verified, so no caller can mistake a failure for "verified free".
+ */
+async function planFor(email) {
+  const result = await resolveEntitlement(email);
+  if (result.state === 'unavailable') throw new EntitlementUnavailableError();
+  return result.plan;
 }
 
 async function verifyPlanHandler(req, res) {
   // Only ever answers for the signed-in account — no probing other emails.
-  const plan = await planFor(req.userEmail);
+  const { state, plan } = await resolveEntitlement(req.userEmail);
+  if (state === 'unavailable') {
+    // Do NOT report active:false — the UI must keep the access it already shows.
+    return res.status(503).json({ ...planUnavailableBody(), plan: null, active: null });
+  }
   res.json({ active: !!plan, plan });
 }
 
@@ -233,5 +304,6 @@ async function isPlanActive(email) {
 module.exports = router;
 module.exports.verifyPlanHandler = verifyPlanHandler;
 module.exports.planFor = planFor;
+module.exports.resolveEntitlement = resolveEntitlement;
 module.exports.isPlanActive = isPlanActive;
 module.exports.pricePlans = pricePlans;

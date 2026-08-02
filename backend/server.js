@@ -15,6 +15,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { BRAND } = require('./lib/brand');
 const { requestLogger, logError } = require('./lib/logger');
+const { isEntitlementUnavailable, planUnavailableBody } = require('./lib/subscription-state');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -216,6 +217,15 @@ app.use((_req, res) => {
 });
 
 app.use((err, req, res, _next) => {
+  // v13 SC-P0-01: entitlement could not be VERIFIED (Supabase/provider down).
+  // Every plan-reading route (auth/me, login, account billing, planGate,
+  // workspace creation) reaches here by throwing rather than silently falling
+  // back to 'free'. Answer with a stable, retryable 503 and no access change —
+  // the UI keeps whatever access it is already showing.
+  if (isEntitlementUnavailable(err)) {
+    logError('plan_unavailable', { req_id: req.id, path: req.path, message: err.message });
+    return res.status(503).json({ ...planUnavailableBody(), req_id: req.id });
+  }
   logError('unhandled_error', { req_id: req.id, path: req.path, message: err.message, stack: err.stack });
   const status = err.status || err.statusCode || 500;
   res.status(status).json({
