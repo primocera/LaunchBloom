@@ -206,15 +206,19 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // 3-day free trial for first-time subscribers only (no double-trialing).
     const giveTrial = !(await hadTrialOrActiveSubscription(email));
 
-    // Region currency (EUR for EU/EEA, USD otherwise). The price must carry this
-    // currency via Stripe currency_options or Stripe rejects the session — that
-    // rejection is desirable: better a clear 400 here than charging an EU card
-    // in USD, which fails after 3DS looking like a card decline.
+    // Region currency: 'eur' for EU/EEA buyers (when EUR pricing is enabled),
+    // 'usd' otherwise. We PIN the session currency only for EUR — that gives EU
+    // buyers the exact catalog euro price (from the price's EUR currency_options)
+    // and stops an EU card being charged USD (which fails after 3DS looking like
+    // a decline). For everyone else we set NO currency, so Stripe Adaptive
+    // Pricing (if the owner keeps it enabled) can present the buyer's own local
+    // currency, falling back to the price's USD base. Pinning USD here would
+    // suppress Adaptive for non-EU buyers.
     const currency = currencyForRequest(req);
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      currency,
+      ...(currency === 'eur' ? { currency: 'eur' } : {}),
       line_items: [{ price: priceId, quantity: 1 }],
       customer: customerId,
       client_reference_id: userId || undefined,

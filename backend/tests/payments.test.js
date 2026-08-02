@@ -110,7 +110,7 @@ test('first-time subscriber gets a 3-day trial; redirect uses PUBLIC_URL', async
   assert.ok(lastCheckout.success_url.startsWith('https://app.example.com/'));
 });
 
-test('checkout currency follows the buyer region when EUR pricing is enabled', async () => {
+test('EU buyer pins EUR; non-EU pins nothing so Adaptive Pricing can localize', async () => {
   process.env.EUR_PRICING_ENABLED = '1';
   try {
     reset();
@@ -119,23 +119,25 @@ test('checkout currency follows the buyer region when EUR pricing is enabled', a
     assert.equal(eu.status, 200);
     assert.equal(lastCheckout.currency, 'eur');
 
+    // A non-EU buyer must NOT have currency pinned — leaving it unset is what
+    // lets Adaptive Pricing (or the USD base) apply.
     reset();
     const us = await request(app).post('/api/payments/create-checkout-session')
       .set(...AUTHED).set('x-vercel-ip-country', 'US').send({ plan: 'starter', interval: 'monthly' });
     assert.equal(us.status, 200);
-    assert.equal(lastCheckout.currency, 'usd');
+    assert.equal(lastCheckout.currency, undefined);
   } finally {
     delete process.env.EUR_PRICING_ENABLED;
   }
 });
 
-test('with EUR pricing disabled (default), an EU buyer is still charged USD', async () => {
+test('with EUR pricing disabled (default), no currency is pinned for anyone', async () => {
   delete process.env.EUR_PRICING_ENABLED;
   reset();
   const eu = await request(app).post('/api/payments/create-checkout-session')
     .set(...AUTHED).set('x-vercel-ip-country', 'DE').send({ plan: 'starter', interval: 'monthly' });
   assert.equal(eu.status, 200);
-  assert.equal(lastCheckout.currency, 'usd');
+  assert.equal(lastCheckout.currency, undefined);
 });
 
 test('an already-subscribed user is blocked (no duplicate subscription)', async () => {
