@@ -394,6 +394,43 @@ router.get('/api/admin/scorecard', requireAuth, requireAdmin, async (req, res) =
   }
 });
 
+// ── SC-P1-12 · Capped-beta value scorecard ──────────────────────────────────
+// The activation value loop for the 10–20 user ICP beta. Read-only, pseudonymous
+// (ids only, no content), staff/test/demo accounts excluded by an auditable rule,
+// every funnel rate on one denominator, gates pre-registered as hypotheses.
+// Analytics failure here is isolated: a failed pull degrades to an empty cohort.
+const { computeScorecard, rosterFromEnv } = require('../lib/beta-scorecard');
+
+router.get('/api/admin/beta-scorecard', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await audit(req, 'beta_scorecard');
+    const days = Math.min(Number(req.query.days) || 7, 90);
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+
+    // Ids/timestamps/categorical properties only — never content.
+    let rows = [];
+    try {
+      const { data } = await supabase
+        .from('analytics_events')
+        .select('event, user_id, workspace_id, created_at, properties')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
+        .limit(20000);
+      rows = Array.isArray(data) ? data : [];
+    } catch {
+      rows = []; // analytics outage must not break the operator view
+    }
+
+    const scorecard = computeScorecard(rows, {
+      window: { days, since, until: new Date().toISOString() },
+      roster: rosterFromEnv(),
+    });
+    res.json(scorecard);
+  } catch {
+    res.status(500).json({ error: 'Beta scorecard failed', req_id: req.id });
+  }
+});
+
 // ── Email outbox (playbook v6, Prompt 6) ────────────────────────────────────
 
 // Dead letters and failing emails, so delivery problems are visible.
