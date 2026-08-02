@@ -42,25 +42,28 @@ Checked 2026-08-02. Mellowa is a **different stack** (Next.js + TypeScript) and 
 - `src/app/api/stripe/checkout/route.ts` passes **no** currency — it relies on the
   Stripe price simply *being* EUR. No region detection, no `currency_options`, no
   `EUR_PRICING_ENABLED` flag. Everyone pays EUR.
-- The code comments state the live prices were **already corrected from USD to EUR**.
+- The code comments *claimed* the live prices were corrected from USD to EUR — but
+  a live verify on 2026-08-02 showed they were **still USD** (999/5999 **usd**)
+  behind the €9.99/€59.99 labels. The correction had not actually reached the live
+  env. (This also explains EU card declines in the launch rehearsal.)
 - It already has its own `npm run verify-prices` (`scripts/verify-stripe-prices.mjs`)
   asserting the live prices match the EUR `BILLING_CONTRACT`.
 
-### The only Mellowa action: verify (no code changes)
+### What Mellowa actually needed (done 2026-08-02): repoint the env
 
-Confirm Mellowa's live prices are still EUR 9.99 / 59.99:
+Ran Mellowa's verify with the live key → both prices FAIL as `usd`. Correct **EUR**
+prices already existed on the products (999 eur / 5999 eur), just never wired into
+the env. So no new code and no new prices — just repoint the two Vercel vars:
 
 ```
-cd C:\Users\primo\dailyflowai
-# live STRIPE_SECRET_KEY + STRIPE_PRICE_PRO_MONTHLY/_YEARLY in a git-ignored .env.local
-node -r dotenv/config scripts/verify-stripe-prices.mjs dotenv_config_path=.env.local
+STRIPE_PRICE_PRO_MONTHLY = price_1TxjJI0YzvSNMCpN3nWPw01Y
+STRIPE_PRICE_PRO_YEARLY  = price_1TxjNa0YzvSNMCpN8H7bU79j
 ```
 
-Green (EUR 9.99 monthly, EUR 59.99 yearly) ⇒ nothing to do. If it shows USD or a
-wrong amount, recreate those two prices in **EUR** (base currency) and repoint
-`STRIPE_PRICE_PRO_*` — Mellowa charges the price's own currency, so the price must
-BE eur (this is simpler than Scalvya's currency_options approach and is the right
-model for a EUR-only product).
+Redeploy, then archive the old USD prices (`price_1TvRDS…`, `price_1TvREH…`).
+Because Mellowa's checkout charges the price's OWN currency (no currency passed),
+the fix is "the price must BE eur" — NOT Scalvya's currency_options approach. To
+re-check: `node scripts/verify-stripe-prices.mjs <env-file>` → all OK/eur.
 
 ### Why the approaches differ
 
