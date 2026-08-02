@@ -216,9 +216,8 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // suppress Adaptive for non-EU buyers.
     const currency = currencyForRequest(req);
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       mode: 'subscription',
-      ...(currency === 'eur' ? { currency: 'eur' } : {}),
       line_items: [{ price: priceId, quantity: 1 }],
       customer: customerId,
       client_reference_id: userId || undefined,
@@ -233,7 +232,30 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       // there; AppShell shows the matching success/cancel notice (v5 Prompt 2).
       success_url: `${baseUrl}/app?checkout=success&plan=${planName}&interval=${interval}`,
       cancel_url: `${baseUrl}/app?checkout=cancelled`,
-    });
+    };
+
+    // Pin EUR for EU buyers when enabled — but NEVER let a half-configured EUR
+    // setup break checkout. If the Stripe price has no EUR currency_option yet,
+    // Stripe rejects the session ("price ... only supports `usd`"); we catch that
+    // one case and retry in USD so the customer can still subscribe. EUR begins
+    // working automatically once the price carries it (see add-eur-currency.js).
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(
+        currency === 'eur' ? { ...sessionParams, currency: 'eur' } : sessionParams
+      );
+    } catch (err) {
+      const m = ((err && err.message) || '').toLowerCase();
+      const eurUnsupported = err && err.type === 'StripeInvalidRequestError'
+        && m.includes('currency') && (m.includes('usd') || m.includes('eur'));
+      if (currency === 'eur' && eurUnsupported) {
+        console.warn('[checkout] price lacks EUR currency_option — falling back to USD so checkout still works');
+        track('checkout_eur_fallback', { userId, properties: { plan: planName, interval } });
+        session = await stripe.checkout.sessions.create(sessionParams);
+      } else {
+        throw err;
+      }
+    }
 
     if (!session || !session.url) {
       track('checkout_failed', { userId, properties: { plan: planName, interval, reason: 'no_url' } });

@@ -12,6 +12,7 @@ const state = {
   user: { id: 'user-1', email: 'me@app.com' },
   currentPlan: null, // planFor() → what the caller already has
   hadTrial: false,   // hadTrialOrActiveSubscription()
+  rejectEur: false,  // simulate a Stripe price with no EUR currency_option
 };
 
 const fakeSupabase = makeFakeSupabase({
@@ -44,7 +45,17 @@ stubModule('lib/stripe.js', {
   },
   checkout: {
     sessions: {
-      create: async (payload) => { lastCheckout = payload; return { url: 'https://checkout.stripe.com/s' }; },
+      create: async (payload) => {
+        // Simulate a price that has no EUR currency_option: reject the EUR
+        // attempt exactly as live Stripe does, so the route's USD fallback runs.
+        if (payload.currency === 'eur' && state.rejectEur) {
+          const e = new Error("The price specified only supports `usd`. This doesn't match the expected currency: `eur`.");
+          e.type = 'StripeInvalidRequestError';
+          throw e;
+        }
+        lastCheckout = payload;
+        return { url: 'https://checkout.stripe.com/s' };
+      },
     },
   },
 });
@@ -63,6 +74,7 @@ function reset() {
   state.user = { id: 'user-1', email: 'me@app.com' };
   state.currentPlan = null;
   state.hadTrial = false;
+  state.rejectEur = false;
   lastCheckout = null;
   createdCustomers = 0;
 }
@@ -126,6 +138,22 @@ test('EU buyer pins EUR; non-EU pins nothing so Adaptive Pricing can localize', 
       .set(...AUTHED).set('x-vercel-ip-country', 'US').send({ plan: 'starter', interval: 'monthly' });
     assert.equal(us.status, 200);
     assert.equal(lastCheckout.currency, undefined);
+  } finally {
+    delete process.env.EUR_PRICING_ENABLED;
+  }
+});
+
+test('EU checkout falls back to USD (not an error) when the price has no EUR yet', async () => {
+  process.env.EUR_PRICING_ENABLED = '1';
+  try {
+    reset();
+    state.rejectEur = true; // the Stripe price only supports USD
+    const eu = await request(app).post('/api/payments/create-checkout-session')
+      .set(...AUTHED).set('x-vercel-ip-country', 'DE').send({ plan: 'starter', interval: 'monthly' });
+    // The customer still gets a working checkout — in USD — rather than a 4xx.
+    assert.equal(eu.status, 200);
+    assert.ok(eu.body.url, 'checkout url should still be returned');
+    assert.equal(lastCheckout.currency, undefined); // retried without a pinned currency
   } finally {
     delete process.env.EUR_PRICING_ENABLED;
   }
