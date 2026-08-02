@@ -2,15 +2,11 @@ require('dotenv').config();
 
 const express = require('express');
 const helmet = require('helmet');
-// v5 Prompt 15: loud deploy-time warning while legal placeholders remain.
-{
-  const { legalPlaceholders } = require('./lib/brand');
-  const missing = legalPlaceholders();
-  if (missing.length && process.env.NODE_ENV === 'production') {
-    const enforced = process.env.ENFORCE_LAUNCH_CONFIG === '1';
-    console.warn(`[legal] legal config incomplete (${missing.join(', ')}) — ${enforced ? 'real checkout is BLOCKED (ENFORCE_LAUNCH_CONFIG=1)' : 'checkout allowed; set these + ENFORCE_LAUNCH_CONFIG=1 before charging real customers'}`);
-  }
-}
+// v13 SC-P0-04: launch configuration is validated automatically at startup, so
+// a paid production deploy with placeholder legal/billing config is visible
+// BEFORE it can serve checkout. In production this needs no flag; an unsafe
+// bypass (UNSAFE_SKIP_LAUNCH_CONFIG_CHECK) refuses to start there.
+require('./lib/launch-config').startupLaunchConfigCheck();
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { BRAND } = require('./lib/brand');

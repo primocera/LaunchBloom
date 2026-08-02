@@ -44,6 +44,19 @@ function legalPlaceholders() {
   return missing;
 }
 
+/**
+ * Public Terms / Privacy URLs (v13 SC-P0-04). Default to the deployed site's
+ * own legal pages; override per-deploy when they live elsewhere. Production
+ * must not sell without real, public HTTPS links (validated in launch-config).
+ */
+function legalUrls() {
+  const base = String(BRAND.siteUrl || '').replace(/\/+$/, '');
+  return {
+    terms: process.env.BRAND_TERMS_URL || (base ? `${base}/terms` : ''),
+    privacy: process.env.BRAND_PRIVACY_URL || (base ? `${base}/privacy` : ''),
+  };
+}
+
 // Bump when Terms/Privacy change materially; signup records the accepted
 // version so consent is auditable (Prompt 14).
 const LEGAL_VERSION = process.env.LEGAL_VERSION || '2026-07-15';
@@ -53,4 +66,4 @@ function emailFrom() {
   return `${BRAND.senderName} <${BRAND.senderEmail}>`;
 }
 
-module.exports = { BRAND, emailFrom, LEGAL_VERSION, legalPlaceholders };
+module.exports = { BRAND, emailFrom, LEGAL_VERSION, legalPlaceholders, legalUrls };

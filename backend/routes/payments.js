@@ -180,17 +180,22 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       return checkoutUnavailable(res, { retryable: false, reason: 'price_not_configured' });
     }
 
-    // v5 Prompt 15: never take real money while legal placeholders remain live.
-    // Optional by default (so test-mode Stripe / preview deploys work before the
-    // legal entity + domain are known); set ENFORCE_LAUNCH_CONFIG=1 to hard-block
-    // real checkout once you go live.
-    if (process.env.NODE_ENV === 'production') {
-      const { legalPlaceholders } = require('../lib/brand');
-      const missing = legalPlaceholders();
-      if (missing.length) {
-        console.warn('[checkout] legal config incomplete:', missing.join(', '));
-        if (process.env.ENFORCE_LAUNCH_CONFIG === '1') {
-          return res.status(500).json({ error: 'Checkout is temporarily unavailable.', code: 'CONFIG' });
+    // v13 SC-P0-04: never take real money on an incomplete launch config.
+    // Request-time defense in depth behind the startup check and the
+    // requireLaunchReady middleware — enforced automatically in production,
+    // warn-only in dev/preview so test-mode Stripe still works.
+    {
+      const { launchConfigProblems, launchConfigEnforced } = require('../lib/launch-config');
+      const problems = launchConfigProblems();
+      if (problems.length) {
+        // Variable names + categories only — never a configured value.
+        console.warn('[checkout] launch config incomplete:', problems.join('; '));
+        if (launchConfigEnforced()) {
+          return res.status(503).json({
+            error: 'Checkout is temporarily unavailable. Your workspace and drafts are unaffected.',
+            code: 'LAUNCH_CONFIG_INCOMPLETE',
+            req_id: req.id,
+          });
         }
       }
     }

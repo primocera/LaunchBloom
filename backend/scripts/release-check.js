@@ -31,7 +31,7 @@ require('dotenv').config({
   override: false,
 });
 
-const { launchMode, launchConfigProblems } = require('../lib/launch-config');
+const { launchMode, launchConfigProblems, bypassRequested, UNSAFE_BYPASS } = require('../lib/launch-config');
 const { RULES_VERSION } = require('../lib/consistency');
 const { DEPENDENCIES_VERSION } = require('../lib/brief-impact');
 const { missingStripeEnv } = require('../lib/plan-catalog');
@@ -100,6 +100,14 @@ function collect() {
   const ceiling = spendCeiling();
   add('ai:spend_ceiling', ceiling.ok, ceiling.detail,
     mode === 'production' ? 'blocker' : 'external');
+
+  // 8. v13 SC-P0-04: the unsafe bypass must never be present on a release
+  //    candidate. It is dev/test-only and the server refuses to boot with it
+  //    in production — a release must not ship depending on it.
+  add('launch:unsafe_bypass', !bypassRequested(),
+    bypassRequested()
+      ? `${UNSAFE_BYPASS} is set — remove it (rejected in production)`
+      : `${UNSAFE_BYPASS} not set`);
 
   return { mode, checks };
 }

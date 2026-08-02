@@ -68,17 +68,32 @@ gap. E2E is run locally against a credential-blanked server.
 - **Public copy:** landing/features reviewed — no ranking guarantees, no "priority
   exports", no unlimited/white-label/team-collab claims. ✅
 
-## 4. Launch config — now OPTIONAL by default (deferred until domain is known)
+## 4. Launch config — FAIL-CLOSED in production (v13 SC-P0-04)
 
 Migrations 015–023 have been run. ✅
 
-The legal + Stripe config gates are **optional by default** so the app can be
-deployed/previewed and tested with **sandbox (test-mode) Stripe** before a real
-domain or legal entity exists. To hard-enforce them for the real, money-taking
-launch, set **`ENFORCE_LAUNCH_CONFIG=1`** — then missing legal values block real
-checkout and missing Stripe prices 500 `/api/plans`, exactly as before.
+Behaviour by environment (no flag to remember):
 
-**Before charging REAL customers** (set `ENFORCE_LAUNCH_CONFIG=1` and provide):
+| Environment | Mode | Behaviour on incomplete config |
+|---|---|---|
+| `NODE_ENV=production` + **live** Stripe key (`sk_live…`) | `production` | **Always enforced.** Startup logs the blocking problems; `/api/payments/*` and `/api/ai/*` return **503 `LAUNCH_CONFIG_INCOMPLETE`**; `/api/plans` returns 500 `CONFIG` on missing prices. |
+| `NODE_ENV=production` + test/absent Stripe key | `preview` | Warn-only (unless `ENFORCE_LAUNCH_CONFIG=1`). |
+| local dev / `NODE_ENV=test` | `test` | Warn-only; documented stubs keep the app clickable. |
+
+- `ENFORCE_LAUNCH_CONFIG=1` can only **add** enforcement outside production (to
+  rehearse it). It is never what turns production safety on.
+- `UNSAFE_SKIP_LAUNCH_CONFIG_CHECK=1` is a deliberately-unsafe dev/test escape
+  hatch. With `NODE_ENV=production` the server **refuses to start** and
+  `npm run release:check` flags it.
+- Rejected as blocking problems: placeholder/localhost/non-HTTPS `PUBLIC_URL`,
+  `ALLOWED_ORIGINS` entries or Terms/Privacy URLs (`BRAND_TERMS_URL`,
+  `BRAND_PRIVACY_URL`, defaulting to `<BRAND_URL>/terms|/privacy`); missing
+  legal entity values; missing Stripe price mapping under a live key; and an
+  enabled-but-incomplete currency catalog (`EUR_PRICING_ENABLED=1` without
+  `EUR_PRICES_VERIFIED=1` or with any price env missing).
+- Errors and logs name **variable names and categories only** — never a value.
+
+**Before charging REAL customers** (provide):
 
 1. **Legal:** `BRAND_LEGAL_NAME`, `BRAND_LEGAL_ADDRESS`, `BRAND_GOVERNING_LAW`
    (optional `BRAND_PRIVACY_EMAIL`).

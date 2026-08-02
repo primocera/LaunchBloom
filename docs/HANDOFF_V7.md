@@ -172,7 +172,9 @@ npm run test:e2e     # Playwright (public/anon journeys; needs Chromium)
 These gate paid launch and cannot be produced from the dev environment:
 
 - Live Stripe prices set in env: `STRIPE_PRICE_{STARTER,PRO,STUDIO}_{MONTHLY,YEARLY}`.
-- `PUBLIC_URL` (real domain) + `ENFORCE_LAUNCH_CONFIG=1` once legal config is real.
+- `PUBLIC_URL` (real domain) + real legal config. Since v13 SC-P0-04 production
+  enforces this automatically — `ENFORCE_LAUNCH_CONFIG` is only for rehearsing
+  enforcement outside production; see docs/BETA_GO_NO_GO.md §4.
 - Verified Resend sending domain.
 - Email outbox trigger: cron-job.org calling `GET /api/cron/email-outbox` with
   `Authorization: Bearer ${CRON_SECRET}` (Vercel crons need a paid plan).
