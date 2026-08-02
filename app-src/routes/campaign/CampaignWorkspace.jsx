@@ -7,6 +7,7 @@ import {
   SECTIONS, missingDecisions, hasNoDates, fmtDate, sectionPath,
 } from './shared';
 import { campaignSummary, campaignNextAction, readinessGroups } from '../../lib/campaign-next-action';
+import { safeInternalPath } from '../../lib/safe-path';
 import {
   Deliverables, BriefImpact, PackagePreview, HandoffExports, SaveTemplate,
 } from './panels';
@@ -134,7 +135,10 @@ function Overview({ campaign, navigate }) {
   const summary = campaignSummary(campaign, review);
   const na = campaignNextAction(summary);
   const groups = readinessGroups(summary);
-  const isRoute = na.destination.startsWith('/app/campaigns');
+  // v13 SC-P0-06: the destination is data-derived; validate it centrally so no
+  // value can ever drive an off-origin navigation through this sink.
+  const destination = safeInternalPath(na.destination);
+  const isRoute = destination.startsWith('/app/campaigns');
 
   // next_action_viewed on each new action_code; next_action_completed when the
   // previously-viewed action is no longer current after a summary reload (a
@@ -166,8 +170,8 @@ function Overview({ campaign, navigate }) {
         <h2 style={{ marginTop: 0 }}>Next: {na.label}</h2>
         <p className="muted" style={{ marginTop: 0 }}>{na.reason}</p>
         {isRoute
-          ? <button className="btn-primary" onClick={() => navigate(na.destination)}>{na.label}</button>
-          : <a className="btn-primary" href={na.destination}>{na.label}</a>}
+          ? <button className="btn-primary" onClick={() => navigate(destination)}>{na.label}</button>
+          : <a className="btn-primary" href={destination}>{na.label}</a>}
       </div>
 
       {/* Transparent readiness — four groups with reasons, no synthetic score. */}
