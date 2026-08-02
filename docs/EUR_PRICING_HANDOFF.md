@@ -1,21 +1,20 @@
-# EUR pricing — handoff for replicating in Mellowa
+# EUR pricing — Scalvya implementation + Mellowa status
 
-How Scalvya added region-based EUR/USD pricing, and exactly what to repeat in the
-Mellowa repo. Same shared (EU-based) Stripe account, same ConversionForge-derived
-stack, so this is mostly a copy — but read the **Mellowa-specific cautions** first.
+Records how Scalvya added region-based EUR/USD pricing, and — after checking the
+Mellowa (dailyflowai) repo — what Mellowa actually needs (spoiler: not this).
 
-## The problem this fixes
+## The problem this fixes (Scalvya)
 
-The Stripe account is **EU-based** (settles in EUR) but prices were authored only
-in **USD**. Result: EU buyers were quoted and *charged* in USD, and their cards
-failed 3DS looking like declines ("past due" invoices). Stripe **Adaptive Pricing
-does NOT fix this** — it only localizes for buyers in a country *different* from
-the account's, needs prices in the settlement currency, and ignores separate EUR
-price objects. The fix is explicit multi-currency: attach EUR onto the *same*
-Stripe price the app charges (`currency_options`), and have checkout pin EUR for
-EU buyers.
+The shared Stripe account is **EU-based** (settles in EUR) but Scalvya's prices
+were authored only in **USD**. EU buyers were quoted and *charged* in USD, and
+their cards failed 3DS looking like declines ("past due" invoices). Stripe
+**Adaptive Pricing does NOT fix this** — it only localizes for buyers in a country
+*different* from the account's, needs prices in the settlement currency, and
+ignores separate EUR price objects. Scalvya's fix: explicit multi-currency —
+attach EUR onto the *same* Stripe price the app charges (`currency_options`), and
+have checkout pin EUR for EU buyers, USD for the rest.
 
-## Scalvya reference commits (copy these changes)
+## Scalvya implementation (commits)
 
 - `b8809c9` region-based EUR/USD pricing (currency lib, dual-currency catalog, `/api/plans`, checkout, verify script, tests)
 - `50b3062` pin EUR only for EU buyers; leave others to Adaptive Pricing
@@ -23,64 +22,48 @@ EU buyers.
 - `f03a392` `add-eur-currency` script (attach EUR onto existing prices)
 - `1bd4b5a` expand `currency_options` so the script confirms its own write; git-ignore `.env.live`
 
-## Code changes (mirror in Mellowa)
+Key files: `backend/lib/currency.js` (NEW, region→currency, gated on `EUR_PRICING_ENABLED`),
+`backend/lib/plan-catalog.js` (`PRICES` per-currency + `money()` + `publicCatalog(currency)`),
+`backend/routes/plans.js` (currency-aware + `private` cache/Vary), `backend/routes/payments.js`
+(pin EUR only for EU + USD fallback), `backend/scripts/{verify-stripe-prices,add-eur-currency}.js`.
 
-1. **`backend/lib/currency.js`** (NEW) — `EUR_COUNTRIES` (EU-27 + EEA), `currencyForCountry`,
-   `currencyForRequest(req)` reading `x-vercel-ip-country` (Cloudflare fallback), fail-closed
-   to USD. **Gated behind `EUR_PRICING_ENABLED`** — off ⇒ always USD, so deploy is inert until
-   the flag is set. `eurEnabled()` exported.
-2. **`backend/lib/plan-catalog.js`** — `PRICES` becomes `{plan:{usd:{monthly,yearly}, eur:{...}}}`.
-   Add `money(amount, currency)` (`$`/`€`). `yearlySavings(plan, currency)`, `maxSavingsPct(currency)`.
-   `publicCatalog(currency='usd')` returns that currency's display + a `currency` field, plus a
-   `currency_note` gated on `EUR_PRICING_ENABLED`.
-3. **`backend/routes/plans.js`** — `const currency = currencyForRequest(req)`, pass to
-   `publicCatalog(currency)`. **Change caching**: `Cache-Control: private, max-age=300` +
-   `res.vary('X-Vercel-IP-Country')` — never `public` again (a CDN would serve one region's
-   currency to another).
-4. **`backend/routes/payments.js`** — build `sessionParams` without currency; then
-   `stripe.checkout.sessions.create(currency === 'eur' ? {...sessionParams, currency:'eur'} : sessionParams)`.
-   **Pin EUR only for EU**; leave others unset so Adaptive Pricing localizes them. Wrap in a
-   try/catch that, on a StripeInvalidRequestError whose message mentions currency+usd/eur,
-   retries WITHOUT currency (USD fallback) so checkout never hard-breaks.
-5. **`backend/scripts/verify-stripe-prices.js`** — retrieve with `expand:['currency_options']`;
-   assert base currency `usd` + `currency_options.eur` present and matching for every price.
-6. **`backend/scripts/add-eur-currency.js`** (NEW) — one-shot idempotent: for each `STRIPE_PRICE_*`,
-   `stripe.prices.update(id, { currency_options:{ eur:{ unit_amount: cents }}, expand:['currency_options'] })`.
-   The Stripe **Dashboard makes a NEW price** when you "add a currency"; the **API edits in place** —
-   that's why this script exists.
-7. **`package.json`** — `"add-eur-prices": "node backend/scripts/add-eur-currency.js"`.
-8. **`.gitignore`** — add `.env.live`, `.env.production`, `.env.*.local`.
-9. **Tests** — port `backend/tests/currency.test.js` (NEW) and the dual-currency updates in
-   `plan-catalog.test.js`, `pricing-contract.test.js`, `payments.test.js` (EU→EUR, non-EU pins
-   nothing, USD fallback, flag-off ⇒ USD).
+Stripe ops: added EUR `currency_options` to the 6 live prices via the API (Dashboard
+makes a NEW price; the API edits in place), kept USD default, Adaptive Pricing left ON,
+`EUR_PRICING_ENABLED=1` in Vercel. Verified live and working.
 
-## Ops steps (owner)
+## Mellowa (dailyflowai) — DOES NOT need the above
 
-1. **Pick Mellowa's EUR amounts** from ITS OWN USD prices — do NOT reuse Scalvya's numbers.
-   Convert at the ECB rate (Scalvya used 1 USD = 0.8707 on 2026-07-31; use a current rate),
-   monthly to cents, yearly to whole euros. Put them in Mellowa's `plan-catalog` `PRICES.eur`.
-2. **Attach EUR to Mellowa's live prices** with the script. Create a git-ignored `.env.live`
-   holding Mellowa's live `STRIPE_SECRET_KEY` + Mellowa's `STRIPE_PRICE_*` ids, then:
-   ```
-   node -r dotenv/config backend/scripts/add-eur-currency.js dotenv_config_path=.env.live
-   node -r dotenv/config backend/scripts/verify-stripe-prices.js dotenv_config_path=.env.live
-   ```
-   Confirm `Mode: LIVE`, the correct account, and all ✓. Then **delete `.env.live`**.
-3. **Keep USD as the default** currency on each price; add EUR alongside. **Adaptive Pricing can
-   stay ON** (account-wide, already enabled) — it serves non-EU buyers; EU is pinned to EUR.
-4. **Vercel** → set `EUR_PRICING_ENABLED=1` on the Mellowa project → redeploy.
-5. **Test**: fresh EU email, **no VPN** → EUR shown and charged. Non-EU → USD.
+Checked 2026-08-02. Mellowa is a **different stack** (Next.js + TypeScript) and is
+**EUR-only by design** — do not port Scalvya's dual-currency code into it.
 
-## Mellowa-specific cautions
-
-- **Different prices/plans.** Mellowa's plan names, amounts, and number of prices differ. Adjust
-  `PRICES`, `STRIPE_ENV`, and `PLAN_LIMITS` mappings to Mellowa's actual catalog — don't assume
+- `src/lib/stripe/plans.ts` pins `BILLING_CONTRACT = { currency: "eur", monthly 999,
+  yearly 5999 }`; `PRICING` shows €9.99/mo and €59.99/yr. One paid plan (PRO), not
   starter/pro/studio.
-- **Shared Stripe account.** Mellowa's price IDs are different objects in the same account. Only
-  touch Mellowa's price IDs. Adaptive Pricing is already on account-wide.
-- **Per-customer currency pinning.** Stripe pins currency to a customer on first transaction, so
-  only NEW customers see EUR — test with a fresh `+alias` email, never a reused one.
-- **Rollback.** Unset `EUR_PRICING_ENABLED` and redeploy ⇒ back to USD-only instantly. The USD
-  fallback in checkout means a half-configured state never errors.
-- **Key hygiene.** Any live key placed in a local file should be rolled afterwards. Never commit
-  `.env.live`.
+- `src/app/api/stripe/checkout/route.ts` passes **no** currency — it relies on the
+  Stripe price simply *being* EUR. No region detection, no `currency_options`, no
+  `EUR_PRICING_ENABLED` flag. Everyone pays EUR.
+- The code comments state the live prices were **already corrected from USD to EUR**.
+- It already has its own `npm run verify-prices` (`scripts/verify-stripe-prices.mjs`)
+  asserting the live prices match the EUR `BILLING_CONTRACT`.
+
+### The only Mellowa action: verify (no code changes)
+
+Confirm Mellowa's live prices are still EUR 9.99 / 59.99:
+
+```
+cd C:\Users\primo\dailyflowai
+# live STRIPE_SECRET_KEY + STRIPE_PRICE_PRO_MONTHLY/_YEARLY in a git-ignored .env.local
+node -r dotenv/config scripts/verify-stripe-prices.mjs dotenv_config_path=.env.local
+```
+
+Green (EUR 9.99 monthly, EUR 59.99 yearly) ⇒ nothing to do. If it shows USD or a
+wrong amount, recreate those two prices in **EUR** (base currency) and repoint
+`STRIPE_PRICE_PRO_*` — Mellowa charges the price's own currency, so the price must
+BE eur (this is simpler than Scalvya's currency_options approach and is the right
+model for a EUR-only product).
+
+### Why the approaches differ
+
+Scalvya targets USD-first and wanted EUR *added* for EU buyers → dual-currency +
+region switching. Mellowa is EUR-only → the price is just EUR, no switching. Same
+underlying lesson (displayed currency must equal charged currency), different fix.
