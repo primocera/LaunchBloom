@@ -34,6 +34,13 @@ const EXPECTED_INTERVAL = { monthly: 'month', yearly: 'year' };
 
 function fail(msg) { console.error(`  ✗ ${msg}`); }
 function ok(msg) { console.log(`  ✓ ${msg}`); }
+function warn(msg) { console.warn(`  ! ${msg}`); }
+
+// v13 SC-P0-03: EUR is a REQUIRED pair once the EUR launch is switched on —
+// a missing or wrong EUR price is then a hard failure, because the pricing page
+// would quote euros the checkout cannot honour. While EUR is off, EUR gaps are
+// reported as warnings (USD is the only currency anyone can be charged in).
+const EUR_REQUIRED = process.env.EUR_PRICING_ENABLED === '1';
 
 async function main() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -44,13 +51,17 @@ async function main() {
 
   const stripe = Stripe(key);
   const problems = [];
+  const warnings = [];
+  const productsByPlan = {};
+  let pairsChecked = 0;
 
   // ── which account are we even talking to? ────────────────────────────────
   const account = await stripe.accounts.retrieve();
   const livemode = !key.startsWith('sk_test');
   console.log(`Stripe account : ${account.id}`);
   console.log(`Mode           : ${livemode ? 'LIVE' : 'TEST'}`);
-  console.log(`Expected       : ${BASE_CURRENCY.toUpperCase()} base + EUR currency_options\n`);
+  console.log(`Expected       : ${BASE_CURRENCY.toUpperCase()} base + EUR currency_options`);
+  console.log(`EUR launch     : ${EUR_REQUIRED ? 'ENABLED — every EUR pair is REQUIRED' : 'disabled — EUR gaps are warnings'}\n`);
 
   if (!livemode) {
     console.log('NOTE: this is a TEST-mode key. Test prices say nothing about what\n' +
@@ -83,6 +94,8 @@ async function main() {
 
       const actualUsd = price.unit_amount / 100;
       const issues = [];
+      const softIssues = [];
+      pairsChecked += 1; // the USD pair
 
       // Base currency: USD.
       if (price.currency !== BASE_CURRENCY) {
@@ -91,14 +104,34 @@ async function main() {
       if (actualUsd !== expectedUsd) {
         issues.push(`USD charges ${actualUsd}, app displays ${expectedUsd}`);
       }
+
+      // Product ownership: every price of a plan must hang off ONE product, and
+      // that product must be active. A price pointing at another product (or an
+      // archived one) is how a plan silently sells the wrong thing.
+      const productId = typeof price.product === 'string' ? price.product : price.product?.id;
+      if (!productId) {
+        issues.push('price has no product');
+      } else if (productsByPlan[plan] && productsByPlan[plan] !== productId) {
+        issues.push(`product ${productId} differs from ${plan}'s other price (${productsByPlan[plan]})`);
+      } else {
+        productsByPlan[plan] = productId;
+      }
+
       // EUR must be present under currency_options and match the catalog, or an
       // EU checkout (which sets currency:'eur') fails outright.
       const eurOpt = price.currency_options && price.currency_options.eur;
+      const eurIssues = [];
+      pairsChecked += 1; // the EUR pair
       if (!eurOpt) {
-        issues.push("EUR is not configured on this price (add it via Stripe → the price → 'Add another currency')");
+        eurIssues.push("EUR is not configured on this price (add it via Stripe → the price → 'Add another currency')");
       } else if (eurOpt.unit_amount / 100 !== expectedEur) {
-        issues.push(`EUR charges ${eurOpt.unit_amount / 100}, app displays ${expectedEur}`);
+        eurIssues.push(`EUR charges ${eurOpt.unit_amount / 100}, app displays ${expectedEur}`);
+      } else if (eurOpt.recurring && eurOpt.recurring.interval
+          && eurOpt.recurring.interval !== EXPECTED_INTERVAL[interval]) {
+        eurIssues.push(`EUR bills per ${eurOpt.recurring.interval}, expected per ${EXPECTED_INTERVAL[interval]}`);
       }
+      (EUR_REQUIRED ? issues : softIssues).push(...eurIssues);
+
       if (price.recurring?.interval !== EXPECTED_INTERVAL[interval]) {
         issues.push(`bills per ${price.recurring?.interval || 'one-time'}, expected per ${EXPECTED_INTERVAL[interval]}`);
       }
@@ -110,12 +143,22 @@ async function main() {
         problems.push(`${label}: ${issues.join('; ')}`);
         fail(`${label} (${priceId}) — ${issues.join('; ')}`);
       } else {
-        ok(`${label} — USD ${actualUsd} + EUR ${eurOpt.unit_amount / 100} /${price.recurring.interval}`);
+        const eurText = eurOpt ? `EUR ${eurOpt.unit_amount / 100}` : 'EUR missing';
+        ok(`${label} — USD ${actualUsd} + ${eurText} /${price.recurring.interval} · product ${productId}`);
+      }
+      if (softIssues.length) {
+        warnings.push(`${label}: ${softIssues.join('; ')}`);
+        warn(`${label}: ${softIssues.join('; ')} (not fatal while EUR_PRICING_ENABLED is off)`);
       }
     }
   }
 
   console.log('');
+  console.log(`Plan/currency pairs checked: ${pairsChecked} (${Object.keys(STRIPE_ENV).length} plans × 2 intervals × 2 currencies)`);
+  if (warnings.length) {
+    console.warn(`${warnings.length} warning(s) — these become HARD FAILURES with EUR_PRICING_ENABLED=1:`);
+    for (const w of warnings) console.warn(`  - ${w}`);
+  }
   if (problems.length) {
     console.error(`${problems.length} pricing problem(s) found:`);
     for (const p of problems) console.error(`  - ${p}`);

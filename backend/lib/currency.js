@@ -51,12 +51,37 @@ function eurEnabled() {
   return process.env.EUR_PRICING_ENABLED === '1';
 }
 
-/** Billing currency for the request: USD unless EUR is enabled AND the buyer is EU/EEA. */
+/**
+ * v13 SC-P0-03: EUR may only be SELECTED once the EUR catalog has actually been
+ * verified against Stripe. `npm run verify-prices` proves every plan/interval
+ * carries a matching EUR currency_option; the owner then attests that result to
+ * the runtime with EUR_PRICES_VERIFIED=1. In production, EUR_PRICING_ENABLED
+ * alone is NOT enough — an unverified EUR catalog silently degrades to the
+ * explicitly configured USD fallback BEFORE anything is displayed, so a buyer
+ * can never be shown EUR and then charged USD. Outside production the flag is
+ * sufficient so the path stays testable.
+ */
+function eurCatalogVerified() {
+  if (process.env.NODE_ENV !== 'production') return true;
+  return process.env.EUR_PRICES_VERIFIED === '1';
+}
+
+/** True when EUR is both switched on and proven configured. */
+function eurCatalogReady() {
+  return eurEnabled() && eurCatalogVerified();
+}
+
+/**
+ * Billing currency for the request: USD unless EUR is enabled, VERIFIED, and the
+ * buyer is EU/EEA. This is the single decision point — display and checkout both
+ * read it (via plan-catalog.selectCatalog) so they can never disagree.
+ */
 function currencyForRequest(req) {
-  if (!eurEnabled()) return 'usd';
+  if (!eurCatalogReady()) return 'usd';
   return currencyForCountry(countryOf(req));
 }
 
 module.exports = {
-  EUR_COUNTRIES, SUPPORTED, currencyForCountry, countryOf, currencyForRequest, eurEnabled,
+  EUR_COUNTRIES, SUPPORTED, currencyForCountry, countryOf, currencyForRequest,
+  eurEnabled, eurCatalogVerified, eurCatalogReady,
 };

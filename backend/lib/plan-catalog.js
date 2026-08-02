@@ -9,7 +9,14 @@
 // ---------------------------------------------------------------------------
 
 const { PLAN_LIMITS } = require('./plan-limits');
-const { SUPPORTED } = require('./currency');
+const {
+  SUPPORTED, EUR_COUNTRIES, countryOf, currencyForCountry, eurEnabled, eurCatalogReady,
+} = require('./currency');
+
+// v13 SC-P0-03: bumped whenever PRICES or the currency rules change. Pricing
+// page, paywall, checkout CTA and the server-created Checkout Session all carry
+// this same value, so a display/charge mismatch is traceable to one catalog.
+const CATALOG_VERSION = '2026-07-31.1';
 
 // One successful user-triggered generation or regeneration = one AI action.
 const AI_ACTION_DEFINITION =
@@ -127,6 +134,9 @@ function publicCatalog(currency = 'usd') {
   const trial = PLAN_LIMITS.trial;
   return {
     currency: cur,
+    // v13 SC-P0-03: the catalog version the buyer was shown. Checkout stamps the
+    // same value on its Stripe session metadata.
+    catalog_version: CATALOG_VERSION,
     plans,
     trial: {
       days: 3,
@@ -152,6 +162,105 @@ function publicCatalog(currency = 'usd') {
   };
 }
 
+// ---------------------------------------------------------------------------
+// v13 SC-P0-03 — authoritative server-side catalog selection.
+//
+// ONE function decides region -> currency -> price id -> availability. GET
+// /api/plans (what the buyer sees) and POST create-checkout-session (what the
+// buyer is charged) both call it, so the displayed price and the charged price
+// come from the same decision. Client input never selects a currency or a
+// Stripe price id: only { plan, interval } is accepted, and both are validated
+// against this table.
+// ---------------------------------------------------------------------------
+
+const PLAN_ALIASES = { business: 'studio' };
+const LEGACY_PLAN_ENV = {
+  starter: 'STRIPE_PRICE_STARTER',
+  pro: 'STRIPE_PRICE_PRO',
+  studio: 'STRIPE_PRICE_BUSINESS',
+};
+
+/** The env var name ("price key") that holds the Stripe price for a plan/interval. */
+function priceKey(plan, interval) {
+  const p = PLAN_ALIASES[plan] || plan;
+  const entry = STRIPE_ENV[p];
+  if (!entry) return null;
+  return entry[interval === 'yearly' ? 'yearly' : 'monthly'];
+}
+
+/** Resolve the Stripe price id for a plan/interval from env (legacy monthly fallback). */
+function stripePriceId(plan, interval) {
+  const p = PLAN_ALIASES[plan] || plan;
+  const key = priceKey(p, interval);
+  if (!key) return null;
+  return process.env[key] || process.env[LEGACY_PLAN_ENV[p]] || null;
+}
+
+/**
+ * Authoritative selection for a request.
+ *
+ * @param {object} req  express request (read for edge geo headers only)
+ * @param {object} [opts] { plan, interval } when a specific price is needed
+ * @returns {{
+ *   region: 'eu'|'non_eu', currency: 'usd'|'eur', requested_currency: 'usd'|'eur',
+ *   catalog_version: string, fallback_reason: string|null,
+ *   plan: string|null, interval: string|null,
+ *   price_key: string|null, price_id: string|null, available: boolean,
+ * }}
+ */
+function selectCatalog(req, opts = {}) {
+  const country = String(countryOf(req) || '').trim().toUpperCase();
+  const region = EUR_COUNTRIES.has(country) ? 'eu' : 'non_eu';
+
+  // What the region WOULD be quoted if EUR were fully live, vs what it actually
+  // gets. The fallback is decided here, before display — never after.
+  const requested = eurEnabled() ? currencyForCountry(country) : 'usd';
+  let currency = requested;
+  let fallbackReason = null;
+  if (requested === 'eur' && !eurCatalogReady()) {
+    currency = 'usd';
+    fallbackReason = 'eur_catalog_unverified';
+  }
+  if (currency === 'eur' && missingStripeEnv().length) {
+    currency = 'usd';
+    fallbackReason = 'stripe_price_env_incomplete';
+  }
+
+  const plan = opts.plan ? (PLAN_ALIASES[opts.plan] || opts.plan) : null;
+  const interval = opts.interval === 'yearly' ? 'yearly' : (opts.interval ? 'monthly' : null);
+  const known = plan ? Object.prototype.hasOwnProperty.call(PRICES, plan) : false;
+  const key = known ? priceKey(plan, interval) : null;
+  const id = known ? stripePriceId(plan, interval) : null;
+
+  return {
+    region,
+    currency,
+    requested_currency: requested,
+    catalog_version: CATALOG_VERSION,
+    fallback_reason: fallbackReason,
+    plan: known ? plan : null,
+    interval,
+    price_key: key,
+    price_id: id,
+    // With no plan asked for, availability means "the catalog can be displayed".
+    available: plan ? Boolean(known && id) : true,
+  };
+}
+
+/** Redacted, PII-free telemetry shape for a selection (safe to log/track). */
+function selectionTelemetry(sel) {
+  return {
+    region: sel.region,
+    currency: sel.currency,
+    requested_currency: sel.requested_currency,
+    catalog_version: sel.catalog_version,
+    fallback_reason: sel.fallback_reason,
+    plan: sel.plan,
+    interval: sel.interval,
+    price_key: sel.price_key, // env var NAME, never the price id or any user data
+  };
+}
+
 /** Names of Stripe price env vars that are missing (for production config checks). */
 function missingStripeEnv() {
   const missing = [];
@@ -170,6 +279,12 @@ module.exports = {
   PRICES,
   INCLUDED_FREE,
   STRIPE_ENV,
+  CATALOG_VERSION,
+  PLAN_ALIASES,
+  priceKey,
+  stripePriceId,
+  selectCatalog,
+  selectionTelemetry,
   AI_ACTION_DEFINITION,
   money,
   yearlySavings,

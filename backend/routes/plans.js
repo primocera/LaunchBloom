@@ -7,8 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { publicCatalog, missingStripeEnv } = require('../lib/plan-catalog');
-const { currencyForRequest } = require('../lib/currency');
+const { publicCatalog, missingStripeEnv, selectCatalog } = require('../lib/plan-catalog');
 
 function plansHandler(req, res) {
   const missing = missingStripeEnv();
@@ -24,10 +23,12 @@ function plansHandler(req, res) {
   // cache keyed only on the URL would hand a US visitor a cached EUR page and
   // vice versa, so this response is per-client `private` and also Varies on the
   // geo header. Never `public` again while pricing is region-dependent.
-  const currency = currencyForRequest(req);
+  // v13 SC-P0-03: the SAME authoritative selection checkout uses, so the price
+  // shown here is the price charged there (same catalog_version, same currency).
+  const selection = selectCatalog(req);
   res.set('Cache-Control', 'private, max-age=300');
   res.vary('X-Vercel-IP-Country');
-  res.json(publicCatalog(currency));
+  res.json(publicCatalog(selection.currency));
 }
 
 router.get('/api/plans', plansHandler);

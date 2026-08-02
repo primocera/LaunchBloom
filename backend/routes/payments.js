@@ -11,7 +11,25 @@ const { pricePlans, resolveEntitlement } = require('./customers');
 const { planUnavailableBody } = require('../lib/subscription-state');
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
-const { currencyForRequest } = require('../lib/currency');
+const { selectCatalog, selectionTelemetry } = require('../lib/plan-catalog');
+
+/**
+ * v13 SC-P0-03: the ONE public checkout failure message. Stripe's own text never
+ * reaches a customer — it leaks price ids, currency internals and reads like a
+ * card decline when it is a configuration problem on our side.
+ */
+const CHECKOUT_UNAVAILABLE =
+  'Checkout is temporarily unavailable for this price. You have not been charged. ' +
+  'Please try again in a few minutes, or contact support if it keeps happening.';
+
+function checkoutUnavailable(res, { status = 503, retryable = true, reason = null } = {}) {
+  if (reason) console.error(`[checkout] unavailable (${reason})`);
+  return res.status(status).json({
+    error: CHECKOUT_UNAVAILABLE,
+    code: 'CHECKOUT_UNAVAILABLE',
+    retryable,
+  });
+}
 
 const VALID_PLANS = ['starter', 'pro', 'studio'];
 const VALID_INTERVALS = ['monthly', 'yearly'];
@@ -93,31 +111,13 @@ async function ownsSubscription(subscriptionId, userEmail) {
   return customer?.email?.toLowerCase() === userEmail.toLowerCase();
 }
 
-/**
- * Resolves a Stripe price id from { plan, interval }.
- *
- * Preferred env vars (create these in Stripe → Products, one price per cell):
- *   STRIPE_PRICE_STARTER_MONTHLY   STRIPE_PRICE_STARTER_YEARLY
- *   STRIPE_PRICE_PRO_MONTHLY       STRIPE_PRICE_PRO_YEARLY
- *   STRIPE_PRICE_STUDIO_MONTHLY    STRIPE_PRICE_STUDIO_YEARLY
- *
- * Backward compatibility: if the interval-specific var is missing, fall back to
- * the old single-price vars (STRIPE_PRICE_STARTER / _PRO / _BUSINESS). "business"
- * is treated as an alias of "studio".
- */
-const PLAN_ALIASES = { business: 'studio' };
-const LEGACY_PLAN_ENV = {
-  starter: 'STRIPE_PRICE_STARTER',
-  pro: 'STRIPE_PRICE_PRO',
-  studio: 'STRIPE_PRICE_BUSINESS',
-};
-
-function resolvePriceId(planName, interval) {
-  const plan = PLAN_ALIASES[planName] || planName;
-  const intv = interval === 'yearly' ? 'YEARLY' : 'MONTHLY';
-  const key = `STRIPE_PRICE_${plan.toUpperCase()}_${intv}`;
-  return process.env[key] || process.env[LEGACY_PLAN_ENV[plan]] || null;
-}
+// v13 SC-P0-03: price resolution lives in the catalog (plan-catalog.js
+// stripePriceId / selectCatalog) so display and checkout resolve prices through
+// the same table — there is no second price-resolution path in this file.
+// Env vars (one price per cell, plus the legacy single-price fallbacks):
+//   STRIPE_PRICE_STARTER_MONTHLY   STRIPE_PRICE_STARTER_YEARLY
+//   STRIPE_PRICE_PRO_MONTHLY       STRIPE_PRICE_PRO_YEARLY
+//   STRIPE_PRICE_STUDIO_MONTHLY    STRIPE_PRICE_STUDIO_YEARLY
 
 /**
  * True if this email already had a Stripe trial or an active subscription, so a
@@ -170,9 +170,14 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Choose a valid billing interval: monthly or yearly.' });
     }
 
-    const priceId = resolvePriceId(planName, interval);
-    if (!priceId) {
-      return res.status(400).json({ error: `Plan "${planName}" (${interval}) is not configured (missing STRIPE_PRICE_* env var).` });
+    // Authoritative server-side selection: region -> currency -> price id. The
+    // request body contributes only { plan, interval }; any client-supplied
+    // price id or currency is ignored entirely.
+    const selection = selectCatalog(req, { plan: planName, interval });
+    const priceId = selection.price_id;
+    if (!selection.available || !priceId) {
+      console.error(`[checkout] no price configured for ${planName}/${interval} (${selection.price_key || 'unknown key'})`);
+      return checkoutUnavailable(res, { retryable: false, reason: 'price_not_configured' });
     }
 
     // v5 Prompt 15: never take real money while legal placeholders remain live.
@@ -214,15 +219,15 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // 3-day free trial for first-time subscribers only (no double-trialing).
     const giveTrial = !(await hadTrialOrActiveSubscription(email));
 
-    // Region currency: 'eur' for EU/EEA buyers (when EUR pricing is enabled),
-    // 'usd' otherwise. We PIN the session currency only for EUR — that gives EU
+    // Currency comes from the SAME selection the pricing page rendered from
+    // (GET /api/plans). We PIN the session currency only for EUR — that gives EU
     // buyers the exact catalog euro price (from the price's EUR currency_options)
     // and stops an EU card being charged USD (which fails after 3DS looking like
     // a decline). For everyone else we set NO currency, so Stripe Adaptive
     // Pricing (if the owner keeps it enabled) can present the buyer's own local
     // currency, falling back to the price's USD base. Pinning USD here would
     // suppress Adaptive for non-EU buyers.
-    const currency = currencyForRequest(req);
+    const currency = selection.currency;
 
     const sessionParams = {
       mode: 'subscription',
@@ -231,7 +236,15 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       client_reference_id: userId || undefined,
       // Webhook discriminator on the shared Stripe account: the handler drops
       // checkout.session.completed events without this stamp as foreign.
-      metadata: { scalvya: '1', app_user_id: userId || '' },
+      metadata: {
+        scalvya: '1',
+        app_user_id: userId || '',
+        // v13 SC-P0-03: the catalog the buyer was quoted from, stamped on the
+        // session so a display/charge mismatch is correlatable in Stripe.
+        catalog_version: selection.catalog_version,
+        catalog_currency: selection.currency,
+        price_key: selection.price_key || '',
+      },
       subscription_data: {
         metadata: { app_user_id: userId || '' },
         ...(giveTrial ? { trial_period_days: 3 } : {}),
@@ -242,48 +255,39 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       cancel_url: `${baseUrl}/app?checkout=cancelled`,
     };
 
-    // Pin EUR for EU buyers when enabled — but NEVER let a half-configured EUR
-    // setup break checkout. If the Stripe price has no EUR currency_option yet,
-    // Stripe rejects the session ("price ... only supports `usd`"); we catch that
-    // one case and retry in USD so the customer can still subscribe. EUR begins
-    // working automatically once the price carries it (see add-eur-currency.js).
-    let session;
-    try {
-      session = await stripe.checkout.sessions.create(
-        currency === 'eur' ? { ...sessionParams, currency: 'eur' } : sessionParams
-      );
-    } catch (err) {
-      const m = ((err && err.message) || '').toLowerCase();
-      const eurUnsupported = err && err.type === 'StripeInvalidRequestError'
-        && m.includes('currency') && (m.includes('usd') || m.includes('eur'));
-      if (currency === 'eur' && eurUnsupported) {
-        console.warn('[checkout] price lacks EUR currency_option — falling back to USD so checkout still works');
-        track('checkout_eur_fallback', { userId, properties: { plan: planName, interval } });
-        session = await stripe.checkout.sessions.create(sessionParams);
-      } else {
-        throw err;
-      }
-    }
+    // Redacted, PII-free record of what was selected, so support can correlate a
+    // reported mismatch without touching customer data.
+    track('checkout_catalog_selected', { userId, properties: selectionTelemetry(selection) });
+
+    // v13 SC-P0-03: NO cross-currency retry. If Stripe rejects the pinned EUR
+    // session, that means the catalog the buyer was shown does not exist in
+    // Stripe — silently retrying in USD would charge a currency the buyer never
+    // saw. We fail with a stable public error instead; the outer catch maps it.
+    const session = await stripe.checkout.sessions.create(
+      currency === 'eur' ? { ...sessionParams, currency: 'eur' } : sessionParams
+    );
 
     if (!session || !session.url) {
       track('checkout_failed', { userId, properties: { plan: planName, interval, reason: 'no_url' } });
-      return res.status(502).json({ error: 'Stripe did not return a checkout URL' });
+      return checkoutUnavailable(res, { reason: 'no_url' });
     }
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
     console.error('[create-checkout-session] error', err.type, err.code, err.message);
     track('checkout_failed', { userId: req.userId, properties: { reason: err.code || err.type || 'error' } });
-    if (err && err.type === 'StripeInvalidRequestError') {
-      return res.status(400).json({ error: err.message || 'Invalid request to Stripe', code: err.code || null });
+    // v13 SC-P0-03: map by Stripe's TYPED error, never by parsing its message —
+    // and never echo Stripe's text to the customer. A misconfigured price and an
+    // auth failure are our problem, not retryable by the buyer; transport/API
+    // errors are worth retrying.
+    const type = (err && err.type) || '';
+    if (type === 'StripeInvalidRequestError' || type === 'StripeAuthenticationError' || type === 'StripePermissionError') {
+      return checkoutUnavailable(res, { retryable: false, reason: type });
     }
-    if (err && err.type === 'StripeAuthenticationError') {
-      return res.status(500).json({ error: 'Stripe authentication failed (check STRIPE_SECRET_KEY)' });
+    if (type === 'StripeAPIError' || type === 'StripeConnectionError' || type === 'StripeRateLimitError') {
+      return checkoutUnavailable(res, { retryable: true, reason: type });
     }
-    if (err && err.type === 'StripeAPIError') {
-      return res.status(502).json({ error: 'Stripe API error, please try again' });
-    }
-    return res.status(500).json({ error: (err && err.message) || 'Failed to create checkout session' });
+    return checkoutUnavailable(res, { status: 500, retryable: true, reason: type || 'error' });
   }
 });
 

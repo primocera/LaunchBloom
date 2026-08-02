@@ -4,6 +4,14 @@ const assert = require('node:assert/strict');
 process.env.SESSION_SECRET = 'test-secret-for-unit-tests';
 process.env.PUBLIC_URL = 'https://app.example.com';
 process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_starter_m';
+// v13 SC-P0-03: EUR is only selectable when the whole price set is configured,
+// so the EUR tests need a complete catalog. STUDIO_YEARLY is deliberately left
+// unset by the "unconfigured plan price" test via delete (see below).
+process.env.STRIPE_PRICE_STARTER_YEARLY = 'price_starter_y';
+process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_m';
+process.env.STRIPE_PRICE_PRO_YEARLY = 'price_pro_y';
+process.env.STRIPE_PRICE_STUDIO_MONTHLY = 'price_studio_m';
+process.env.STRIPE_PRICE_STUDIO_YEARLY = 'price_studio_y';
 
 const { stubModule, makeFakeSupabase } = require('./helpers');
 
@@ -150,19 +158,67 @@ test('EU buyer pins EUR; non-EU pins nothing so Adaptive Pricing can localize', 
   }
 });
 
-test('EU checkout falls back to USD (not an error) when the price has no EUR yet', async () => {
+// v13 SC-P0-03 — displayed currency must equal charged currency. A EUR quote
+// followed by a USD charge is the exact bug this replaces.
+test('EU checkout NEVER falls back to USD when the price has no EUR — no session is created', async () => {
   process.env.EUR_PRICING_ENABLED = '1';
   try {
     reset();
     state.rejectEur = true; // the Stripe price only supports USD
     const eu = await request(app).post('/api/payments/create-checkout-session')
       .set(...AUTHED).set('x-vercel-ip-country', 'DE').send({ plan: 'starter', interval: 'monthly' });
-    // The customer still gets a working checkout — in USD — rather than a 4xx.
-    assert.equal(eu.status, 200);
-    assert.ok(eu.body.url, 'checkout url should still be returned');
-    assert.equal(lastCheckout.currency, undefined); // retried without a pinned currency
+    assert.equal(eu.status, 503);
+    assert.equal(eu.body.code, 'CHECKOUT_UNAVAILABLE');
+    assert.equal(eu.body.retryable, false);
+    assert.ok(/You have not been charged/.test(eu.body.error));
+    // No raw Stripe text may reach the customer.
+    assert.ok(!/price|currency_option|usd|eur|stripe/i.test(eu.body.error.replace(/Checkout is temporarily unavailable for this price\./, '')));
+    assert.equal(lastCheckout, null, 'no USD session may be created after a EUR quote');
+    assert.ok(!eu.body.url);
   } finally {
     delete process.env.EUR_PRICING_ENABLED;
+  }
+});
+
+test('a tampered currency/priceId in the body cannot change the selected catalog', async () => {
+  process.env.EUR_PRICING_ENABLED = '1';
+  try {
+    reset();
+    const r = await request(app).post('/api/payments/create-checkout-session')
+      .set(...AUTHED).set('x-vercel-ip-country', 'US')
+      .send({ plan: 'starter', interval: 'monthly', currency: 'eur', priceId: 'price_ATTACKER', catalog_version: 'x' });
+    assert.equal(r.status, 200);
+    assert.equal(lastCheckout.currency, undefined, 'client currency must be ignored');
+    assert.equal(lastCheckout.line_items[0].price, 'price_starter_m');
+    assert.equal(lastCheckout.metadata.catalog_currency, 'usd');
+  } finally {
+    delete process.env.EUR_PRICING_ENABLED;
+  }
+});
+
+test('the checkout session is stamped with the catalog version and price key it was quoted from', async () => {
+  reset();
+  const r = await request(app).post('/api/payments/create-checkout-session')
+    .set(...AUTHED).send({ plan: 'starter', interval: 'monthly' });
+  assert.equal(r.status, 200);
+  const { CATALOG_VERSION } = require('../lib/plan-catalog');
+  assert.equal(lastCheckout.metadata.catalog_version, CATALOG_VERSION);
+  assert.equal(lastCheckout.metadata.price_key, 'STRIPE_PRICE_STARTER_MONTHLY');
+});
+
+test('an unconfigured plan price returns the stable public error, not env details', async () => {
+  reset();
+  const saved = process.env.STRIPE_PRICE_STUDIO_YEARLY;
+  delete process.env.STRIPE_PRICE_STUDIO_YEARLY;
+  try {
+    const r = await request(app).post('/api/payments/create-checkout-session')
+      .set(...AUTHED).send({ plan: 'studio', interval: 'yearly' });
+    assert.equal(r.status, 503);
+    assert.equal(r.body.code, 'CHECKOUT_UNAVAILABLE');
+    assert.ok(!/STRIPE_PRICE/.test(r.body.error), 'must not leak env var names');
+    assert.equal(lastCheckout, null);
+  } finally {
+    process.env.STRIPE_PRICE_STUDIO_YEARLY = saved;
   }
 });
 
