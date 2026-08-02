@@ -64,3 +64,27 @@ Scalvya's product copy says USD (US-first) → it kept USD and *added* EUR for E
 buyers (dual-currency, region-switched). Mellowa's product copy says EUR everywhere →
 it's simply EUR, one currency, no switching. Same lesson (displayed currency must
 equal charged currency), opposite starting point.
+
+## Two other billing bugs found in Scalvya's live rehearsal (2026-08-02) — check Mellowa
+
+Neither is EUR-specific; both are worth confirming in Mellowa since it's the same
+Stripe account and era of API version.
+
+1. **Paid customer shown as Free (stale-subscription masking).** Scalvya's `planFor`
+   took ONE entitling subscription with no ordering; a second entitling row on a
+   retired price (maps to no plan) masked the valid current one → a *paying* user
+   sat on Free with 0 actions. Fixed (Scalvya `b037394`) by scanning all entitling
+   rows newest-first and returning the first that maps.
+   - **Mellowa check:** Mellowa stores one subscription row per `user_id` (upsert
+     onConflict user_id in `src/app/api/stripe/checkout/route.ts`) and reads
+     entitlement by status, so it's likely NOT exposed to multi-row masking — but
+     confirm a stale/duplicate row or a retired price can't strand a paying user.
+
+2. **Renewal date null / "renews on ." (Stripe moved `current_period_end` to the item).**
+   On API version `2026-04-22.dahlia`, `subscription.current_period_end` is undefined —
+   it now lives at `subscription.items.data[0].current_period_end`. Scalvya stored
+   null and the account page rendered "renews on ." Fixed by reading the item-level
+   field with a top-level fallback.
+   - **Mellowa check:** wherever Mellowa's webhook mirrors period/renewal dates, read
+     `current_period_end` (and `_start`) from the subscription **item** with a
+     top-level fallback, or the billing/renewal date is null on the 2026 API version.

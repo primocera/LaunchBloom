@@ -241,6 +241,19 @@
       "closure": "Closed: owner applied 037 and ran CHECK_APPLIED.sql against production on 2026-07-28. All rows 001-037 applied = true. Evidence: docs/evidence/2026-07-28-migrations-applied.md."
     },
     {
+      "id": "P0-billing-entitlement-and-renewal",
+      "severity": "P0",
+      "status": "open",
+      "found_at_utc": "2026-08-02T00:00:00Z",
+      "title": "A paying customer can be shown Free (planFor masked by a retired-price sub), and the renewal date stores null on Stripe's 2026 API",
+      "owner": "owner",
+      "closure": "Two billing defects found running real money on 2026-08-02, both FIXED on main but AFTER the frozen candidate, so this candidate still contains them: (1) P0 — planFor took one entitling subscription with no ordering, so a retired-price row masked a valid one and a paying account showed Plan: Free / 0 AI actions; fixed b037394 with regression test backend/tests/customers-multi-sub.test.js. (2) P1 — current_period_end is undefined on Stripe API 2026-04-22.dahlia (moved to the subscription item), stored null, account showed 'renews on .'; fixed f3917c7. To clear this: cut a NEW candidate including b037394 + f3917c7 (and the EUR pricing commits), and reconfirm on the deployed candidate that a live paid account shows its plan and renewal date. Full write-up: docs/BILLING_FINDINGS_2026-08-02.md.",
+      "tracks": [
+        "capped_beta",
+        "public_paid"
+      ]
+    },
+    {
       "id": "P0-no-authenticated-e2e",
       "severity": "P1",
       "severity_history": "Downgraded from P0 on 2026-07-28. The P0 rested on the claim that the signed-in journey had never been executed at all. That was true of automated browser runs and false of the product: the owner has run signup, login, Stripe trial, access, cancel and generation against production. The remaining gap — phone, keyboard, cross-account isolation and failure paths — is a public-launch condition, not a capped-beta one.",
@@ -296,14 +309,14 @@
   ],
   "verdicts": {
     "capped_beta": {
-      "verdict": "GO",
-      "decided_at_utc": "2026-08-01T12:00:00Z",
-      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required automated check ran at the v12 candidate beea612 (lint, 626 unit tests, build, fresh bundle, 52 public browser journeys, export integrity, launch integrity), migrations are verified applied against production (unchanged in v12 — no SQL added), production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe (behavior-equivalent under v12). This is NOT permission to open public signup. v12 note: the hero WCAG AA gap that rode along in v11 is now FIXED and closed; the remaining public-launch gap (the authenticated browser matrix) is a public_paid condition, not a capped-beta one. OWNER ACTION post-deploy: re-run /api/admin/readiness and a quick signed-in re-walk against the deployed candidate to reconfirm."
+      "verdict": "NO-GO",
+      "decided_at_utc": "2026-08-02T00:00:00Z",
+      "note": "NO-GO as of 2026-08-02: a P0 billing defect (blocker P0-billing-entitlement-and-renewal) was found running real money — a paying account showed Plan: Free with 0 AI actions — which affects paying beta users too. It is FIXED on main (b037394 + f3917c7) but AFTER this frozen candidate, so this candidate still contains it. Path back to GO: cut a new candidate including those fixes and reconfirm a live paid account shows its plan (see docs/BILLING_FINDINGS_2026-08-02.md). Prior capped-beta basis, still valid once re-cut: GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. Computed by `npm run launch:gate`, not declared: every required automated check ran at the v12 candidate beea612 (lint, 626 unit tests, build, fresh bundle, 52 public browser journeys, export integrity, launch integrity), migrations are verified applied against production (unchanged in v12 — no SQL added), production configuration was answered by /api/admin/readiness in production mode with 0 blockers, and the owner has walked the signed-in product end to end on live Stripe (behavior-equivalent under v12). This is NOT permission to open public signup. v12 note: the hero WCAG AA gap that rode along in v11 is now FIXED and closed; the remaining public-launch gap (the authenticated browser matrix) is a public_paid condition, not a capped-beta one. OWNER ACTION post-deploy: re-run /api/admin/readiness and a quick signed-in re-walk against the deployed candidate to reconfirm."
     },
     "public_paid": {
-      "verdict": "CONDITIONAL GO",
-      "decided_at_utc": "2026-08-01T12:00:00Z",
-      "note": "CONDITIONAL GO on ACCEPTED RISK, not a full GO. Every condition that was actually met is evidenced at the v12 candidate: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full automated check set green (lint, 626 unit, build, fresh bundle, 52 browser journeys, export integrity, launch integrity). The v11 hero-contrast risk is now RESOLVED (SC-V12-02) and no longer rides along. TWO required conditions remain unmet and accepted by the owner, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e) and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status — `skipped`, `not_run`. Because required P0/P1 conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing either acceptance returns this verdict to NO-GO automatically. OWNER ACTIONS to reach full GO: run the authenticated matrix against a disposable non-production project (docs/RUNBOOK_AUTH_E2E.md) and complete the live billing rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md)."
+      "verdict": "NO-GO",
+      "decided_at_utc": "2026-08-02T00:00:00Z",
+      "note": "NO-GO as of 2026-08-02: the P0 billing defect (blocker P0-billing-entitlement-and-renewal) found running real money — a paying account showed Plan: Free — is present in this frozen candidate (fixed on main at b037394 + f3917c7, after the candidate). A P0 in the candidate makes public paid NO-GO regardless of the accepted risks below. Path back: cut a new candidate including the fixes and reconfirm live paid entitlement (docs/BILLING_FINDINGS_2026-08-02.md); public_paid would then return to CONDITIONAL GO while authenticated-e2e stays accepted. Prior basis: CONDITIONAL GO on ACCEPTED RISK, not a full GO. Every condition that was actually met is evidenced at the v12 candidate: migrations verified applied, production configuration answered by /api/admin/readiness in production mode with 0 blockers, unsubscribe suppression proven live in both directions, spend ceiling live at $15, and the full automated check set green (lint, 626 unit, build, fresh bundle, 52 browser journeys, export integrity, launch integrity). The v11 hero-contrast risk is now RESOLVED (SC-V12-02) and no longer rides along. TWO required conditions remain unmet and accepted by the owner, each with a named rationale in blockers[].accepted_risk: no automated signed-in browser matrix (risk authenticated-e2e) and no nine-transition live billing rehearsal (risk live-money). Each keeps its real status — `skipped`, `not_run`. Because required P0/P1 conditions ride on accepted risk, a full GO is impossible here by construction; this is CONDITIONAL GO. Reversing either acceptance returns this verdict to NO-GO automatically. OWNER ACTIONS to reach full GO: run the authenticated matrix against a disposable non-production project (docs/RUNBOOK_AUTH_E2E.md) and complete the live billing rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md)."
     }
   },
   "rollback": {

@@ -11,8 +11,8 @@ Repository `primocera/LaunchBloom` · branch `v12` · generated 2026-08-01T12:00
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, live-money |
+| Capped beta | **NO-GO** | open P0: P0-billing-entitlement-and-renewal |
+| Public paid launch | **NO-GO** | open P0: P0-billing-entitlement-and-renewal |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -80,10 +80,11 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
+| P0 | A paying customer can be shown Free (planFor masked by a retired-price sub), and the renewal date stores null on Stripe's 2026 API | OPEN | owner | Two billing defects found running real money on 2026-08-02, both FIXED on main but AFTER the frozen candidate, so this candidate still contains them: (1) P0 — planFor took one entitling subscription with no ordering, so a retired-price row masked a valid one and a paying account showed Plan: Free / 0 AI actions; fixed b037394 with regression test backend/tests/customers-multi-sub.test.js. (2) P1 — current_period_end is undefined on Stripe API 2026-04-22.dahlia (moved to the subscription item), stored null, account showed 'renews on .'; fixed f3917c7. To clear this: cut a NEW candidate including b037394 + f3917c7 (and the EUR pricing commits), and reconfirm on the deployed candidate that a live paid account shows its plan and renewal date. Full write-up: docs/BILLING_FINDINGS_2026-08-02.md. |
 | P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
-**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
+**Public paid launch (NO-GO) rests on these accepted risks:**
 
 - `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
