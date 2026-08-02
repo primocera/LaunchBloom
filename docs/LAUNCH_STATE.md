@@ -5,14 +5,14 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-02T14:00:00Z
+Repository `primocera/LaunchBloom` · branch `v13` · generated 2026-08-03T09:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, live-money |
+| Capped beta | **NO-GO** | required check release_config is not_run |
+| Public paid launch | **NO-GO** | open P1: P1-router-rsc-csrf-advisory; required check release_config is not_run |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -23,19 +23,26 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `a11afdacfee8261db260946dbe37668e68a6037e` (frozen)
-- HEAD now: `a11afdacfee8261db260946dbe37668e68a6037e`
-- Bundle: index-BN3b4iRY.js, index-OkR4Xfg_.css
+- Candidate SHA: `879e1bb7a813cacd945a156f7f9fbaaa6e4e7b08` (frozen)
+- HEAD now: `879e1bb7a813cacd945a156f7f9fbaaa6e4e7b08`
+- Bundle: index-B75XUgt7.js, index-Ck_SQ1wq.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
 
 | Commit | Subject | Already closes |
 |---|---|---|
-| `b037394` | fix(billing): planFor must not drop a paying user to free on a stale sub | Closes the P0 half of P0-billing-entitlement-and-renewal: planFor now orders entitling subscriptions so a retired-price row can no longer mask a valid one. Regression test backend/tests/customers-multi-sub.test.js passes (1/1) at this candidate. |
-| `f3917c7` | fix(billing): store renewal date from the subscription item (Stripe 2026 API) | Closes the renewal-date half of P0-billing-entitlement-and-renewal: current_period_end is read from the subscription item on API 2026-04-22.dahlia, so the account no longer stores null / shows 'renews on .'. |
-| `45fbdfd` | fix(landing): SC-V12-02 hero meets WCAG AA without a scrim or dulling the blue | Closes P1-hero-contrast-below-aa: white hero text now measures a uniform 4.70:1 across the text band (backend/tests/landing-contrast.test.js now REQUIRES AA). |
-| `f577be3` | feat(billing): SC-V12-04 subscription state machine, webhook ordering and live-rehearsal prep | Makes entitlement reconciliation explicit and adds refund/dispute handling and PII-free ops signals; the late-payment_failed-after-recovery guard is unchanged and still tested. |
+| `271e31c` | fix(billing): fail closed when entitlement cannot be verified (SC-P0-01) | A temporary Supabase/database failure is no longer read as 'no paid plan'. resolveEntitlement() distinguishes verified-free / entitled / unmapped / unavailable; checkout fails closed (no Stripe session) on unavailable, verify-plan never renders a paying user as Free. Tests: backend/tests/entitlement-fail-closed.test.js (11/11). |
+| `ebcfe5c` | fix(billing): highest valid entitlement wins across overlapping subscriptions (SC-P0-02) | One pure canonical resolver (highest valid entitlement, deterministic tie-break) reused by checkout, account, usage and support; overlaps are flagged as a redacted anomaly without silent downgrade or cross-product entitlement. Tests: backend/tests/entitlement-canonical.test.js (30/30). |
+| `6380016` | fix(billing): one server catalog decides displayed and charged currency (SC-P0-03) | Removed the catch-and-retry-in-another-currency path; displayed and charged currency now originate from one server catalog selection. Production EUR is impossible with an incomplete catalog (EUR_PRICING_ENABLED + EUR_PRICES_VERIFIED). Tests: currency/payments/pricing-contract (41/41). |
+| `6debd63` | fix(launch): production launch config fails closed without a flag (SC-P0-04) | Production critical-config validation is automatic (no longer dependent on remembering ENFORCE_LAUNCH_CONFIG); an unsafe bypass is rejected when NODE_ENV=production; placeholder domains, missing legal URLs and incomplete enabled-currency catalogs are rejected. NOTE: this materially changed the config-gate code, so the production readiness observation must be re-run — see checks[release_config]. |
+| `77cee5b` | fix(billing): delete legacy customer/portal routes; server-only portal return URL (SC-P0-05) | Deleted POST /api/customers (client-supplied email) and GET /api/customers/:id/portal (arbitrary returnUrl). Billing identity is the authenticated user; the canonical portal return URL is server-config-only. Tests: backend/tests/legacy-customer-portal.test.js (12/12). |
+| `ca3eaa8` | fix(deps): react-router-dom 6.30.4 -> 7.18.2; centralize internal-path validation (SC-P0-06) | Closed the three 6.30.4 advisories (GHSA-jjmj-jmhj-qwj2, GHSA-wrjc-x8rr-h8h6, GHSA-337j-9hxr-rhxg) by upgrading to 7.18.2; added app-src/lib/safe-path.js for any untrusted redirect. RESIDUAL: a separate high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF) remains open on 7.x — tracked as blocker P1-router-rsc-csrf-advisory; not reachable (this app ships no RSC). |
+| `de9c779` | fix(app): zero-warning React correctness pass, stale-response guard (SC-P1-07) | Lint baseline 0 errors / 0 warnings for product code; every id-keyed studio/campaign/library loader cancels or ignores stale responses so old campaign data cannot overwrite the new selection. Tests: backend/tests/request-guard.test.js (6/6). |
+| `709015a` | test(billing): state contract matrix + trial-eligibility coverage (SC-P1-08) | docs/BILLING_STATE_MATRIX.md generated from and cross-checked against fixtures driven through the real canonical resolver; auth E2E guard refuses production/unrecognized targets. Tests: billing-state-matrix + billing-trial-eligibility + e2e-guard (28/28). |
+| `f4394a9` | feat(app): typed error-to-copy states for billing & generation failures (SC-P1-10) | One typed error-to-copy contract across plan verification, checkout, generation, usage limit, export and empty workspace; accessible alerts with focus management and one clear recovery action; no raw provider text, no false downgrade. Tests: backend/tests/error-states.test.js (11/11). |
+| `45ec316` | feat(landing): sharper promise, named coordination + honest FAQ (SC-P1-11) | Hero tightened to one outcome + one trust qualifier; coordination named (offer/audience/angle/proof/CTA/tone); FAQ covers who-it-is-for, export meaning, publishing, SEO limitation, data handling, trial start, cancellation. Content-contract tests forbid unsupported readiness/publishing claims (29/29). |
+| `879e1bb` | feat(analytics): capped-beta value scorecard with auditable staff exclusion (SC-P1-12) | Privacy-conscious value-loop event model + weekly cohort scorecard with pre-registered hypothesis thresholds and an interview guide; no content/PII in payloads; analytics failure never blocks core product. Tests: backend/tests/beta-scorecard.test.js (12/12). |
 
 ## Migrations
 
@@ -50,16 +57,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `a11afda` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `a11afda` | yes |
-| Production build | `npm run build:app` | passed locally | `a11afda` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `a11afda` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `a11afda` | yes |
+| ESLint | `npm run lint` | passed locally | `879e1bb` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `879e1bb` | yes |
+| Production build | `npm run build:app` | passed locally | `879e1bb` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `879e1bb` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `879e1bb` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `a11afda` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `a11afda` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `a11afda` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `a11afda` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `879e1bb` | yes |
+| Production configuration gate | `npm run release:check` | not run | — | no |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `879e1bb` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `879e1bb` | yes |
 
 ## Owner evidence
 
@@ -82,10 +89,11 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix now exists (SC-V11-03). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against the candidate SHA. |
+| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 879e1bb. |
+| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | OPEN | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v13's scope. `npm audit --omit=dev` reports 2 high at 879e1bb. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). Close by either (a) owner accepting the risk with a named rationale and revisit date, or (b) upgrading to react-router 8 on a React 19 / Vite 7 migration. Until then it is an open, named, unreachable risk — it must not be reported as closed. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
-**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
+**Public paid launch (NO-GO) rests on these accepted risks:**
 
 - `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
@@ -93,16 +101,16 @@ over it, and never that it was resolved.
 ## Rollback
 
 - **reference:** docs/RUNBOOK_INCIDENTS.md
-- **code:** v12 commits are independent and additive; revert the offending commit and rebuild app/. SC-V12-01..07 each landed as one focused commit.
-- **data:** No migration is introduced by v12 (git diff against the v11 candidate over backend/migrations/ is empty). Nothing to roll back at the data layer.
-- **flags:** Kill switches (all reversible env vars): AI_GENERATION_PAUSED=1 stops generation; SIGNUP_PAUSED=1 stops new signups; BETA_INVITE_CAP caps the cohort and FAILS CLOSED on a missing/invalid value (v12 SC-V12-07). See docs/RUNBOOK_INCIDENTS.md.
+- **code:** v13 commits are independent and additive; revert the offending commit and rebuild app/. SC-P0-01..06 and SC-P1-07,08,10,11,12 each landed as one focused commit on branch v13.
+- **data:** No migration is introduced by v13 (git diff a11afda..879e1bb over backend/migrations/ is empty). Nothing to roll back at the data layer.
+- **flags:** Kill switches (all reversible env vars): AI_GENERATION_PAUSED=1 stops generation; SIGNUP_PAUSED=1 stops new signups; BETA_INVITE_CAP caps the cohort and FAILS CLOSED on a missing/invalid value. New in v13: the production launch-config gate fails closed automatically (SC-P0-04) — a missing legal URL or incomplete currency catalog blocks paid checkout by design. See docs/RUNBOOK_INCIDENTS.md.
 
 ## Superseded documents
 
 These remain in the repository as history. None of them is current truth.
 
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
-- `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any v11 commit.
+- `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.
 - `docs/BETA_GO_NO_GO.md` — Historical v5 beta audit pinned to 0ce5cd5.
 - `docs/CONFIGURED_STATE.md` — Production configuration snapshot from 2026-07-26. Still useful as a record of what the owner already set up, but it is not current release truth and its migration table conflicts with docs/GO_NO_GO_V10.md.
 
@@ -110,9 +118,9 @@ These remain in the repository as history. None of them is current truth.
 
 1. Land all intended work on the release branch. No feature work after this point.
 2. Set candidate.sha to the exact frozen commit and candidate.state to "frozen".
-3. Re-run every required check at that SHA and record status, observed_at_sha and an evidence reference for each.
+3. Re-run every required check at that SHA and record status, observed_at_sha and an evidence reference for each. A check whose underlying code changed since the last candidate may NOT be carried forward — re-run it or mark it not_run.
 4. Attach owner evidence references for the live items.
 5. Run `npm run launch:gate`. It recomputes both verdicts; it cannot be argued with.
 6. Run `npm run launch:render` to regenerate docs/LAUNCH_STATE.md.
 
-Any commit after step 2 creates a NEW candidate: the SHA no longer matches HEAD, every check pinned to the old SHA stops counting, and the verdict returns to NO-GO.
+Any commit after step 2 that changes code creates a NEW candidate: the SHA no longer matches HEAD, every check pinned to the old SHA stops counting, and the verdict returns to NO-GO. Documentation-only commits (docs/ and the prompt packs) do not.
