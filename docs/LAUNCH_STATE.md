@@ -11,8 +11,8 @@ Repository `primocera/LaunchBloom` · branch `v13` · generated 2026-08-03T09:00
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **NO-GO** | required check release_config is not_run |
-| Public paid launch | **NO-GO** | open P1: P1-router-rsc-csrf-advisory; required check release_config is not_run |
+| Capped beta | **NO-GO** | required check release_config is failed |
+| Public paid launch | **NO-GO** | open P1: P1-router-rsc-csrf-advisory; required check release_config is failed |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -64,7 +64,7 @@ settle this question.
 | Public browser journeys | `npx playwright test` | passed locally | `879e1bb` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
 | DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `879e1bb` | yes |
-| Production configuration gate | `npm run release:check` | not run | — | no |
+| Production configuration gate | `npm run release:check` | FAILED | — | no |
 | Launch-state document integrity | `npm run launch:verify` | passed locally | `879e1bb` | yes |
 | Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `879e1bb` | yes |
 

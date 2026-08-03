@@ -285,15 +285,21 @@ test('the committed launch state is internally consistent', () => {
   assert.deepEqual(documentProblems(state), []);
 });
 
-// 2026-07-28: capped_beta reached GO. Every reason it used to carry went away
-// because the underlying fact changed and was written down with an evidence
-// reference — migrations verified against the production database, production
-// configuration answered by /api/admin/readiness in production mode, the spend
-// ceiling confirmed live. That is the only route to GO this system allows.
-test('capped beta is GO on evidence, and every passing check is pinned to the candidate', () => {
+// 2026-08-03 (v13 candidate 879e1bb): capped_beta is NO-GO for one honest
+// reason. Every automated check that can run without production secrets is green
+// and every capped-beta owner evidence item is observed, but SC-P0-04/03 changed
+// the production config-gate code and the re-observed readiness returned
+// ready=false (EUR_PRICING_ENABLED without EUR_PRICES_VERIFIED), so release_config
+// is `failed`. It is the SOLE capped-beta blocker; when the owner runs
+// verify-prices and sets the flag, this test's expected verdict returns to GO.
+test('capped beta is NO-GO only on the production config gate, and every passing check is pinned to the candidate', () => {
   const state = loadState();
   const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
-  assert.equal(v.capped_beta.verdict, 'GO', `still blocked by: ${v.capped_beta.reasons.join('; ')}`);
+  assert.equal(v.capped_beta.verdict, 'NO-GO', `unexpected reasons: ${v.capped_beta.reasons.join('; ')}`);
+  // The one and only thing standing between this candidate and a capped-beta GO
+  // is the production configuration gate — no other required condition is unmet.
+  assert.deepEqual(v.capped_beta.reasons, ['required check release_config is failed'],
+    `capped beta must be blocked by release_config alone, got: ${v.capped_beta.reasons.join('; ')}`);
 
   // A GO is only as good as its pinning: no check may claim a pass on evidence
   // gathered at some other commit, and none may pass with nothing behind it.
@@ -313,12 +319,16 @@ test('capped beta is GO on evidence, and every passing check is pinned to the ca
   }
 });
 
-test('public paid launch is CONDITIONAL GO on accepted risk, never a full GO', () => {
+test('public paid launch is never a full GO while accepted risks stand, and its accepted set is manifest-consistent', () => {
   const state = loadState();
   const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
-  // The accepted risks make a full GO impossible; the honest verdict is conditional.
-  assert.equal(v.public_paid.verdict, 'CONDITIONAL GO');
+  // v13 (879e1bb): public_paid is NO-GO — it carries unaccepted blockers
+  // (release_config failed, the open router advisory) on top of the two accepted
+  // risks. The durable invariant this test protects is that accepted risks can
+  // never lift the verdict to a full GO, and that the computed accepted set
+  // matches exactly the items scoped to public_paid in the manifest.
   assert.notEqual(v.public_paid.verdict, 'GO');
+  assert.equal(v.public_paid.verdict, 'NO-GO');
 
   // Freeze-stable: the accepted risks the verdict rests on must be exactly the
   // set of accepted items scoped to public_paid — derived from the manifest, not
@@ -415,18 +425,20 @@ test('the rendered launch status stays in sync with the canonical data', () => {
   assert.equal(onDisk, expected, 'docs/LAUNCH_STATE.md is stale — run `npm run launch:render`');
 });
 
-test('the rendered output lists accepted risks and never claims all conditions met for a CONDITIONAL GO', () => {
+test('the rendered output lists accepted risks and never claims all conditions met for a non-GO verdict', () => {
   const state = loadState();
   const doc = render(state, { head_sha: state.candidate.sha });
   const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
-  assert.equal(v.public_paid.verdict, 'CONDITIONAL GO', 'this test assumes the manifest is conditional');
+  // v13 (879e1bb): the manifest is NO-GO on both tracks. Whatever the verdict,
+  // the render must never read as a clean pass and must name every accepted risk.
+  assert.equal(v.public_paid.verdict, 'NO-GO', 'this test assumes the manifest is not a full GO');
 
-  // The conditional verdict must not read as a clean pass.
+  // A non-GO verdict must never render as "all conditions met" (reserved for GO).
   const verdictSection = doc.slice(doc.indexOf('## Verdict'), doc.indexOf('## Release candidate'));
-  assert.ok(verdictSection.includes('CONDITIONAL GO'));
+  assert.ok(verdictSection.includes('NO-GO'));
   assert.ok(
-    !/CONDITIONAL GO.*all conditions met/.test(verdictSection),
-    'a CONDITIONAL GO must never be rendered as "all conditions met"',
+    !verdictSection.includes('all conditions met'),
+    'a non-GO verdict must never be rendered as "all conditions met"',
   );
 
   // Every accepted risk the verdict rests on is named, with its real status.
