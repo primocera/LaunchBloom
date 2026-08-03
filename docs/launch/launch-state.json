@@ -6,11 +6,11 @@
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "v13",
-    "sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+    "sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
-    "head_at_generation": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+    "head_at_generation": "552318709c04f37f0a455acdd4c734fd5cd31abc",
     "bundle": {
       "build_hash": "index-B75XUgt7",
       "files": [
@@ -99,7 +99,7 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "eslint backend app-src api — 0 errors, 0 warnings at candidate 879e1bb (2026-08-03). SC-P1-07 drove the product-code baseline to zero warnings.",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
@@ -109,7 +109,7 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "node --test backend/tests/*.test.js — 763 tests, 763 pass / 0 fail / 0 skipped at candidate 879e1bb (2026-08-03). Includes the v13 billing suites (entitlement-fail-closed, entitlement-canonical, legacy-customer-portal, billing-state-matrix, error-states, request-guard, beta-scorecard) and the launch-state self-tests.",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut). Also runnable in the fail-closed release-candidate workflow."
     },
@@ -119,7 +119,7 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "vite build — success at candidate 879e1bb (2026-08-03); 103 modules; emitted index-B75XUgt7.js + index-Ck_SQ1wq.css.",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut). Deterministic — rebuild matches the committed bundle."
     },
@@ -129,7 +129,7 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "node scripts/check-app-fresh.mjs — app/ up to date with app-src/ (normalized hash match vs HEAD) at candidate 879e1bb (2026-08-03).",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut)."
     },
@@ -139,7 +139,7 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "npx playwright test — 52 pass / 0 fail at candidate 879e1bb (2026-08-03; desktop + mobile; 320/375/768/1024/1440 + 200% zoom, reduced motion, forced colors, no horizontal scroll). Under full parallel load two specs (hero-contrast opaque-white, signup-CTA one-navigation) flaked against the shared preview server; each was re-run single-worker in isolation and passed (hero-contrast 11/11, signup-conversion 14/14).",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut). The parallel-load flake matches the behavior documented for the prior candidate; the specs are green in isolation."
     },
@@ -172,7 +172,7 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail at candidate 879e1bb (2026-08-03).",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut)."
     },
@@ -182,7 +182,7 @@
       "command": "npm run release:check",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "GET /api/admin/readiness against the deployed v13 candidate in PRODUCTION, 2026-08-03: mode=production, ready=TRUE, blockers=0, external=0. All 14 checks ok — launch:config 'all launch-config requirements met', stripe:price_allowlist all live prices set, cron:secret set, email:delivery configured, ai:spend_ceiling $15, launch:unsafe_bypass not set. Live signals: outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, ai_spend_24h 0, operational_status ok.",
       "note": "Answered in PRODUCTION against the deployed candidate, not locally (a local run has no production secrets). Recorded as passed_locally because the vocabulary has no stronger status for an automated check than an actual run; the production environment is named in the evidence. This RE-OBSERVED the changed SC-P0-04/03 config-gate code, which is why the a11afda result was not carried forward: the first re-observation returned ready=false on the new EUR_PRICES_VERIFIED guardrail (EUR was live but never verified); the owner then ran `npm run verify-prices` (read-only — all six USD+EUR pairs correct on the live account, per-interval products active and in live mode), set EUR_PRICES_VERIFIED=1 in production, redeployed, and readiness now returns ready=true with 0 blockers. OWNER ACTION after any future config change: re-run GET /api/admin/readiness."
     },
@@ -192,7 +192,7 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "npm run launch:verify — OK at candidate 879e1bb (2026-08-03); declared verdicts match computed.",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut)."
     },
@@ -202,7 +202,7 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "8f21b02216b28bbbb8d57a02f3bbfa1673b89748",
+      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
       "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate 879e1bb (2026-08-03). The test REQUIRES WCAG AA across the full hero text band (uniform 4.70:1) and asserts the approved --sky-top blue is unchanged with no scrim/glass surface. SC-P1-11 landing copy changes kept this green.",
       "note": "Re-run locally at the candidate 879e1bb (2026-08-03 v13 cut)."
     }

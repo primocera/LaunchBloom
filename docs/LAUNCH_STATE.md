@@ -23,8 +23,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `8f21b02216b28bbbb8d57a02f3bbfa1673b89748` (frozen)
-- HEAD now: `8f21b02216b28bbbb8d57a02f3bbfa1673b89748`
+- Candidate SHA: `552318709c04f37f0a455acdd4c734fd5cd31abc` (frozen)
+- HEAD now: `552318709c04f37f0a455acdd4c734fd5cd31abc`
 - Bundle: index-B75XUgt7.js, index-Ck_SQ1wq.css
 - Environment class: production
 
@@ -57,16 +57,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `8f21b02` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `8f21b02` | yes |
-| Production build | `npm run build:app` | passed locally | `8f21b02` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `8f21b02` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `8f21b02` | yes |
+| ESLint | `npm run lint` | passed locally | `5523187` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `5523187` | yes |
+| Production build | `npm run build:app` | passed locally | `5523187` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `5523187` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `5523187` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `8f21b02` | yes |
-| Production configuration gate | `npm run release:check` | passed locally | `8f21b02` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `8f21b02` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `8f21b02` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `5523187` | yes |
+| Production configuration gate | `npm run release:check` | passed locally | `5523187` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `5523187` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `5523187` | yes |
 
 ## Owner evidence
 
