@@ -105,16 +105,27 @@ async function main() {
         issues.push(`USD charges ${actualUsd}, app displays ${expectedUsd}`);
       }
 
-      // Product ownership: every price of a plan must hang off ONE product, and
-      // that product must be active. A price pointing at another product (or an
-      // archived one) is how a plan silently sells the wrong thing.
+      // Product ownership: every price must hang off a REAL, ACTIVE product in
+      // the same live/test mode as the key. A price pointing at an archived or
+      // foreign product is how a plan silently sells the wrong thing — that is
+      // the risk this guards. Monthly and annual plans are commonly modelled as
+      // SEPARATE Stripe products, so prices of one plan are NOT required to share
+      // a single product; entitlement is mapped from the price id (STRIPE_PRICE_*),
+      // never from the product, so per-interval products are a legitimate setup.
       const productId = typeof price.product === 'string' ? price.product : price.product?.id;
       if (!productId) {
         issues.push('price has no product');
-      } else if (productsByPlan[plan] && productsByPlan[plan] !== productId) {
-        issues.push(`product ${productId} differs from ${plan}'s other price (${productsByPlan[plan]})`);
       } else {
-        productsByPlan[plan] = productId;
+        productsByPlan[plan] = productId; // retained for the ok() summary line
+        try {
+          const product = await stripe.products.retrieve(productId);
+          if (!product.active) issues.push(`product ${productId} is ARCHIVED in Stripe — checkout will fail`);
+          if (product.livemode !== livemode) {
+            issues.push(`product ${productId} is in ${product.livemode ? 'LIVE' : 'TEST'} mode, key is ${livemode ? 'LIVE' : 'TEST'}`);
+          }
+        } catch (err) {
+          issues.push(`product ${productId} could not be fetched (${err.code || err.message})`);
+        }
       }
 
       // EUR must be present under currency_options and match the catalog, or an
