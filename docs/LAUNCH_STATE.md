@@ -23,8 +23,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `879e1bb7a813cacd945a156f7f9fbaaa6e4e7b08` (frozen)
-- HEAD now: `879e1bb7a813cacd945a156f7f9fbaaa6e4e7b08`
+- Candidate SHA: `fd78a80ad1ab91e7437ba5ec4acae2809bdafe4f` (frozen)
+- HEAD now: `fd78a80ad1ab91e7437ba5ec4acae2809bdafe4f`
 - Bundle: index-B75XUgt7.js, index-Ck_SQ1wq.css
 - Environment class: production
 
@@ -57,16 +57,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `879e1bb` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `879e1bb` | yes |
-| Production build | `npm run build:app` | passed locally | `879e1bb` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `879e1bb` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `879e1bb` | yes |
+| ESLint | `npm run lint` | passed locally | `fd78a80` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `fd78a80` | yes |
+| Production build | `npm run build:app` | passed locally | `fd78a80` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `fd78a80` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `fd78a80` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `879e1bb` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `fd78a80` | yes |
 | Production configuration gate | `npm run release:check` | FAILED | — | no |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `879e1bb` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `879e1bb` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `fd78a80` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `fd78a80` | yes |
 
 ## Owner evidence
 
