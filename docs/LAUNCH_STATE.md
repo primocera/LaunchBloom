@@ -12,7 +12,7 @@ Repository `primocera/LaunchBloom` · branch `v14` · generated 2026-08-04T00:00
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **NO-GO** | open P1: P1-router-rsc-csrf-advisory |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, router-rsc-advisory, live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -94,12 +94,13 @@ over it, and never that it was resolved.
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
 | P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 81993ff. |
-| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | OPEN | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v13's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). Close by either (a) owner accepting the risk with a named rationale and revisit date, or (b) upgrading to react-router 8 on a React 19 / Vite 7 migration. Until then it is an open, named, unreachable risk — it must not be reported as closed. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
+| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v14's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). ACCEPTED for public_paid on 2026-08-04 with the rationale below; it keeps its real status (the advisory is NOT closed) and is revisited at the react-router 8 / React 19 / Vite 7 migration or sooner if a 7.x backport ships. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
-**Public paid launch (NO-GO) rests on these accepted risks:**
+**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
 
 - `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
+- `router-rsc-advisory` — react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-router-rsc-csrf-advisory)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
 
 ## Rollback
