@@ -50,6 +50,44 @@ test('no frontend source contains banned claims or retired vocabulary', () => {
   assert.deepEqual(hits, [], `banned copy found:\n${hits.join('\n')}`);
 });
 
+// v14 SC-06: the product is Scalvya. Retired brand names (OfferFlow / OfferFlow
+// AI / LaunchBloom / ConversionForge) must never return to any customer-visible
+// surface OR the source that renders it — not even in a comment, because the
+// next agent copies comments into copy. Migration-history references live in
+// docs/CLAUDE.md, which is not scanned here.
+const RETIRED_BRANDS = /offerflow|launchbloom|conversionforge/i;
+
+test('no frontend source mentions a retired brand name', () => {
+  const hits = [];
+  for (const file of SOURCES) {
+    const m = read(file).match(RETIRED_BRANDS);
+    if (m) hits.push(`${path.relative(APP_SRC, file)}: "${m[0]}"`);
+  }
+  assert.deepEqual(hits, [], `retired brand name found (use "Scalvya"):\n${hits.join('\n')}`);
+});
+
+// v14 SC-06: the model INSTRUCTIONS must not tell the AI to produce "send-ready"
+// / "production-ready" / "ready to paste" output. Those are misleading customer
+// promises; the generated asset is a complete draft that requires human review.
+// Use precise deliverable language ("complete draft body copy") instead.
+test('backend AI instruction text makes no send-ready / production-ready promise', () => {
+  const AI_TEXT_FILES = [
+    path.join(__dirname, '..', 'routes', 'assets.js'),
+    path.join(__dirname, '..', 'lib', 'schemas.js'),
+    path.join(__dirname, '..', 'lib', 'ai.js'),
+  ];
+  const FORBIDDEN = [/send[- ]ready/i, /production[- ]ready/i, /ready to paste/i];
+  const hits = [];
+  for (const file of AI_TEXT_FILES) {
+    const text = read(file);
+    for (const re of FORBIDDEN) {
+      const m = text.match(re);
+      if (m) hits.push(`${path.basename(file)}: "${m[0]}"`);
+    }
+  }
+  assert.deepEqual(hits, [], `forbidden deliverable promise in AI instructions:\n${hits.join('\n')}`);
+});
+
 // ── v9 SC-08: ICP legibility + two honest use-case paths, one product ───────
 
 test('landing names the ICP and offers two use-case paths into one workflow', () => {

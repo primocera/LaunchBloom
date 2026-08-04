@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Scalvya (formerly OfferFlow AI / LaunchBloom) — a SaaS **AI marketing workspace** for solopreneurs, creators, freelancers, coaches and small ecommerce/service brands. The user answers onboarding questions; the AI generates positioning → 3 offer options → a full "Launch Kit" (landing page copy, 30-day content plan, 7-email sequence, Meta ad ideas, SEO starter plan, weekly action plan), then dedicated **studios** turn that offer into the assets a brand needs to sell: website pages, email flows, campaign emails, social captions, ad/creative briefs and SEO.
+Scalvya (historical names, kept only for migration history: OfferFlow AI, LaunchBloom) — a SaaS **campaign-control workspace** that turns one approved offer/brief into connected website, email, social, ads/creative and SEO-idea assets that stay consistent on positioning, claims and CTA.
+
+**Canonical flow (do not fork it):** Brand Profile → Campaign Brief → Create → Review → Library → Export. The user fills a Brand Profile, defines and **approves** a Campaign Brief (a human decision, not an AI-strategy purchase), then Create runs the studios against that approved brief; generated assets are reviewed, kept in the Library, and Export packages the user-approved drafts.
+
+**ICP:** the primary customer is **freelance marketers and boutique agencies** (client work); **solo founders / small brands** are a secondary use case served by the *same* product, never a separate one.
+
+**Honest boundaries (must hold in customer copy and model instructions):** Scalvya does **not** publish, post, schedule or send anything; it reports **no** SEO search-volume, difficulty or ranking data (ideas only); it does **not** give legal/compliance approval; and **export means packaging the user's approved drafts** for handoff, not sending them. A generated asset is a **complete draft that requires human review** — never described to the customer as "send-ready", "production-ready" or "ready to paste". The content contract (`backend/tests/content-contract.test.js`) enforces this and forbids the retired brand names on customer-visible surfaces.
 
 **Marketing studios (upgrade prompts 5-18):** `backend/routes/assets.js` mounts five `/api/ai/generate-*` routes (website-kit, email-flow, campaign-emails, social-assets, creative-assets), each plan-gated on `asset_generations`, workspace-scoped, saving into the `004_marketing_assets` tables (`website_pages`, `email_assets`, `social_assets`, `creative_assets`, `seo_assets`). Schemas live in `backend/lib/schemas.js` (exported separately from `SECTION_SCHEMAS`). The frontend generator studios share `app-src/routes/studios/generator.jsx`. Non-blocking `quality_warnings` come from `backend/lib/quality-checks.js`.
 
@@ -15,18 +21,21 @@ The build follows the prompt playbook in `OfferFlow_AI_Claude_Code_Prompts.docx`
 ## Commands
 
 ```bash
-cd backend
 npm install
-npm run dev      # nodemon server.js (default port 3002)
-npm start        # node server.js
-node -c file.js  # syntax-check a changed file (no test suite yet)
+npm run dev              # node --watch backend/server.js (API)
+npm run dev:app          # vite dev server (frontend)
+npm test                 # node --test backend/tests/*.test.js (784+ tests)
+npm run lint             # eslint backend app-src api
+npm run build:app        # vite build → committed app/ bundle
+npm run check            # lint + test + build:app + check:app-fresh
+node -c file.js          # quick syntax-check a changed file
 ```
 
 Backend needs a `.env` (copy `backend/.env.example`): Supabase service-role, Stripe, Anthropic, SESSION_SECRET. Stripe webhooks locally: `stripe listen --forward-to localhost:3002/api/webhooks/stripe`.
 
 ## Architecture
 
-**Stack:** Node.js + Express (CommonJS, plain JS — no TypeScript, no Zod), Supabase Postgres via service_role client, Anthropic Claude (`claude-opus-4-8`) with structured JSON output, Stripe Checkout + webhooks, optional Resend. Frontend (planned): Vite + React + react-router, reusing ConversionForge's `app-src/` landing components with OfferFlow copy.
+**Stack:** Node.js + Express (CommonJS, plain JS — no TypeScript, no Zod), Supabase Postgres via service_role client, Anthropic Claude (`claude-opus-4-8`) with structured JSON output, Stripe Checkout + webhooks, optional Resend. Frontend is a **real, shipped** Vite + React + react-router-dom v7 app in `app-src/` (Landing, auth, Brand Profile, Campaigns, Create, the five studios, Asset Library, Account, Admin), built into the committed `app/` bundle and served statically on Vercel; `npm run check:app-fresh` guards that `app/` matches `app-src/`.
 
 **Identity model (no Supabase Auth):** `backend/lib/auth.js` mints stateless HMAC session tokens (`email|exp` signed with SESSION_SECRET, 30 days). The session email IS the identity; `workspaces.user_email` links data to accounts.
 

@@ -50,7 +50,7 @@ export default function App() {
 }
 
 /**
- * Signed-in area: ConversionForge-style shell — collapsible left sidebar
+ * Signed-in area: collapsible left-sidebar app shell — sidebar
  * (Dashboard, Launch Flow, Studios, account) + scrollable main pane.
  */
 /**

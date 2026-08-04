@@ -6,7 +6,7 @@ import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 
 // ---------------------------------------------------------------------------
-// Left sidebar, same shell pattern as ConversionForge: brand, nav (Dashboard,
+// Left sidebar: brand, nav (Dashboard,
 // Launch Flow, the five studios), and the account block with plan + usage.
 // ---------------------------------------------------------------------------
 

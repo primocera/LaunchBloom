@@ -309,7 +309,7 @@ const EMAIL_FLOW_SYSTEM =
   '- subject_line: under 50 characters where the language allows; specific, not clickbait.\n' +
   '- subject_options: 2-3 distinct, honest subject lines (include subject_line); never deceptive (no fake "Re:", no false "you won").\n' +
   '- preheader: under 90 characters; completes the subject line, never repeats it.\n' +
-  '- body_copy: complete, send-ready copy — never an outline or bullet skeleton.\n' +
+  '- body_copy: complete draft body copy in full sentences (never an outline or bullet skeleton), written for the user to review before sending.\n' +
   '- objective: restate the email\'s single purpose from the blueprint.\n' +
   '- body_copy: scannable — short paragraphs or bullets, one idea per block.\n' +
   '- cta: one specific primary CTA (not always "Shop now"); secondary_cta only if useful, else "".\n' +
@@ -527,7 +527,7 @@ const CAMPAIGN_SYSTEM =
   'sequence that can be used for a launch, seasonal promotion, product focus, bundle push, sale, ' +
   'newsletter or last-chance campaign.\n\n' +
   'Each email must include email_type, send_day, objective, subject_line, subject_options (2-3 distinct, ' +
-  'non-deceptive), preheader, headline, full send-ready body_copy (never an outline), cta, secondary_cta ' +
+  'non-deceptive), preheader, headline, full draft body_copy in complete sentences (never an outline), cta, secondary_cta ' +
   '(only when justified, else ""), segment, exclusions and design_notes.\n\n' +
   'Campaign sequence logic:\n' +
   '- Start with value or problem awareness, not immediate pressure.\n' +

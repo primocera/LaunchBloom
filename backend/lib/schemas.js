@@ -630,7 +630,7 @@ const campaignEmailSchema = {
           },
           preheader: { type: 'string' },
           headline: { type: 'string' },
-          body_copy: { type: 'string', description: 'Full send-ready body copy, not an outline.' },
+          body_copy: { type: 'string', description: 'Full draft body copy in complete sentences (not an outline); requires human review before use.' },
           cta: { type: 'string' },
           secondary_cta: { type: 'string', description: 'Only when justified; empty string otherwise.' },
           segment: { type: 'string' },
