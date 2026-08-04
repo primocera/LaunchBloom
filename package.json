@@ -22,6 +22,8 @@
     "verify-prices": "node backend/scripts/verify-stripe-prices.js",
     "_comment_add_eur": "One-shot: adds EUR (currency_options) onto the SAME six live prices in place, so no new price ids / no Vercel changes. Run with the LIVE key, then verify-prices.",
     "add-eur-prices": "node backend/scripts/add-eur-currency.js",
+    "_comment_audit": "Production dependency advisories only (dev tooling is not shipped). Recorded for the launch gate; run before every candidate cut.",
+    "audit": "npm audit --omit=dev",
     "release:check": "node backend/scripts/release-check.js",
     "release:evidence": "node backend/scripts/release-check.js --evidence",
     "_comment_launch": "docs/launch/launch-state.json is the single release truth. `verify` checks the document is trustworthy (CI-safe, must stay green); `gate` recomputes GO/NO-GO and stays red until the evidence exists; `render` regenerates docs/LAUNCH_STATE.md.",
