@@ -7,8 +7,12 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
-const { resolveEntitlement } = require('./customers');
-const { planUnavailableBody } = require('../lib/subscription-state');
+const { resolveEntitlement, readFailed, redactEmail } = require('./customers');
+const {
+  planUnavailableBody,
+  EntitlementUnavailableError,
+  isEntitlementUnavailable,
+} = require('../lib/subscription-state');
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
 const { selectCatalog, selectionTelemetry } = require('../lib/plan-catalog');
@@ -59,11 +63,17 @@ function resolveBaseUrl() {
  * the app stay linked even if the email later changes.
  */
 async function ensureStripeCustomer(email, userId) {
-  const { data: existing } = await supabase
+  // v14 SC-02: FAIL CLOSED. A Supabase read error is NOT "no customer" — reading
+  // it as absence lets a transient outage mint a SECOND Stripe customer for a
+  // user who already has one. Distinguish a verified no-row (PGRST116) from a
+  // real failure and throw the canonical unavailable error on the latter, before
+  // any Stripe mutation.
+  const { data: existing, error: existingErr } = await supabase
     .from('customers')
     .select('id, stripe_customer_id')
     .eq('email', email)
     .single();
+  if (readFailed(existingErr)) throw new EntitlementUnavailableError(existingErr);
 
   if (existing && existing.stripe_customer_id) {
     // Shared-Stripe fallout: the stored id can point at a customer that only
@@ -74,7 +84,8 @@ async function ensureStripeCustomer(email, userId) {
       if (!c.deleted) return existing.stripe_customer_id;
     } catch (err) {
       if (err.code !== 'resource_missing') throw err;
-      console.warn(`[ensureStripeCustomer] stale stripe_customer_id ${existing.stripe_customer_id} for ${email} — recreating`);
+      // v14 SC-03: never log the full email — redacted + opaque Stripe id only.
+      console.warn(`[ensureStripeCustomer] stale stripe_customer_id ${existing.stripe_customer_id} for ${redactEmail(email)} — recreating`);
     }
   }
 
@@ -83,12 +94,30 @@ async function ensureStripeCustomer(email, userId) {
     metadata: { app_user_id: userId || '', source: 'launchbloom' },
   });
 
-  await supabase
+  // v14 SC-02: verify persistence. If the Stripe customer cannot be mirrored in
+  // Supabase we must NOT open checkout against an unlinked customer — a webhook
+  // could later fail to attribute the subscription. We do NOT delete the freshly
+  // created Stripe customer (no proven idempotent compensation exists here); the
+  // next checkout attempt reuses it via the email lookup / Stripe's own email
+  // dedupe, and the reconciliation path is: match orphaned customers.email to a
+  // Stripe customer of the same email and re-upsert the id. Log a redacted
+  // correlation event and fail closed.
+  const { error: upsertErr } = await supabase
     .from('customers')
     .upsert(
       { email, stripe_customer_id: stripeCustomer.id, metadata: { app_user_id: userId || '' } },
       { onConflict: 'email' }
     );
+  if (upsertErr) {
+    console.error(JSON.stringify({
+      code: 'STRIPE_CUSTOMER_PERSIST_FAILED',
+      level: 'error',
+      source: 'ensureStripeCustomer',
+      email: redactEmail(email),
+      stripe_customer_id: stripeCustomer.id,
+    }));
+    throw new EntitlementUnavailableError(upsertErr);
+  }
 
   return stripeCustomer.id;
 }
@@ -120,23 +149,30 @@ async function ownsSubscription(subscriptionId, userEmail) {
 
 /**
  * True if this email already had a Stripe trial or an active subscription, so a
- * fresh checkout must NOT grant another 3-day free trial. Fails open to "no
- * prior trial" only when the customer has never existed in Supabase.
+ * fresh checkout must NOT grant another 3-day free trial.
+ *
+ * v14 SC-02: FAIL CLOSED. Only a VERIFIED absence returns false — a verified
+ * no-customer row (PGRST116) or a verified empty subscription set. Any Supabase
+ * read error throws EntitlementUnavailableError, because treating an outage as
+ * "no prior trial" is exactly how a returning user is handed a second free
+ * trial. Callers must resolve this BEFORE mutating anything in Stripe.
  */
 async function hadTrialOrActiveSubscription(email) {
   email = (email || '').trim().toLowerCase();
   if (!email) return false;
-  const { data: customer } = await supabase
+  const { data: customer, error: customerErr } = await supabase
     .from('customers')
     .select('id')
     .eq('email', email)
     .single();
+  if (readFailed(customerErr)) throw new EntitlementUnavailableError(customerErr);
   if (!customer) return false;
 
-  const { data: subs } = await supabase
+  const { data: subs, error: subsErr } = await supabase
     .from('subscriptions')
     .select('status, trial_end')
     .eq('customer_id', customer.id);
+  if (readFailed(subsErr)) throw new EntitlementUnavailableError(subsErr);
   if (!subs || subs.length === 0) return false;
 
   return subs.some(
@@ -217,11 +253,14 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       });
     }
 
+    // v14 SC-02: resolve ALL billing state that gates checkout BEFORE creating
+    // or mutating anything in Stripe. Trial eligibility is verified here; if it
+    // cannot be verified, hadTrialOrActiveSubscription throws before any Stripe
+    // customer exists. 3-day free trial for first-time subscribers only.
+    const giveTrial = !(await hadTrialOrActiveSubscription(email));
+
     const baseUrl = resolveBaseUrl();
     const customerId = await ensureStripeCustomer(email, userId);
-
-    // 3-day free trial for first-time subscribers only (no double-trialing).
-    const giveTrial = !(await hadTrialOrActiveSubscription(email));
 
     // Currency comes from the SAME selection the pricing page rendered from
     // (GET /api/plans). We PIN the session currency only for EUR — that gives EU
@@ -278,6 +317,14 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
+    // v14 SC-02: billing state could not be verified (trial-history or customer
+    // read/persist failure). Nothing was created in Stripe — the reads run
+    // before ensureStripeCustomer, and a persist failure throws before a session
+    // is created. Return a stable, retryable 503 with honest "not charged" copy.
+    if (isEntitlementUnavailable(err)) {
+      track('checkout_failed', { userId: req.userId, properties: { reason: 'billing_state_unavailable' } });
+      return checkoutUnavailable(res, { retryable: true, reason: 'billing_state_unavailable' });
+    }
     console.error('[create-checkout-session] error', err.type, err.code, err.message);
     track('checkout_failed', { userId: req.userId, properties: { reason: err.code || err.type || 'error' } });
     // v13 SC-P0-03: map by Stripe's TYPED error, never by parsing its message —
@@ -325,8 +372,13 @@ router.post('/cancel-subscription', requireAuth, async (req, res) => {
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
     });
   } catch (err) {
-    console.error('cancel-subscription error:', err);
-    res.status(500).json({ error: err.message });
+    // v14 SC-03: never echo Stripe/Supabase raw text to the client. A vanished
+    // subscription is a 404; everything else is a stable generic 500.
+    console.error('[cancel-subscription] error', err.type, err.code, err.message);
+    if (err.code === 'resource_missing') {
+      return res.status(404).json({ error: 'Subscription not found' });
+    }
+    res.status(500).json({ error: 'Could not update your subscription right now. Please try again.', code: 'SUBSCRIPTION_UPDATE_FAILED' });
   }
 });
 
@@ -352,11 +404,12 @@ router.get('/subscription/:subscriptionId', requireAuth, async (req, res) => {
       trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
     });
   } catch (err) {
-    console.error('get-subscription error:', err);
+    // v14 SC-03: stable generic message; never leak Stripe/Supabase raw text.
+    console.error('[get-subscription] error', err.type, err.code, err.message);
     if (err.code === 'resource_missing') {
       return res.status(404).json({ error: 'Subscription not found' });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Could not load your subscription right now. Please try again.', code: 'SUBSCRIPTION_LOOKUP_FAILED' });
   }
 });
 

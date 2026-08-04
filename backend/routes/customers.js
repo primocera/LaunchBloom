@@ -199,8 +199,9 @@ router.get('/:id', requireAuth, async (req, res) => {
 
     res.json(sanitizeCustomer(customer));
   } catch (err) {
-    console.error('get-customer error:', err);
-    res.status(500).json({ error: err.message });
+    // v14 SC-03: never echo the raw Supabase/internal message to the client.
+    console.error('[get-customer] error', err && err.code, err && err.message);
+    res.status(500).json({ error: 'Could not load this customer right now. Please try again.', code: 'CUSTOMER_LOOKUP_FAILED' });
   }
 });
 
@@ -222,3 +223,9 @@ module.exports.planFor = planFor;
 module.exports.resolveEntitlement = resolveEntitlement;
 module.exports.isPlanActive = isPlanActive;
 module.exports.pricePlans = pricePlans;
+// v14 SC-02: the canonical read-failure semantics (PGRST116 = verified no-row,
+// everything else = unavailable) and the PII-safe email redactor, exported so
+// payments.js fails closed through the SAME model instead of a second one.
+module.exports.readFailed = readFailed;
+module.exports.NO_ROWS = NO_ROWS;
+module.exports.redactEmail = redactEmail;

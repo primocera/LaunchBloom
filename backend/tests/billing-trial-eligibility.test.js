@@ -56,3 +56,38 @@ test('an empty email is never treated as a returning trialer', async () => {
   assert.equal(await hadTrialOrActiveSubscription(''), false);
   assert.equal(await hadTrialOrActiveSubscription(null), false);
 });
+
+// --- v14 SC-02: FAIL CLOSED on read failure ------------------------------
+// A Supabase outage is NOT evidence of "no prior trial". Treating a read error
+// as absence is exactly how a returning user is handed a second free trial, so
+// every real read error must throw the canonical unavailable error, and only a
+// VERIFIED no-row (PGRST116) may return eligible.
+
+const DB_ERROR = { code: '08006', message: 'connection refused' };
+
+test('a customer read ERROR fails closed → throws, never "eligible"', async () => {
+  results.customers = { data: null, error: DB_ERROR };
+  results.subscriptions = { data: null, error: null };
+  await assert.rejects(
+    () => hadTrialOrActiveSubscription('err@synthetic.test'),
+    (e) => e.code === 'PLAN_UNAVAILABLE'
+  );
+  results.customers = { data: null, error: null };
+});
+
+test('a subscription-history read ERROR fails closed → throws', async () => {
+  setCustomer({ id: 'cus_synthetic_1' });
+  results.subscriptions = { data: null, error: DB_ERROR };
+  await assert.rejects(
+    () => hadTrialOrActiveSubscription('suberr@synthetic.test'),
+    (e) => e.code === 'PLAN_UNAVAILABLE'
+  );
+  results.subscriptions = { data: null, error: null };
+});
+
+test('a VERIFIED no-customer (PGRST116) is still eligible for the first trial', async () => {
+  results.customers = { data: null, error: { code: 'PGRST116', message: 'no rows' } };
+  results.subscriptions = { data: null, error: null };
+  assert.equal(await hadTrialOrActiveSubscription('norow@synthetic.test'), false);
+  results.customers = { data: null, error: null };
+});
