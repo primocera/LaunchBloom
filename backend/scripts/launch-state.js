@@ -104,6 +104,7 @@ const STATUS_LABEL = {
   failed: 'FAILED',
   passed_locally: 'passed locally',
   passed_ci: 'passed in CI',
+  observed_production: 'observed in production',
   configured: 'configured',
   live_rehearsed: 'live rehearsed',
   observed: 'observed',

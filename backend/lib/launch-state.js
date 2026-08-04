@@ -29,16 +29,24 @@ const STATUSES = Object.freeze([
   'failed',
   'passed_locally',
   'passed_ci',
+  // v14 SC-04: a check whose command was actually run against the deployed
+  // PRODUCTION environment. Stronger than passed_locally (a laptop run) and
+  // distinct from `observed` (a live behaviour that held over time). Recording
+  // a production run as passed_locally understates it; recording a laptop run
+  // as observed_production overstates it — the two must stay separable.
+  'observed_production',
   'configured',
   'live_rehearsed',
   'observed',
   'unknown',
 ]);
 
-// A required automated check may only count as satisfied by an actual run.
-const CHECK_PASSING = Object.freeze(['passed_ci', 'passed_locally']);
-// Owner evidence describes the live system; local runs cannot satisfy it.
-const EVIDENCE_PASSING = Object.freeze(['live_rehearsed', 'observed']);
+// A required automated check may only count as satisfied by an actual run — a
+// local run, a CI run, or a run against the deployed production environment.
+const CHECK_PASSING = Object.freeze(['passed_ci', 'passed_locally', 'observed_production']);
+// Owner evidence describes the live system; local runs cannot satisfy it. A
+// production observation of a check counts here too.
+const EVIDENCE_PASSING = Object.freeze(['live_rehearsed', 'observed', 'observed_production']);
 
 const SEVERITIES = Object.freeze(['P0', 'P1', 'P2']);
 const BLOCKER_STATUSES = Object.freeze(['open', 'closed', 'accepted']);
@@ -87,6 +95,107 @@ const VERDICT_TRACKS = Object.freeze(['capped_beta', 'public_paid']);
 
 const isPlainObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 const list = (v) => (Array.isArray(v) ? v : []);
+
+// --- stale-reference integrity (v14 SC-04) --------------------------------
+//
+// launch:verify used to validate only the STRUCTURED pins (observed_at_sha ==
+// candidate). The free-form evidence/note/closure/verdict prose was invisible
+// to it, so a manifest could pin candidate A while every human-readable line
+// still named a superseded candidate B — and pass clean. These scanners make
+// the prose first-class: any commit-like SHA or Vite bundle hash embedded in
+// prose must reconcile with the structured facts, or it is stale.
+
+// Keys whose VALUE is a structured commit pin, not prose. They are the SOURCE
+// of sanctioned SHAs and are validated elsewhere (observed_at_sha ==
+// candidate), so they are not re-scanned as prose.
+const STRUCTURED_SHA_KEYS = Object.freeze(['sha', 'baseline_sha', 'head_at_generation', 'observed_at_sha']);
+
+// A commit-like token: 7-40 hex chars that contains at least one digit. The
+// digit requirement means ordinary all-letter hex words ("defaced", "facade")
+// are never mistaken for a SHA, while every short SHA we actually pin — which
+// always contains a digit — is still caught.
+const SHA_RE = /\b(?=[0-9a-f]{0,39}[0-9])[0-9a-f]{7,40}\b/g;
+// A Vite build-hash token as emitted into app/ (index-<hash>).
+const BUNDLE_RE = /\bindex-[A-Za-z0-9_-]{6,}\b/g;
+// Words that make a "candidate <sha>" mention explicitly historical, so it is
+// naming a superseded candidate as history rather than claiming the current one.
+const HISTORICAL_QUALIFIERS = new Set(['prior', 'previous', 'old', 'older', 'baseline', 'earlier', 'former', 'superseded', 'original']);
+
+function shaMatches(token, sanctioned) {
+  return sanctioned.some((s) => s.startsWith(token) || token.startsWith(s));
+}
+
+/** Visit every string value except the structured SHA pins. */
+function walkStrings(node, key, visit) {
+  if (typeof node === 'string') { if (!STRUCTURED_SHA_KEYS.includes(key)) visit(node); return; }
+  if (Array.isArray(node)) { for (const v of node) walkStrings(v, key, visit); return; }
+  if (isPlainObject(node)) { for (const k of Object.keys(node)) walkStrings(node[k], k, visit); }
+}
+
+// Every SHA that prose is allowed to mention: the candidate, the reviewed
+// baseline, the recorded HEAD, each drift commit, and any SHA explicitly
+// entered in `historical_shas` with a written label. Anything else is stale.
+function sanctionedShas(state) {
+  const candidate = isPlainObject(state.candidate) ? state.candidate : {};
+  const out = [];
+  const add = (s) => { if (typeof s === 'string' && s) out.push(s.toLowerCase()); };
+  add(candidate.sha);
+  add(candidate.baseline_sha);
+  add(candidate.head_at_generation);
+  for (const d of list(state.drift_from_baseline)) add(d && d.sha);
+  for (const c of list(state.checks)) add(c && c.observed_at_sha);
+  for (const h of list(state.historical_shas)) add(h && h.sha);
+  return out;
+}
+
+function staleReferenceProblems(state) {
+  if (!isPlainObject(state)) return [];
+  const problems = [];
+  const sanctioned = sanctionedShas(state);
+  const candidate = isPlainObject(state.candidate) ? state.candidate : {};
+  const bundle = isPlainObject(candidate.bundle) ? candidate.bundle : {};
+  const buildHashes = [];
+  if (typeof bundle.build_hash === 'string') buildHashes.push(bundle.build_hash);
+  for (const f of list(bundle.files)) if (typeof f === 'string') buildHashes.push(f.replace(/\.[a-z0-9]+$/i, ''));
+
+  const candidateSha = typeof candidate.sha === 'string' ? candidate.sha.toLowerCase() : null;
+  const seenSha = new Set();
+  const seenBundle = new Set();
+  const seenCandidate = new Set();
+  walkStrings(state, null, (str) => {
+    // The strongest signal: prose that explicitly calls a SHA "the candidate".
+    // A legitimate commit SHA (e.g. a drift commit) is still wrong here if it is
+    // named as the candidate while a different SHA is pinned. This is the exact
+    // "structured candidate A + prose candidate B" drift SC-04 must reject. A
+    // historical qualifier ("prior candidate a11afda") is explicitly allowed —
+    // it names a superseded candidate as history, not as the current one.
+    for (const m of str.matchAll(/(\w+\s+)?candidate\s+([0-9a-f]{7,40})\b/gi)) {
+      const qualifier = (m[1] || '').trim().toLowerCase();
+      if (HISTORICAL_QUALIFIERS.has(qualifier)) continue;
+      const tok = m[2].toLowerCase();
+      if (candidateSha && !(candidateSha.startsWith(tok) || tok.startsWith(candidateSha)) && !seenCandidate.has(tok)) {
+        seenCandidate.add(tok);
+        problems.push(`prose names "candidate ${m[2]}" but the pinned candidate is ${candidate.sha}`);
+      }
+    }
+    for (const m of str.match(SHA_RE) || []) {
+      const tok = m.toLowerCase();
+      if (!shaMatches(tok, sanctioned) && !seenSha.has(tok)) {
+        seenSha.add(tok);
+        problems.push(`stale/unsanctioned commit SHA "${m}" appears in prose but is not the candidate, baseline, a drift commit, or a labeled historical SHA`);
+      }
+    }
+    if (buildHashes.length) {
+      for (const m of str.match(BUNDLE_RE) || []) {
+        if (!buildHashes.some((h) => h === m || h.startsWith(m) || m.startsWith(h)) && !seenBundle.has(m)) {
+          seenBundle.add(m);
+          problems.push(`stale bundle hash "${m}" appears in prose but the candidate bundle is "${bundle.build_hash || 'unset'}"`);
+        }
+      }
+    }
+  });
+  return problems;
+}
 
 // --- integrity ------------------------------------------------------------
 
@@ -187,6 +296,11 @@ function integrityProblems(state) {
       bad(`verdicts.${track}: declared ${declared.verdict}, computed ${computed[track].verdict}`);
     }
   }
+
+  // v14 SC-04: prose that names a superseded candidate, or a bundle hash that
+  // is not the candidate's, makes the document lie even when every structured
+  // pin is correct. Treat those references as first-class integrity failures.
+  for (const p of staleReferenceProblems(state)) bad(p);
 
   return problems;
 }
@@ -340,5 +454,6 @@ module.exports = {
   VERDICTS,
   VERDICT_TRACKS,
   integrityProblems,
+  staleReferenceProblems,
   computeVerdicts,
 };

@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { integrityProblems, computeVerdicts, STATUSES, VERDICTS, CHECK_PASSING, EVIDENCE_PASSING } = require('../lib/launch-state');
+const { integrityProblems, staleReferenceProblems, computeVerdicts, STATUSES, VERDICTS, CHECK_PASSING, EVIDENCE_PASSING } = require('../lib/launch-state');
 const { loadState, documentProblems, render } = require('../scripts/launch-state');
 
 const SHA = 'a'.repeat(40);
@@ -275,6 +275,84 @@ test('a verdict string outside the closed vocabulary is rejected', () => {
   state.verdicts.public_paid.verdict = 'SHIP IT';
   assert.match(integrityProblems(state).join(' '), /unknown verdict "SHIP IT"/);
   assert.ok(!VERDICTS.includes('SHIP IT'));
+});
+
+// --- v14 SC-04: prose references are first-class facts ---------------------
+// launch:verify used to see only the structured pins. A manifest could pin
+// candidate A while every human-readable line named a superseded candidate B
+// and still pass. These fix that: the evidence/note/closure prose must
+// reconcile with the structured candidate, bundle and drift facts.
+
+const CAND = 'a'.repeat(40);
+function withProse(mutate) {
+  const state = clone(VALID);
+  state.candidate.sha = CAND;
+  state.checks[0].observed_at_sha = CAND;
+  state.checks[1].observed_at_sha = CAND;
+  mutate(state);
+  return state;
+}
+
+test('SC-04: structured candidate A + prose naming candidate B is an integrity failure', () => {
+  const state = withProse((s) => {
+    s.candidate.explanation = 'Every check was re-run at candidate deadbee1 on the freeze day.';
+  });
+  assert.match(integrityProblems(state).join(' '), /prose names "candidate deadbee1" but the pinned candidate is/);
+});
+
+test('SC-04: a historical qualifier ("prior candidate X") is allowed', () => {
+  const state = withProse((s) => {
+    s.candidate.baseline_sha = 'beef123';
+    s.candidate.explanation = 'It contains everything in the prior candidate beef123 plus the new fixes.';
+  });
+  assert.deepEqual(staleReferenceProblems(state), []);
+});
+
+test('SC-04: an unsanctioned commit SHA in prose is rejected as stale', () => {
+  const state = withProse((s) => {
+    s.checks[0].evidence = 'passed; the regression was fixed in c0ffee9 last week';
+  });
+  assert.match(integrityProblems(state).join(' '), /stale\/unsanctioned commit SHA "c0ffee9"/);
+});
+
+test('SC-04: a SHA that is a real drift or historical commit is allowed in prose', () => {
+  const state = withProse((s) => {
+    s.drift_from_baseline = [{ sha: 'c0ffee9', subject: 'x', closes_requirement: 'y' }];
+    s.historical_shas = [{ sha: 'dec0de5', label: 'historical superseded doc commit' }];
+    s.checks[0].evidence = 'builds on c0ffee9; supersedes dec0de5';
+  });
+  assert.deepEqual(staleReferenceProblems(state), []);
+});
+
+test('SC-04: a bundle hash in prose that is not the candidate bundle is rejected', () => {
+  const state = withProse((s) => {
+    s.candidate.bundle = { build_hash: 'index-AAAA111', files: ['index-AAAA111.js'] };
+    s.checks[0].evidence = 'emitted index-BBBB222.js at the candidate';
+  });
+  assert.match(integrityProblems(state).join(' '), /stale bundle hash "index-BBBB222"/);
+});
+
+test('SC-04: observed_production is a valid status that counts a check as passed', () => {
+  assert.ok(STATUSES.includes('observed_production'));
+  assert.ok(CHECK_PASSING.includes('observed_production'));
+  assert.ok(EVIDENCE_PASSING.includes('observed_production'));
+  const state = withProse((s) => {
+    s.checks[0].status = 'observed_production';
+    s.checks[1].status = 'observed_production';
+  });
+  assert.deepEqual(integrityProblems(state), []);
+  const v = computeVerdicts(state, { head_sha: CAND, code_changes: [] });
+  assert.equal(v.capped_beta.verdict, 'GO');
+});
+
+test('SC-04: a production observation is never rendered as "passed locally"', () => {
+  const state = withProse((s) => { s.checks[0].status = 'observed_production'; });
+  const doc = render(state, { head_sha: CAND });
+  assert.match(doc, /observed in production/);
+});
+
+test('SC-04: the committed manifest has no stale prose references', () => {
+  assert.deepEqual(staleReferenceProblems(loadState()), []);
 });
 
 // --- the real manifest ----------------------------------------------------
