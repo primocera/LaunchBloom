@@ -5,7 +5,7 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v13` · generated 2026-08-03T09:00:00Z
+Repository `primocera/LaunchBloom` · branch `v14` · generated 2026-08-04T00:00:00Z
 
 ## Verdict
 
@@ -23,8 +23,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `552318709c04f37f0a455acdd4c734fd5cd31abc` (frozen)
-- HEAD now: `552318709c04f37f0a455acdd4c734fd5cd31abc`
+- Candidate SHA: `81993ffb4bbcd358e0e2a3ede9e85540581c4352` (frozen)
+- HEAD now: `81993ffb4bbcd358e0e2a3ede9e85540581c4352`
 - Bundle: index-B75XUgt7.js, index-Ck_SQ1wq.css
 - Environment class: production
 
@@ -43,6 +43,10 @@ means at least one required condition is unmet without a valid acceptance.
 | `f4394a9` | feat(app): typed error-to-copy states for billing & generation failures (SC-P1-10) | One typed error-to-copy contract across plan verification, checkout, generation, usage limit, export and empty workspace; accessible alerts with focus management and one clear recovery action; no raw provider text, no false downgrade. Tests: backend/tests/error-states.test.js (11/11). |
 | `45ec316` | feat(landing): sharper promise, named coordination + honest FAQ (SC-P1-11) | Hero tightened to one outcome + one trust qualifier; coordination named (offer/audience/angle/proof/CTA/tone); FAQ covers who-it-is-for, export meaning, publishing, SEO limitation, data handling, trial start, cancellation. Content-contract tests forbid unsupported readiness/publishing claims (29/29). |
 | `879e1bb` | feat(analytics): capped-beta value scorecard with auditable staff exclusion (SC-P1-12) | Privacy-conscious value-loop event model + weekly cohort scorecard with pre-registered hypothesis thresholds and an interview guide; no content/PII in payloads; analytics failure never blocks core product. Tests: backend/tests/beta-scorecard.test.js (12/12). |
+| `a27b5de` | fix(billing): fail closed on trial/customer uncertainty; redact billing errors (SC-02, SC-03) | hadTrialOrActiveSubscription() and ensureStripeCustomer() distinguish a verified no-row from a read error and throw the canonical unavailable error; checkout resolves trial state before any Stripe mutation and verifies the customer upsert persisted; billing catch blocks return stable codes, never err.message, and logs redact the email. Tests: billing-fail-closed-checkout + billing-privacy + billing-trial-eligibility read-failure cases. |
+| `00569f2` | fix(launch): make launch evidence mechanically truthful (SC-04) | Launch-state integrity now rejects stale/unsanctioned commit SHAs and bundle hashes in prose and a 'candidate <sha>' phrase that names a non-pinned SHA; adds the observed_production status. Tests: 8 SC-04 self-tests incl. structured-A + prose-B. |
+| `dd3dff0` | docs(project): canonical Scalvya product + content contract (SC-06) | CLAUDE.md describes the real campaign-control product/flow/ICP/boundaries and shipped architecture; AI instructions drop 'send-ready'; content-contract test forbids retired brand names on customer surfaces and scans backend AI text. Tests: content-contract. |
+| `81993ff` | chore(launch): SC-05 router advisory proof + audit script | npm run audit added; GHSA-qwww-vcr4-c8h2 proven not reachable (all app-src router imports are react-router-dom, single declarative BrowserRouter, zero RSC/SSR indicators, pure client SPA). Recorded in blocker P1-router-rsc-csrf-advisory.reachability_evidence. |
 
 ## Migrations
 
@@ -57,16 +61,16 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `5523187` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `5523187` | yes |
-| Production build | `npm run build:app` | passed locally | `5523187` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `5523187` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `5523187` | yes |
+| ESLint | `npm run lint` | passed locally | `81993ff` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `81993ff` | yes |
+| Production build | `npm run build:app` | passed locally | `81993ff` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `81993ff` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `81993ff` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `5523187` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `5523187` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `5523187` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `5523187` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `81993ff` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `81993ff` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `81993ff` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `81993ff` | yes |
 
 ## Owner evidence
 
@@ -89,8 +93,8 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 5523187. |
-| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | OPEN | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v13's scope. `npm audit --omit=dev` reports 2 high at 5523187. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). Close by either (a) owner accepting the risk with a named rationale and revisit date, or (b) upgrading to react-router 8 on a React 19 / Vite 7 migration. Until then it is an open, named, unreachable risk — it must not be reported as closed. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
+| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 81993ff. |
+| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | OPEN | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v13's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). Close by either (a) owner accepting the risk with a named rationale and revisit date, or (b) upgrading to react-router 8 on a React 19 / Vite 7 migration. Until then it is an open, named, unreachable risk — it must not be reported as closed. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
 **Public paid launch (NO-GO) rests on these accepted risks:**

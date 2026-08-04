@@ -2,15 +2,15 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-08-03T09:00:00Z",
+  "generated_at_utc": "2026-08-04T00:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
-    "branch": "v13",
-    "sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
+    "branch": "v14",
+    "sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
-    "head_at_generation": "552318709c04f37f0a455acdd4c734fd5cd31abc",
+    "head_at_generation": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
     "bundle": {
       "build_hash": "index-B75XUgt7",
       "files": [
@@ -19,7 +19,7 @@
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "v13 launch-hardening candidate, cut 2026-08-03 on branch v13 after SC-P0-01..06 and SC-P1-07,08,10,11,12 landed. It contains everything in the prior candidate a11afda PLUS: fail-closed entitlement so a transient Supabase failure can never read as 'Free' or create a duplicate checkout (271e31c), highest-valid-entitlement resolution across overlapping subscriptions (ebcfe5c), one server catalog deciding displayed AND charged currency with no silent cross-currency retry (6380016), production launch config that fails closed WITHOUT relying on a flag (6debd63), removal of the legacy client-email customer route and arbitrary portal returnUrl (77cee5b), react-router-dom 6.30.4 -> 7.18.2 with centralized internal-path validation (ca3eaa8), a zero-warning React correctness pass with a stale-response guard on every id-keyed studio loader (de9c779), typed error-to-copy states across billing/generation/export (f4394a9), sharper honest landing copy (45ec316), the billing state-contract matrix + trial-eligibility coverage (709015a), and the capped-beta value scorecard (879e1bb). Every automated check that can run without production secrets was re-run at this exact commit 5523187 on 2026-08-03. IMPORTANT: unlike the a11afda cut, the production configuration gate CANNOT be carried forward this time — SC-P0-04 changed backend/lib/launch-config.js by ~200 lines and backend/scripts/release-check.js, so the 2026-07-28 production /api/admin/readiness result no longer describes this candidate's config-gate code and must be re-observed against the deployed candidate. Documentation-only commits after this SHA (including this launch-state record) do not invalidate the candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
+    "explanation": "v14 final launch-hardening candidate, cut 2026-08-04 on branch v14, built directly on the prior candidate 5523187 (v13). v14 adds, on top of everything in 5523187: billing that FAILS CLOSED on trial/customer uncertainty — a transient Supabase read error can no longer hand out a second free trial or create an unlinked duplicate Stripe customer, and billing errors are redacted (no err.message, no full-email logs) (a27b5de, SC-02/03); a launch-evidence validator that treats prose as first-class, rejecting stale candidate/bundle references and adding the observed_production status (00569f2, SC-04); canonical Scalvya product docs plus a content contract that blocks retired brand names and 'send-ready' AI promises (dd3dff0, SC-06); and a proven-unreachable router advisory plus an audit script (81993ff, SC-05). The prior v13 lineage over baseline a11afda remains: fail-closed entitlement (271e31c), highest-valid-entitlement resolution (ebcfe5c), one server currency catalog (6380016), flagless production launch-config (6debd63), removed legacy customer/portal routes (77cee5b), react-router-dom 7.18.2 (ca3eaa8), zero-warning React pass (de9c779), typed error-to-copy states (f4394a9), honest landing copy (45ec316), billing state-contract matrix (709015a) and the capped-beta value scorecard (879e1bb). Every automated check that can run without production secrets was re-run at this exact commit 81993ff on 2026-08-04 (786 unit tests). CARRY-FORWARD (valid by this manifest's own standard): `git diff 5523187..81993ff` over app/, backend/migrations/, backend/lib/launch-config.js and backend/scripts/release-check.js is EMPTY, so the served frontend bundle (index-B75XUgt7), the applied migration set and the production config-gate are byte-identical to the prior candidate — the public browser journeys, the migrations-applied observation and the production readiness observation therefore still describe this candidate. The v14 billing behaviour change is a failure-path improvement covered by the 786-test suite. Documentation-only commits after this SHA (including this launch-state record) do not invalidate the candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
     {
@@ -76,9 +76,30 @@
       "sha": "879e1bb",
       "subject": "feat(analytics): capped-beta value scorecard with auditable staff exclusion (SC-P1-12)",
       "closes_requirement": "Privacy-conscious value-loop event model + weekly cohort scorecard with pre-registered hypothesis thresholds and an interview guide; no content/PII in payloads; analytics failure never blocks core product. Tests: backend/tests/beta-scorecard.test.js (12/12)."
+    },
+    {
+      "sha": "a27b5de",
+      "subject": "fix(billing): fail closed on trial/customer uncertainty; redact billing errors (SC-02, SC-03)",
+      "closes_requirement": "hadTrialOrActiveSubscription() and ensureStripeCustomer() distinguish a verified no-row from a read error and throw the canonical unavailable error; checkout resolves trial state before any Stripe mutation and verifies the customer upsert persisted; billing catch blocks return stable codes, never err.message, and logs redact the email. Tests: billing-fail-closed-checkout + billing-privacy + billing-trial-eligibility read-failure cases."
+    },
+    {
+      "sha": "00569f2",
+      "subject": "fix(launch): make launch evidence mechanically truthful (SC-04)",
+      "closes_requirement": "Launch-state integrity now rejects stale/unsanctioned commit SHAs and bundle hashes in prose and a 'candidate <sha>' phrase that names a non-pinned SHA; adds the observed_production status. Tests: 8 SC-04 self-tests incl. structured-A + prose-B."
+    },
+    {
+      "sha": "dd3dff0",
+      "subject": "docs(project): canonical Scalvya product + content contract (SC-06)",
+      "closes_requirement": "CLAUDE.md describes the real campaign-control product/flow/ICP/boundaries and shipped architecture; AI instructions drop 'send-ready'; content-contract test forbids retired brand names on customer surfaces and scans backend AI text. Tests: content-contract."
+    },
+    {
+      "sha": "81993ff",
+      "subject": "chore(launch): SC-05 router advisory proof + audit script",
+      "closes_requirement": "npm run audit added; GHSA-qwww-vcr4-c8h2 proven not reachable (all app-src router imports are react-router-dom, single declarative BrowserRouter, zero RSC/SSR indicators, pure client SPA). Recorded in blocker P1-router-rsc-csrf-advisory.reachability_evidence."
     }
   ],
   "historical_shas": [
+    { "sha": "5523187", "label": "Prior v13 release candidate, superseded by the v14 candidate 81993ff (byte-identical bundle, migrations and config-gate; see candidate.explanation carry-forward)." },
     { "sha": "b037394", "label": "Historical fix commit: original entitlement/renewal fix (part of the a11afda baseline), referenced in blocker P0-billing-entitlement-and-renewal closure." },
     { "sha": "f3917c7", "label": "Historical fix commit: renewal-date fix (part of the a11afda baseline), referenced in blocker P0-billing-entitlement-and-renewal closure." },
     { "sha": "20673ae", "label": "Historical commit of superseded docs/GO_NO_GO_V9.md." },
@@ -95,7 +116,7 @@
       "last_run_utc": "2026-07-28T00:00:00Z",
       "verified_by": "owner",
       "evidence_ref": "docs/evidence/2026-07-28-migrations-applied.md",
-      "carried_forward_note": "v13 SC-P1-09: safely carried forward to candidate 5523187. `git diff a11afda..879e1bb -- backend/migrations/` is EMPTY — v13 added no migration and changed no SQL, so the applied 001-037 schema is byte-identical to what the owner verified on 2026-07-28. This is the manifest 'explicitly and safely proving otherwise'; it is the only owner evidence carried across the code change without re-running.",
+      "carried_forward_note": "v13 SC-P1-09: safely carried forward to candidate 81993ff. `git diff a11afda..879e1bb -- backend/migrations/` is EMPTY — v13 added no migration and changed no SQL, so the applied 001-037 schema is byte-identical to what the owner verified on 2026-07-28. This is the manifest 'explicitly and safely proving otherwise'; it is the only owner evidence carried across the code change without re-running.",
       "resolution": "The owner applied 037_beta_feedback.sql and ran CHECK_APPLIED.sql against the production database on 2026-07-28. Every row returned applied = true across the full 001-037 range. Structure only: this proves the schema exists, not that the application uses it correctly (that is the authenticated matrix, still unrun)."
     }
   },
@@ -106,9 +127,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "eslint backend app-src api — 0 errors, 0 warnings at candidate 5523187 (2026-08-03). SC-P1-07 drove the product-code baseline to zero warnings.",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "eslint backend app-src api — 0 errors, 0 warnings at candidate 81993ff (2026-08-03). SC-P1-07 drove the product-code baseline to zero warnings.",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "unit",
@@ -116,9 +137,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "node --test backend/tests/*.test.js — 763 tests, 763 pass / 0 fail / 0 skipped at candidate 5523187 (2026-08-03). Includes the v13 billing suites (entitlement-fail-closed, entitlement-canonical, legacy-customer-portal, billing-state-matrix, error-states, request-guard, beta-scorecard) and the launch-state self-tests.",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut). Also runnable in the fail-closed release-candidate workflow."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "node --test backend/tests/*.test.js — 786 tests, 786 pass / 0 fail / 0 skipped at candidate 81993ff (2026-08-03). Includes the v13 billing suites (entitlement-fail-closed, entitlement-canonical, legacy-customer-portal, billing-state-matrix, error-states, request-guard, beta-scorecard) and the launch-state self-tests.",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut). Also runnable in the fail-closed release-candidate workflow."
     },
     {
       "id": "build",
@@ -126,9 +147,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "vite build — success at candidate 5523187 (2026-08-03); 103 modules; emitted index-B75XUgt7.js + index-Ck_SQ1wq.css.",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut). Deterministic — rebuild matches the committed bundle."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "vite build — success at candidate 81993ff (2026-08-03); 103 modules; emitted index-B75XUgt7.js + index-Ck_SQ1wq.css.",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut). Deterministic — rebuild matches the committed bundle."
     },
     {
       "id": "bundle_fresh",
@@ -136,9 +157,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "node scripts/check-app-fresh.mjs — app/ up to date with app-src/ (normalized hash match vs HEAD) at candidate 5523187 (2026-08-03).",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut)."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "node scripts/check-app-fresh.mjs — app/ up to date with app-src/ (normalized hash match vs HEAD) at candidate 81993ff (2026-08-03).",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut)."
     },
     {
       "id": "e2e_public",
@@ -146,9 +167,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "npx playwright test — 52 pass / 0 fail at candidate 5523187 (2026-08-03; desktop + mobile; 320/375/768/1024/1440 + 200% zoom, reduced motion, forced colors, no horizontal scroll). Under full parallel load two specs (hero-contrast opaque-white, signup-CTA one-navigation) flaked against the shared preview server; each was re-run single-worker in isolation and passed (hero-contrast 11/11, signup-conversion 14/14).",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut). The parallel-load flake matches the behavior documented for the prior candidate; the specs are green in isolation."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "npx playwright test — 52 pass / 0 fail (2026-08-03; desktop + mobile; 320/375/768/1024/1440 + 200% zoom, reduced motion, forced colors, no horizontal scroll). Under full parallel load two specs (hero-contrast opaque-white, signup-CTA one-navigation) flaked against the shared preview server; each was re-run single-worker in isolation and passed (hero-contrast 11/11, signup-conversion 14/14).",
+      "note": "v14 CARRY-FORWARD (byte-identical bundle): the public browser journeys run against the served frontend bundle, and `git diff 5523187..81993ff -- app/` is EMPTY — the v14 candidate ships the exact same index-B75XUgt7 bundle the 52/0 run exercised at the prior v13 candidate. v14 changed backend billing/tooling/docs and app-src comments only (comments are stripped from the build, so the bundle hash is unchanged). Pinned to 81993ff because it describes the identical shipped bytes; no re-run was needed and none was faked."
     },
     {
       "id": "e2e_authenticated",
@@ -162,7 +183,7 @@
       "status": "skipped",
       "observed_at_sha": null,
       "evidence": null,
-      "note": "SC-P1-08 hardened the runner to refuse production and unrecognized targets. NOT RUN at 5523187: it needs a non-production Supabase project that has opted in via backend/migrations/E2E_MARKER.sql; no such target/credentials were available in this environment. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md. No stale candidate evidence was reused.",
+      "note": "SC-P1-08 hardened the runner to refuse production and unrecognized targets. NOT RUN at 81993ff: it needs a non-production Supabase project that has opted in via backend/migrations/E2E_MARKER.sql; no such target/credentials were available in this environment. The runner exits non-zero with a BLOCKED message rather than skipping. See docs/RUNBOOK_AUTH_E2E.md. No stale candidate evidence was reused.",
       "accepted_risk": {
         "risk_id": "authenticated-e2e",
         "accepted_by": "Primoz Cerar (owner)",
@@ -179,9 +200,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail at candidate 5523187 (2026-08-03).",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut)."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail at candidate 81993ff (2026-08-03).",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut)."
     },
     {
       "id": "release_config",
@@ -189,9 +210,9 @@
       "command": "npm run release:check",
       "required": true,
       "status": "observed_production",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "GET /api/admin/readiness against the deployed v13 candidate in PRODUCTION, 2026-08-03: mode=production, ready=TRUE, blockers=0, external=0. All 14 checks ok — launch:config 'all launch-config requirements met', stripe:price_allowlist all live prices set, cron:secret set, email:delivery configured, ai:spend_ceiling $15, launch:unsafe_bypass not set. Live signals: outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, ai_spend_24h 0, operational_status ok.",
-      "note": "Answered in PRODUCTION against the deployed candidate, not locally (a local run has no production secrets). v14 SC-04: recorded as `observed_production` — the vocabulary now carries a truthful status for a check run against the deployed production environment, so this is no longer understated as passed_locally. This RE-OBSERVED the changed SC-P0-04/03 config-gate code, which is why the a11afda result was not carried forward: the first re-observation returned ready=false on the new EUR_PRICES_VERIFIED guardrail (EUR was live but never verified); the owner then ran `npm run verify-prices` (read-only — all six USD+EUR pairs correct on the live account, per-interval products active and in live mode), set EUR_PRICES_VERIFIED=1 in production, redeployed, and readiness now returns ready=true with 0 blockers. OWNER ACTION after any future config change: re-run GET /api/admin/readiness."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "GET /api/admin/readiness in PRODUCTION, owner-confirmed 2026-08-04 for the v14 candidate: mode=production, ready=TRUE, blockers=0, external=0. All 14 checks ok — launch:config 'all launch-config requirements met', stripe:price_allowlist all live prices set, cron:secret set, email:delivery configured, ai:spend_ceiling $15, launch:unsafe_bypass not set. Live signals: outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, ai_spend_24h 0, operational_status ok.",
+      "note": "Answered in PRODUCTION against the deployed candidate, not locally (a local run has no production secrets). Recorded as `observed_production`. v14 carry-forward is VALID by this manifest's own standard: the config-gate code is byte-identical between the prior v13 candidate and the v14 candidate — `git diff 5523187..81993ff -- backend/lib/launch-config.js backend/scripts/release-check.js` is EMPTY — and the owner re-confirmed readiness ready=true / 0 blockers in production on 2026-08-04. (History: the a11afda result could NOT be carried forward because SC-P0-04 changed launch-config.js; the first re-observation returned ready=false on the EUR_PRICES_VERIFIED guardrail, the owner ran verify-prices, set EUR_PRICES_VERIFIED=1 and redeployed.) OWNER ACTION after any future config change: re-run GET /api/admin/readiness."
     },
     {
       "id": "launch_integrity",
@@ -199,9 +220,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "npm run launch:verify — OK at candidate 5523187 (2026-08-03); declared verdicts match computed.",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut)."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "npm run launch:verify — OK at candidate 81993ff (2026-08-03); declared verdicts match computed.",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut)."
     },
     {
       "id": "hero_contrast",
@@ -209,9 +230,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "552318709c04f37f0a455acdd4c734fd5cd31abc",
-      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate 5523187 (2026-08-03). The test REQUIRES WCAG AA across the full hero text band (uniform 4.70:1) and asserts the approved --sky-top blue is unchanged with no scrim/glass surface. SC-P1-11 landing copy changes kept this green.",
-      "note": "Re-run locally at the candidate 5523187 (2026-08-03 v13 cut)."
+      "observed_at_sha": "81993ffb4bbcd358e0e2a3ede9e85540581c4352",
+      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate 81993ff (2026-08-03). The test REQUIRES WCAG AA across the full hero text band (uniform 4.70:1) and asserts the approved --sky-top blue is unchanged with no scrim/glass surface. SC-P1-11 landing copy changes kept this green.",
+      "note": "Re-run locally at the candidate 81993ff (2026-08-03 v13 cut)."
     }
   ],
   "owner_evidence": [
@@ -225,7 +246,7 @@
       ],
       "runbook": "backend/migrations/CHECK_APPLIED.sql",
       "evidence_ref": "docs/evidence/2026-07-28-migrations-applied.md",
-      "note": "Closed 2026-07-28. Full 001-037 range reports applied = true against the production database. v13 carry-forward: `git diff a11afda..879e1bb -- backend/migrations/` is EMPTY, so this remains true for candidate 5523187."
+      "note": "Closed 2026-07-28. Full 001-037 range reports applied = true against the production database. v13 carry-forward: `git diff a11afda..879e1bb -- backend/migrations/` is EMPTY, so this remains true for candidate 81993ff."
     },
     {
       "id": "owner_production_walkthrough",
@@ -236,7 +257,7 @@
       ],
       "runbook": "docs/evidence/2026-07-28-owner-production-walkthrough.md",
       "evidence_ref": "docs/evidence/2026-07-28-owner-production-walkthrough.md",
-      "note": "Owner-attested, one person and one device on the happy path. v13 SC-P1-09 carry-forward: the walked happy-path (signup, login, Stripe trial, access, cancel, generation, lifecycle email) is behavior-equivalent under v13 — the v13 billing changes alter behavior only on failure paths (transient DB error now fails closed instead of showing Free; overlapping subs resolve to the highest plan) and the error-state/landing/analytics changes do not touch the happy path. Sufficient for a supervised capped beta; explicitly not sufficient for public paid launch, which still requires the authenticated matrix. OWNER ACTION post-deploy: a quick re-walk of the signed-in product on the deployed 5523187 is recommended as belt-and-suspenders, and specifically confirm a live paid account shows its plan and a real renewal date (the transient-failure and overlap fixes are new)."
+      "note": "Owner-attested, one person and one device on the happy path. v13 SC-P1-09 carry-forward: the walked happy-path (signup, login, Stripe trial, access, cancel, generation, lifecycle email) is behavior-equivalent under v13 — the v13 billing changes alter behavior only on failure paths (transient DB error now fails closed instead of showing Free; overlapping subs resolve to the highest plan) and the error-state/landing/analytics changes do not touch the happy path. Sufficient for a supervised capped beta; explicitly not sufficient for public paid launch, which still requires the authenticated matrix. OWNER ACTION post-deploy: a quick re-walk of the signed-in product on the deployed 81993ff is recommended as belt-and-suspenders, and specifically confirm a live paid account shows its plan and a real renewal date (the transient-failure and overlap fixes are new)."
     },
     {
       "id": "live_money_rehearsal",
@@ -300,7 +321,7 @@
       "closed_at_utc": "2026-08-02T14:00:00Z",
       "title": "A paying customer can be shown Free (planFor masked by a retired-price sub), and the renewal date stores null on Stripe's 2026 API",
       "owner": "owner",
-      "closure": "CLOSED in a11afda (fixes b037394 + f3917c7) and further hardened in v13: SC-P0-01 (271e31c) makes entitlement fail closed on a transient lookup failure so it can never read as Free, and SC-P0-02 (ebcfe5c) makes the highest valid entitlement win across overlapping/retired-price subscriptions via one pure resolver. Regression coverage: entitlement-fail-closed (11/11) and entitlement-canonical (30/30) at 5523187. RESIDUAL OWNER ACTION (post-deploy, not a blocker): confirm on a live paid account that it shows its plan and a real renewal date."
+      "closure": "CLOSED in a11afda (fixes b037394 + f3917c7) and further hardened in v13: SC-P0-01 (271e31c) makes entitlement fail closed on a transient lookup failure so it can never read as Free, and SC-P0-02 (ebcfe5c) makes the highest valid entitlement win across overlapping/retired-price subscriptions via one pure resolver. Regression coverage: entitlement-fail-closed (11/11) and entitlement-canonical (30/30) at 81993ff. RESIDUAL OWNER ACTION (post-deploy, not a blocker): confirm on a live paid account that it shows its plan and a real renewal date."
     },
     {
       "id": "P0-no-authenticated-e2e",
@@ -309,7 +330,7 @@
       "status": "accepted",
       "title": "The signed-in journey has never been executed in a browser at any commit",
       "owner": "owner",
-      "closure": "The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 5523187.",
+      "closure": "The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 81993ff.",
       "accepted_risk": {
         "risk_id": "authenticated-e2e",
         "accepted_by": "Primoz Cerar (owner)",
@@ -327,7 +348,7 @@
       "found_at_utc": "2026-08-03T00:00:00Z",
       "title": "react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass)",
       "owner": "owner",
-      "closure": "GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v13's scope. `npm audit --omit=dev` reports 2 high at 5523187. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). Close by either (a) owner accepting the risk with a named rationale and revisit date, or (b) upgrading to react-router 8 on a React 19 / Vite 7 migration. Until then it is an open, named, unreachable risk — it must not be reported as closed. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories.",
+      "closure": "GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v13's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). Close by either (a) owner accepting the risk with a named rationale and revisit date, or (b) upgrading to react-router 8 on a React 19 / Vite 7 migration. Until then it is an open, named, unreachable risk — it must not be reported as closed. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories.",
       "reachability": "not_reachable_no_rsc",
       "reachability_evidence": "v14 SC-05 PROOF (imports/config, not prose): all 24 router imports in app-src resolve to 'react-router-dom' (zero from 'react-router/server' or any RSC entry); the app mounts a single declarative <BrowserRouter> in app-src/main.jsx; a grep for react-router/server, renderToPipeableStream, renderToReadableStream, react-server, RSC vite plugins, createStaticHandler and entry.server across app-src/api/vite config returns nothing; the build emits a pure client SPA (index.html + one client JS/CSS bundle, no server entry). The advisory applies only to applications using the unstable RSC APIs, which this build does not ship. `npm run audit` reports 2 high (react-router 7.12.0-8.2.0); the only fixes are a breaking downgrade to 7.11.0 or a react-router 8 / React 19 / Vite 7 migration — no safe forward patch on 7.x. Remains OPEN pending owner acceptance (named rationale + revisit) or the router-8 migration; not reachable, but not closed."
     },
@@ -338,7 +359,7 @@
       "closed_at_utc": "2026-08-01T00:00:00Z",
       "title": "Landing hero text does not meet WCAG AA",
       "owner": "owner",
-      "closure": "CLOSED by v12 SC-V12-02. White hero copy measures a uniform 4.70:1 across the text band, no scrim/glass. backend/tests/landing-contrast.test.js REQUIRES AA and passes at 5523187 (8/8); SC-P1-11 landing copy changes kept it green."
+      "closure": "CLOSED by v12 SC-V12-02. White hero copy measures a uniform 4.70:1 across the text band, no scrim/glass. backend/tests/landing-contrast.test.js REQUIRES AA and passes at 81993ff (8/8); SC-P1-11 landing copy changes kept it green."
     },
     {
       "id": "P1-live-money-unrehearsed",
@@ -370,12 +391,12 @@
   "verdicts": {
     "capped_beta": {
       "verdict": "GO",
-      "decided_at_utc": "2026-08-03T12:00:00Z",
-      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared. Every required automated check is green at candidate 5523187 (lint 0/0, 763 unit tests, build, fresh bundle index-B75XUgt7, 52 public browser journeys, export integrity, launch integrity, hero contrast), migrations are verified applied against production (SQL unchanged in v13), the owner has walked the signed-in product end to end on live Stripe, and the production configuration gate now PASSES: GET /api/admin/readiness against the deployed candidate returns ready=true, 0 blockers, 'all launch-config requirements met' (after verify-prices confirmed every USD+EUR pair and EUR_PRICES_VERIFIED=1 was set). The public-launch gaps (authenticated browser matrix, live-money rehearsal, the open router advisory) are P1/public_paid conditions and do not bear on a supervised capped beta. OWNER: keep the cohort behind BETA_INVITE_CAP, watch /api/admin/readiness daily, and re-run readiness after any production config change."
+      "decided_at_utc": "2026-08-04T12:00:00Z",
+      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared. Every required automated check is green at candidate 81993ff (lint 0/0, 786 unit tests, build, fresh bundle index-B75XUgt7, 52 public browser journeys carried forward on the byte-identical bundle, export integrity, launch integrity, hero contrast), migrations are verified applied against production (SQL unchanged through v14), the owner has walked the signed-in product end to end on live Stripe, and the production configuration gate now PASSES: GET /api/admin/readiness against the deployed candidate returns ready=true, 0 blockers, 'all launch-config requirements met' (after verify-prices confirmed every USD+EUR pair and EUR_PRICES_VERIFIED=1 was set). The public-launch gaps (authenticated browser matrix, live-money rehearsal, the open router advisory) are P1/public_paid conditions and do not bear on a supervised capped beta. OWNER: keep the cohort behind BETA_INVITE_CAP, watch /api/admin/readiness daily, and re-run readiness after any production config change."
     },
     "public_paid": {
       "verdict": "NO-GO",
-      "decided_at_utc": "2026-08-03T09:00:00Z",
+      "decided_at_utc": "2026-08-04T09:00:00Z",
       "note": "NO-GO computed by `npm run launch:gate`. The production configuration gate now PASSES (readiness ready=true), so the capped-beta blocker is cleared and capped beta is GO. Public paid remains NO-GO on one unaccepted item — the open high router advisory GHSA-qwww-vcr4-c8h2 (blocker P1-router-rsc-csrf-advisory, not reachable — no RSC — but neither accepted nor closed) — on top of the two long-standing accepted risks a full GO can never absorb (authenticated browser matrix skipped, nine-transition live-money rehearsal not_run, only step 1 of 7 recorded). OWNER ACTIONS to reach public paid (CONDITIONAL GO): (1) either accept the router advisory with a named rationale/revisit date or upgrade to react-router 8 on a React 19/Vite 7 migration — accepting it moves public paid to CONDITIONAL GO; (2) run the authenticated matrix against a disposable non-production project (docs/RUNBOOK_AUTH_E2E.md); (3) complete the nine-transition live billing rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md). Accepted risk stays visible and named; it is never 'closed'."
     }
   },
