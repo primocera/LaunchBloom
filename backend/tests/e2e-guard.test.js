@@ -33,6 +33,26 @@ test('a fully configured throwaway target is READY', () => {
   assert.deepEqual(guard.preflight(FULL_ENV), { state: 'READY', reason: null });
 });
 
+test('a LIVE Stripe key is FORBIDDEN â€” the matrix must never touch live money', () => {
+  const pre = guard.preflight({ ...FULL_ENV, STRIPE_SECRET_KEY: 'sk_live_ABC123deadbeef' });
+  assert.equal(pre.state, 'FORBIDDEN');
+  assert.match(pre.reason, /LIVE Stripe key/);
+  // The key value itself is never echoed.
+  assert.ok(!pre.reason.includes('ABC123deadbeef'));
+});
+
+test('a restricted LIVE Stripe key (rk_live_) is also FORBIDDEN', () => {
+  assert.equal(guard.liveStripeRefusal({ STRIPE_SECRET_KEY: 'rk_live_zzz' }),
+    guard.liveStripeRefusal({ STRIPE_SECRET_KEY: 'rk_live_zzz' }));
+  assert.match(guard.liveStripeRefusal({ STRIPE_SECRET_KEY: 'rk_live_zzz' }), /LIVE Stripe key/);
+});
+
+test('a TEST-mode Stripe key does not trip the refusal', () => {
+  assert.equal(guard.liveStripeRefusal({ STRIPE_SECRET_KEY: 'sk_test_abc' }), null);
+  assert.equal(guard.liveStripeRefusal({}), null);
+  assert.equal(guard.preflight({ ...FULL_ENV, STRIPE_SECRET_KEY: 'sk_test_abc' }).state, 'READY');
+});
+
 test('a project on the forbidden ref list is FORBIDDEN, and the ref is never printed', () => {
   const env = {
     ...FULL_ENV,
@@ -129,6 +149,7 @@ test('evidence carries SHA, environment class, projects, counts and timestamps â
     summary: { passed: 18, failed: 0, skipped: 0, flaky: 1 },
     startedAtUtc: '2026-08-01T00:00:00Z',
     endedAtUtc: '2026-08-01T00:05:00Z',
+    artifactPaths: ['test-results/e2e-auth-report.json', 'playwright-report/'],
   });
 
   assert.equal(evidence.check, 'e2e_authenticated');
@@ -138,6 +159,7 @@ test('evidence carries SHA, environment class, projects, counts and timestamps â
   assert.deepEqual(evidence.projects, ['authenticated', 'authenticated-mobile', 'authenticated-keyboard']);
   assert.equal(evidence.counts.passed, 18);
   assert.equal(evidence.counts.flaky, 1);
+  assert.deepEqual(evidence.artifact_paths, ['test-results/e2e-auth-report.json', 'playwright-report/']);
   assert.equal(evidence.started_at_utc, '2026-08-01T00:00:00Z');
 
   // No secret value from the environment may appear anywhere in the evidence.

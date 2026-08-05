@@ -90,6 +90,12 @@ child.on('exit', (playwrightCode) => {
     summary,
     startedAtUtc,
     endedAtUtc,
+    // Report + traces (retained only on failure by playwright.config.js).
+    artifactPaths: [
+      path.relative(ROOT, JSON_OUT).replace(/\\/g, '/'),
+      'test-results/',
+      'playwright-report/',
+    ],
   });
   writeFileSync(EVIDENCE_OUT, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   console.log(`\nEvidence written to ${path.relative(ROOT, EVIDENCE_OUT)} (no secrets, counts only):`);

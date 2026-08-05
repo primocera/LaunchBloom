@@ -89,6 +89,20 @@ If `SUPABASE_URL` resolves to a listed ref the runner exits non-zero with
 `REFUSED`, printing only the *outcome* — never the ref or any key. A local stack
 (`http://127.0.0.1:54321`) has no ref and is allowed; the marker still guards it.
 
+**Live money is refused too (v15 SC-03).** If `STRIPE_SECRET_KEY` is a LIVE key
+(`sk_live_…` / `rk_live_…`) preflight returns `FORBIDDEN` before any browser
+starts — the authenticated matrix must never touch live money. Checkout journeys
+use Stripe test mode or a deterministic non-money seam; a live key is a refusal,
+not a warning. The five refusal paths (missing config, production host, missing
+marker, live Stripe key, foreign project) are covered by
+`backend/tests/e2e-guard.test.js` and enforced by `guard.preflight`.
+
+**Billing-read-failure journey (v15 SC-03).** `e2e/authenticated/billing.spec.js`
+injects a transient plan-verification `503 PLAN_UNAVAILABLE` with `page.route`
+(no real Stripe) and asserts the signed-in UI shows a safe temporary-unavailable
+state, keeps the user signed in, and **never renders Free or a start/second
+trial CTA**.
+
 ## Running it
 
 ```bash

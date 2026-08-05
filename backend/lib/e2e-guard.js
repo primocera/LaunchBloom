@@ -120,6 +120,22 @@ function baseUrlRefusal(env = {}) {
     + 'run against the locally started app';
 }
 
+/**
+ * A refusal reason when a LIVE Stripe key is configured. The authenticated
+ * matrix drives checkout journeys; it must NEVER touch live money. Checkout
+ * tests use Stripe test mode or a deterministic non-money seam, so a secret or
+ * restricted LIVE key (sk_live_… / rk_live_…) is refused before any browser
+ * starts. The key value itself is never printed — only that it is live.
+ */
+function liveStripeRefusal(env = {}) {
+  const key = String(env.STRIPE_SECRET_KEY || '').trim();
+  if (/^(sk|rk)_live_/.test(key)) {
+    return 'a LIVE Stripe key is configured (STRIPE_SECRET_KEY=sk_live_…) — the authenticated '
+      + 'matrix must never touch live money; use a test-mode key or unset it';
+  }
+  return null;
+}
+
 /** Whether the run is a release-candidate gate, where any skip is a hard failure. */
 function isReleaseGate(env = {}) {
   return String(env.RC_GATE || '') === '1';
@@ -134,7 +150,8 @@ function preflight(env = {}) {
   if (missing.length) {
     return { state: 'BLOCKED', reason: `missing environment: ${missing.join(', ')}` };
   }
-  const refusal = targetRefusal(env) || unrecognizedTargetRefusal(env) || baseUrlRefusal(env);
+  const refusal = targetRefusal(env) || unrecognizedTargetRefusal(env)
+    || baseUrlRefusal(env) || liveStripeRefusal(env);
   if (refusal) return { state: 'FORBIDDEN', reason: refusal };
   return { state: 'READY', reason: null };
 }
@@ -175,7 +192,7 @@ function environmentClass(env = {}) {
  * Machine-readable evidence for docs/launch — candidate SHA, environment class,
  * project names, counts and timestamps. Never a secret value or user datum.
  */
-function buildEvidence({ sha, env = {}, projects = [], summary = {}, startedAtUtc, endedAtUtc }) {
+function buildEvidence({ sha, env = {}, projects = [], summary = {}, startedAtUtc, endedAtUtc, artifactPaths = [] }) {
   return {
     check: 'e2e_authenticated',
     candidate_sha: sha || null,
@@ -188,6 +205,9 @@ function buildEvidence({ sha, env = {}, projects = [], summary = {}, startedAtUt
       skipped: Number(summary.skipped || 0),
       flaky: Number(summary.flaky || 0),
     },
+    // Where the raw run artifacts live (report, traces retained on failure).
+    // Paths only — the artifacts themselves are uploaded by the workflow.
+    artifact_paths: [...artifactPaths],
     started_at_utc: startedAtUtc || null,
     ended_at_utc: endedAtUtc || null,
   };
@@ -202,6 +222,7 @@ module.exports = {
   isLocalUrl,
   unrecognizedTargetRefusal,
   baseUrlRefusal,
+  liveStripeRefusal,
   isReleaseGate,
   preflight,
   classifyRun,
