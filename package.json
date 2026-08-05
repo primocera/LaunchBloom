@@ -33,7 +33,9 @@
     "launch:render": "node backend/scripts/launch-state.js render",
     "_comment_export_integrity": "DOCX/PDF/ZIP structural validation and bounds — the export path that protects the paid deliverable.",
     "test:export": "node --test backend/tests/handoff-export-integrity.test.js",
-    "backfill:consistency": "node backend/scripts/backfill-consistency.js"
+    "backfill:consistency": "node backend/scripts/backfill-consistency.js",
+  "_comment_rehearsal": "SC-04: validate a completed live-money rehearsal record against the canonical eight-transition matrix. Read-only; owner runs the rehearsal itself.",
+  "rehearsal:validate": "node backend/scripts/validate-rehearsal.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

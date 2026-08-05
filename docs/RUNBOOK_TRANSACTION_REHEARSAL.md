@@ -97,6 +97,29 @@ line for the late event and the row stays `active`. Covered locally by
 sequence is the live confirmation. Refunds and disputes are acknowledged but
 change no entitlement on their own (`backend/tests/webhook-lifecycle.test.js`).
 
+## Recording the rehearsal (SC-04 schema)
+
+Record the run as a machine-checkable JSON file, copying
+`docs/evidence/rehearsal-record.template.json`. Each of the eight rows (A–H)
+takes a `status` (`not_run` · `blocked` · `failed` · `test_mode_rehearsed` ·
+`live_rehearsed`), an **opaque** `evidence` id (a Stripe event/subscription/
+invoice/charge id — **never** an email, card number, webhook secret or customer
+text) and the `observed_at_utc` of the system state. Then validate it:
+
+```bash
+npm run rehearsal:validate -- docs/evidence/<your-file>.json --candidate <sha>
+```
+
+The validator (`backend/lib/rehearsal.js`) rejects a candidate mismatch, a
+missing/duplicate row, a rehearsed row with no observation, **reused** evidence,
+any PII/secret in evidence, and a **live_required** row (B, E, F, G, H)
+satisfied only in test mode. A `test_mode_rehearsed` proof never satisfies a
+live row, and a schema-valid but incomplete record still exits non-zero — a
+partial rehearsal supports **CONDITIONAL GO**, never a clean GO, and the
+`live-money` accepted risk stays visible until every live_required row is
+`live_rehearsed`. **Refund verification (row H): whenever money moved, confirm
+the refund in Stripe and record its opaque refund id** before closing the row.
+
 ## Rollback (per journey)
 
 If any journey above lands in a wrong state, the customer comes first and the

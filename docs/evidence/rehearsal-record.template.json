@@ -1,0 +1,57 @@
+{
+  "schema": "rehearsal-record-1",
+  "candidate_sha": "__FILL_CANDIDATE_SHA__",
+  "matrix": "ordered_recovery_sequence",
+  "transition_count": 8,
+  "rows": [
+    {
+      "id": "A",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "B",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "C",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "D",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "E",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "F",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "G",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    },
+    {
+      "id": "H",
+      "status": "not_run",
+      "evidence": null,
+      "observed_at_utc": null
+    }
+  ],
+  "_instructions": "v15 SC-04 owner template. Fill each row: status one of not_run|blocked|failed|test_mode_rehearsed|live_rehearsed; evidence = an OPAQUE Stripe event/subscription/invoice/charge id (never an email, card number, secret or customer text); observed_at_utc = when the SYSTEM STATE was observed. Validate with: npm run rehearsal:validate -- docs/evidence/<your-file>.json. A live_required row (B,E,F,G,H) is satisfied only by live_rehearsed. Verify a refund in Stripe whenever money moved (row H)."
+}
