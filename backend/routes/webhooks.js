@@ -583,3 +583,8 @@ async function onCustomerUpdated(stripeCustomer) {
 }
 
 module.exports = router;
+// v15 XAPP-01: exported for the cross-app isolation matrix tests. On the shared
+// Stripe account these are the ownership boundary — a foreign event must never
+// be adopted, mutated, emailed or counted.
+module.exports.isOurSubscription = isOurSubscription;
+module.exports.isOurCharge = isOurCharge;
