@@ -79,6 +79,9 @@ stubModule('lib/stripe.js', {
   customers: {
     create: async (payload) => { stripeCalls.customersCreated += 1; return { id: 'cus_new', ...payload }; },
     retrieve: async (id) => ({ id, deleted: false }),
+    // v15 SC-02: recovery lookup runs before create on a verified no-row. No
+    // pre-existing Scalvya customer in these fixtures, so it returns none.
+    search: async () => ({ data: [] }),
   },
   checkout: {
     sessions: {

@@ -16,6 +16,54 @@ const {
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
 const { selectCatalog, selectionTelemetry } = require('../lib/plan-catalog');
+const { opsSignal } = require('../lib/ops-signal');
+
+// Scalvya's ownership tag in the SHARED Stripe account. Every customer this app
+// creates carries metadata.source = this value; recovery and reconciliation only
+// ever match on it, so a Mellowa (or any foreign) customer is never adopted.
+const APP_STRIPE_SOURCE = 'launchbloom';
+
+/**
+ * v15 SC-02: multiple Scalvya-owned Stripe customers exist for one user. This is
+ * never resolved by arbitrary selection — it fails closed with a stable internal
+ * code and a redacted operator signal. No PII, no customer ids in the message.
+ */
+class CustomerReconciliationRequiredError extends Error {
+  constructor(count) {
+    super('customer reconciliation required');
+    this.name = 'CustomerReconciliationRequiredError';
+    this.code = 'CUSTOMER_RECONCILIATION_REQUIRED';
+    this.candidateCount = count;
+  }
+}
+
+/**
+ * A deterministic, PII-free Stripe idempotency key for customer creation, stable
+ * across retries that should converge on ONE customer. Namespaced by app + the
+ * stable internal user id — never the raw (mutable, PII) email.
+ */
+function stripeCustomerIdempotencyKey(userId) {
+  return `scalvya:customer:create:${userId}`;
+}
+
+/**
+ * Read-only recovery: find Scalvya-owned Stripe customers for this user by exact
+ * app-ownership metadata (source + stable user id). Returns zero / one / multiple
+ * so the caller can create idempotently, reuse, or fail closed. Never matches on
+ * email, so it cannot adopt a foreign product's customer from the shared account.
+ */
+async function recoverScalvyaCustomer(userId) {
+  if (typeof stripe.customers.search !== 'function') return { status: 'zero' };
+  const query = `metadata['app_user_id']:'${userId}' AND metadata['source']:'${APP_STRIPE_SOURCE}'`;
+  const res = await stripe.customers.search({ query, limit: 10 });
+  const live = (res && res.data ? res.data : []).filter(
+    (c) => c && !c.deleted && c.metadata
+      && c.metadata.app_user_id === userId && c.metadata.source === APP_STRIPE_SOURCE,
+  );
+  if (live.length === 0) return { status: 'zero' };
+  if (live.length === 1) return { status: 'one', id: live[0].id };
+  return { status: 'multiple', count: live.length, ids: live.map((c) => c.id) };
+}
 
 /**
  * v13 SC-P0-03: the ONE public checkout failure message. Stripe's own text never
@@ -63,6 +111,12 @@ function resolveBaseUrl() {
  * the app stay linked even if the email later changes.
  */
 async function ensureStripeCustomer(email, userId) {
+  // v15 SC-02: identity is the STABLE INTERNAL user id. Without it we can build
+  // neither a PII-free idempotency key nor a safe recovery query, so we fail
+  // closed rather than fall back to an email-keyed identity (email is mutable
+  // and PII). requireAuth guarantees userId upstream; this is defense in depth.
+  if (!userId) throw new EntitlementUnavailableError(new Error('missing stable user id for customer identity'));
+
   // v14 SC-02: FAIL CLOSED. A Supabase read error is NOT "no customer" — reading
   // it as absence lets a transient outage mint a SECOND Stripe customer for a
   // user who already has one. Distinguish a verified no-row (PGRST116) from a
@@ -78,34 +132,51 @@ async function ensureStripeCustomer(email, userId) {
   if (existing && existing.stripe_customer_id) {
     // Shared-Stripe fallout: the stored id can point at a customer that only
     // exists in test mode or on another account ("No such customer" in live).
-    // Verify it against the current key; recreate on resource_missing.
+    // Verify it against the current key; recover on resource_missing.
     try {
       const c = await stripe.customers.retrieve(existing.stripe_customer_id);
       if (!c.deleted) return existing.stripe_customer_id;
     } catch (err) {
       if (err.code !== 'resource_missing') throw err;
       // v14 SC-03: never log the full email — redacted + opaque Stripe id only.
-      console.warn(`[ensureStripeCustomer] stale stripe_customer_id ${existing.stripe_customer_id} for ${redactEmail(email)} — recreating`);
+      console.warn(`[ensureStripeCustomer] stale stripe_customer_id ${existing.stripe_customer_id} for ${redactEmail(email)} — recovering`);
     }
   }
 
-  const stripeCustomer = await stripe.customers.create({
-    email,
-    metadata: { app_user_id: userId || '', source: 'launchbloom' },
-  });
+  // v15 SC-02: BEFORE creating, recover an existing Scalvya-owned customer by app
+  // metadata. Stripe does NOT deduplicate Customer objects by email, so a bare
+  // create() on every retry (e.g. after a failed link write) would multiply
+  // customers. Recovery reclaims a prior orphan by the stable user id instead.
+  //   zero     → create idempotently;
+  //   one      → reuse (the query already proved it live + Scalvya-owned);
+  //   multiple → fail closed, never an arbitrary selection.
+  const recovered = await recoverScalvyaCustomer(userId);
+  if (recovered.status === 'multiple') throw new CustomerReconciliationRequiredError(recovered.count);
+
+  let customerId;
+  if (recovered.status === 'one') {
+    customerId = recovered.id;
+  } else {
+    // The namespaced idempotency key makes concurrent and retried creates for
+    // the same user converge on ONE Customer within Stripe's key-retention
+    // window (~24h) — the primary guard against duplicates under a race.
+    const stripeCustomer = await stripe.customers.create(
+      { email, metadata: { app_user_id: userId, source: APP_STRIPE_SOURCE } },
+      { idempotencyKey: stripeCustomerIdempotencyKey(userId) },
+    );
+    customerId = stripeCustomer.id;
+  }
 
   // v14 SC-02: verify persistence. If the Stripe customer cannot be mirrored in
   // Supabase we must NOT open checkout against an unlinked customer — a webhook
-  // could later fail to attribute the subscription. We do NOT delete the freshly
-  // created Stripe customer (no proven idempotent compensation exists here); the
-  // next checkout attempt reuses it via the email lookup / Stripe's own email
-  // dedupe, and the reconciliation path is: match orphaned customers.email to a
-  // Stripe customer of the same email and re-upsert the id. Log a redacted
-  // correlation event and fail closed.
+  // could later fail to attribute the subscription. We do NOT delete the Stripe
+  // customer on a failed link (no proven-safe idempotent compensation without
+  // first proving no subscription/session references it); the recovery lookup
+  // above reclaims it on the next attempt. Log a redacted event and fail closed.
   const { error: upsertErr } = await supabase
     .from('customers')
     .upsert(
-      { email, stripe_customer_id: stripeCustomer.id, metadata: { app_user_id: userId || '' } },
+      { email, stripe_customer_id: customerId, metadata: { app_user_id: userId } },
       { onConflict: 'email' }
     );
   if (upsertErr) {
@@ -114,12 +185,33 @@ async function ensureStripeCustomer(email, userId) {
       level: 'error',
       source: 'ensureStripeCustomer',
       email: redactEmail(email),
-      stripe_customer_id: stripeCustomer.id,
+      stripe_customer_id: customerId,
     }));
     throw new EntitlementUnavailableError(upsertErr);
   }
 
-  return stripeCustomer.id;
+  // v15 SC-02: conflict/race check. If a concurrent writer linked a DIFFERENT
+  // customer, the DB row is the durable truth — never open checkout against the
+  // customer we happened to create. Prefer the persisted winner if it is live;
+  // otherwise fail closed for reconciliation. A read-back miss (no row / read
+  // error) is treated as transient and does not undo the durable write above.
+  const { data: linked } = await supabase
+    .from('customers')
+    .select('stripe_customer_id')
+    .eq('email', email)
+    .single();
+  if (linked && linked.stripe_customer_id && linked.stripe_customer_id !== customerId) {
+    try {
+      const winner = await stripe.customers.retrieve(linked.stripe_customer_id);
+      if (!winner.deleted) {
+        opsSignal('reconciliation_correction', { reason: 'stripe_customer_link_race_resolved', severity: 'info' });
+        return linked.stripe_customer_id;
+      }
+    } catch { /* winner unretrievable — fall through to reconciliation-required */ }
+    throw new CustomerReconciliationRequiredError(2);
+  }
+
+  return customerId;
 }
 
 /** 404s unless the subscription's customer email matches the session email. */
@@ -325,6 +417,17 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       track('checkout_failed', { userId: req.userId, properties: { reason: 'billing_state_unavailable' } });
       return checkoutUnavailable(res, { retryable: true, reason: 'billing_state_unavailable' });
     }
+    // v15 SC-02: multiple Scalvya-owned Stripe customers for one user. Not
+    // retryable by the buyer — an operator must reconcile. Emit a redacted,
+    // PII-free signal (the count only) and fail closed with the safe copy.
+    if (err instanceof CustomerReconciliationRequiredError) {
+      opsSignal('reconciliation_correction', {
+        reason: `multiple_stripe_customers:${err.candidateCount}`,
+        severity: 'high',
+      });
+      track('checkout_failed', { userId: req.userId, properties: { reason: 'customer_reconciliation_required' } });
+      return checkoutUnavailable(res, { retryable: false, reason: 'customer_reconciliation_required' });
+    }
     console.error('[create-checkout-session] error', err.type, err.code, err.message);
     track('checkout_failed', { userId: req.userId, properties: { reason: err.code || err.type || 'error' } });
     // v13 SC-P0-03: map by Stripe's TYPED error, never by parsing its message —
@@ -417,3 +520,9 @@ module.exports = router;
 // v7 LB-12: account/billing uses this to switch paywall copy to pay-today for
 // users who already used their one trial.
 module.exports.hadTrialOrActiveSubscription = hadTrialOrActiveSubscription;
+// v15 SC-02: exported for unit tests (idempotency, recovery, race, reconciliation).
+module.exports.ensureStripeCustomer = ensureStripeCustomer;
+module.exports.recoverScalvyaCustomer = recoverScalvyaCustomer;
+module.exports.stripeCustomerIdempotencyKey = stripeCustomerIdempotencyKey;
+module.exports.CustomerReconciliationRequiredError = CustomerReconciliationRequiredError;
+module.exports.APP_STRIPE_SOURCE = APP_STRIPE_SOURCE;
