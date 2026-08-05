@@ -2,6 +2,13 @@
 
 **Read this before writing the next pack (v16+).**
 
+> **Hard rule, up front:** if the pack you are about to write is about the
+> **authenticated E2E matrix**, the **live-money rehearsal**, or the
+> **react-router advisory** — **do not write it.** All three are owner-gated,
+> already inventoried in `docs/launch/launch-state.json`, and cannot change
+> status from a prompt. A pack whose spine is any of the three is a no-op. Stop
+> and tell the owner to run the two live tasks (or deploy the beta) instead.
+
 The last five packs (v11 → v15) keep circling the **same three items**: the
 authenticated E2E matrix, the live-money rehearsal, and the react-router
 advisory. Each new pack re-inventories them, adds more machinery *around* them,
