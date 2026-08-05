@@ -1,3 +1,8 @@
+> **SUPERSEDED (v15).** This v14 handoff is pinned to the prior candidate
+> `81993ff`. The current canonical handoff is **`docs/OWNER_HANDOFF_V15.md`**
+> (candidate `b234dad`), and the single source of truth is
+> `docs/launch/launch-state.json` / `docs/LAUNCH_STATE.md`. Kept only as history.
+
 # Owner handoff — v14 launch hardening (SC-07 + LAUNCH-01)
 
 > Prepared by Claude Code on branch `v14`. This document contains **no live

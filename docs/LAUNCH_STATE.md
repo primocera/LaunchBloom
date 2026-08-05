@@ -5,7 +5,7 @@
 > release document that disagrees with this one is superseded, not a
 > second opinion.
 
-Repository `primocera/LaunchBloom` · branch `v14` · generated 2026-08-04T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `v15` · generated 2026-08-05T00:00:00Z
 
 ## Verdict
 
@@ -23,8 +23,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `81993ffb4bbcd358e0e2a3ede9e85540581c4352` (frozen)
-- HEAD now: `81993ffb4bbcd358e0e2a3ede9e85540581c4352`
+- Candidate SHA: `b234dad77a72910d4c94555eb0a2c410c2a0a1a9` (frozen)
+- HEAD now: `b234dad77a72910d4c94555eb0a2c410c2a0a1a9`
 - Bundle: index-B75XUgt7.js, index-Ck_SQ1wq.css
 - Environment class: production
 
@@ -47,6 +47,12 @@ means at least one required condition is unmet without a valid acceptance.
 | `00569f2` | fix(launch): make launch evidence mechanically truthful (SC-04) | Launch-state integrity now rejects stale/unsanctioned commit SHAs and bundle hashes in prose and a 'candidate <sha>' phrase that names a non-pinned SHA; adds the observed_production status. Tests: 8 SC-04 self-tests incl. structured-A + prose-B. |
 | `dd3dff0` | docs(project): canonical Scalvya product + content contract (SC-06) | CLAUDE.md describes the real campaign-control product/flow/ICP/boundaries and shipped architecture; AI instructions drop 'send-ready'; content-contract test forbids retired brand names on customer surfaces and scans backend AI text. Tests: content-contract. |
 | `81993ff` | chore(launch): SC-05 router advisory proof + audit script | npm run audit added; GHSA-qwww-vcr4-c8h2 proven not reachable (all app-src router imports are react-router-dom, single declarative BrowserRouter, zero RSC/SSR indicators, pure client SPA). Recorded in blocker P1-router-rsc-csrf-advisory.reachability_evidence. |
+| `d70d81b` | docs(launch): one current launch truth + active-doc integrity scan (SC-01) | OWNER_HANDOFF_V14 reconciled to the machine state (then pinned to 81993ff, public paid CONDITIONAL GO, router accepted); one canonical eight-transition (A–H) live-money count; new activeDocumentProblems() fails launch:verify on a contradictory candidate/verdict/blocker/bundle/transition-count in any allowlisted active document. Tests: active-doc-integrity (11/11). |
+| `16e2b06` | fix(billing): idempotent Stripe customer creation + orphan recovery (SC-02) | Namespaced PII-free idempotency key + read-only recovery by app metadata so a retry or concurrent request never mints a second Stripe customer; multiple candidates fail closed (CUSTOMER_RECONCILIATION_REQUIRED); foreign-product customers never adopted; false 'Stripe email dedupe' comment corrected. Tests: billing-idempotent-customer (13/13). |
+| `f72514a` | test(e2e): authenticated matrix refuses live money + billing-failure journey (SC-03) | Preflight refuses a LIVE Stripe key; evidence records artifact_paths; a controlled entitlement-read-failure journey proves the signed-in UI stays safe (never Free / second trial). Five refusal paths proven. Tests: e2e-guard (19/19). |
+| `e8ba74d` | feat(launch): canonical live-money rehearsal matrix + record schema (SC-04) | One machine-readable eight-transition (A–H) matrix + a completed-rehearsal record validator rejecting partial, reused, stale or PII-bearing evidence and test-mode proof on a live-required row. Tests: rehearsal (13/13). |
+| `6748c18` | fix(security): make the react-router RSC advisory continuously enforceable (SC-05) | Deterministic RSC/SSR reachability guard (npm run check:router) wired into check + release-candidate + launch:verify; accepted-risk review_by expiry enforcement so the acceptance cannot silently become permanent. Tests: router-reachability (15/15). |
+| `b234dad` | test(billing): Scalvya-side cross-app Stripe isolation matrix (XAPP-01) | Exported webhook ownership helpers + symmetrical negative tests (same email, same-looking user id, foreign product/price, missing metadata, multiple-candidate recovery); docs/XAPP_ISOLATION_MATRIX.md records the contract. Tests: cross-app-isolation (9/9). |
 
 ## Migrations
 
@@ -61,16 +67,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `81993ff` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `81993ff` | yes |
-| Production build | `npm run build:app` | passed locally | `81993ff` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `81993ff` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `81993ff` | yes |
+| ESLint | `npm run lint` | passed locally | `b234dad` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `b234dad` | yes |
+| Production build | `npm run build:app` | passed locally | `b234dad` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `b234dad` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `b234dad` | yes |
 | Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `81993ff` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `81993ff` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `81993ff` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `81993ff` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `b234dad` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `b234dad` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `b234dad` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `b234dad` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `b234dad` | yes |
 
 ## Owner evidence
 
@@ -93,7 +100,7 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03) and its runner now refuses production/unrecognized targets (SC-P1-08). Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate 81993ff. |
+| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03); its runner refuses production/unrecognized targets (SC-P1-08) and now also a LIVE Stripe key (SC-03), and stays a non-zero BLOCKED when the environment is absent. Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate b234dad. |
 | P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v14's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). ACCEPTED for public_paid on 2026-08-04 with the rationale below; it keeps its real status (the advisory is NOT closed) and is revisited at the react-router 8 / React 19 / Vite 7 migration or sooner if a 7.x backport ships. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
@@ -114,6 +121,7 @@ over it, and never that it was resolved.
 
 These remain in the repository as history. None of them is current truth.
 
+- `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (candidate b234dad). Kept as history.
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
 - `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.
 - `docs/BETA_GO_NO_GO.md` — Historical v5 beta audit pinned to 0ce5cd5.
