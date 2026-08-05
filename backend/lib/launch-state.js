@@ -125,6 +125,46 @@ function shaMatches(token, sanctioned) {
   return sanctioned.some((s) => s.startsWith(token) || token.startsWith(s));
 }
 
+// The set of Vite build-hash tokens the candidate legitimately ships (the
+// build_hash plus each emitted file with its extension stripped).
+function bundleHashesOf(candidate) {
+  const bundle = isPlainObject(candidate && candidate.bundle) ? candidate.bundle : {};
+  const out = [];
+  if (typeof bundle.build_hash === 'string') out.push(bundle.build_hash);
+  for (const f of list(bundle.files)) if (typeof f === 'string') out.push(f.replace(/\.[a-z0-9]+$/i, ''));
+  return out;
+}
+
+// Prose that explicitly calls a SHA "the candidate" while a different SHA is
+// pinned is the exact "structured candidate A + prose candidate B" drift. A
+// historical qualifier ("prior candidate a11afda") is allowed — it names a
+// superseded candidate as history, not the current one. Pushes messages via
+// `sink`; `seen` dedupes across a whole document.
+function candidateMentionProblems(str, candidate, seen, sink) {
+  const candidateSha = typeof candidate.sha === 'string' ? candidate.sha.toLowerCase() : null;
+  if (!candidateSha) return;
+  for (const m of str.matchAll(/(\w+\s+)?candidate\s+([0-9a-f]{7,40})\b/gi)) {
+    const qualifier = (m[1] || '').trim().toLowerCase();
+    if (HISTORICAL_QUALIFIERS.has(qualifier)) continue;
+    const tok = m[2].toLowerCase();
+    if (!(candidateSha.startsWith(tok) || tok.startsWith(candidateSha)) && !seen.has(tok)) {
+      seen.add(tok);
+      sink(`names "candidate ${m[2]}" but the pinned candidate is ${candidate.sha}`);
+    }
+  }
+}
+
+// A bundle hash in prose that is not the candidate's shipped bundle is stale.
+function bundleMentionProblems(str, buildHashes, bundleLabel, seen, sink) {
+  if (!buildHashes.length) return;
+  for (const m of str.match(BUNDLE_RE) || []) {
+    if (!buildHashes.some((h) => h === m || h.startsWith(m) || m.startsWith(h)) && !seen.has(m)) {
+      seen.add(m);
+      sink(`stale bundle hash "${m}" but the candidate bundle is "${bundleLabel}"`);
+    }
+  }
+}
+
 /** Visit every string value except the structured SHA pins. */
 function walkStrings(node, key, visit) {
   if (typeof node === 'string') { if (!STRUCTURED_SHA_KEYS.includes(key)) visit(node); return; }
@@ -195,6 +235,112 @@ function staleReferenceProblems(state) {
     }
   });
   return problems;
+}
+
+// --- active-document integrity (v15 SC-01) --------------------------------
+//
+// staleReferenceProblems scans the manifest's OWN prose. But a human can still
+// read a contradictory current truth from a hand-authored handoff or a stale
+// rendered view that disagrees with the manifest — exactly the OWNER_HANDOFF
+// vs launch-state split SC-01 closes. activeDocumentProblems takes the manifest
+// plus the text of each allowlisted ACTIVE document (state.active_documents)
+// and fails when an active document contradicts the computed truth on: a
+// non-historical candidate SHA, a track verdict, an accepted/closed blocker
+// re-described as open/unaccepted, the candidate bundle hash, or the canonical
+// live-money transition count. Pure: the CLI reads the files and passes text.
+
+const NUMBER_WORDS = Object.freeze({
+  1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven',
+  8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve', 13: 'thirteen',
+});
+
+/** The one canonical live-money transition count everything must agree on. */
+function canonicalTransitionCount(state) {
+  const r = isPlainObject(state && state.live_money_rehearsal) ? state.live_money_rehearsal : {};
+  return Number.isInteger(r.transition_count) ? r.transition_count : null;
+}
+
+const normVerdict = (s) => String(s).toUpperCase().replace(/[\s-]+/g, '');
+const TRACK_LABEL_RE = Object.freeze({
+  capped_beta: 'capped[ _-]?beta',
+  public_paid: 'public[ _-]?paid',
+});
+
+function activeDocumentProblems(state, docs) {
+  if (!isPlainObject(state)) return [];
+  const out = [];
+  const candidate = isPlainObject(state.candidate) ? state.candidate : {};
+  const bundle = isPlainObject(candidate.bundle) ? candidate.bundle : {};
+  const bundleLabel = bundle.build_hash || 'unset';
+  const buildHashes = bundleHashesOf(candidate);
+  const computed = computeVerdicts(state);
+  const txCount = canonicalTransitionCount(state);
+  const acceptedBlockers = list(state.blockers).filter((b) => b && (b.status === 'accepted' || b.status === 'closed'));
+
+  for (const doc of list(docs)) {
+    if (!doc || typeof doc.text !== 'string') continue;
+    const text = doc.text;
+    const where = `active doc ${doc.path}: `;
+    const push = (m) => out.push(where + m);
+
+    // 1 + 4 — candidate SHA and bundle hash contradictions (reuse the manifest
+    // scanners against the document text).
+    candidateMentionProblems(text, candidate, new Set(), push);
+    bundleMentionProblems(text, buildHashes, bundleLabel, new Set(), push);
+
+    // 2 — verdict contradiction. Match the "Label: VERDICT" idiom (handles
+    // markdown bold and an optional "launch"); the generated table/legend prose
+    // uses other separators and is not matched, so it cannot false-positive.
+    for (const track of VERDICT_TRACKS) {
+      const want = computed[track].verdict;
+      // Match the "Label: VERDICT" idiom, tolerating markdown bold on either
+      // side of the separator ("**Public paid:** **NO-GO**"). A separator is
+      // required, so the generated table ("| Public paid launch | **GO** |")
+      // and the legend prose cannot false-positive.
+      const re = new RegExp(`\\b(?:${TRACK_LABEL_RE[track]})\\b(?:\\s+launch)?[\\s*]*[:—-][\\s*]*(CONDITIONAL GO|NO[- ]GO|GO)\\b`, 'ig');
+      for (const m of text.matchAll(re)) {
+        if (normVerdict(m[1]) !== normVerdict(want)) {
+          push(`states ${track} = "${m[1]}" but the computed verdict is "${want}"`);
+        }
+      }
+    }
+
+    // 3 — an accepted/closed blocker re-described as open/unaccepted. Scoped:
+    // the blocker's stable id or GHSA code must appear near a negation, so the
+    // legitimate "accepted, not closed" wording of an accepted risk is allowed.
+    for (const b of acceptedBlockers) {
+      const ids = [b.id, ...(String(b.title || '').match(/GHSA-[\w-]+/gi) || [])].filter(Boolean);
+      for (const id of ids) {
+        let i = text.indexOf(id);
+        while (i !== -1) {
+          const window = text.slice(Math.max(0, i - 220), i + id.length + 220);
+          if (/\bneither accepted nor closed\b/i.test(window)
+              || /\bnot (?:yet |been )?accepted\b/i.test(window)
+              || /\brisk is not accepted\b/i.test(window)
+              || (b.status === 'accepted' && /\bstill (?:open|unaccepted)\b/i.test(window))) {
+            push(`describes blocker ${b.id} as not accepted/open, but the manifest records it as ${b.status}`);
+            break;
+          }
+          i = text.indexOf(id, i + id.length);
+        }
+      }
+    }
+
+    // 5 — inconsistent transition count. Any "<n>-transition" or "<word>-transition"
+    // token that is not the canonical count contradicts the one live-money matrix.
+    if (txCount != null) {
+      const valid = new Set([String(txCount), NUMBER_WORDS[txCount]].filter(Boolean));
+      const seenTx = new Set();
+      for (const m of text.matchAll(/\b([a-z]+|\d+)-transition\b/gi)) {
+        const tok = m[1].toLowerCase();
+        if (!valid.has(tok) && !seenTx.has(tok)) {
+          seenTx.add(tok);
+          push(`says "${m[1]}-transition" but the canonical live-money rehearsal has ${txCount} transitions (${NUMBER_WORDS[txCount]})`);
+        }
+      }
+    }
+  }
+  return out;
 }
 
 // --- integrity ------------------------------------------------------------
@@ -455,5 +601,7 @@ module.exports = {
   VERDICT_TRACKS,
   integrityProblems,
   staleReferenceProblems,
+  activeDocumentProblems,
+  canonicalTransitionCount,
   computeVerdicts,
 };

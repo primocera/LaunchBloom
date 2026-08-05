@@ -44,24 +44,31 @@ Fresh `npm ci`, then:
 - **Public Playwright** (`npm run test:e2e`): NOT RUN — the browser binary is not installed in this environment and I did not download binaries. Because the frontend bundle is byte-identical to the v13 candidate (which recorded 52/0), you may either re-run it once (`npx playwright install chromium && npm run test:e2e`) or record a bundle-unchanged carry-forward.
 - **Authenticated matrix** (`npm run test:e2e:auth`): BLOCKED — needs a disposable non-production Supabase project with the `E2E_MARKER.sql` opt-in (see `docs/RUNBOOK_AUTH_E2E.md`). The runner refuses production/unrecognized targets and exits non-zero rather than skipping.
 - **Production readiness / config gate** (`GET /api/admin/readiness`): owner-only — needs production secrets.
-- **Nine-transition live-money rehearsal**: owner-only — see `docs/RUNBOOK_TRANSACTION_REHEARSAL.md`.
+- **Eight-transition live-money rehearsal** (the ordered recovery sequence, steps A–H): owner-only — see `docs/RUNBOOK_TRANSACTION_REHEARSAL.md`.
 
-## 4. To formally re-pin the v14 candidate (owner step)
+## 4. Candidate is pinned to `81993ff` (done)
 
-The manifest (`docs/launch/launch-state.json`) is still pinned to the v13 candidate `5523187`; `npm run launch:drift` correctly reports code drift (`backend/tests/*`, `package.json`). To cut the v14 candidate:
+The manifest (`docs/launch/launch-state.json`) is pinned to the v14 candidate
+`81993ff`. The v13 candidate `5523187` is recorded only as prior history
+(`historical_shas`). At the pinned candidate:
 
-1. Confirm frozen SHA `81993ff` and a clean tree.
-2. Re-run the required checks at `81993ff` and record each with `observed_at_sha: 81993ff` + an evidence reference. **A check whose code changed may not be carried forward** — re-run it or mark it `not_run`. (Public Playwright: re-run, or record the bundle-unchanged carry-forward with the identical `index-B75XUgt7` hash as the argument.)
-3. Re-observe the owner evidence at the deployed `81993ff`: production readiness (`ready=true`), migrations applied (unchanged — no new migration in v14, so `git diff 5523187..81993ff -- backend/migrations/` is empty), and a quick signed-in re-walk focused on the **new fail-closed billing paths** (a transient DB error must now fail closed with the safe "not charged" copy, never show Free or open a second trial).
-4. Set `candidate.sha`, `head_at_generation` and every `observed_at_sha` to `81993ff`; update the evidence prose (test count is now **786**, bundle hash unchanged).
-5. `npm run launch:gate` (do **not** hand-edit verdicts) → `npm run launch:render` → commit docs only.
+- `npm run launch:verify` → OK (one active launch truth; verdict recomputed).
+- `npm run launch:gate` → **capped_beta: GO**, **public_paid: CONDITIONAL GO** (computed, not declared).
+- `npm run launch:drift` → none (HEAD matches candidate except documentation).
+- Required checks are pinned to `81993ff` with `786` unit tests; the frontend
+  bundle is `index-B75XUgt7` (byte-identical carry-forward from `5523187`).
+
+There is nothing left to re-pin for the v14 candidate. Owner-only deployment and
+rollback instructions are preserved in **LAUNCH-01** below. Any future code change
+creates a *new* candidate and returns the gate to NO-GO until it is re-cut and
+re-evidenced (`how_to_create_a_new_candidate` in the manifest).
 
 ## 5. Verdict (computed, not declared)
 
 - **Capped beta:** **GO** (candidate re-pinned to `81993ff` on 2026-08-04; `launch:gate` computes GO, `launch:drift` none). Owner confirmed production readiness `ready=true`/0 blockers, and the browser/migrations/config-gate evidence is a valid carry-forward (byte-identical `git diff 5523187..81993ff` over `app/`, `backend/migrations/`, `launch-config.js`, `release-check.js`). Remaining before opening the cohort: deploy `81993ff` to production (LAUNCH-01 below) and, recommended, one manual fail-closed billing sanity check.
-- **Public paid:** **NO-GO.** Three items stand: the open router advisory `P1-router-rsc-csrf-advisory` (not reachable — proven in §5 of the manifest — but neither accepted nor closed; accepting it with your named rationale + revisit date moves this to CONDITIONAL GO), the skipped authenticated matrix, and the un-run nine-transition live-money rehearsal.
+- **Public paid:** **CONDITIONAL GO** (computed 2026-08-04). No unaccepted blocker remains, but the public-paid launch proceeds *over* three required conditions that are only bypassed by named, visible accepted risks — never satisfied: the router advisory `P1-router-rsc-csrf-advisory` (**accepted** 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), the skipped authenticated matrix (`authenticated-e2e`), and the un-run **eight-transition** live-money rehearsal (`live-money`). Each keeps its real status. Strongly recommended before opening *unrestricted* public signup: run the authenticated matrix and complete the rehearsal to convert those two from accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta.
 
-**Router advisory (GHSA-qwww-vcr4-c8h2):** not reachable — proof recorded in the blocker `reachability_evidence`: every `app-src` router import is `react-router-dom`, a single declarative `<BrowserRouter>`, zero RSC/SSR indicators, pure client SPA. No safe forward patch on 7.x (fix is a breaking 7.11.0 downgrade or a react-router-8/React-19/Vite-7 migration). Your decision: accept (named rationale + revisit date) **or** schedule the router-8 migration.
+**Router advisory (GHSA-qwww-vcr4-c8h2):** not reachable — proof recorded in the blocker `reachability_evidence`: every `app-src` router import is `react-router-dom`, a single declarative `<BrowserRouter>`, zero RSC/SSR indicators, pure client SPA. No safe forward patch on 7.x (fix is a breaking 7.11.0 downgrade or a react-router-8/React-19/Vite-7 migration). **Accepted for the public-paid track on 2026-08-04** (Primoz Cerar, owner) with revisit at the router-8 / React-19 / Vite-7 migration or sooner if a 7.x backport ships; it stays visible and named, never closed.
 
 ---
 

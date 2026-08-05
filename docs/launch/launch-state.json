@@ -106,6 +106,18 @@
     { "sha": "fd354ad", "label": "Historical commit of superseded docs/GO_NO_GO_V10.md." },
     { "sha": "0ce5cd5", "label": "Historical commit of superseded docs/BETA_GO_NO_GO.md." }
   ],
+  "live_money_rehearsal": {
+    "runbook": "docs/RUNBOOK_TRANSACTION_REHEARSAL.md",
+    "canonical": "ordered_recovery_sequence",
+    "transition_count": 8,
+    "step_ids": ["A", "B", "C", "D", "E", "F", "G", "H"],
+    "late_failure_step": "G",
+    "note": "The eight-transition ordered recovery sequence (steps A–H) is the canonical live-money rehearsal gating public_paid; step G is the late payment_failed-after-recovery regression. SC-04 formalizes each step's precondition/expected-state and a completed-rehearsal record schema."
+  },
+  "active_documents": [
+    "docs/LAUNCH_STATE.md",
+    "docs/OWNER_HANDOFF_V14.md"
+  ],
   "migrations": {
     "range": "001-037",
     "on_disk_count": 39,
@@ -268,7 +280,7 @@
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal",
       "evidence_ref": null,
-      "note": "Owner-only. Claude Code must never perform a live charge or refund. The nine-transition matrix — and specifically row 7, a late payment_failed arriving after a recovery — remains unrun. v13 did not change the subscription state machine or webhook ordering, so this item is unchanged from a11afda.",
+      "note": "Owner-only. Claude Code must never perform a live charge or refund. The eight-transition ordered rehearsal (steps A–H in docs/RUNBOOK_TRANSACTION_REHEARSAL.md) — and specifically step G, a late payment_failed arriving after a recovery — remains unrun. v13 did not change the subscription state machine or webhook ordering, so this item is unchanged from a11afda.",
       "accepted_risk": {
         "risk_id": "live-money",
         "accepted_by": "Primoz Cerar (owner)",
@@ -386,7 +398,7 @@
         "tracks": [
           "public_paid"
         ],
-        "rationale": "Owner has run a live trial start, granted access and cancellation against real Stripe, and production shows 0 webhook failures in 24h. Not rehearsed: the nine-transition matrix, specifically a late payment_failed arriving AFTER a recovery. Mitigation: entitlement is reconciled from Stripe as canonical, refunds are immediate, and the owner monitors webhook_failures_24h on /api/admin/readiness."
+        "rationale": "Owner has run a live trial start, granted access and cancellation against real Stripe, and production shows 0 webhook failures in 24h. Not rehearsed: the eight-transition ordered sequence (steps A–H), specifically a late payment_failed arriving AFTER a recovery (step G). Mitigation: entitlement is reconciled from Stripe as canonical, refunds are immediate, and the owner monitors webhook_failures_24h on /api/admin/readiness."
       }
     },
     {
@@ -408,7 +420,7 @@
     "public_paid": {
       "verdict": "CONDITIONAL GO",
       "decided_at_utc": "2026-08-04T09:00:00Z",
-      "note": "CONDITIONAL GO computed by `npm run launch:gate` — NOT a clean GO. No unaccepted blocker remains, but the public-paid launch proceeds OVER three required conditions that are only bypassed by named, visible accepted risks, never satisfied: the router advisory GHSA-qwww-vcr4-c8h2 (accepted 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), the authenticated browser matrix (skipped), and the nine-transition live-money rehearsal (not_run — a real charge on 2026-08-04 covers step 1 of 7; the late payment_failed-after-recovery, refund and out-of-order webhook transitions remain unrehearsed). Each keeps its real status. STRONGLY RECOMMENDED before opening unrestricted public signup: run the authenticated matrix (docs/RUNBOOK_AUTH_E2E.md) and complete the nine-transition rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md) to convert those two from accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta."
+      "note": "CONDITIONAL GO computed by `npm run launch:gate` — NOT a clean GO. No unaccepted blocker remains, but the public-paid launch proceeds OVER three required conditions that are only bypassed by named, visible accepted risks, never satisfied: the router advisory GHSA-qwww-vcr4-c8h2 (accepted 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), the authenticated browser matrix (skipped), and the eight-transition (steps A–H) live-money rehearsal (not_run — a real charge on 2026-08-04 covers step B, trial-converts-to-paid; the late payment_failed-after-recovery (step G), refund and out-of-order webhook transitions remain unrehearsed). Each keeps its real status. STRONGLY RECOMMENDED before opening unrestricted public signup: run the authenticated matrix (docs/RUNBOOK_AUTH_E2E.md) and complete the eight-transition rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md) to convert those two from accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta."
     }
   },
   "rollback": {

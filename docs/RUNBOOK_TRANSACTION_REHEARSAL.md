@@ -57,7 +57,14 @@ Journey 13 is the v10 SC-00 regression: replay a `invoice.payment_failed` whose
 `stripe events resend <evt_id>`). Covered locally by
 `backend/tests/webhook-ordering.test.js`; this row is the live confirmation.
 
-## SC-V12-04 · Ordered recovery sequence (run as one continuous rehearsal)
+## SC-V12-04 · Ordered recovery sequence — the canonical live-money rehearsal (run as one continuous rehearsal)
+
+> **This eight-transition ordered sequence (steps A–H) is the canonical
+> live-money rehearsal** the launch state (`docs/launch/launch-state.json`,
+> owner-evidence `live_money_rehearsal`) refers to. The 13-row journey catalog
+> above is the broader set of paths to spot-check; the eight lettered steps are
+> the money-path rehearsal that gates `public_paid`, and the late
+> `payment_failed`-after-recovery regression is **step G** (the 7th step).
 
 Run these transitions **in order on a single subscription**, using a real
 low-value Scalvya plan, only after the owner deliberately starts the run. Record

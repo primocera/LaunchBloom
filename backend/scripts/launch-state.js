@@ -20,6 +20,7 @@ const { execSync } = require('child_process');
 
 const {
   integrityProblems,
+  activeDocumentProblems,
   computeVerdicts,
   CHECK_PASSING,
   EVIDENCE_PASSING,
@@ -72,7 +73,7 @@ function codeChangesSince(sha) {
 
 // Integrity checks that need the filesystem, kept out of the pure module:
 // the manifest's claims about other documents must actually hold on disk.
-function documentProblems(state, root = ROOT) {
+function documentProblems(state, root = ROOT, overrides = {}) {
   const problems = [];
   for (const doc of state.superseded_documents || []) {
     const p = path.join(root, doc.path);
@@ -82,6 +83,25 @@ function documentProblems(state, root = ROOT) {
       problems.push(`${doc.path} is listed as superseded but carries no SUPERSEDED banner — two active documents can disagree`);
     }
   }
+
+  // v15 SC-01: the allowlisted ACTIVE documents (a hand-authored owner handoff
+  // and the rendered view) must not contradict the manifest on candidate,
+  // verdict, blocker status, bundle or the live-money transition count. Reading
+  // these files is why this scan lives in the CLI and not the pure module.
+  const activeDocs = [];
+  for (const rel of state.active_documents || []) {
+    // `render` passes the freshly-generated text for the file it is about to
+    // write, so a stale on-disk rendered view can never block its own
+    // regeneration (the generator's output cannot contradict the manifest).
+    if (Object.prototype.hasOwnProperty.call(overrides, rel)) {
+      activeDocs.push({ path: rel, text: overrides[rel] });
+      continue;
+    }
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) { problems.push(`active document missing: ${rel}`); continue; }
+    activeDocs.push({ path: rel, text: fs.readFileSync(p, 'utf8') });
+  }
+  for (const p of activeDocumentProblems(state, activeDocs)) problems.push(p);
 
   // Migration count is a fact about the repository, so it is verified against
   // the repository rather than trusted.
@@ -276,7 +296,17 @@ function main() {
     code_changes: codeChangesSince(state.candidate && state.candidate.sha),
   };
 
-  const problems = [...integrityProblems(state), ...documentProblems(state)];
+  // Rendered against the pinned candidate, not the live HEAD, so the committed
+  // document is deterministic — otherwise every commit after the freeze
+  // rewrites it and the sync test fails for a reason unrelated to launch truth.
+  const pinned = { head_sha: state.candidate.sha || state.candidate.head_at_generation || observed.head_sha };
+  const renderedContent = render(state, pinned);
+  // In render mode the active-doc scan checks the ABOUT-TO-BE-WRITTEN rendered
+  // view, so a stale on-disk copy cannot block its own regeneration.
+  const overrides = mode === 'render'
+    ? { [path.relative(ROOT, RENDER_PATH).replace(/\\/g, '/')]: renderedContent }
+    : {};
+  const problems = [...integrityProblems(state), ...documentProblems(state, ROOT, overrides)];
 
   if (mode === 'render') {
     if (problems.length) {
@@ -284,13 +314,7 @@ function main() {
       for (const p of problems) console.error(`  - ${p}`);
       process.exit(1);
     }
-    // Rendered against the pinned candidate, not the live HEAD, so the
-    // committed document is deterministic — otherwise every commit that lands
-    // after the freeze (including the gate documents themselves) rewrites it
-    // and the sync test fails for a reason that is not about launch truth.
-    // Live drift is reported by `npm run launch:gate`, which reads real HEAD.
-    const pinned = { head_sha: state.candidate.sha || state.candidate.head_at_generation || observed.head_sha };
-    fs.writeFileSync(RENDER_PATH, render(state, pinned), 'utf8');
+    fs.writeFileSync(RENDER_PATH, renderedContent, 'utf8');
     console.log(`Wrote ${path.relative(ROOT, RENDER_PATH)}`);
     process.exit(0);
   }
