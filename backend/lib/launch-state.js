@@ -343,6 +343,40 @@ function activeDocumentProblems(state, docs) {
   return out;
 }
 
+// --- accepted-risk review dates (v15 SC-05) -------------------------------
+//
+// An accepted risk that can never expire quietly becomes permanent. When an
+// accepted_risk carries a `review_by` date, release verification fails once that
+// date passes without the owner re-affirming it — so the router advisory (and
+// any other dated acceptance) cannot silently outlive its rationale.
+
+function parseDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? null : t;
+}
+
+/**
+ * Problems from accepted risks whose review date has passed (or is malformed).
+ * `now` is injected so the check is deterministic in tests. Pure.
+ */
+function reviewProblems(state, now = Date.now()) {
+  const problems = [];
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+  const consider = (kind, id, acc) => {
+    if (!isPlainObject(acc) || acc.review_by == null) return;
+    const due = parseDate(acc.review_by);
+    if (due == null) { problems.push(`${kind} ${id}: accepted risk has an unparseable review_by (${JSON.stringify(acc.review_by)})`); return; }
+    if (nowMs >= due) {
+      problems.push(`${kind} ${id}: accepted risk is past its review_by (${acc.review_by}) — re-affirm with a new date or resolve it`);
+    }
+  };
+  for (const b of list(state.blockers)) if (b && b.status === 'accepted') consider('blocker', b.id, b.accepted_risk);
+  for (const c of list(state.checks)) if (c && c.accepted_risk) consider('check', c.id, c.accepted_risk);
+  for (const e of list(state.owner_evidence)) if (e && e.accepted_risk) consider('evidence', e.id, e.accepted_risk);
+  return problems;
+}
+
 // --- integrity ------------------------------------------------------------
 
 // Structural problems that make the manifest untrustworthy as a source of
@@ -603,5 +637,6 @@ module.exports = {
   staleReferenceProblems,
   activeDocumentProblems,
   canonicalTransitionCount,
+  reviewProblems,
   computeVerdicts,
 };

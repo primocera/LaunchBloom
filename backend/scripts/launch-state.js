@@ -21,10 +21,12 @@ const { execSync } = require('child_process');
 const {
   integrityProblems,
   activeDocumentProblems,
+  reviewProblems,
   computeVerdicts,
   CHECK_PASSING,
   EVIDENCE_PASSING,
 } = require('../lib/launch-state');
+const { rscIndicators } = require('../lib/router-reachability');
 
 const ROOT = path.join(__dirname, '..', '..');
 const STATE_PATH = path.join(ROOT, 'docs', 'launch', 'launch-state.json');
@@ -69,6 +71,13 @@ function codeChangesSince(sha) {
   } catch {
     return null; // unknown never means safe
   }
+}
+
+// v15 SC-05: the frontend source + build config, for the RSC reachability scan.
+// Reuses the standalone scanner's collector so both agree on what is scanned.
+function collectSourceForRsc() {
+  try { return require('./check-router-reachability').collect(); }
+  catch { return []; }
 }
 
 // Integrity checks that need the filesystem, kept out of the pure module:
@@ -306,7 +315,18 @@ function main() {
   const overrides = mode === 'render'
     ? { [path.relative(ROOT, RENDER_PATH).replace(/\\/g, '/')]: renderedContent }
     : {};
-  const problems = [...integrityProblems(state), ...documentProblems(state, ROOT, overrides)];
+  // v15 SC-05: release verification also fails if an accepted risk is past its
+  // review date, or if the app stopped being a pure client SPA (which would make
+  // the accepted react-router RSC advisory reachable again).
+  const reachability = rscIndicators(collectSourceForRsc()).map(
+    (f) => `router reachability: ${f.path} ${f.why} [${f.id}] — the accepted no-RSC risk no longer holds`,
+  );
+  const problems = [
+    ...integrityProblems(state),
+    ...documentProblems(state, ROOT, overrides),
+    ...reviewProblems(state, Date.now()),
+    ...reachability,
+  ];
 
   if (mode === 'render') {
     if (problems.length) {

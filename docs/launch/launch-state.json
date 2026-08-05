@@ -369,6 +369,12 @@
           "public_paid"
         ],
         "revisit_at": "react-router 8 / React 19 / Vite 7 migration, or sooner if a 7.x backport of GHSA-qwww-vcr4-c8h2 ships",
+        "review_by": "2026-11-04",
+        "reachability_guard": "npm run check:router (backend/lib/router-reachability.js): fails if any RSC/SSR/server-router indicator appears, so the 'not reachable' basis is mechanically enforced, not asserted.",
+        "resolution_paths": [
+          "A: a safe patched 7.x release of react-router-dom that fixes GHSA-qwww-vcr4-c8h2 without the 8.x break — adopt it and close this blocker.",
+          "B: a separately scoped react-router 8 / React 19 / Vite 7 migration with its own regression plan (breaking; removes react-router-dom)."
+        ],
         "dependency_watch": "Watch react-router advisories and the react-router-dom 7.x line; re-run `npm run audit` before every candidate cut and reassess if a 7.x fix or a reachable RSC/SSR entry point is ever introduced.",
         "rationale": "The advisory affects ONLY applications using the unstable React Server Components APIs. This app ships none: all app-src router imports are 'react-router-dom', it mounts a single declarative <BrowserRouter>, there is no RSC/SSR entry point, and the build is a pure client SPA (proof in reachability_evidence). The only fixes are a breaking downgrade to 7.11.0 or a full react-router 8 / React 19 / Vite 7 migration — neither justified for an unreachable path. Owner accepts this for the public-paid track only; it stays visible and named, never closed, and is revisited at the router-8 migration."
       },

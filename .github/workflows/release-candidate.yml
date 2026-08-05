@@ -55,6 +55,9 @@ jobs:
       - name: Stale-bundle check (app/ matches app-src/)
         run: npm run check:app-fresh
 
+      - name: Router reachability (accepted RSC advisory stays unreachable)
+        run: npm run check:router
+
       - name: Export integrity (DOCX / PDF / ZIP)
         run: npm run test:export
 
@@ -78,7 +81,7 @@ jobs:
             echo "workflow_run_id=${GITHUB_RUN_ID}"
             echo "ref=${GITHUB_REF}"
             echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "checks=lint,launch:verify,test,build:app,check:app-fresh,test:export,test:e2e,launch:drift"
+            echo "checks=lint,launch:verify,test,build:app,check:app-fresh,check:router,test:export,test:e2e,launch:drift"
           } > "rc-evidence/summary-${GITHUB_SHA}.txt"
 
       - name: Upload evidence
