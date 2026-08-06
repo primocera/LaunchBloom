@@ -21,6 +21,7 @@ const { execSync } = require('child_process');
 const {
   integrityProblems,
   activeDocumentProblems,
+  agentDocumentProblems,
   reviewProblems,
   computeVerdicts,
   CHECK_PASSING,
@@ -111,6 +112,22 @@ function documentProblems(state, root = ROOT, overrides = {}) {
     activeDocs.push({ path: rel, text: fs.readFileSync(p, 'utf8') });
   }
   for (const p of activeDocumentProblems(state, activeDocs)) problems.push(p);
+
+  // SC-95-02: the high-traffic AI-agent entry documents (README, CLAUDE.md, the
+  // prompt-pack scope note) are hand-authored prose, not generated, so they get
+  // a lighter scan that fails on a retired auth model, a public-paid-open claim
+  // that contradicts the verdict, a stale transition count or a resolved risk.
+  const agentDocs = [];
+  for (const rel of state.agent_documents || []) {
+    if (Object.prototype.hasOwnProperty.call(overrides, rel)) {
+      agentDocs.push({ path: rel, text: overrides[rel] });
+      continue;
+    }
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) { problems.push(`agent document missing: ${rel}`); continue; }
+    agentDocs.push({ path: rel, text: fs.readFileSync(p, 'utf8') });
+  }
+  for (const p of agentDocumentProblems(state, agentDocs)) problems.push(p);
 
   // Migration count is a fact about the repository, so it is verified against
   // the repository rather than trusted.

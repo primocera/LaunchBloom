@@ -149,6 +149,11 @@
     "docs/LAUNCH_STATE.md",
     "docs/OWNER_HANDOFF_V15.md"
   ],
+  "agent_documents": [
+    "README.md",
+    "CLAUDE.md",
+    "docs/PROMPT_PACK_SCOPE_NOTE.md"
+  ],
   "migrations": {
     "range": "001-037",
     "on_disk_count": 39,
@@ -429,7 +434,8 @@
       "closed_at_utc": "2026-08-01T00:00:00Z",
       "title": "Landing hero text does not meet WCAG AA",
       "owner": "owner",
-      "closure": "CLOSED by v12 SC-V12-02. White hero copy measures a uniform 4.70:1 across the text band, no scrim/glass. backend/tests/landing-contrast.test.js REQUIRES AA and passes at 81993ff (8/8); SC-P1-11 landing copy changes kept it green."
+      "closure": "CLOSED by v12 SC-V12-02. White hero copy measures a uniform 4.70:1 across the text band, no scrim/glass. backend/tests/landing-contrast.test.js REQUIRES AA and passes at 81993ff (8/8); SC-P1-11 landing copy changes kept it green.",
+      "resolved_subject_markers": ["hero[^\\n]{0,40}below WCAG AA"]
     },
     {
       "id": "P1-live-money-unrehearsed",

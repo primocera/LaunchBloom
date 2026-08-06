@@ -16,7 +16,7 @@ Scalvya (historical names, kept only for migration history: OfferFlow AI, Launch
 
 **Pricing:** a **3-day paid Stripe trial** then starter/pro/studio (monthly or yearly). `payments.js` adds `trial_period_days: 3` for first-time subscribers only; `planFor()` returns `'trial'` while `trialing`. Price→plan mapping uses `STRIPE_PRICE_{STARTER,PRO,STUDIO}_{MONTHLY,YEARLY}` (legacy `_BUSINESS` → studio). Limits per plan live in `backend/lib/plan-limits.js`; `free` is a very limited public/demo plan (0 full kits until the trial starts).
 
-The build follows the prompt playbook in `OfferFlow_AI_Claude_Code_Prompts.docx`, but the stack was deliberately changed from the playbook's Next.js/OpenAI to a **ConversionForge-derived architecture** (sibling project at `c:\Users\primo\conversionForge`). When in doubt about a pattern, look at how ConversionForge does it.
+The build follows the prompt playbook in `OfferFlow_AI_Claude_Code_Prompts.docx`, but the stack was deliberately changed from the playbook's Next.js/OpenAI to a **ConversionForge-derived architecture** (the sibling ConversionForge project). When in doubt about a pattern, look at how ConversionForge does it.
 
 ## Commands
 
@@ -24,7 +24,7 @@ The build follows the prompt playbook in `OfferFlow_AI_Claude_Code_Prompts.docx`
 npm install
 npm run dev              # node --watch backend/server.js (API)
 npm run dev:app          # vite dev server (frontend)
-npm test                 # node --test backend/tests/*.test.js (784+ tests)
+npm test                 # node --test backend/tests/*.test.js
 npm run lint             # eslint backend app-src api
 npm run build:app        # vite build → committed app/ bundle
 npm run check            # lint + test + build:app + check:app-fresh
@@ -37,7 +37,7 @@ Backend needs a `.env` (copy `backend/.env.example`): Supabase service-role, Str
 
 **Stack:** Node.js + Express (CommonJS, plain JS — no TypeScript, no Zod), Supabase Postgres via service_role client, Anthropic Claude (`claude-opus-4-8`) with structured JSON output, Stripe Checkout + webhooks, optional Resend. Frontend is a **real, shipped** Vite + React + react-router-dom v7 app in `app-src/` (Landing, auth, Brand Profile, Campaigns, Create, the five studios, Asset Library, Account, Admin), built into the committed `app/` bundle and served statically on Vercel; `npm run check:app-fresh` guards that `app/` matches `app-src/`.
 
-**Identity model (no Supabase Auth):** `backend/lib/auth.js` mints stateless HMAC session tokens (`email|exp` signed with SESSION_SECRET, 30 days). The session email IS the identity; `workspaces.user_email` links data to accounts.
+**Identity model (Supabase Auth):** `backend/lib/auth.js` `requireAuth` authenticates each request from the HttpOnly `sb_access` cookie (validated against Supabase Auth); an expired access token is silently refreshed from the `sb_refresh` cookie. It attaches **`req.userId` (a stable Supabase user UUID)** and `req.userEmail`. The stable UUID is the identity and the primary owner key — `workspaces.user_id` owns data; **`user_email` is mutable contact/display data and a legacy fallback** only for pre-`user_id` rows (get-or-create adopts and stamps them) and for the `customers` billing table keyed by email. Every service-role query is scoped by `user_id` (with the `user_email` fallback for un-backfilled rows). `SESSION_SECRET` is still used by the inherited credit helpers, not for identity. (The old stateless-HMAC/localStorage token is gone.)
 
 **Plan gating:** every AI route is wrapped in `planGate(feature)` from `backend/lib/plan-limits.js` — it authenticates, resolves the plan via `planFor()` (cached), ensures the workspace, and enforces the per-feature limit by counting rows (monthly for paid plans, lifetime for `trial`/`free`). Returns 402 code `UPGRADE` when a limit is hit; failed generations never count. (`backend/lib/gate.js` `creditGate` is the inherited ConversionForge credit system and is not wired into the AI routes.)
 

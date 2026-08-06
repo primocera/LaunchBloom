@@ -121,19 +121,18 @@ automatically.
 | [`docs/GOLDEN_EVAL_V10.md`](docs/GOLDEN_EVAL_V10.md) | What the quality gate does and does not measure |
 | [`docs/LIFECYCLE_EMAIL_V10.md`](docs/LIFECYCLE_EMAIL_V10.md) | Every email, its trigger, dedupe key and category |
 | [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal (still outstanding) |
-| [`docs/HANDOFF_V12.md`](docs/HANDOFF_V12.md) | **Start here.** State at launch, accepted risks, what v12 should pick up |
+| [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) | **Start here.** Current owner handoff: state, accepted risks, next steps |
 | [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | Generated launch truth — never edit by hand |
 | [`docs/RUNBOOK_AUTH_E2E.md`](docs/RUNBOOK_AUTH_E2E.md) | Running the signed-in browser matrix |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) · [`DEVELOPMENT.md`](DEVELOPMENT.md) | Deploy and local setup |
 
 ## Status
 
-**Live.** Public paid signup is open as of 2026-07-28.
-
-The launch verdict is computed, not declared — from
+The launch verdict is **computed, not declared here** — from
 [`docs/launch/launch-state.json`](docs/launch/launch-state.json), by
-`npm run launch:gate`. The two tracks are not on the same footing, and accepted
-risk never produces a full GO:
+`npm run launch:gate`. This README states product capability and links to that
+canonical truth; it does not independently declare a track open or GO. The two
+tracks are not on the same footing, and accepted risk never produces a full GO:
 
 | Track | Verdict | On what |
 |---|---|---|
@@ -141,16 +140,17 @@ risk never produces a full GO:
 | Public paid launch | CONDITIONAL GO | evidence, with three required conditions riding on accepted risk |
 
 Proven against production: migrations `001`–`037` applied, configuration
-verified via `/api/admin/readiness` (`mode: production`, 13/13, 0 blockers),
-unsubscribe suppression honoured in both directions, and a daily AI spend
-ceiling live.
+verified via `/api/admin/readiness` (`mode: production`, all readiness checks
+green, 0 blockers), unsubscribe suppression honoured in both directions, and a
+daily AI spend ceiling live.
 
 Accepted rather than proven, each signed and dated in the record: no automated
-signed-in browser matrix, hero text below WCAG AA, and no nine-transition live
-billing rehearsal. Each item keeps its real status — `skipped`, `open`,
+signed-in browser matrix, and no live billing rehearsal (the canonical
+eight-transition A–H matrix). Each item keeps its real status — `skipped`,
 `not_run` — so the record still says what is true, and withdrawing any
-acceptance returns the verdict to NO-GO on its own.
+acceptance returns the verdict to NO-GO on its own. (Exact counts and the full
+blocker list live in the canonical launch-state, not here.)
 
-Start with [`docs/HANDOFF_V12.md`](docs/HANDOFF_V12.md) for the full picture and
-what to pick up next. Earlier GO/NO-GO documents (`v9`, `v10`) are historical
-and carry SUPERSEDED banners.
+Start with [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) for the full
+picture and what to pick up next. Earlier GO/NO-GO and handoff documents (`v9`,
+`v10`, `v12`) are historical and carry SUPERSEDED banners.

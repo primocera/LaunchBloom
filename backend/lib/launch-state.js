@@ -343,6 +343,81 @@ function activeDocumentProblems(state, docs) {
   return out;
 }
 
+// --- AI-agent entry documents (SC-95-02) ----------------------------------
+//
+// README.md, CLAUDE.md and the prompt-pack scope note are the highest-traffic
+// documents a coding agent reads as CURRENT TRUTH, yet they are hand-authored
+// prose that carries no candidate SHA or bundle, so the activeDocumentProblems
+// scanner (built for generated/handoff docs) does not police them. They drift
+// in a distinct way: they teach a retired architecture, claim a track is open
+// when its verdict is not a full GO, or repeat a resolved risk. This scanner
+// fails release verification on exactly those drifts. Pure: the CLI reads the
+// files and passes their text.
+
+// Markers of the retired stateless-HMAC / no-Supabase-Auth identity model. The
+// code uses Supabase Auth + HttpOnly cookies + a stable user UUID; a doc that
+// still teaches the old model would make a coding agent regress it.
+const RETIRED_AUTH_MARKERS = Object.freeze([
+  /no supabase auth/i,
+  /stateless hmac session token/i,
+  /the session email is the identity/i,
+  /\bemail\|exp\b/i,
+]);
+
+function agentDocumentProblems(state, docs) {
+  if (!isPlainObject(state)) return [];
+  const out = [];
+  const computed = computeVerdicts(state);
+  const txCount = canonicalTransitionCount(state);
+  const publicPaidIsFullGo = normVerdict(computed.public_paid.verdict) === 'GO';
+  // Closed blockers carry an optional list of subject phrases a doc must not
+  // re-describe as an open/accepted risk (e.g. the resolved hero-contrast item).
+  const closedSubjects = list(state.blockers)
+    .filter((b) => b && b.status === 'closed' && Array.isArray(b.resolved_subject_markers))
+    .flatMap((b) => b.resolved_subject_markers.map((m) => ({ id: b.id, marker: String(m) })));
+
+  for (const doc of list(docs)) {
+    if (!doc || typeof doc.text !== 'string') continue;
+    const text = doc.text;
+    const push = (m) => out.push(`agent doc ${doc.path}: ${m}`);
+
+    // (a) retired auth model.
+    for (const re of RETIRED_AUTH_MARKERS) {
+      if (re.test(text)) push(`teaches the retired auth model (/${re.source}/); the code uses Supabase Auth + HttpOnly cookies + a stable user UUID`);
+    }
+
+    // (b) a launch track claimed open/live when its computed verdict is not a
+    // full GO. Only fires while public_paid is below GO, so a real future GO
+    // does not false-positive.
+    if (!publicPaidIsFullGo) {
+      const re = /public[ _-]?paid[^.\n]{0,48}?\b(?:is\s+)?(?:open|live|launched|available to everyone)\b/ig;
+      const m = re.exec(text);
+      if (m) push(`claims public paid is open/live ("${m[0].trim()}") but the computed public_paid verdict is "${computed.public_paid.verdict}"`);
+    }
+
+    // (c) a transition count other than the one canonical live-money count.
+    if (txCount != null) {
+      const valid = new Set([String(txCount), NUMBER_WORDS[txCount]].filter(Boolean));
+      const seen = new Set();
+      for (const m of text.matchAll(/\b([a-z]+|\d+)-transition\b/gi)) {
+        const tok = m[1].toLowerCase();
+        if (!valid.has(tok) && !seen.has(tok)) {
+          seen.add(tok);
+          push(`says "${m[1]}-transition" but the canonical live-money rehearsal has ${txCount} (${NUMBER_WORDS[txCount]})`);
+        }
+      }
+    }
+
+    // (d) a resolved blocker's subject re-described as an outstanding risk.
+    for (const { id, marker } of closedSubjects) {
+      if (new RegExp(marker, 'i').test(text)) {
+        push(`repeats "${marker}" as an outstanding risk, but blocker ${id} is closed`);
+      }
+    }
+  }
+  return out;
+}
+
 // --- accepted-risk review dates (v15 SC-05) -------------------------------
 //
 // An accepted risk that can never expire quietly becomes permanent. When an
@@ -636,6 +711,7 @@ module.exports = {
   integrityProblems,
   staleReferenceProblems,
   activeDocumentProblems,
+  agentDocumentProblems,
   canonicalTransitionCount,
   reviewProblems,
   computeVerdicts,
