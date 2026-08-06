@@ -408,22 +408,29 @@ router.get('/api/admin/beta-scorecard', requireAuth, requireAdmin, async (req, r
     const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
 
     // Ids/timestamps/categorical properties only — never content.
+    // SC-95-03: distinguish a real empty window from an analytics OUTAGE. A read
+    // failure (thrown error, or a Supabase {error} result) makes the scorecard
+    // report every metric as UNAVAILABLE, never zero — an outage must not read
+    // as "no activity" and must block expansion.
     let rows = [];
+    let dataAvailable = true;
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('analytics_events')
         .select('event, user_id, workspace_id, created_at, properties')
         .gte('created_at', since)
         .order('created_at', { ascending: true })
         .limit(20000);
-      rows = Array.isArray(data) ? data : [];
+      if (error) dataAvailable = false;
+      else rows = Array.isArray(data) ? data : [];
     } catch {
-      rows = []; // analytics outage must not break the operator view
+      dataAvailable = false;
     }
 
     const scorecard = computeScorecard(rows, {
       window: { days, since, until: new Date().toISOString() },
       roster: rosterFromEnv(),
+      dataAvailable,
     });
     res.json(scorecard);
   } catch {

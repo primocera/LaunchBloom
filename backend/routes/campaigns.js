@@ -105,6 +105,11 @@ router.post('/api/campaigns', requireAuth, async (req, res, next) => {
       .select()
       .single();
     if (error) throw new Error('Failed to create campaign: ' + error.message);
+    // SC-95-03: server-confirmed repeat-value signal. Deduped per campaign id so
+    // a retry/re-post cannot double-count; a workspace's 2nd distinct campaign is
+    // what the scorecard's second_campaign_rate measures. campaign_id is an id,
+    // not content — safe in analytics.
+    track('campaign_created', { userId: req.userId, workspaceId: ws.id, dedupeKey: `campaign:${data.id}`, properties: { campaign_id: data.id, source: 'brief' } });
     res.status(201).json({ campaign: data });
   } catch (err) {
     next(err);
@@ -391,6 +396,9 @@ router.post('/api/campaigns/apply-playbook', requireAuth, async (req, res, next)
       userId: req.userId, workspaceId: ws.id,
       properties: { playbook_id: pb.id, playbook_version: pb.version },
     });
+    // SC-95-03: applying a playbook creates a real new campaign — a repeat-value
+    // signal, deduped per campaign id.
+    track('campaign_created', { userId: req.userId, workspaceId: ws.id, dedupeKey: `campaign:${campaign.id}`, properties: { campaign_id: campaign.id, source: 'playbook' } });
     res.status(201).json({ campaign, brief_questions: pb.brief_questions });
   } catch (err) {
     next(err);
@@ -468,6 +476,9 @@ router.post('/api/templates/:id/apply', requireAuth, async (req, res, next) => {
         { onConflict: 'campaign_id,deliverable_code' });
     }
     track('user_template_reused', { userId: req.userId, workspaceId: ws.id, properties: { template_version: tpl.version } });
+    // SC-95-03: applying a saved template creates a real new campaign — a
+    // repeat-value signal, deduped per campaign id.
+    track('campaign_created', { userId: req.userId, workspaceId: ws.id, dedupeKey: `campaign:${campaign.id}`, properties: { campaign_id: campaign.id, source: 'template' } });
     res.status(201).json({ campaign });
   } catch (err) {
     next(err);

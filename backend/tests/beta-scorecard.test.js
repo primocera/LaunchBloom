@@ -150,9 +150,12 @@ test('every provisional threshold is flagged as a hypothesis', () => {
   for (const t of PROVISIONAL_THRESHOLDS) assert.equal(t.hypothesis, true);
 });
 
-test('uninstrumented milestones report unavailable, never a misleading zero', () => {
-  const uninstrumented = VALUE_LOOP.filter((s) => !s.canonical).map((s) => s.step);
-  assert.ok(uninstrumented.includes('second_campaign_created'));
+test('any genuinely-uninstrumented milestone reports unavailable, never a misleading zero', () => {
+  // SC-95-03 instrumented second_campaign_created, so the uninstrumented set may
+  // now be empty; the honesty MECHANISM must still hold for any step lacking a
+  // canonical event, and second_campaign must NOT be in that set anymore.
+  const uninstrumented = VALUE_LOOP.filter((s) => !s.canonical && !s.derive).map((s) => s.step);
+  assert.ok(!uninstrumented.includes('second_campaign_created'), 'second_campaign is now instrumented');
   const sc = computeScorecard(fixture(), { roster });
   for (const step of uninstrumented) {
     assert.equal(sc.steps.find((s) => s.step === step).state, 'unavailable');

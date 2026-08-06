@@ -90,6 +90,11 @@ export const api = {
   deleteWorkspace: (id) => request(`/api/workspaces/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/api/workspace/dashboard'),
   // Admin support view (Prompt 10 + 16) — 403 for non-allowlisted accounts.
+  // SC-95-03: the canonical capped-beta value scorecard (one denominator,
+  // server-confirmed milestones incl. repeat campaigns, outage-aware).
+  betaScorecard: (days = 7) => request(`/api/admin/beta-scorecard?days=${days}`),
+  // Deprecated divergent views, kept for continuity; the canonical decision
+  // system is betaScorecard above.
   scorecard: () => request('/api/admin/scorecard'),
   cohort: (days = 30) => request(`/api/admin/cohort?days=${days}`),
   // Brand Profile (Prompt 9)

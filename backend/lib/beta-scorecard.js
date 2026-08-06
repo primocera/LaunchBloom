@@ -71,7 +71,7 @@ const VALUE_LOOP = [
     question: 'Do they complete a whole campaign? (the paid job)' },
   { step: 'first_export', canonical: 'first_asset_exported', scope: 'workspace',
     question: 'Do they take real value out of the tool? (the value moment)' },
-  { step: 'second_campaign_created', canonical: null, scope: 'workspace',
+  { step: 'second_campaign_created', canonical: 'campaign_created', scope: 'workspace', derive: 'repeat_campaign',
     question: 'Do they come back and do it again? (repeat value)' },
   { step: 'workspace_returned', canonical: 'day7_returned', scope: 'workspace',
     question: 'Do they return across days, not one sitting? (retention)' },
@@ -209,6 +209,33 @@ function distinctSubjects(rows, canonical, scope, { roster = {}, excludedWorkspa
 }
 
 /**
+ * SC-95-03: distinct workspaces that created at least `minCount` DISTINCT
+ * campaigns. `campaign_created` is emitted once per real persisted campaign
+ * (deduped per campaign id at write time), so counting distinct campaign ids
+ * per workspace measures genuine repeat use — a retried create or a template
+ * clone of the same campaign cannot inflate it. Staff/test subjects excluded
+ * with the same auditable roster as every other milestone.
+ */
+function workspacesWithRepeatCampaigns(rows, minCount = 2, { roster = {}, excludedWorkspaces = new Set() } = {}) {
+  const perWorkspace = new Map(); // workspace_id -> Set(distinct campaign id)
+  for (const r of rows) {
+    if (!r || r.event !== 'campaign_created') continue;
+    const ws = r.workspace_id;
+    if (!ws || excludedWorkspaces.has(String(ws))) continue;
+    if (classifyAccount({ userId: r.user_id, workspaceId: ws }, roster).excluded) continue;
+    // Prefer the explicit campaign id; fall back to the per-campaign dedupe key
+    // (also unique per campaign) so a row without properties still counts once.
+    const cid = (r.properties && r.properties.campaign_id) || r.campaign_id || r.dedupe_key;
+    if (!cid) continue;
+    if (!perWorkspace.has(String(ws))) perWorkspace.set(String(ws), new Set());
+    perWorkspace.get(String(ws)).add(String(cid));
+  }
+  const set = new Set();
+  for (const [ws, campaigns] of perWorkspace) if (campaigns.size >= minCount) set.add(ws);
+  return set;
+}
+
+/**
  * The weekly operator scorecard for the capped beta.
  *
  * `rows` are ledger rows: { event, user_id, workspace_id, campaign_id,
@@ -218,7 +245,31 @@ function distinctSubjects(rows, canonical, scope, { roster = {}, excludedWorkspa
  * against ONE base — the activated cohort (distinct workspaces that completed a
  * brand profile). Mixing denominators is how funnels lie, so we don't.
  */
-function computeScorecard(rows = [], { window = null, roster = {}, minCohort = MIN_COHORT, excludedWorkspaces = new Set() } = {}) {
+function computeScorecard(rows = [], { window = null, roster = {}, minCohort = MIN_COHORT, excludedWorkspaces = new Set(), dataAvailable = true } = {}) {
+  // SC-95-03: an analytics READ FAILURE is UNAVAILABLE, never zero. The operator
+  // must see "we could not measure this window" (which blocks expansion), not a
+  // misleading empty cohort that looks like a real no-activity week.
+  if (dataAvailable === false) {
+    return {
+      window,
+      schema_version: SCHEMA_VERSION,
+      data_available: false,
+      cohort_size: null,
+      min_cohort: minCohort,
+      reportable: false,
+      activation_denominator: 'distinct workspaces with a completed brand profile',
+      steps: VALUE_LOOP.map((def) => ({
+        step: def.step, question: def.question, canonical: def.canonical || null,
+        numerator: null, denominator: null, value: null, state: 'unavailable',
+      })),
+      derived: {},
+      thresholds: PROVISIONAL_THRESHOLDS,
+      disclaimer:
+        'Analytics read FAILED for this window — every metric is UNAVAILABLE, not zero. ' +
+        'Do not expand or change the product on an unavailable read.',
+    };
+  }
+
   const safeRows = Array.isArray(rows) ? rows : [];
   const opts = { roster, excludedWorkspaces };
 
@@ -235,6 +286,16 @@ function computeScorecard(rows = [], { window = null, roster = {}, minCohort = M
   };
 
   const steps = VALUE_LOOP.map((def) => {
+    if (def.derive === 'repeat_campaign') {
+      // SC-95-03: repeat value = distinct workspaces with ≥2 distinct campaigns,
+      // measured against the SAME activated-cohort denominator as every other
+      // rate. No longer 'unavailable'.
+      const reached = workspacesWithRepeatCampaigns(safeRows, 2, opts).size;
+      return {
+        step: def.step, question: def.question, canonical: def.canonical, ...rate(reached),
+        definition: 'distinct activated workspaces that created ≥2 distinct campaigns (server-confirmed campaign_created, deduped per campaign)',
+      };
+    }
     if (!def.canonical) {
       return {
         step: def.step, question: def.question, canonical: null,
@@ -269,6 +330,7 @@ function computeScorecard(rows = [], { window = null, roster = {}, minCohort = M
   return {
     window,
     schema_version: SCHEMA_VERSION,
+    data_available: true,
     cohort_size: cohort,
     min_cohort: minCohort,
     reportable,
@@ -308,5 +370,6 @@ module.exports = {
   validateEventEnvelope,
   buildEnvelope,
   distinctSubjects,
+  workspacesWithRepeatCampaigns,
   computeScorecard,
 };
