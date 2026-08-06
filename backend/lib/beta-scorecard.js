@@ -235,6 +235,72 @@ function workspacesWithRepeatCampaigns(rows, minCount = 2, { roster = {}, exclud
   return set;
 }
 
+// SC-95-04: the handoff feedback categories (mirrors routes/feedback.js ALLOWED).
+// CATEGORIES only — the free-text note is never read here, aggregated, or logged.
+const FEEDBACK_CATEGORIES = Object.freeze({
+  job_done: ['full_campaign', 'part_of_campaign', 'single_asset', 'nothing_usable'],
+  manual_work: ['almost_none', 'light_editing', 'heavy_editing', 'rewrote_most'],
+  price_view: ['worth_more', 'about_right', 'too_high', 'would_not_pay'],
+});
+
+/**
+ * SC-95-04: safe aggregate of post-handoff feedback for the canonical scorecard.
+ * Reads only `feedback_submitted` (moment=handoff) analytics events — categories
+ * and ids, never the note. Denominators: respondents (distinct workspaces that
+ * answered) over eligible (distinct workspaces that exported a handoff, i.e.
+ * were asked). The reduced-rework claim is BLOCKED by default and only supported
+ * once enough respondents report low manual work and zero nothing_usable — so
+ * the product cannot claim "reduced rework" until the evidence supports it.
+ */
+function handoffFeedback(rows, { roster = {}, excludedWorkspaces = new Set(), minCohort = MIN_COHORT } = {}) {
+  const eligible = distinctSubjects(rows, 'handoff_exported', 'workspace', { roster, excludedWorkspaces }).size;
+  const counts = {};
+  for (const cat of Object.keys(FEEDBACK_CATEGORIES)) {
+    counts[cat] = {};
+    for (const v of FEEDBACK_CATEGORIES[cat]) counts[cat][v] = 0;
+  }
+  const respWs = new Set();
+  for (const r of rows) {
+    if (!r || r.event !== 'feedback_submitted') continue;
+    const p = r.properties || {};
+    if (p.moment !== 'handoff') continue;
+    const ws = r.workspace_id;
+    if (!ws || excludedWorkspaces.has(String(ws))) continue;
+    if (classifyAccount({ userId: r.user_id, workspaceId: ws }, roster).excluded) continue;
+    if (respWs.has(String(ws))) continue; // dedupe per workspace (belt to the upsert brace)
+    respWs.add(String(ws));
+    for (const cat of Object.keys(FEEDBACK_CATEGORIES)) {
+      const v = p[cat];
+      if (v && FEEDBACK_CATEGORIES[cat].includes(v)) counts[cat][v] += 1;
+    }
+  }
+  const respondents = respWs.size;
+  const state = respondents === 0 ? 'no_data' : (respondents < minCohort ? 'insufficient_data' : 'reported');
+  const response_rate = eligible > 0 ? +((respondents / eligible) * 100).toFixed(1) : null;
+
+  const mw = counts.manual_work;
+  const mwAnswered = mw.almost_none + mw.light_editing + mw.heavy_editing + mw.rewrote_most;
+  const heavyOrRewrote = mw.heavy_editing + mw.rewrote_most;
+  const heavy_or_rewrote_rate = mwAnswered > 0 ? +((heavyOrRewrote / mwAnswered) * 100).toFixed(1) : null;
+  const nothing_usable_count = counts.job_done.nothing_usable;
+  const reduced_rework_claim_supported = state === 'reported'
+    && mwAnswered >= minCohort
+    && heavy_or_rewrote_rate != null && heavy_or_rewrote_rate < 50
+    && nothing_usable_count === 0;
+
+  return {
+    state,
+    respondents,
+    eligible,
+    response_rate,
+    counts,
+    heavy_or_rewrote_rate,
+    nothing_usable_count,
+    reduced_rework_claim_supported,
+    note: 'Categories only; free-text notes are never aggregated. The reduced-rework claim stays blocked until respondents, low manual work and interviews support it.',
+  };
+}
+
 /**
  * The weekly operator scorecard for the capped beta.
  *
@@ -263,6 +329,7 @@ function computeScorecard(rows = [], { window = null, roster = {}, minCohort = M
         numerator: null, denominator: null, value: null, state: 'unavailable',
       })),
       derived: {},
+      handoff_feedback: { state: 'unavailable', respondents: null, eligible: null, response_rate: null, counts: {}, reduced_rework_claim_supported: false },
       thresholds: PROVISIONAL_THRESHOLDS,
       disclaimer:
         'Analytics read FAILED for this window — every metric is UNAVAILABLE, not zero. ' +
@@ -348,6 +415,9 @@ function computeScorecard(rows = [], { window = null, roster = {}, minCohort = M
       generation_attempts: attempts,
       failure_by_studio: failureByStudio,
     },
+    // SC-95-04: neutral evidence about manual rework and price value, so the
+    // "coordinated handoff reduces rework" claim is tied to data, not asserted.
+    handoff_feedback: handoffFeedback(safeRows, { roster, excludedWorkspaces, minCohort }),
     thresholds: PROVISIONAL_THRESHOLDS,
     disclaimer:
       'Internal decision aid for the capped beta. Thresholds are pre-registered HYPOTHESES, ' +
@@ -371,5 +441,7 @@ module.exports = {
   buildEnvelope,
   distinctSubjects,
   workspacesWithRepeatCampaigns,
+  FEEDBACK_CATEGORIES,
+  handoffFeedback,
   computeScorecard,
 };

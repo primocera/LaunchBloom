@@ -264,7 +264,52 @@ function BetaValueScorecard({ beta }) {
           ))}
         </ul>
       </div>
+
+      <HandoffFeedback fb={beta.handoff_feedback} />
     </section>
+  );
+}
+
+// SC-95-04: post-handoff feedback — did the coordinated handoff reduce rework?
+// Categories only (never the free-text note). The reduced-rework claim is
+// blocked until respondents, low manual work and interviews support it.
+function HandoffFeedback({ fb }) {
+  if (!fb) return null;
+  const cat = (obj) => Object.entries(obj || {}).filter(([, n]) => n > 0);
+  const supported = fb.reduced_rework_claim_supported;
+  return (
+    <div style={{ marginTop: 20 }}>
+      <h2 style={{ fontSize: 16, margin: '0 0 6px' }}>Handoff feedback — reduced rework?</h2>
+      <p style={{ fontSize: 13, color: C.muted, marginTop: 0 }}>
+        {fb.respondents == null ? '—' : `${fb.respondents} respondents`}
+        {fb.eligible ? ` of ${fb.eligible} who exported a handoff` : ''}
+        {fb.response_rate != null ? ` · ${fb.response_rate}% response` : ''} · state: {fb.state}.
+        Categories only; notes are never shown here.
+      </p>
+      <span style={{
+        display: 'inline-block', fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
+        color: supported ? C.success : C.warn,
+        background: supported ? 'rgba(16,185,129,.12)' : 'rgba(180,83,9,.12)',
+      }}>
+        {supported ? 'Reduced-rework claim supported by evidence' : 'Reduced-rework claim BLOCKED — evidence insufficient'}
+      </span>
+      {fb.state === 'reported' && (
+        <div style={{ display: 'grid', gap: 12, marginTop: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+          {['job_done', 'manual_work', 'price_view'].map((c) => (
+            <div key={c} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px' }}>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>{c}</div>
+              {cat(fb.counts?.[c]).length === 0
+                ? <div style={{ fontSize: 13, color: C.muted }}>No answers</div>
+                : cat(fb.counts[c]).map(([v, n]) => (
+                  <div key={v} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{v}</span><strong>{n}</strong>
+                  </div>
+                ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
