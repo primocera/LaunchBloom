@@ -152,6 +152,22 @@ test('Stripe-customer persistence failure → no Checkout Session, stable 503 (s
   noRawProviderText(r.body);
 });
 
+test('SC-95-01: durable link to an unverifiable (unstamped/foreign) customer → 503, zero session, zero create', async () => {
+  reset();
+  // A stored link whose retrieved customer carries no ownership metadata (the
+  // route fake returns { id, deleted:false }); it must fail closed for
+  // reconciliation rather than open checkout against an unowned customer.
+  db.customersRead = { data: { id: 'row-1', stripe_customer_id: 'cus_foreign' }, error: null };
+  db.subscriptionsRead = { data: null, error: null };
+  const r = await request(app).post('/api/payments/create-checkout-session')
+    .set(...AUTHED).send({ plan: 'starter', interval: 'monthly' });
+  assert.equal(r.status, 503);
+  assert.equal(r.body.retryable, false, 'buyer cannot fix an ownership mismatch by retrying');
+  assert.equal(stripeCalls.customersCreated, 0, 'never create around a foreign link');
+  assert.equal(stripeCalls.sessionsCreated, 0, 'never open a session against an unowned customer');
+  noRawProviderText(r.body);
+});
+
 test('happy path still works: verified no prior trial → session created with 3-day trial', async () => {
   reset();
   db.customersRead = { data: null, error: NO_ROW };

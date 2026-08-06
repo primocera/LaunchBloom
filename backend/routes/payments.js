@@ -29,12 +29,36 @@ const APP_STRIPE_SOURCE = 'launchbloom';
  * code and a redacted operator signal. No PII, no customer ids in the message.
  */
 class CustomerReconciliationRequiredError extends Error {
-  constructor(count) {
+  constructor(count, reason = null) {
     super('customer reconciliation required');
     this.name = 'CustomerReconciliationRequiredError';
     this.code = 'CUSTOMER_RECONCILIATION_REQUIRED';
     this.candidateCount = count;
+    // SC-95-01: why reconciliation is required (duplicate candidates vs a live
+    // link/winner whose ownership could not be proven). Operator signal only —
+    // never surfaced to the buyer.
+    this.reason = reason;
   }
+}
+
+/**
+ * SC-95-01: the ONE ownership predicate for a live Stripe Customer on the shared
+ * account. A Customer is Scalvya-owned only if it is not deleted AND its
+ * metadata proves this app (`source`) AND this exact stable user
+ * (`app_user_id`). The durable DB link, a recovered search candidate, the
+ * freshly created object and a concurrent link-race winner all pass through
+ * here before use — object presence, a local DB row or email equality is never
+ * proof, so a Mellowa/foreign or wrong-user Customer can never be adopted even
+ * when the email or user id look identical.
+ */
+function isOwnedScalvyaCustomer(customer, userId) {
+  return Boolean(
+    customer
+    && !customer.deleted
+    && customer.metadata
+    && customer.metadata.source === APP_STRIPE_SOURCE
+    && customer.metadata.app_user_id === userId,
+  );
 }
 
 /**
@@ -131,15 +155,33 @@ async function ensureStripeCustomer(email, userId) {
 
   if (existing && existing.stripe_customer_id) {
     // Shared-Stripe fallout: the stored id can point at a customer that only
-    // exists in test mode or on another account ("No such customer" in live).
-    // Verify it against the current key; recover on resource_missing.
+    // exists in test mode or on another account ("No such customer" in live),
+    // or — the SC-95-01 hole — at a live FOREIGN or wrong-user customer. A
+    // durable DB link is not ownership proof by itself; verify metadata at the
+    // moment of use.
+    let linkedCustomer = null;
     try {
-      const c = await stripe.customers.retrieve(existing.stripe_customer_id);
-      if (!c.deleted) return existing.stripe_customer_id;
+      linkedCustomer = await stripe.customers.retrieve(existing.stripe_customer_id);
     } catch (err) {
       if (err.code !== 'resource_missing') throw err;
+      // resource_missing → stale link, eligible for the existing safe recovery.
+      opsSignal('stale_link_recovered', { reason: 'linked_customer_missing', severity: 'info' });
       // v14 SC-03: never log the full email — redacted + opaque Stripe id only.
       console.warn(`[ensureStripeCustomer] stale stripe_customer_id ${existing.stripe_customer_id} for ${redactEmail(email)} — recovering`);
+    }
+    if (linkedCustomer) {
+      // SC-95-01: reuse the durable link ONLY when metadata proves ownership.
+      if (isOwnedScalvyaCustomer(linkedCustomer, userId)) return existing.stripe_customer_id;
+      if (!linkedCustomer.deleted) {
+        // Live but foreign / wrong-user / missing-metadata. NEVER overwrite the
+        // link and NEVER mint a second customer around it — fail closed for an
+        // operator to reconcile. The buyer gets the safe checkout-unavailable
+        // copy; nothing in Stripe is mutated.
+        opsSignal('ownership_mismatch', { reason: 'durable_link_foreign_or_wrong_user', severity: 'high' });
+        throw new CustomerReconciliationRequiredError(1, 'durable_link_ownership_mismatch');
+      }
+      // Deleted object behaves like a stale link → fall through to safe recovery.
+      opsSignal('stale_link_recovered', { reason: 'linked_customer_deleted', severity: 'info' });
     }
   }
 
@@ -164,6 +206,13 @@ async function ensureStripeCustomer(email, userId) {
       { email, metadata: { app_user_id: userId, source: APP_STRIPE_SOURCE } },
       { idempotencyKey: stripeCustomerIdempotencyKey(userId) },
     );
+    // SC-95-01: verify the create RESPONSE carries our ownership stamp before
+    // adopting it. We just set source + app_user_id, so a response that fails
+    // the predicate means an idempotent replay returned a foreign object or the
+    // client is misbehaving — never proceed with an unverified id.
+    if (!isOwnedScalvyaCustomer(stripeCustomer, userId)) {
+      throw new EntitlementUnavailableError(new Error('created Stripe customer failed ownership verification'));
+    }
     customerId = stripeCustomer.id;
   }
 
@@ -203,12 +252,16 @@ async function ensureStripeCustomer(email, userId) {
   if (linked && linked.stripe_customer_id && linked.stripe_customer_id !== customerId) {
     try {
       const winner = await stripe.customers.retrieve(linked.stripe_customer_id);
-      if (!winner.deleted) {
-        opsSignal('reconciliation_correction', { reason: 'stripe_customer_link_race_resolved', severity: 'info' });
+      // SC-95-01: adopt the race winner ONLY when metadata proves exact
+      // ownership. A live-but-foreign, wrong-user, metadata-free or deleted
+      // winner is NOT proof the persisted link is ours — fail closed.
+      if (isOwnedScalvyaCustomer(winner, userId)) {
+        opsSignal('link_race_reconciliation', { reason: 'stripe_customer_link_race_resolved', severity: 'info' });
         return linked.stripe_customer_id;
       }
+      opsSignal('ownership_mismatch', { reason: 'link_race_winner_foreign_or_wrong_user', severity: 'high' });
     } catch { /* winner unretrievable — fall through to reconciliation-required */ }
-    throw new CustomerReconciliationRequiredError(2);
+    throw new CustomerReconciliationRequiredError(2, 'link_race_ownership_unproven');
   }
 
   return customerId;
@@ -523,6 +576,8 @@ module.exports.hadTrialOrActiveSubscription = hadTrialOrActiveSubscription;
 // v15 SC-02: exported for unit tests (idempotency, recovery, race, reconciliation).
 module.exports.ensureStripeCustomer = ensureStripeCustomer;
 module.exports.recoverScalvyaCustomer = recoverScalvyaCustomer;
+// SC-95-01: exported so the ownership matrix can assert the predicate directly.
+module.exports.isOwnedScalvyaCustomer = isOwnedScalvyaCustomer;
 module.exports.stripeCustomerIdempotencyKey = stripeCustomerIdempotencyKey;
 module.exports.CustomerReconciliationRequiredError = CustomerReconciliationRequiredError;
 module.exports.APP_STRIPE_SOURCE = APP_STRIPE_SOURCE;
