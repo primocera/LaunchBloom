@@ -213,10 +213,13 @@ async function handleEvent(event) {
 
   switch (event.type) {
     case 'checkout.session.completed':
-      // Only sessions our checkout created (payments.js stamps this metadata).
-      // A foreign product's checkout for the same email would otherwise
-      // overwrite our customers.stripe_customer_id with a foreign customer id.
-      if (!data.metadata?.scalvya && !data.metadata?.app_user_id) {
+      // XAPP-95-01: require our EXACT discriminator, not merely a present
+      // app_user_id key. payments.js stamps every Scalvya session with
+      // metadata.scalvya === '1', so this drops nothing of ours — but this event
+      // is the only one that upserts customers.stripe_customer_id, so accepting a
+      // foreign session here is exactly how that column gets tainted with a
+      // foreign customer id. Exact proof, not "looks like ours".
+      if (data.metadata?.scalvya !== '1') {
         ignoreForeign();
         return;
       }

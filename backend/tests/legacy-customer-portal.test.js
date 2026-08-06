@@ -46,6 +46,10 @@ let createdStripeCustomers = 0;
 stubModule('lib/stripe.js', {
   customers: {
     create: async () => { createdStripeCustomers += 1; return { id: 'cus_new' }; },
+    // XAPP-95-01: the portal/delete now verify ownership before any Stripe call.
+    // The stored cus_1 is a normal Scalvya customer — created by us with our
+    // ownership metadata (source + this user's app_user_id).
+    retrieve: async (id) => ({ id, deleted: false, metadata: { source: 'launchbloom', app_user_id: 'user-1' } }),
     del: async () => ({}),
   },
   subscriptions: { list: async () => ({ data: [] }), cancel: async () => ({}) },

@@ -37,8 +37,12 @@ const fakeSupabase = {
 };
 stubModule('lib/supabase.js', fakeSupabase);
 
-// Stripe: has one active subscription whose cancellation FAILS.
+// Stripe: an OWNED customer (XAPP-95-01 verifies ownership before cancelling)
+// with one active subscription whose cancellation FAILS.
 stubModule('lib/stripe.js', {
+  customers: {
+    retrieve: async (id) => ({ id, deleted: false, metadata: { source: 'launchbloom', app_user_id: 'user-1' } }),
+  },
   subscriptions: {
     list: async () => ({ data: [{ id: 'sub_1', status: 'active' }] }),
     cancel: async () => { throw new Error('stripe down'); },

@@ -18,6 +18,28 @@ const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 const { track } = require('../lib/analytics');
 const { configuredAppUrl } = require('../lib/launch-config');
+const { isOwnedScalvyaCustomer } = require('./payments');
+const { opsSignal } = require('../lib/ops-signal');
+
+/**
+ * XAPP-95-01: the shared customers.stripe_customer_id link is not ownership
+ * proof by itself — the same column that checkout must verify (SC-95-01) is also
+ * consumed by the billing portal and account deletion. Retrieve the customer and
+ * confirm exact Scalvya ownership (source + this user's app_user_id) before any
+ * Stripe call. Returns 'owned' | 'foreign' | 'missing' | 'unreadable' so each
+ * caller can fail closed appropriately without ever acting on a foreign customer.
+ */
+async function ownedStripeCustomerStatus(stripeCustomerId, userId) {
+  if (!stripeCustomerId) return 'missing';
+  let customer;
+  try {
+    customer = await stripe.customers.retrieve(stripeCustomerId);
+  } catch (err) {
+    if (err.code === 'resource_missing') return 'missing';
+    return 'unreadable';
+  }
+  return isOwnedScalvyaCustomer(customer, userId) ? 'owned' : 'foreign';
+}
 
 /** Which interval a stored price id represents, from the env allowlist. */
 function intervalForPrice(priceId) {
@@ -122,6 +144,28 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
     if (!customer || !customer.stripe_customer_id) {
       return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
     }
+
+    // XAPP-95-01: never open a portal into a customer we cannot prove is ours.
+    const ownership = await ownedStripeCustomerStatus(customer.stripe_customer_id, req.userId);
+    if (ownership === 'missing') {
+      // Stale id from a test-mode/foreign checkout on the shared Stripe account.
+      // Clear it so the next checkout mints a fresh live customer.
+      await supabase.from('customers').update({ stripe_customer_id: null }).eq('email', req.userEmail);
+      return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
+    }
+    if (ownership === 'foreign') {
+      // A live customer that is NOT ours (foreign product or wrong user). Do NOT
+      // hand the user a portal into it, and do NOT auto-clear a live foreign link.
+      opsSignal('ownership_mismatch', { reason: 'billing_portal_foreign_customer', severity: 'high' });
+      return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
+    }
+    if (ownership === 'unreadable') {
+      return res.status(503).json({
+        error: 'Billing is temporarily unavailable. Your workspace and drafts are unaffected.',
+        code: 'BILLING_UNAVAILABLE', req_id: req.id,
+      });
+    }
+
     let session;
     try {
       session = await stripe.billingPortal.sessions.create({
@@ -130,12 +174,7 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
       });
     } catch (err) {
       if (err.code === 'resource_missing') {
-        // Stale id from a test-mode/foreign checkout on the shared Stripe
-        // account. Clear it so the next checkout mints a fresh live customer.
-        await supabase
-          .from('customers')
-          .update({ stripe_customer_id: null })
-          .eq('email', req.userEmail);
+        await supabase.from('customers').update({ stripe_customer_id: null }).eq('email', req.userEmail);
         return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
       }
       throw err;
@@ -199,21 +238,32 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
         .eq('email', email)
         .single();
       if (customer && customer.stripe_customer_id) {
-        const subs = await stripe.subscriptions.list({ customer: customer.stripe_customer_id, status: 'all', limit: 100 });
-        let canceled = 0;
-        let failures = 0;
-        for (const sub of subs.data) {
-          if (['active', 'trialing', 'past_due', 'unpaid'].includes(sub.status)) {
-            try {
-              await stripe.subscriptions.cancel(sub.id);
-              canceled++;
-            } catch {
-              failures++;
+        // XAPP-95-01: never LIST or CANCEL subscriptions on a customer we cannot
+        // prove is ours — cancelling a foreign product's live subscriptions would
+        // be a cross-tenant billing mutation. Verify ownership first; on anything
+        // but 'owned', skip the Stripe step and continue deleting local data.
+        const ownership = await ownedStripeCustomerStatus(customer.stripe_customer_id, userId);
+        if (ownership !== 'owned') {
+          if (ownership === 'foreign') opsSignal('ownership_mismatch', { reason: 'account_delete_foreign_customer', severity: 'high' });
+          step('stripe_cancellation', ownership === 'missing' ? 'ok' : 'skipped',
+            ownership === 'missing' ? 'no live billing account' : 'billing account not verified as owned — not cancelled here');
+        } else {
+          const subs = await stripe.subscriptions.list({ customer: customer.stripe_customer_id, status: 'all', limit: 100 });
+          let canceled = 0;
+          let failures = 0;
+          for (const sub of subs.data) {
+            if (['active', 'trialing', 'past_due', 'unpaid'].includes(sub.status)) {
+              try {
+                await stripe.subscriptions.cancel(sub.id);
+                canceled++;
+              } catch {
+                failures++;
+              }
             }
           }
+          if (failures > 0) step('stripe_cancellation', 'failed', `${failures} subscription(s) could not be canceled — contact support`);
+          else step('stripe_cancellation', 'ok', canceled ? `${canceled} subscription(s) canceled` : 'no active subscriptions');
         }
-        if (failures > 0) step('stripe_cancellation', 'failed', `${failures} subscription(s) could not be canceled — contact support`);
-        else step('stripe_cancellation', 'ok', canceled ? `${canceled} subscription(s) canceled` : 'no active subscriptions');
       } else {
         step('stripe_cancellation', 'ok', 'no billing account');
       }

@@ -190,6 +190,23 @@ test('a foreign checkout.session.completed does not overwrite our customer id', 
   assert.deepEqual(db._writes, [], 'a foreign session must not touch our customers table');
 });
 
+test('XAPP-95-01: a checkout with only app_user_id (no scalvya stamp) is dropped — exact proof', async () => {
+  reset();
+  // This is the only event that upserts customers.stripe_customer_id, so it must
+  // require our EXACT discriminator (metadata.scalvya === "1"), not merely a
+  // present app_user_id key that another product could also use.
+  const r = await post({
+    id: 'evt_ambiguous_cs', type: 'checkout.session.completed', created: CREATED,
+    data: { object: {
+      id: 'cs_ambiguous', mode: 'subscription', subscription: 'sub_x',
+      customer: 'cus_foreign', customer_details: { email: 'owner@example.com' },
+      metadata: { app_user_id: 'u_x' },
+    } },
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(db._writes, [], 'no exact scalvya stamp → the foreign customer id never lands on our row');
+});
+
 test('a foreign invoice.paid is acked without recording a payment', async () => {
   reset();
   const r = await post({
