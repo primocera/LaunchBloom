@@ -400,41 +400,65 @@ router.get('/api/admin/scorecard', requireAuth, requireAdmin, async (req, res) =
 // every funnel rate on one denominator, gates pre-registered as hypotheses.
 // Analytics failure here is isolated: a failed pull degrades to an empty cohort.
 const { computeScorecard, rosterFromEnv } = require('../lib/beta-scorecard');
+const { weeklyDecisionRecord } = require('../lib/weekly-decision');
+
+// Compute the canonical scorecard for a window. Ids/timestamps/categorical
+// properties only — never content. SC-95-03: distinguish a real empty window
+// from an analytics OUTAGE — a read failure (thrown error or a Supabase {error}
+// result) makes every metric UNAVAILABLE, never zero, so an outage cannot read
+// as "no activity" and blocks expansion.
+async function betaScorecardForWindow(days) {
+  const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+  let rows = [];
+  let dataAvailable = true;
+  try {
+    const { data, error } = await supabase
+      .from('analytics_events')
+      .select('event, user_id, workspace_id, created_at, properties')
+      .gte('created_at', since)
+      .order('created_at', { ascending: true })
+      .limit(20000);
+    if (error) dataAvailable = false;
+    else rows = Array.isArray(data) ? data : [];
+  } catch {
+    dataAvailable = false;
+  }
+  return computeScorecard(rows, {
+    window: { days, since, until: new Date().toISOString() },
+    roster: rosterFromEnv(),
+    dataAvailable,
+  });
+}
 
 router.get('/api/admin/beta-scorecard', requireAuth, requireAdmin, async (req, res) => {
   try {
     await audit(req, 'beta_scorecard');
     const days = Math.min(Number(req.query.days) || 7, 90);
-    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
-
-    // Ids/timestamps/categorical properties only — never content.
-    // SC-95-03: distinguish a real empty window from an analytics OUTAGE. A read
-    // failure (thrown error, or a Supabase {error} result) makes the scorecard
-    // report every metric as UNAVAILABLE, never zero — an outage must not read
-    // as "no activity" and must block expansion.
-    let rows = [];
-    let dataAvailable = true;
-    try {
-      const { data, error } = await supabase
-        .from('analytics_events')
-        .select('event, user_id, workspace_id, created_at, properties')
-        .gte('created_at', since)
-        .order('created_at', { ascending: true })
-        .limit(20000);
-      if (error) dataAvailable = false;
-      else rows = Array.isArray(data) ? data : [];
-    } catch {
-      dataAvailable = false;
-    }
-
-    const scorecard = computeScorecard(rows, {
-      window: { days, since, until: new Date().toISOString() },
-      roster: rosterFromEnv(),
-      dataAvailable,
-    });
-    res.json(scorecard);
+    res.json(await betaScorecardForWindow(days));
   } catch {
     res.status(500).json({ error: 'Beta scorecard failed', req_id: req.id });
+  }
+});
+
+// SC-95-05: the weekly capped-beta decision record, generated FROM the canonical
+// scorecard (not a second scorecard). Owner-supplied operational inputs:
+// cohort start (BETA_COHORT_START) and invited count (BETA_INVITE_CAP) from env;
+// billing-severity incident count from ?billing_incidents (default 0), since
+// there is no automated billing-incident ledger. Never returns content or PII.
+router.get('/api/admin/weekly-decision', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await audit(req, 'weekly_decision');
+    const days = Math.min(Number(req.query.days) || 7, 90);
+    const scorecard = await betaScorecardForWindow(days);
+    const record = weeklyDecisionRecord(scorecard, {
+      now: Date.now(),
+      cohortStart: process.env.BETA_COHORT_START || null,
+      invited: process.env.BETA_INVITE_CAP || null,
+      billingIncidents: Math.max(0, Number(req.query.billing_incidents) || 0),
+    });
+    res.json(record);
+  } catch {
+    res.status(500).json({ error: 'Weekly decision failed', req_id: req.id });
   }
 });
 

@@ -93,6 +93,8 @@ export const api = {
   // SC-95-03: the canonical capped-beta value scorecard (one denominator,
   // server-confirmed milestones incl. repeat campaigns, outage-aware).
   betaScorecard: (days = 7) => request(`/api/admin/beta-scorecard?days=${days}`),
+  // SC-95-05: the weekly decision record generated from the scorecard.
+  weeklyDecision: (days = 7) => request(`/api/admin/weekly-decision?days=${days}`),
   // Deprecated divergent views, kept for continuity; the canonical decision
   // system is betaScorecard above.
   scorecard: () => request('/api/admin/scorecard'),

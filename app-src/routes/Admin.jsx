@@ -88,12 +88,15 @@ export default function Admin() {
   const [cohort, setCohort] = useState(null);
   // SC-95-03: the canonical value scorecard loads independently too.
   const [beta, setBeta] = useState(null);
+  // SC-95-05: the weekly decision record, generated from the scorecard.
+  const [decision, setDecision] = useState(null);
   const [state, setState] = useState('loading'); // loading | ready | denied | error
 
   useEffect(() => {
     api.betaScorecard()
       .then((d) => { setBeta(d); setState('ready'); })
       .catch((err) => setState(err.status === 403 || err.status === 401 ? 'denied' : 'error'));
+    api.weeklyDecision().then(setDecision).catch(() => setDecision(null));
     api.scorecard().then(setData).catch(() => setData(null));
     api.cohort().then(setCohort).catch(() => setCohort(null));
   }, []);
@@ -123,6 +126,9 @@ export default function Admin() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1040, margin: '0 auto', color: C.text }}>
+      {/* SC-95-05: the one weekly decision, generated from the scorecard. */}
+      <WeeklyDecision decision={decision} />
+
       {/* SC-95-03: the canonical capped-beta value scorecard — one denominator,
           server-confirmed milestones (including repeat campaigns), outage-aware.
           This is the decision system; the sections below are deprecated views. */}
@@ -179,6 +185,37 @@ export default function Admin() {
         </div>
       </details>
     </div>
+  );
+}
+
+// SC-95-05: the one weekly decision (Continue / Interview / Iterate / Pause /
+// Stop) with its single bounded action, generated from the scorecard. Gates are
+// hypotheses; a windowed metric reads `pending`, not failed, until mature.
+const DECISION_COLOR = {
+  Continue: C.success, Interview: C.primary, Iterate: C.warn, 'Pause intake': C.warn, Stop: '#B91C1C',
+};
+function WeeklyDecision({ decision }) {
+  if (!decision) return null;
+  const color = DECISION_COLOR[decision.decision] || C.muted;
+  return (
+    <section style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', marginBottom: 22 }}>
+      <div style={{ fontSize: 13, color: C.muted }}>Weekly decision · {decision.window?.days ?? 7}-day window · cohort age {decision.cohort?.cohort_age_days ?? '—'}d</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 22, fontWeight: 700, color }}>{decision.decision}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999, color: decision.expansion_allowed ? C.success : C.muted, background: decision.expansion_allowed ? 'rgba(16,185,129,.12)' : 'rgba(107,114,128,.12)' }}>
+          {decision.expansion_allowed ? 'expansion allowed' : 'no expansion'}
+        </span>
+      </div>
+      <p style={{ fontSize: 14, color: C.text, marginTop: 8 }}>{decision.action}</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        {(decision.gates || []).map((g) => (
+          <span key={g.key} style={{ fontSize: 12, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 999, padding: '2px 8px' }}>
+            {g.key}: {g.value == null ? g.state : `${g.value}% ${g.state}`}
+          </span>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>{decision.disclaimer}</p>
+    </section>
   );
 }
 
