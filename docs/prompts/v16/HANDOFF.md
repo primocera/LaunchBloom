@@ -149,7 +149,24 @@ that touches a coupled self-test hits the same pattern.
 `capped_beta` is **GO** for an invited, supervised cohort behind
 `BETA_INVITE_CAP` — not public signup.
 
-## 5. Guardrails that still hold
+## 5. 👉 NEXT FOCUS — get users into the paid beta
+
+The build side is in good shape: `capped_beta` is **GO** and the last automated
+blocker (authenticated E2E) is closed. The bottleneck now is **not more code —
+it is getting real paying users into the capped beta.** The next effort should
+be **acquisition / activation**, not another hardening pack:
+
+- Fill the invited cohort behind `BETA_INVITE_CAP` — outreach, invites, and a
+  reason to show up. Real paid users are the evidence that matters next.
+- Watch first-value and repeat-value on the scorecard (SC-95-03/05) as the cohort
+  arrives; that data, not more prompts, tells us what to build next.
+- Only after there are real users does the remaining owner work (finish the A–H
+  live-money rehearsal, then decide `public_paid`) become worth doing.
+
+So: **the next pack, if any, should serve getting and activating paid-beta users
+— not re-hardening a product that already passes its gates.**
+
+## 6. Guardrails that still hold
 
 Verify against HEAD and build only the verified gap; no pricing / limit / trial /
 status-enum / verdict edits; no new generators, share links, client accounts or
