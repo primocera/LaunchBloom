@@ -435,7 +435,9 @@ test('public paid launch is never a full GO while accepted risks stand, and its 
   for (const e of stripped.owner_evidence) delete e.accepted_risk;
   const without = computeVerdicts(stripped, { head_sha: state.candidate.sha, code_changes: [] });
   assert.equal(without.public_paid.verdict, 'NO-GO', 'withdrawing the acceptances must reverse the verdict');
-  assert.match(without.public_paid.reasons.join(' '), /e2e_authenticated is skipped/);
+  // e2e_authenticated now passes (v16, candidate f37e0e1), so the remaining
+  // public_paid acceptances are the router advisory and the live-money rehearsal.
+  assert.match(without.public_paid.reasons.join(' '), /P1-router-rsc-csrf-advisory/);
   assert.match(without.public_paid.reasons.join(' '), /live_money_rehearsal is not_run/);
 });
 
@@ -588,10 +590,12 @@ test('a full GO is impossible while any required condition rides on accepted ris
 
 test('an accepted risk never rewrites the underlying status', () => {
   const state = loadState();
+  // The authenticated matrix now runs and passes (v16, candidate f37e0e1); the
+  // remaining accepted risk that must not be rewritten is the live-money item.
   const check = state.checks.find((c) => c.id === 'e2e_authenticated');
-  assert.equal(check.status, 'skipped', 'the matrix has still never run and must still say so');
+  assert.equal(check.status, 'passed_locally', 'the recorded status must be the real run result');
   const money = state.owner_evidence.find((e) => e.id === 'live_money_rehearsal');
-  assert.equal(money.status, 'not_run');
+  assert.equal(money.status, 'not_run', 'the live-money accepted risk keeps its real not_run status');
   for (const b of state.blockers.filter((x) => x.status === 'accepted')) {
     assert.ok(b.accepted_risk.rationale.length >= 40, `${b.id} needs a real rationale`);
     assert.ok(b.accepted_risk.accepted_by, `${b.id} must name who accepted it`);

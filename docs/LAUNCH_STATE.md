@@ -10,14 +10,14 @@
 > advisory are owner-gated and cannot be closed by a pack — do not write one
 > around them.
 
-Repository `primocera/LaunchBloom` · branch `v15` · generated 2026-08-05T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-05T00:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: authenticated-e2e, router-rsc-advisory, live-money |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: router-rsc-advisory, live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -28,9 +28,9 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `b234dad77a72910d4c94555eb0a2c410c2a0a1a9` (frozen)
-- HEAD now: `b234dad77a72910d4c94555eb0a2c410c2a0a1a9`
-- Bundle: index-B75XUgt7.js, index-Ck_SQ1wq.css
+- Candidate SHA: `f37e0e19672805fc22e6b8f875a9ea040533f141` (frozen)
+- HEAD now: `f37e0e19672805fc22e6b8f875a9ea040533f141`
+- Bundle: index-KvmoZn9d.js, index-Ck_SQ1wq.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
@@ -72,17 +72,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `b234dad` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `b234dad` | yes |
-| Production build | `npm run build:app` | passed locally | `b234dad` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `b234dad` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `b234dad` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `b234dad` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `b234dad` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `b234dad` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `b234dad` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `b234dad` | yes |
+| ESLint | `npm run lint` | passed locally | `f37e0e1` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `f37e0e1` | yes |
+| Production build | `npm run build:app` | passed locally | `f37e0e1` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `f37e0e1` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `f37e0e1` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `f37e0e1` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `f37e0e1` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `f37e0e1` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `f37e0e1` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `f37e0e1` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `f37e0e1` | yes |
 
 ## Owner evidence
 
@@ -105,13 +105,11 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P1 | The signed-in journey has never been executed in a browser at any commit | ACCEPTED (not closed) | owner | The matrix exists (SC-V11-03); its runner refuses production/unrecognized targets (SC-P1-08) and now also a LIVE Stripe key (SC-03), and stays a non-zero BLOCKED when the environment is absent. Point it at a non-production Supabase project per docs/RUNBOOK_AUTH_E2E.md, run `npm run test:e2e:auth`, and record the result against candidate b234dad. |
 | P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v14's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). ACCEPTED for public_paid on 2026-08-04 with the rationale below; it keeps its real status (the advisory is NOT closed) and is revisited at the react-router 8 / React 19 / Vite 7 migration or sooner if a 7.x backport ships. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
 **Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
 
-- `authenticated-e2e` — The signed-in journey has never been executed in a browser at any commit — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P0-no-authenticated-e2e, check:e2e_authenticated)
 - `router-rsc-advisory` — react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-router-rsc-csrf-advisory)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
 
@@ -126,7 +124,8 @@ over it, and never that it was resolved.
 
 These remain in the repository as history. None of them is current truth.
 
-- `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (candidate b234dad). Kept as history.
+- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate f37e0e1 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
+- `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (the prior candidate b234dad). Kept as history.
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
 - `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.
 - `docs/BETA_GO_NO_GO.md` — Historical v5 beta audit pinned to 0ce5cd5.

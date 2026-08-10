@@ -1,3 +1,8 @@
+> **SUPERSEDED (v16).** This v15 handoff is pinned to the prior candidate
+> `b234dad`. The current canonical launch truth is
+> `docs/launch/launch-state.json` / `docs/LAUNCH_STATE.md` (candidate `f37e0e1`,
+> which advances the authenticated-E2E blocker to CLOSED). Kept only as history.
+
 # Owner handoff — v15 final launch closure
 
 > Prepared by Claude Code on branch `v15`. This document contains **no live
