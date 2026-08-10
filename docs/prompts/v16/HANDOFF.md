@@ -11,6 +11,36 @@ public_paid CONDITIONAL GO**.
 
 ---
 
+## ⛔ DO NOT put these in the next prompt pack — they are already DONE
+
+The next pack must **not** contain prompts for any of the following. They are
+closed and re-selling them wastes a cycle and risks regressing working code:
+
+1. **The authenticated E2E matrix.** DONE — 45/45 green, blocker
+   `P0-no-authenticated-e2e` **CLOSED**. Do not re-scaffold it, do not "add" it,
+   do not re-open it as a gap. If you must run it, just run it — do not write it.
+2. **Stripe payments / customer ownership.** DONE — ownership is verified at
+   **every** acceptance path (checkout, durable DB link, billing **portal**,
+   account **delete**, **webhook**) via `isOwnedScalvyaCustomer()`. Shared-Stripe
+   isolation between Scalvya and Mellowa is proven both sides (XAPP-95-01). Do not
+   re-sell "close the Stripe customer paths" — there are none left open.
+3. **The value scorecard, repeat-campaign proof, reduced-rework handoff, and the
+   weekly beta decision loop** (SC-95-03/04/05) — DONE.
+4. **Coding-agent architecture truth** (SC-95-02) — DONE and enforced by a
+   scanner; do not re-describe the retired stateless-HMAC model anywhere.
+
+The ONLY things left are **owner-only** and must NOT be written as automated
+prompts (see §4):
+
+- **Live-money rehearsal** — PARTIAL (a real $11.31 charge happened). The rest of
+  the A–H sequence (refund, late `payment_failed` step G, out-of-order webhooks)
+  is a manual owner run. Never write a prompt that performs a live charge/refund.
+- **Router RSC advisory** `GHSA-qwww-vcr4-c8h2` — accepted, not reachable (no RSC).
+  It is a react-router 8 / React 19 / Vite 7 stack-migration item, not a bug to
+  "fix" in a normal pack. Do not re-sell it as an open vulnerability.
+
+---
+
 ## 1. What the v16 prompt pack executed (SC-95 / XAPP-95)
 
 All committed earlier in the v16 lineage (see `git log`):
