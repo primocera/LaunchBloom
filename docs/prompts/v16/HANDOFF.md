@@ -70,6 +70,12 @@ run for the first time against a disposable non-production EU Supabase project
 
 Full detail: **`docs/prompts/v16/E2E_AUTH_FINDINGS.md`**.
 
+> **Effort note:** getting this matrix from its first run to 45/45 green took
+> **over 10 hours** — the suite had never executed, so it was a layered dig
+> (Supabase schema/grants + Auth rate limits, the SERVE_APP/bundle wiring, the
+> harness bugs, then the two real product bugs). Budget accordingly if a future
+> pack reopens the authenticated E2E.
+
 ## 3. The v16 candidate cut (release engineering)
 
 Because v16 changed frontend source and the served bundle, the prior candidate's
