@@ -317,7 +317,7 @@
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal",
       "evidence_ref": null,
-      "note": "Owner-only. Claude Code must never perform a live charge or refund. The eight-transition ordered rehearsal (steps A–H in docs/RUNBOOK_TRANSACTION_REHEARSAL.md) — and specifically step G, a late payment_failed arriving after a recovery — remains unrun. v13 did not change the subscription state machine or webhook ordering, so this item is unchanged from a11afda.",
+      "note": "Owner-only. Claude Code must never perform a live charge or refund. PARTIALLY REHEARSED: the owner took a real charge of $11.31 against live Stripe, confirming the live trial→paid conversion / charge transition end to end (the money moved). What remains unrun is the FULL eight-transition ordered sequence (steps A–H in docs/RUNBOOK_TRANSACTION_REHEARSAL.md) — specifically the refund, and step G (a late payment_failed arriving AFTER a recovery) with its out-of-order webhook handling. Status stays not_run because the gating item is the complete ordered sequence, not a single charge. The subscription state machine and webhook ordering are unchanged since a11afda.",
       "accepted_risk": {
         "risk_id": "live-money",
         "accepted_by": "Primoz Cerar (owner)",
@@ -435,7 +435,7 @@
         "tracks": [
           "public_paid"
         ],
-        "rationale": "Owner has run a live trial start, granted access and cancellation against real Stripe, and production shows 0 webhook failures in 24h. Not rehearsed: the eight-transition ordered sequence (steps A–H), specifically a late payment_failed arriving AFTER a recovery (step G). Mitigation: entitlement is reconciled from Stripe as canonical, refunds are immediate, and the owner monitors webhook_failures_24h on /api/admin/readiness."
+        "rationale": "Owner has run a live trial start, granted access and cancellation against real Stripe, taken a real charge of $11.31 (live trial→paid conversion confirmed — the money moved), and production shows 0 webhook failures in 24h. Not yet rehearsed: the FULL eight-transition ordered sequence (steps A–H) — the refund and specifically a late payment_failed arriving AFTER a recovery (step G) with out-of-order webhooks. Mitigation: entitlement is reconciled from Stripe as canonical, refunds are immediate, and the owner monitors webhook_failures_24h on /api/admin/readiness."
       }
     },
     {
@@ -457,7 +457,7 @@
     "public_paid": {
       "verdict": "CONDITIONAL GO",
       "decided_at_utc": "2026-08-04T09:00:00Z",
-      "note": "CONDITIONAL GO computed by `npm run launch:gate` — NOT a clean GO. No unaccepted blocker remains, and the authenticated browser matrix now PASSES (45/45 at candidate 948a6af, closing blocker P0-no-authenticated-e2e). The public-paid launch still proceeds OVER two required conditions that are only bypassed by named, visible accepted risks, never satisfied: the router advisory GHSA-qwww-vcr4-c8h2 (accepted 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), and the eight-transition (steps A–H) live-money rehearsal (not_run — a real charge on 2026-08-04 covers step B, trial-converts-to-paid; the late payment_failed-after-recovery (step G), refund and out-of-order webhook transitions remain unrehearsed). Each keeps its real status. STRONGLY RECOMMENDED before opening unrestricted public signup: complete the eight-transition rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md) to convert that last accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta."
+      "note": "CONDITIONAL GO computed by `npm run launch:gate` — NOT a clean GO. No unaccepted blocker remains, and the authenticated browser matrix now PASSES (45/45 at candidate 948a6af, closing blocker P0-no-authenticated-e2e). The public-paid launch still proceeds OVER two required conditions that are only bypassed by named, visible accepted risks, never satisfied: the router advisory GHSA-qwww-vcr4-c8h2 (accepted 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), and the eight-transition (steps A–H) live-money rehearsal (not_run but PARTIALLY rehearsed — a real charge of $11.31 confirms the live trial→paid conversion / charge transition; the refund, the late payment_failed-after-recovery (step G) and out-of-order webhook transitions remain unrehearsed). Each keeps its real status. STRONGLY RECOMMENDED before opening unrestricted public signup: complete the eight-transition rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md) to convert that last accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta."
     }
   },
   "rollback": {
