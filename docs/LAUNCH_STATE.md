@@ -28,8 +28,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `f37e0e19672805fc22e6b8f875a9ea040533f141` (frozen)
-- HEAD now: `f37e0e19672805fc22e6b8f875a9ea040533f141`
+- Candidate SHA: `948a6afdd610937bebd6c1b159df361ae911cde0` (frozen)
+- HEAD now: `948a6afdd610937bebd6c1b159df361ae911cde0`
 - Bundle: index-KvmoZn9d.js, index-Ck_SQ1wq.css
 - Environment class: production
 
@@ -72,17 +72,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `f37e0e1` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `f37e0e1` | yes |
-| Production build | `npm run build:app` | passed locally | `f37e0e1` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `f37e0e1` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `f37e0e1` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `f37e0e1` | yes |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `f37e0e1` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `f37e0e1` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `f37e0e1` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `f37e0e1` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `f37e0e1` | yes |
+| ESLint | `npm run lint` | passed locally | `948a6af` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `948a6af` | yes |
+| Production build | `npm run build:app` | passed locally | `948a6af` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `948a6af` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `948a6af` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `948a6af` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `948a6af` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `948a6af` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `948a6af` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `948a6af` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `948a6af` | yes |
 
 ## Owner evidence
 
@@ -124,7 +124,7 @@ over it, and never that it was resolved.
 
 These remain in the repository as history. None of them is current truth.
 
-- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate f37e0e1 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
+- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate 948a6af (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
 - `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (the prior candidate b234dad). Kept as history.
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
 - `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.
