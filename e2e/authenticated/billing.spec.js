@@ -8,7 +8,7 @@
 // trial CTA. The failure is injected deterministically with page.route: no real
 // Stripe, no live money.
 
-const { test, expect } = require('./fixtures');
+const { test, expect, mainText } = require('./fixtures');
 
 const ME = '**/api/auth/me';
 
@@ -28,7 +28,7 @@ test.describe('a billing/entitlement read failure fails safe in the UI', () => {
     // endpoint, then land on a plan-sensitive surface.
     await page.goto(`/app/campaigns/${workspace.campaign_id}/overview`);
 
-    const body = await page.locator('body').innerText();
+    const body = await mainText(page, /couldn.t verify your plan|temporary|try again|unavailable/i);
 
     // 1. A safe, honest temporary-unavailable state is shown.
     expect(body, 'the plan-verification failure must be explained, not silently swallowed')

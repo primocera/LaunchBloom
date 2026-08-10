@@ -106,6 +106,8 @@ const emailFor = (runId, role) => `${RUN_PREFIX}${runId}-${role}@${SEED_DOMAIN}`
 // described a real brand.
 const BRAND_FIXTURE = {
   name: 'Northwind Studio',
+  // The Brand Profile UI reads `brand_name`; `name` alone left the field blank.
+  brand_name: 'Northwind Studio',
   what_we_sell: 'A four-week group coaching programme for independent consultants.',
   audience: 'Independent consultants billing under six figures who want a repeatable offer.',
   tone: 'Direct, practical, no hype.',

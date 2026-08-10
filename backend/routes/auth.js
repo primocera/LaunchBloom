@@ -30,9 +30,12 @@ const { signupDecision, capIsActive, MESSAGES: COHORT_MESSAGES } = require('../l
 
 const router = express.Router();
 
+// Local E2E signs in many seeded users from one IP — don't throttle tests
+// (matches the general/payment/AI limiters in server.js). Production stays at 20.
+const isTestEnv = process.env.NODE_ENV === 'test';
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: isTestEnv ? 100000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many attempts - try again in a few minutes.' },

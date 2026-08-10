@@ -30,7 +30,12 @@ export function AuthProvider({ children }) {
       if (err && err.code === 'PLAN_UNAVAILABLE') {
         if (attempt < PLAN_RETRIES) {
           await new Promise((r) => setTimeout(r, PLAN_RETRY_DELAY_MS));
-          return refresh(attempt + 1);
+          // `await` (not a bare `return`) so THIS call's `finally` — which flips
+          // loading back to false — does not run until the retry has resolved
+          // and set planUnavailable. Without it, loading briefly reads false
+          // while planUnavailable is still null, and the guard bounces a
+          // still-signed-in user to /app/login on a transient plan-read outage.
+          return await refresh(attempt + 1);
         }
         // Keep whatever account state we already have — do not sign the user
         // out and do not render them as Free because of a lookup failure.

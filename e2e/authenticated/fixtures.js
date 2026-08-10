@@ -54,6 +54,15 @@ async function cleanup(request, runId) {
 }
 
 const test = base.extend({
+  // Playwright's built-in `request` fixture is a SEPARATE context with no
+  // cookies, so an authenticated test that reached for `request` was silently
+  // unauthenticated — a request to your OWN resource 401'd. Bind it to the
+  // page's context so it carries the session the workspace fixture establishes.
+  // Seeding (x-e2e-seed-secret header) works either way.
+  request: async ({ page }, use) => {
+    await use(page.request);
+  },
+
   // A fresh isolated dataset per test, removed afterwards whatever the outcome.
   workspace: async ({ request, page }, use, testInfo) => {
     const blocked = missingEnv();
@@ -69,7 +78,19 @@ const test = base.extend({
     await page.getByLabel('Email address').fill(data.email);
     await page.getByLabel('Password', { exact: true }).fill(data.password);
     await page.getByRole('button', { name: /sign in/i }).click();
-    await page.waitForURL(/\/app(\/|$)/, { timeout: 15_000 });
+    // Wait for the REAL post-login redirect. The old /\/app(\/|$)/ also matched
+    // "/app/login" itself, so it returned instantly on the login page and every
+    // test proceeded unauthenticated — the signed-in home is any /app route that
+    // is NOT the login page.
+    await page.waitForURL((url) => {
+      const p = new URL(url).pathname;
+      return p.startsWith('/app') && !p.startsWith('/app/login');
+    }, { timeout: 15_000 });
+    // And confirm the session is durably usable for full navigations before the
+    // test body starts, so a slow cookie commit can't bounce the first goto.
+    await expect
+      .poll(async () => (await page.request.get('/api/auth/me')).status(), { timeout: 10_000 })
+      .toBe(200);
 
     await use(data);
     await cleanup(request, runId);
@@ -81,14 +102,25 @@ const test = base.extend({
 // satisfy a visibility assertion and report green.
 test.beforeEach(async ({ page }) => {
   const problems = [];
+  // A genuinely broken screen surfaces as an uncaught exception — the real
+  // "the app fell over" signal (this listener was missing before).
+  page.on('pageerror', (err) => problems.push(`uncaught: ${err.message}`));
   page.on('console', (msg) => {
-    if (msg.type() === 'error') problems.push(`console error: ${msg.text()}`);
+    if (msg.type() !== 'error') return;
+    // The browser auto-emits "Failed to load resource: <status>" for every
+    // non-2xx fetch. That mirrors network status, not an app fault: a
+    // logged-out /api/auth/me legitimately 401s on the login page, and the
+    // billing/provider specs inject 4xx/5xx on purpose. A real app fault
+    // still comes through as an uncaught error or an explicit console.error.
+    if (/Failed to load resource/i.test(msg.text())) return;
+    problems.push(`console error: ${msg.text()}`);
   });
   page.on('requestfailed', (req) => {
-    problems.push(`request failed: ${req.method()} ${req.url()}`);
-  });
-  page.on('response', (res) => {
-    if (res.status() >= 500) problems.push(`server error: ${res.status()} ${res.url()}`);
+    // A request the SPA aborts when it navigates after a successful action is
+    // normal; only a genuine transport failure (refused, DNS, reset) counts.
+    const err = req.failure()?.errorText || '';
+    if (/ERR_ABORTED/i.test(err)) return;
+    problems.push(`request failed: ${req.method()} ${req.url()} (${err})`);
   });
   page.__problems = problems;
 });
@@ -100,4 +132,18 @@ test.afterEach(async ({ page }) => {
   expect(problems, `page reported errors:\n${problems.join('\n')}`).toEqual([]);
 });
 
-module.exports = { test, expect, missingEnv, BLOCKED_MESSAGE, seed, cleanup, newRunId };
+// page.goto resolves on the 'load' event — before React paints its first
+// frame — so reading page text immediately after a navigation races an empty
+// shell and can sample "". Wait for the app's main region to render real
+// content, then return the full body text for the assertions to inspect.
+async function mainText(page, expected) {
+  // page.goto resolves on 'load' — before the SPA's fetches resolve and React
+  // paints the settled state — so sampling body text immediately races an empty
+  // shell (the sidebar alone already has text). Wait for the expected content to
+  // actually appear (Playwright auto-retries this), then snapshot the full body
+  // so a caller can also assert on what must NOT be present.
+  if (expected) await expect(page.locator('body')).toContainText(expected, { timeout: 10_000 });
+  return page.locator('body').innerText();
+}
+
+module.exports = { test, expect, missingEnv, BLOCKED_MESSAGE, seed, cleanup, newRunId, mainText };

@@ -73,7 +73,8 @@ test.describe('phone layout', () => {
     }
   });
 
-  test('navigation and sign out are reachable at 320px', async ({ page }) => {
+  test('navigation and sign out are reachable at 320px', async ({ page, workspace }) => {
+    expect(workspace.workspace_id, 'the signed-in check needs a real session').toBeTruthy();
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto('/app');
     // The mobile drawer landed in 77009bc; this proves it still works signed in.

@@ -199,7 +199,10 @@ if (process.env.SERVE_APP === '1') {
   const path = require('path');
   const appDir = path.join(__dirname, '..', 'app');
   // Vite base is /app/ — assets live under /app/assets/ (see vercel.json).
-  app.use('/app', express.static(appDir));
+  // redirect:false so a route like /app/assets (the Library) is NOT 301'd to
+  // /app/assets/ and swallowed by the static asset dir; it falls through to the
+  // SPA index below, matching how Vercel serves the client route.
+  app.use('/app', express.static(appDir, { redirect: false }));
   app.get(/^\/(app(?!\/assets\/)(\/.*)?|legal(\/.*)?)?$/, (_req, res) => {
     res.sendFile(path.join(appDir, 'index.html'));
   });

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import ErrorState from './components/ErrorState';
+import { planVerificationState } from './lib/error-states';
 import { CloseIcon, ExpandIcon, MenuIcon } from './components/icons';
 import { BRAND } from './brand';
 import { useAuth } from './lib/auth';
@@ -130,7 +132,7 @@ function ShellNotices() {
 }
 
 function AppShell() {
-  const { account, loading } = useAuth();
+  const { account, loading, planUnavailable, retryPlan } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   // Below 820px the sidebar is an off-canvas drawer. It holds the ONLY copies
   // of the main nav, the workspace switcher and Sign out, so without this a
@@ -147,6 +149,23 @@ function AppShell() {
   }, [mobileNavOpen]);
 
   if (loading) return null;
+  // A transient entitlement-verification outage (503 PLAN_UNAVAILABLE) on a
+  // cold load leaves us with no account object, but it must NOT masquerade as
+  // signed-out: preserve the session and show an honest, retryable state
+  // instead of bouncing the user to the login screen.
+  if (!account && planUnavailable) {
+    return (
+      <div className="shell">
+        <main id="main-content" className="app-main" style={{ maxWidth: 640, margin: '48px auto', padding: '0 20px' }}>
+          <ErrorState
+            state={planVerificationState({ userMessage: planUnavailable })}
+            onRetry={retryPlan}
+            supportHref={`mailto:${BRAND.supportEmail}`}
+          />
+        </main>
+      </div>
+    );
+  }
   if (!account) return <Navigate to="/app/login" replace />;
 
   return (

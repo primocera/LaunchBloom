@@ -4,7 +4,7 @@
 // assertion here is about state the server owns; visible buttons are never
 // treated as proof that an action is permitted.
 
-const { test, expect } = require('./fixtures');
+const { test, expect, mainText } = require('./fixtures');
 
 const scenario = (name) => ({ annotation: { type: 'scenario', description: name } });
 
@@ -25,15 +25,18 @@ test.describe('canonical campaign journey', () => {
     for (const section of ['overview', 'brief', 'deliverables', 'assets', 'review', 'handoff']) {
       await page.goto(`/app/campaigns/${workspace.campaign_id}/${section}`);
       await expect(page, `${section} redirected away`).toHaveURL(new RegExp(`/campaigns/${workspace.campaign_id}/${section}`));
-      // Context is never lost between sections.
-      await expect(page.getByText(/Autumn cohort launch/)).toBeVisible();
+      // Context is never lost between sections. The campaign name can appear in
+      // both a breadcrumb and a heading, so assert at least one is visible.
+      await expect(page.getByText(/Autumn cohort launch/).first()).toBeVisible();
     }
   });
 
   test('the brand profile round-trips what was seeded', async ({ page, workspace }) => {
     expect(workspace.brand_profile).toBe(true);
     await page.goto('/app/brand');
-    await expect(page.getByDisplayValue(/Northwind Studio/)).toBeVisible();
+    // A populated profile shows the editable "Brand name" field (the "basics"
+    // section is open by default); assert the seeded value round-tripped in.
+    await expect(page.getByLabel(/brand name/i)).toHaveValue(/Northwind Studio/);
   });
 
   test('the library lists the workspace and never another account\'s data', async ({ page, workspace }) => {
@@ -66,7 +69,7 @@ test.describe('ownership is enforced by the server, not by the interface', () =>
 
     await page.goto(`/app/campaigns/${foreign}`);
     // The UI must say something honest rather than render an empty shell.
-    const body = await page.locator('body').innerText();
+    const body = await mainText(page, /not found|no longer|don.t have access|couldn.t load/i);
     expect(body).toMatch(/not found|no longer|don.t have access|couldn.t load/i);
   });
 
@@ -92,7 +95,7 @@ test.describe('entitlement states are server-owned', () => {
     }
 
     await page.goto('/app/website');
-    const body = await page.locator('body').innerText();
+    const body = await mainText(page, /plan|trial|upgrade/i);
     expect(body, 'the paywall must explain the state, not just disable a button')
       .toMatch(/plan|trial|upgrade/i);
   });
@@ -109,10 +112,13 @@ test.describe('failure and recovery states preserve work', () => {
   });
 
   test('a provider failure states what was saved', async ({ page, workspace }) => {
-    await page.route('**/api/campaigns/*/consistency', (route) =>
+    // The Review workbench loads its data from the /review endpoint; make that
+    // provider fail the way a transient outage does. (The /consistency endpoint
+    // is not wired into this surface, so faulting it proved nothing.)
+    await page.route('**/api/campaigns/*/review', (route) =>
       route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }));
     await page.goto(`/app/campaigns/${workspace.campaign_id}/review`);
-    const body = await page.locator('body').innerText();
+    const body = await mainText(page, /couldn.t|could not|try again|unavailable|failed/i);
     expect(body, 'a failed check must be explained, not silently blank')
       .toMatch(/couldn.t|could not|try again|unavailable|failed/i);
     // The campaign itself is still there — nothing was lost.
@@ -122,7 +128,7 @@ test.describe('failure and recovery states preserve work', () => {
   test('an empty workspace teaches the next step instead of showing a blank screen', async ({ page }) => {
     test.info().annotations.push(scenario('empty_workspace').annotation);
     await page.goto('/app');
-    const body = await page.locator('body').innerText();
+    const body = await mainText(page, /brand|campaign|start|begin/i);
     expect(body.trim().length).toBeGreaterThan(40);
     expect(body).toMatch(/brand|campaign|start|begin/i);
   });
