@@ -37,7 +37,9 @@
     "test:export": "node --test backend/tests/handoff-export-integrity.test.js",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js",
   "_comment_rehearsal": "SC-04: validate a completed live-money rehearsal record against the canonical eight-transition matrix. Read-only; owner runs the rehearsal itself.",
-  "rehearsal:validate": "node backend/scripts/validate-rehearsal.js"
+  "rehearsal:validate": "node backend/scripts/validate-rehearsal.js",
+  "_comment_readiness": "LB-V17-05: validate a production-readiness evidence record (candidate/env/freshness/ready/blockers/attestation/redaction). Read-only; owner runs GET /api/admin/readiness against the deployed candidate.",
+  "readiness:validate": "node backend/scripts/validate-readiness.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

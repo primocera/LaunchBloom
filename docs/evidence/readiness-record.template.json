@@ -1,0 +1,13 @@
+{
+  "schema": "readiness-record-1",
+  "candidate_sha": "REPLACE_WITH_EXACT_DEPLOYED_CANDIDATE_SHA",
+  "deploy_class": "production",
+  "deploy_ref": "REPLACE_WITH_OPAQUE_DEPLOY_ID_OR_DOMAIN_CLASS",
+  "observed_at_utc": "REPLACE_WITH_ISO_8601_UTC",
+  "http_status": 200,
+  "ready": true,
+  "blocker_count": 0,
+  "blocker_categories": [],
+  "operator": "REPLACE_WITH_INITIALS_OR_HANDLE",
+  "attestation": "I authenticated as an admin and observed GET /api/admin/readiness against the deployed candidate above; the response reported ready=true with 0 blockers."
+}
