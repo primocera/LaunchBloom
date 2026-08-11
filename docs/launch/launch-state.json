@@ -6,11 +6,11 @@
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "main",
-    "sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
+    "sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
-    "head_at_generation": "948a6afdd610937bebd6c1b159df361ae911cde0",
+    "head_at_generation": "27117060f3856258de9fae0f7cb4629ffc429b63",
     "bundle": {
       "build_hash": "index-KvmoZn9d",
       "files": [
@@ -19,7 +19,7 @@
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "v16 launch-closure candidate, cut 2026-08-10 on branch main, built directly on the prior candidate b234dad (v15). v16 executes the Beta + Paid-Readiness pack (SC-95-01..05, XAPP-95-01/02) and then closes the last owner-gated automated blocker. It verifies Stripe-customer ownership at every acceptance path including billing portal, account delete and webhook (SC-95-01, XAPP-95-01); adds a weekly first-value/repeat-value beta decision loop and one executable value scorecard measuring repeat campaigns (SC-95-03..05); and corrects the coding-agent architecture truth and mechanically enforces it (SC-95-02). The headline of this cut: the authenticated seeded browser matrix was run for the FIRST time against a live non-production Supabase, which surfaced and fixed two shipped product bugs — a transient plan-verification 503 that bounced a signed-in user to /app/login, and the /app/assets Library route 404ing when the backend serves the SPA — plus a set of latent harness bugs; the matrix is now 45/45 green under the RC-gate runner (see docs/prompts/v16/E2E_AUTH_FINDINGS.md). Because v16 changed frontend source and the served bundle (now index-KvmoZn9d), the prior candidate's frontend carry-forwards do NOT apply: every automated check was RE-RUN at this exact commit 948a6af on 2026-08-10 — lint 0/0, 914 unit tests, build, fresh bundle index-KvmoZn9d, public browser journeys 52 pass, authenticated matrix 45 pass, export 15/15, router reachability 15/15, hero contrast, launch integrity. CARRY-FORWARD (valid by this manifest's own standard): `git diff b234dad..948a6af` over backend/migrations/ and over backend/lib/launch-config.js + backend/scripts/release-check.js is EMPTY, so the applied migration set and the production config-gate are byte-identical to the prior candidate; the migrations-applied and production-readiness observations carry forward, with the standing owner action to re-confirm GET /api/admin/readiness against the deployed 948a6af before opening. Documentation-only commits after this SHA (including this launch-state record) do not invalidate the candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
+    "explanation": "v16 launch-closure candidate, cut 2026-08-10 on branch main, built directly on the prior candidate b234dad (v15). v16 executes the Beta + Paid-Readiness pack (SC-95-01..05, XAPP-95-01/02) and then closes the last owner-gated automated blocker. It verifies Stripe-customer ownership at every acceptance path including billing portal, account delete and webhook (SC-95-01, XAPP-95-01); adds a weekly first-value/repeat-value beta decision loop and one executable value scorecard measuring repeat campaigns (SC-95-03..05); and corrects the coding-agent architecture truth and mechanically enforces it (SC-95-02). The headline of this cut: the authenticated seeded browser matrix was run for the FIRST time against a live non-production Supabase, which surfaced and fixed two shipped product bugs — a transient plan-verification 503 that bounced a signed-in user to /app/login, and the /app/assets Library route 404ing when the backend serves the SPA — plus a set of latent harness bugs; the matrix is now 45/45 green under the RC-gate runner (see docs/prompts/v16/E2E_AUTH_FINDINGS.md). Because v16 changed frontend source and the served bundle (now index-KvmoZn9d), the prior candidate's frontend carry-forwards do NOT apply: every automated check was RE-RUN at this exact commit 2711706 on 2026-08-10 — lint 0/0, 914 unit tests, build, fresh bundle index-KvmoZn9d, public browser journeys 52 pass, authenticated matrix 45 pass, export 15/15, router reachability 15/15, hero contrast, launch integrity. CARRY-FORWARD (valid by this manifest's own standard): `git diff b234dad..2711706` over backend/migrations/ and over backend/lib/launch-config.js + backend/scripts/release-check.js is EMPTY, so the applied migration set and the production config-gate are byte-identical to the prior candidate; the migrations-applied and production-readiness observations carry forward, with the standing owner action to re-confirm GET /api/admin/readiness against the deployed 2711706 before opening. Documentation-only commits after this SHA (including this launch-state record) do not invalidate the candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
     {
@@ -129,7 +129,7 @@
     }
   ],
   "historical_shas": [
-    { "sha": "b234dad", "label": "Prior v15 release candidate, superseded by the v16 candidate 948a6af. v16 changed frontend source and the served bundle, so its frontend checks were re-run rather than carried forward; the migration set and config-gate are byte-identical (see candidate.explanation carry-forward)." },
+    { "sha": "b234dad", "label": "Prior v15 release candidate, superseded by the v16 candidate 2711706. v16 changed frontend source and the served bundle, so its frontend checks were re-run rather than carried forward; the migration set and config-gate are byte-identical (see candidate.explanation carry-forward)." },
     { "sha": "81993ff", "label": "Prior v14 release candidate, superseded by the prior candidate b234dad (v15; byte-identical bundle, migrations and config-gate; see candidate.explanation carry-forward)." },
     { "sha": "5523187", "label": "Prior v13 release candidate, superseded by the prior candidate 81993ff (v14; byte-identical bundle, migrations and config-gate)." },
     { "sha": "b037394", "label": "Historical fix commit: original entitlement/renewal fix (part of the a11afda baseline), referenced in blocker P0-billing-entitlement-and-renewal closure." },
@@ -175,9 +175,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "eslint backend app-src api — 0 errors, 0 warnings at candidate 948a6af (2026-08-10). SC-P1-07 drove the product-code baseline to zero warnings; the v16 e2e/billing changes kept it clean.",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "eslint backend app-src api — 0 errors, 0 warnings at candidate 2711706 (2026-08-10). SC-P1-07 drove the product-code baseline to zero warnings; the v16 e2e/billing changes kept it clean.",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut). Also runnable in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml)."
     },
     {
       "id": "unit",
@@ -185,9 +185,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "node --test backend/tests/*.test.js — 914 tests, 914 pass / 0 fail / 0 skipped at candidate 948a6af (2026-08-10). Includes the v16 suites (Stripe-customer ownership across portal/delete/webhook, weekly beta decision loop, value scorecard) plus the v15 suites (active-doc-integrity, billing-idempotent-customer, rehearsal, router-reachability, cross-app-isolation) and the v13/v14 billing and launch-state self-tests.",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut). Also runnable in the fail-closed release-candidate workflow."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "node --test backend/tests/*.test.js — 914 tests, 914 pass / 0 fail / 0 skipped at candidate 2711706 (2026-08-10). Includes the v16 suites (Stripe-customer ownership across portal/delete/webhook, weekly beta decision loop, value scorecard) plus the v15 suites (active-doc-integrity, billing-idempotent-customer, rehearsal, router-reachability, cross-app-isolation) and the v13/v14 billing and launch-state self-tests.",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut). Also runnable in the fail-closed release-candidate workflow."
     },
     {
       "id": "build",
@@ -195,9 +195,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "vite build — success at candidate 948a6af (2026-08-10); 103 modules; emitted index-KvmoZn9d.js + index-Ck_SQ1wq.css.",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut). Deterministic — rebuild matches the committed bundle."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "vite build — success at candidate 2711706 (2026-08-10); 103 modules; emitted index-KvmoZn9d.js + index-Ck_SQ1wq.css.",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut). Deterministic — rebuild matches the committed bundle."
     },
     {
       "id": "bundle_fresh",
@@ -205,9 +205,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "node scripts/check-app-fresh.mjs — app/ up to date with app-src/ (normalized hash match vs HEAD) at candidate 948a6af (2026-08-10); committed bundle is index-KvmoZn9d.js + index-Ck_SQ1wq.css.",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut)."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "node scripts/check-app-fresh.mjs — app/ up to date with app-src/ (normalized hash match vs HEAD) at candidate 2711706 (2026-08-10); committed bundle is index-KvmoZn9d.js + index-Ck_SQ1wq.css.",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut)."
     },
     {
       "id": "e2e_public",
@@ -215,9 +215,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "npx playwright test (public projects) — re-run FRESH at candidate 948a6af (2026-08-10): 52 pass / 0 fail under full parallel load (workers:2), no flakes, against the SERVE_APP backend serving the committed index-KvmoZn9d bundle. Desktop + mobile; 320/375/768/1024/1440 + 200% zoom, reduced motion, forced colors, no horizontal scroll.",
-      "note": "Re-run fresh at 948a6af (Chromium available). v16 changed frontend source and the served bundle (index-KvmoZn9d), so this is a genuine re-run, not a carry-forward. Pinned to 948a6af."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "npx playwright test (public projects) — re-run FRESH at candidate 2711706 (2026-08-10): 52 pass / 0 fail under full parallel load (workers:2), no flakes, against the SERVE_APP backend serving the committed index-KvmoZn9d bundle. Desktop + mobile; 320/375/768/1024/1440 + 200% zoom, reduced motion, forced colors, no horizontal scroll.",
+      "note": "Re-run fresh at 2711706 (Chromium available). v16 changed frontend source and the served bundle (index-KvmoZn9d), so this is a genuine re-run, not a carry-forward. Pinned to 2711706."
     },
     {
       "id": "e2e_authenticated",
@@ -229,9 +229,9 @@
       ],
       "scope_rationale": "Scoped to public launch on 2026-07-28. The owner has walked the signed-in product in production — signup, login, Stripe trial, access, cancel, AI generation and lifecycle email — and it works (docs/evidence/2026-07-28-owner-production-walkthrough.md). What the matrix adds over one person clicking the happy path is phone and keyboard operation, cross-account isolation driven in a real browser, and the failure paths (session expiry, provider timeout mid-generation, reload during export). A supervised cohort of invited accounts with the owner watching can absorb those; strangers arriving unannounced cannot. So it stays required for public_paid.",
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "RC_GATE=1 npm run test:e2e:auth — 45 pass / 0 fail / 0 skip / 0 flaky at candidate 948a6af (2026-08-10), across projects authenticated + authenticated-mobile + authenticated-keyboard, workers:2, against a disposable non-production EU Supabase project opted in via backend/migrations/E2E_MARKER.sql. Evidence artifact: test-results/e2e-auth-evidence.json (counts only, no secrets). This was the FIRST real execution of the matrix; it caught two shipped product bugs (a transient plan-verification 503 bouncing a signed-in user to /app/login, fixed in app-src/lib/auth.jsx + App.jsx; and the /app/assets Library route 404ing under SERVE_APP, fixed in backend/server.js) plus a set of latent harness bugs, all fixed in 948a6af. Full findings: docs/prompts/v16/E2E_AUTH_FINDINGS.md.",
-      "note": "Ran at candidate 948a6af (2026-08-10) against a disposable non-production Supabase project — never production, never the Mellowa project. The SC-P1-08 runner still refuses production/unrecognized targets and a LIVE Stripe key. What it now proves over one person clicking the happy path: phone + keyboard operation, cross-account isolation driven in a real browser, entitlement/paywall states, and failure paths (session expiry, plan-verification outage, provider timeout, reload). See docs/RUNBOOK_AUTH_E2E.md. The prior owner-accepted risk for this check is retired — the matrix now runs and passes."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "RC_GATE=1 npm run test:e2e:auth — 45 pass / 0 fail / 0 skip / 0 flaky at candidate 2711706 (2026-08-10), across projects authenticated + authenticated-mobile + authenticated-keyboard, workers:2, against a disposable non-production EU Supabase project opted in via backend/migrations/E2E_MARKER.sql. Evidence artifact: test-results/e2e-auth-evidence.json (counts only, no secrets). This was the FIRST real execution of the matrix; it caught two shipped product bugs (a transient plan-verification 503 bouncing a signed-in user to /app/login, fixed in app-src/lib/auth.jsx + App.jsx; and the /app/assets Library route 404ing under SERVE_APP, fixed in backend/server.js) plus a set of latent harness bugs, all fixed in 2711706. Full findings: docs/prompts/v16/E2E_AUTH_FINDINGS.md.",
+      "note": "Ran at candidate 2711706 (2026-08-10) against a disposable non-production Supabase project — never production, never the Mellowa project. The SC-P1-08 runner still refuses production/unrecognized targets and a LIVE Stripe key. What it now proves over one person clicking the happy path: phone + keyboard operation, cross-account isolation driven in a real browser, entitlement/paywall states, and failure paths (session expiry, plan-verification outage, provider timeout, reload). See docs/RUNBOOK_AUTH_E2E.md. The prior owner-accepted risk for this check is retired — the matrix now runs and passes."
     },
     {
       "id": "export_rendering",
@@ -239,9 +239,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail at candidate 948a6af (2026-08-10).",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut)."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "node --test backend/tests/handoff-export-integrity.test.js — 15 pass / 0 fail at candidate 2711706 (2026-08-10).",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut)."
     },
     {
       "id": "release_config",
@@ -249,9 +249,9 @@
       "command": "npm run release:check",
       "required": true,
       "status": "observed_production",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
       "evidence": "GET /api/admin/readiness in PRODUCTION, owner-confirmed 2026-08-04: mode=production, ready=TRUE, blockers=0, external=0. All 14 checks ok — launch:config 'all launch-config requirements met', stripe:price_allowlist all live prices set, cron:secret set, email:delivery configured, ai:spend_ceiling $15, launch:unsafe_bypass not set. Live signals: outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, ai_spend_24h 0, operational_status ok.",
-      "note": "Answered in PRODUCTION against the deployed prior candidate, not locally (a local run has no production secrets). Recorded as `observed_production` and carried forward to the v16 candidate. The carry-forward is VALID by this manifest's own standard: the config-gate code is byte-identical between the prior candidate b234dad and this candidate — `git diff b234dad..948a6af -- backend/lib/launch-config.js backend/scripts/release-check.js` is EMPTY — and the owner confirmed readiness ready=true / 0 blockers in production on 2026-08-04. NOTE: the v16 server.js change (SPA static redirect:false) is NOT in launch-config.js/release-check.js and does not affect the readiness gate. OWNER ACTION before opening and after any future config change: re-run GET /api/admin/readiness against the deployed 948a6af."
+      "note": "Answered in PRODUCTION against the deployed prior candidate, not locally (a local run has no production secrets). Recorded as `observed_production` and carried forward to the v16 candidate. The carry-forward is VALID by this manifest's own standard: the config-gate code is byte-identical between the prior candidate b234dad and this candidate — `git diff b234dad..2711706 -- backend/lib/launch-config.js backend/scripts/release-check.js` is EMPTY — and the owner confirmed readiness ready=true / 0 blockers in production on 2026-08-04. NOTE: the v16 server.js change (SPA static redirect:false) is NOT in launch-config.js/release-check.js and does not affect the readiness gate. OWNER ACTION before opening and after any future config change: re-run GET /api/admin/readiness against the deployed 2711706."
     },
     {
       "id": "launch_integrity",
@@ -259,9 +259,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "npm run launch:verify — OK at candidate 948a6af (2026-08-10); integrity clean, no stale references, active document in sync, declared verdicts match computed.",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut)."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "npm run launch:verify — OK at candidate 2711706 (2026-08-10); integrity clean, no stale references, active document in sync, declared verdicts match computed.",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut)."
     },
     {
       "id": "hero_contrast",
@@ -269,9 +269,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate 948a6af (2026-08-10). The test REQUIRES WCAG AA across the full hero text band (uniform 4.70:1) and asserts the approved --sky-top blue is unchanged with no scrim/glass surface. The v16 changes did not touch the landing hero.",
-      "note": "Re-run locally at the candidate 948a6af (2026-08-10 v16 cut)."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "node --test backend/tests/landing-contrast.test.js — 8 pass / 0 fail at candidate 2711706 (2026-08-10). The test REQUIRES WCAG AA across the full hero text band (uniform 4.70:1) and asserts the approved --sky-top blue is unchanged with no scrim/glass surface. The v16 changes did not touch the landing hero.",
+      "note": "Re-run locally at the candidate 2711706 (2026-08-10 v16 cut)."
     },
     {
       "id": "router_reachability",
@@ -279,9 +279,9 @@
       "command": "npm run check:router",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "948a6afdd610937bebd6c1b159df361ae911cde0",
-      "evidence": "node backend/scripts/check-router-reachability.js — pure client SPA, zero RSC/SSR/server-router indicators at candidate 948a6af (2026-08-10). backend/tests/router-reachability.test.js (15/15) proves the guard catches a deliberately introduced indicator and does not false-positive on real react-router-dom imports or comments. Mechanically enforces the 'not reachable' basis of the accepted advisory P1-router-rsc-csrf-advisory.",
-      "note": "v15 SC-05, re-run at 948a6af. Wired into `npm run check`, the release-candidate workflow and launch:verify (which now also fails if the guard trips or an accepted risk passes its review_by)."
+      "observed_at_sha": "27117060f3856258de9fae0f7cb4629ffc429b63",
+      "evidence": "node backend/scripts/check-router-reachability.js — pure client SPA, zero RSC/SSR/server-router indicators at candidate 2711706 (2026-08-10). backend/tests/router-reachability.test.js (15/15) proves the guard catches a deliberately introduced indicator and does not false-positive on real react-router-dom imports or comments. Mechanically enforces the 'not reachable' basis of the accepted advisory P1-router-rsc-csrf-advisory.",
+      "note": "v15 SC-05, re-run at 2711706. Wired into `npm run check`, the release-candidate workflow and launch:verify (which now also fails if the guard trips or an accepted risk passes its review_by)."
     }
   ],
   "owner_evidence": [
@@ -295,7 +295,7 @@
       ],
       "runbook": "backend/migrations/CHECK_APPLIED.sql",
       "evidence_ref": "docs/evidence/2026-07-28-migrations-applied.md",
-      "note": "Closed 2026-07-28. Full 001-037 range reports applied = true against the production database. Carry-forward: `git diff a11afda..879e1bb -- backend/migrations/` is EMPTY and equally `git diff b234dad..948a6af -- backend/migrations/` is EMPTY, so this remains true for the v16 candidate 948a6af (v16 added no migration and changed no SQL)."
+      "note": "Closed 2026-07-28. Full 001-037 range reports applied = true against the production database. Carry-forward: `git diff a11afda..879e1bb -- backend/migrations/` is EMPTY and equally `git diff b234dad..2711706 -- backend/migrations/` is EMPTY, so this remains true for the v16 candidate 2711706 (v16 added no migration and changed no SQL)."
     },
     {
       "id": "owner_production_walkthrough",
@@ -375,12 +375,12 @@
     {
       "id": "P0-no-authenticated-e2e",
       "severity": "P1",
-      "severity_history": "Downgraded from P0 on 2026-07-28. The P0 rested on the claim that the signed-in journey had never been executed at all. That was true of automated browser runs and false of the product: the owner has run signup, login, Stripe trial, access, cancel and generation against production. CLOSED on 2026-08-10 at candidate 948a6af when the matrix was finally executed end to end.",
+      "severity_history": "Downgraded from P0 on 2026-07-28. The P0 rested on the claim that the signed-in journey had never been executed at all. That was true of automated browser runs and false of the product: the owner has run signup, login, Stripe trial, access, cancel and generation against production. CLOSED on 2026-08-10 at candidate 2711706 when the matrix was finally executed end to end.",
       "status": "closed",
       "closed_at_utc": "2026-08-10T00:00:00Z",
       "title": "The signed-in journey has never been executed in a browser at any commit",
       "owner": "owner",
-      "closure": "CLOSED at candidate 948a6af (2026-08-10). The authenticated seeded browser matrix was run for the first time against a disposable non-production EU Supabase project (E2E_MARKER.sql opt-in) and is 45/45 green under the RC-gate runner across the authenticated, authenticated-mobile and authenticated-keyboard projects — phone, keyboard, cross-account isolation and failure paths included. Its first execution surfaced and fixed two shipped product bugs (a transient plan-verification 503 bouncing a signed-in user to /app/login; the /app/assets Library route 404ing under SERVE_APP) plus latent harness bugs. See checks[e2e_authenticated] and docs/prompts/v16/E2E_AUTH_FINDINGS.md.",
+      "closure": "CLOSED at candidate 2711706 (2026-08-10). The authenticated seeded browser matrix was run for the first time against a disposable non-production EU Supabase project (E2E_MARKER.sql opt-in) and is 45/45 green under the RC-gate runner across the authenticated, authenticated-mobile and authenticated-keyboard projects — phone, keyboard, cross-account isolation and failure paths included. Its first execution surfaced and fixed two shipped product bugs (a transient plan-verification 503 bouncing a signed-in user to /app/login; the /app/assets Library route 404ing under SERVE_APP) plus latent harness bugs. See checks[e2e_authenticated] and docs/prompts/v16/E2E_AUTH_FINDINGS.md.",
       "resolved_subject_markers": ["signed-in journey has never been executed", "authenticated (browser )?matrix (has )?never (been )?run"]
     },
     {
@@ -452,12 +452,12 @@
     "capped_beta": {
       "verdict": "GO",
       "decided_at_utc": "2026-08-04T12:00:00Z",
-      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared. Every required automated check is green at candidate 948a6af (lint 0/0, 914 unit tests, build, fresh bundle index-KvmoZn9d, public browser journeys 52 pass, authenticated matrix 45 pass, router reachability guard, export integrity, launch integrity, hero contrast), migrations are verified applied against production (SQL byte-identical through v16), the owner has walked the signed-in product end to end on live Stripe, and the production configuration gate PASSES: GET /api/admin/readiness against the deployed prior candidate returns ready=true, 0 blockers, 'all launch-config requirements met' (config-gate byte-identical b234dad..948a6af). The remaining public-launch conditions (the live-money rehearsal and the open router advisory) are public_paid conditions and do not bear on a supervised capped beta. OWNER: re-confirm readiness on the deployed 948a6af, keep the cohort behind BETA_INVITE_CAP, watch /api/admin/readiness daily, and re-run readiness after any production config change."
+      "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared. Every required automated check is green at candidate 2711706 (lint 0/0, 914 unit tests, build, fresh bundle index-KvmoZn9d, public browser journeys 52 pass, authenticated matrix 45 pass, router reachability guard, export integrity, launch integrity, hero contrast), migrations are verified applied against production (SQL byte-identical through v16), the owner has walked the signed-in product end to end on live Stripe, and the production configuration gate PASSES: GET /api/admin/readiness against the deployed prior candidate returns ready=true, 0 blockers, 'all launch-config requirements met' (config-gate byte-identical b234dad..2711706). The remaining public-launch conditions (the live-money rehearsal and the open router advisory) are public_paid conditions and do not bear on a supervised capped beta. OWNER: re-confirm readiness on the deployed 2711706, keep the cohort behind BETA_INVITE_CAP, watch /api/admin/readiness daily, and re-run readiness after any production config change."
     },
     "public_paid": {
       "verdict": "CONDITIONAL GO",
       "decided_at_utc": "2026-08-04T09:00:00Z",
-      "note": "CONDITIONAL GO computed by `npm run launch:gate` — NOT a clean GO. No unaccepted blocker remains, and the authenticated browser matrix now PASSES (45/45 at candidate 948a6af, closing blocker P0-no-authenticated-e2e). The public-paid launch still proceeds OVER two required conditions that are only bypassed by named, visible accepted risks, never satisfied: the router advisory GHSA-qwww-vcr4-c8h2 (accepted 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), and the eight-transition (steps A–H) live-money rehearsal (not_run but PARTIALLY rehearsed — a real charge of $11.31 confirms the live trial→paid conversion / charge transition; the refund, the late payment_failed-after-recovery (step G) and out-of-order webhook transitions remain unrehearsed). Each keeps its real status. STRONGLY RECOMMENDED before opening unrestricted public signup: complete the eight-transition rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md) to convert that last accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta."
+      "note": "CONDITIONAL GO computed by `npm run launch:gate` — NOT a clean GO. No unaccepted blocker remains, and the authenticated browser matrix now PASSES (45/45 at candidate 2711706, closing blocker P0-no-authenticated-e2e). The public-paid launch still proceeds OVER two required conditions that are only bypassed by named, visible accepted risks, never satisfied: the router advisory GHSA-qwww-vcr4-c8h2 (accepted 2026-08-04, not reachable — no RSC — revisit at the router-8 migration), and the eight-transition (steps A–H) live-money rehearsal (not_run but PARTIALLY rehearsed — a real charge of $11.31 confirms the live trial→paid conversion / charge transition; the refund, the late payment_failed-after-recovery (step G) and out-of-order webhook transitions remain unrehearsed). Each keeps its real status. STRONGLY RECOMMENDED before opening unrestricted public signup: complete the eight-transition rehearsal (docs/RUNBOOK_TRANSACTION_REHEARSAL.md) to convert that last accepted risk to satisfied. Public paid is a separate explicit owner decision from the capped beta."
     }
   },
   "rollback": {
@@ -469,7 +469,7 @@
   "superseded_documents": [
     {
       "path": "docs/OWNER_HANDOFF_V15.md",
-      "reason": "v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate 948a6af (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history."
+      "reason": "v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate 2711706 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history."
     },
     {
       "path": "docs/OWNER_HANDOFF_V14.md",
