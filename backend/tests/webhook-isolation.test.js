@@ -226,14 +226,16 @@ test('a foreign invoice.paid is acked without recording a payment', async () => 
 
 // ── our own events still process (the filter must not be over-broad) ───────
 
-test('our subscription is processed when identified by the app_user_id stamp', async () => {
+test('our subscription is processed when identified by the EXACT source stamp', async () => {
   reset();
+  // LB-V17-02: payments.js now stamps subscription_data.metadata.source. That
+  // exact stamp is ours even on a price this test does not configure.
   const r = await post({
     id: 'evt_ours_meta', type: 'customer.subscription.created', created: CREATED,
     data: { object: {
       id: 'sub_ours_meta', customer: 'cus_scalvya', status: 'trialing',
       items: { data: [{ price: { id: 'price_unmapped_but_ours' } }] },
-      cancel_at_period_end: false, metadata: { app_user_id: 'u_42' },
+      cancel_at_period_end: false, metadata: { source: 'launchbloom', app_user_id: 'u_42' },
       trial_end: CREATED + 259200, current_period_end: CREATED + 2592000,
     } },
   });
@@ -242,14 +244,15 @@ test('our subscription is processed when identified by the app_user_id stamp', a
   assert.equal(db._subs.get('sub_ours_meta').status, 'trialing', 'our subscription must be recorded');
 });
 
-test('an EMPTY app_user_id still counts as our stamp', async () => {
+test('LB-V17-02: a bare/empty app_user_id with no exact stamp and no configured price is DROPPED', async () => {
   reset();
-  // payments.js writes `app_user_id: userId || ''` — a truthiness check here
-  // would discard these and leave a paying customer with no entitlement.
+  // This is the vulnerability being closed: previously an empty (or arbitrary)
+  // app_user_id key alone was accepted as our stamp, so a foreign object could
+  // slip in. With no source stamp and an unconfigured price it is now foreign.
   const r = await post({
-    id: 'evt_ours_empty', type: 'customer.subscription.created', created: CREATED,
+    id: 'evt_bare_uid', type: 'customer.subscription.created', created: CREATED,
     data: { object: {
-      id: 'sub_ours_empty', customer: 'cus_scalvya', status: 'active',
+      id: 'sub_bare_uid', customer: 'cus_foreign', status: 'active',
       items: { data: [{ price: { id: 'price_unmapped' } }] },
       cancel_at_period_end: false, metadata: { app_user_id: '' },
       current_period_end: CREATED + 2592000,
@@ -257,8 +260,8 @@ test('an EMPTY app_user_id still counts as our stamp', async () => {
   });
 
   assert.equal(r.status, 200);
-  assert.equal(db._subs.get('sub_ours_empty').status, 'active',
-    'an empty-string stamp is still our stamp');
+  assert.equal(db._subs.has('sub_bare_uid'), false, 'a bare app_user_id is no longer our stamp');
+  assert.deepEqual(db._writes, [], 'nothing written for an unproven object');
 });
 
 test('our subscription is processed when identified by a configured price', async () => {

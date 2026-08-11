@@ -49,19 +49,56 @@ function priceInfo(subscription) {
 // mail for other products' trials) and never thrown on (permanently failing
 // deliveries get the endpoint disabled by Stripe).
 
-/** A subscription is ours iff our checkout stamped app_user_id metadata or its
- *  price is one of our configured STRIPE_PRICE_* prices.
- *
- *  Presence, not truthiness: payments.js writes `app_user_id: userId || ''`, so
- *  a session without a user id stamps an empty string. That is still OUR stamp
- *  — a truthiness check would discard those subscriptions as foreign and leave
- *  a paying customer with no entitlement. */
-function isOurSubscription(subscription) {
-  const meta = subscription?.metadata;
-  if (meta && Object.prototype.hasOwnProperty.call(meta, 'app_user_id')) return true;
+// Scalvya's exact ownership tag in the SHARED Stripe account (mirrors
+// payments.js APP_STRIPE_SOURCE). On this account, `source` — not a bare
+// app_user_id key any product could also set — is what proves ownership.
+const APP_STRIPE_SOURCE = 'launchbloom';
+
+// Known peer-product discriminators on the shared account. Their PRESENCE is
+// positive proof an object is NOT ours, so we never fall through to the legacy
+// price fallback for them (Mellowa stamps app=mellowa + supabase_user_id).
+function hasForeignStamp(meta) {
+  if (!meta || typeof meta !== 'object') return false;
+  if (meta.app && meta.app !== APP_STRIPE_SOURCE) return true;
+  if (meta.source && meta.source !== APP_STRIPE_SOURCE) return true;
+  if (meta.mellowa || meta.frost) return true;
+  if (Object.prototype.hasOwnProperty.call(meta, 'supabase_user_id')) return true;
+  return false;
+}
+
+function configuredPrice(subscription) {
   const priceId = subscription?.items?.data?.[0]?.price?.id;
   const { pricePlans } = require('./customers');
   return !!(priceId && pricePlans()[priceId]);
+}
+
+/**
+ * LB-V17-02: a subscription is ours ONLY via exact proof, never via the mere
+ * presence of an app_user_id key that another product on the shared account
+ * could also carry.
+ *
+ *   1. Exact stamp: metadata.source === 'launchbloom' (or the equivalent
+ *      metadata.scalvya === '1') — self-identifying, no email needed. Every
+ *      subscription created after LB-V17-02 carries this.
+ *   2. A foreign stamp is present → definitely NOT ours (drop, no fallback).
+ *   3. Narrow LEGACY fallback: a configured Scalvya price AND no foreign stamp.
+ *      This covers pre-LB-V17-02 subscriptions (app_user_id only) and the
+ *      event-before-row race. A price match alone — with a foreign stamp — is
+ *      never enough. Returns { legacy: true } so the caller can measure it.
+ *
+ * Returns a result object; use `isOurSubscription(sub).ours` for a boolean.
+ */
+function ownsSubscription(subscription) {
+  const meta = subscription?.metadata || {};
+  if (meta.source === APP_STRIPE_SOURCE || meta.scalvya === '1') return { ours: true, legacy: false };
+  if (hasForeignStamp(meta)) return { ours: false, legacy: false };
+  if (configuredPrice(subscription)) return { ours: true, legacy: true };
+  return { ours: false, legacy: false };
+}
+
+/** Boolean convenience wrapper kept for the exported isolation-test surface. */
+function isOurSubscription(subscription) {
+  return ownsSubscription(subscription).ours;
 }
 
 /** An invoice is ours iff we already mirror its subscription, or its line
@@ -211,6 +248,20 @@ async function handleEvent(event) {
     });
   };
 
+  // LB-V17-02: a subscription accepted only through the narrow legacy
+  // configured-price fallback (no exact source stamp) is measured so the
+  // fallback can be sunset once pre-LB-V17-02 subscriptions age out.
+  const ownSubscriptionOrDrop = () => {
+    const own = ownsSubscription(data);
+    if (!own.ours) { ignoreForeign(); return false; }
+    if (own.legacy) {
+      opsSignal('legacy_price_ownership_fallback', {
+        event_id: event.id, event_type: event.type, subscription_id: data.id, severity: 'info',
+      });
+    }
+    return true;
+  };
+
   switch (event.type) {
     case 'checkout.session.completed':
       // XAPP-95-01: require our EXACT discriminator, not merely a present
@@ -227,24 +278,15 @@ async function handleEvent(event) {
       break;
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      if (!isOurSubscription(data)) {
-        ignoreForeign();
-        return;
-      }
+      if (!ownSubscriptionOrDrop()) return;
       await onSubscriptionUpdated(data, eventAt, event.type, event.data.previous_attributes || {});
       break;
     case 'customer.subscription.deleted':
-      if (!isOurSubscription(data)) {
-        ignoreForeign();
-        return;
-      }
+      if (!ownSubscriptionOrDrop()) return;
       await onSubscriptionDeleted(data, eventAt);
       break;
     case 'customer.subscription.trial_will_end':
-      if (!isOurSubscription(data)) {
-        ignoreForeign();
-        return;
-      }
+      if (!ownSubscriptionOrDrop()) return;
       await onTrialWillEnd(data);
       break;
     case 'invoice.paid':
@@ -267,12 +309,12 @@ async function handleEvent(event) {
     // record a signal for the operator, and make no data mutation. Foreign ones
     // are dropped exactly like any other foreign event.
     case 'charge.refunded':
-      if (!isOurCharge(data)) { ignoreForeign(); return; }
+      if (!(await isOurCharge(data))) { ignoreForeign(); return; }
       opsSignal('charge_refunded', { event_id: event.id, event_type: event.type, charge_id: data.id, severity: 'info' });
       break;
     case 'charge.dispute.created':
     case 'charge.dispute.closed':
-      if (!isOurCharge(data)) { ignoreForeign(); return; }
+      if (!(await isOurCharge(data))) { ignoreForeign(); return; }
       opsSignal('charge_dispute', {
         event_id: event.id, event_type: event.type, dispute_id: data.id, charge_id: data.charge, severity: 'warn',
       });
@@ -286,12 +328,31 @@ async function handleEvent(event) {
   }
 }
 
-/** A charge/dispute is ours iff it carries our checkout metadata stamp or is
- *  tied to a subscription we already mirror. Unknown → foreign (fail safe). */
-function isOurCharge(object) {
-  const meta = object?.metadata;
-  if (meta && Object.prototype.hasOwnProperty.call(meta, 'app_user_id')) return true;
-  if (meta && meta.scalvya) return true;
+/**
+ * LB-V17-02: a charge/dispute is ours ONLY via exact proof:
+ *   1. Exact metadata stamp (source === 'launchbloom' or scalvya === '1'), or
+ *   2. a TRUSTED PARENT — its Stripe customer is one WE own. Only our own
+ *      checkout.session.completed (which requires the exact scalvya stamp) ever
+ *      writes customers.stripe_customer_id, so a match is proof without any
+ *      extra provider read or email lookup.
+ * A foreign stamp, or a bare app_user_id key, is never accepted. Unknown →
+ * foreign (fail safe). Refund/dispute events mutate nothing, so a false negative
+ * only drops an ops signal; a false positive would leak another product's money
+ * events into ours — this errs to the safe side.
+ */
+async function isOurCharge(object) {
+  const meta = object?.metadata || {};
+  if (meta.source === APP_STRIPE_SOURCE || meta.scalvya === '1') return true;
+  if (hasForeignStamp(meta)) return false;
+  const stripeCustomerId = object?.customer;
+  if (stripeCustomerId) {
+    const { data } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('stripe_customer_id', stripeCustomerId)
+      .single();
+    if (data) return true;
+  }
   return false;
 }
 

@@ -434,7 +434,11 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
         price_key: selection.price_key || '',
       },
       subscription_data: {
-        metadata: { app_user_id: userId || '' },
+        // LB-V17-02: stamp the EXACT Scalvya discriminator on the subscription
+        // (and thus on the object the webhook sees), not just app_user_id. On the
+        // shared Stripe account, `source` is what proves ownership — a bare
+        // app_user_id key is no longer accepted as proof by the webhook.
+        metadata: { source: APP_STRIPE_SOURCE, app_user_id: userId || '' },
         ...(giveTrial ? { trial_period_days: 3 } : {}),
       },
       // Return into the signed-in app so the user's prepared work is right

@@ -45,14 +45,27 @@ const SCALVYA_USER = 'scalvya-user-uuid';
 
 // --- webhook ownership: a foreign event is never ours ---------------------
 
-test('a subscription with OUR app_user_id stamp is ours', () => {
-  assert.equal(webhooks.isOurSubscription({ metadata: { app_user_id: SCALVYA_USER } }), true);
-  // Even an empty-string stamp is OURS (presence, not truthiness).
-  assert.equal(webhooks.isOurSubscription({ metadata: { app_user_id: '' } }), true);
+test('LB-V17-02: only an EXACT source/scalvya stamp proves a subscription is ours', () => {
+  // The exact discriminator payments.js now stamps on subscription_data.metadata.
+  assert.equal(webhooks.isOurSubscription({ metadata: { source: payments.APP_STRIPE_SOURCE, app_user_id: SCALVYA_USER } }), true);
+  assert.equal(webhooks.isOurSubscription({ metadata: { scalvya: '1' } }), true);
+  // The vulnerability being closed: a BARE app_user_id key (which any product on
+  // the shared account could also set) is NO LONGER accepted as proof.
+  assert.equal(webhooks.isOurSubscription({ metadata: { app_user_id: SCALVYA_USER } }), false);
+  assert.equal(webhooks.isOurSubscription({ metadata: { app_user_id: '' } }), false);
 });
 
-test('a subscription on one of OUR configured prices is ours', () => {
+test('a subscription on one of OUR configured prices with no foreign stamp is ours (legacy fallback)', () => {
   assert.equal(webhooks.isOurSubscription({ items: { data: [{ price: { id: 'price_starter_m' } }] }, metadata: {} }), true);
+  // Pre-LB-V17-02 subscription: app_user_id only, but on a configured Scalvya price.
+  assert.equal(webhooks.isOurSubscription({ items: { data: [{ price: { id: 'price_pro_m' } }] }, metadata: { app_user_id: SCALVYA_USER } }), true);
+});
+
+test('a foreign stamp blocks the legacy price fallback even on a configured price', () => {
+  // A Mellowa object cannot borrow our price fallback just by carrying a
+  // same-looking app_user_id — its foreign stamp (supabase_user_id / source) wins.
+  assert.equal(webhooks.isOurSubscription({ items: { data: [{ price: { id: 'price_starter_m' } }] }, metadata: { supabase_user_id: 'mellowa', app_user_id: SCALVYA_USER } }), false);
+  assert.equal(webhooks.isOurSubscription({ items: { data: [{ price: { id: 'price_starter_m' } }] }, metadata: { source: 'mellowa' } }), false);
 });
 
 test('a foreign subscription (no app metadata, foreign price) is NOT ours', () => {
@@ -60,11 +73,16 @@ test('a foreign subscription (no app metadata, foreign price) is NOT ours', () =
   assert.equal(webhooks.isOurSubscription({}), false);
 });
 
-test('a charge is ours only with our stamp; a foreign or unstamped charge is not', () => {
-  assert.equal(webhooks.isOurCharge({ metadata: { app_user_id: SCALVYA_USER } }), true);
-  assert.equal(webhooks.isOurCharge({ metadata: { scalvya: '1' } }), true);
-  assert.equal(webhooks.isOurCharge({ metadata: { source: 'mellowa' } }), false);
-  assert.equal(webhooks.isOurCharge({ metadata: {} }), false); // unknown → foreign (fail safe)
+test('LB-V17-02: a charge is ours only via an exact stamp or a customer we own', async () => {
+  // isOurCharge is async (it may consult our local customer link).
+  assert.equal(await webhooks.isOurCharge({ metadata: { source: payments.APP_STRIPE_SOURCE } }), true);
+  assert.equal(await webhooks.isOurCharge({ metadata: { scalvya: '1' } }), true);
+  // Bare app_user_id no longer proves a charge is ours.
+  assert.equal(await webhooks.isOurCharge({ metadata: { app_user_id: SCALVYA_USER } }), false);
+  assert.equal(await webhooks.isOurCharge({ metadata: { source: 'mellowa' } }), false);
+  assert.equal(await webhooks.isOurCharge({ metadata: {} }), false); // unknown → foreign (fail safe)
+  // Unknown customer (our stub returns no local row) → foreign.
+  assert.equal(await webhooks.isOurCharge({ metadata: {}, customer: 'cus_unknown' }), false);
 });
 
 // --- customer ownership: recovery never crosses the app boundary ----------
