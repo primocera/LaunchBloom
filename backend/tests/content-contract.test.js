@@ -197,6 +197,29 @@ test('paywall and checkout banner switch copy for prior-trial users', () => {
   assert.match(app, /Your subscription is active/, 'non-trial checkout success needs its own copy');
 });
 
+// ── LB-V17-01: an unknown/failed eligibility read is never a trial promise ───
+
+test('paywall models trial eligibility as an explicit finite state, never true-on-failure', () => {
+  const paywall = read(path.join(APP_SRC, 'components', 'TrialPaywall.jsx'));
+  // Finite state machine, not a nullable boolean.
+  assert.match(paywall, /eligState/, 'paywall must use an explicit eligibility state');
+  assert.match(paywall, /'unavailable'/, 'paywall must model an explicit unavailable state');
+  // The core defect: a failed/aborted read must NEVER resolve to eligible.
+  assert.ok(
+    !/catch[\s\S]{0,120}setEligState\('eligible'\)/.test(paywall),
+    'a failed eligibility read must not set the eligible state',
+  );
+  assert.ok(
+    !/setTrialEligible\(true\)/.test(paywall),
+    'the optimistic true-on-failure fallback must be gone',
+  );
+  // Only an exact server true renders eligible; only exact false renders ineligible.
+  assert.match(paywall, /trial_eligible === true[\s\S]{0,80}setEligState\('eligible'\)/, 'eligible requires server true');
+  assert.match(paywall, /trial_eligible === false[\s\S]{0,80}setEligState\('ineligible'\)/, 'ineligible requires server false');
+  // The 3-day trial promise is reachable only from the eligible branch.
+  assert.match(paywall, /eligState === 'eligible'[\s\S]{0,240}3-day free trial/, 'trial promise must be gated on eligible');
+});
+
 // ── Brief approval is a human decision, not an AI-strategy purchase ─────────
 
 test('a complete manual brief can be approved without generating strategy', () => {

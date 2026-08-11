@@ -77,6 +77,24 @@ export function checkoutConfigState(err = {}) {
 }
 
 /**
+ * LB-V17-01: the trial/billing eligibility read could not be confirmed (network
+ * failure, 5xx, malformed payload, aborted fetch). This is NOT eligible and NOT
+ * ineligible — it is unknown. We must never render a trial promise or a
+ * charged-today claim from this state; only offer Retry and confirm no charge.
+ */
+export function trialUnavailableState(err = {}) {
+  return {
+    category: ERROR_CATEGORIES.CHECKOUT_CONFIG,
+    role: 'alert',
+    title: 'We couldn’t confirm your billing status',
+    message: 'We couldn’t check whether your free trial is available right now. You have not been charged.',
+    reassurance: 'Nothing was lost and no charge was made — this is a temporary check failure.',
+    action: { kind: RECOVERY_ACTIONS.RETRY, label: 'Try again' },
+    reqId: err.req_id || err.requestId || null,
+  };
+}
+
+/**
  * Generation timed out or the provider failed. The brief is preserved locally,
  * failed generations never count (backend contract), so retry is safe and can
  * reuse the same idempotency key.
