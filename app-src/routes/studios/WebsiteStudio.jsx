@@ -123,10 +123,12 @@ function fullCopy(item) {
 
 export default function WebsiteStudio() {
   // v6 Prompt 25: an SEO idea can arrive as a ready-made page brief.
+  // LB-V17-03: a one-time SEO→Website handoff is transient, so it lives in
+  // sessionStorage (cleared when the tab closes), not indefinite localStorage.
   let brief = '';
   try {
-    brief = localStorage.getItem('of-website-brief') || '';
-    if (brief) localStorage.removeItem('of-website-brief');
+    brief = sessionStorage.getItem('of-website-brief') || '';
+    if (brief) sessionStorage.removeItem('of-website-brief');
   } catch { /* storage unavailable */ }
   return (
     <GeneratorStudio

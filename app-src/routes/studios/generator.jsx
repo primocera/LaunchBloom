@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { api } from '../../lib/api';
+import { api, getActiveWorkspace } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { saveDraft, loadDraft, clearDraft } from '../../lib/local-drafts';
 import { download } from '../../lib/export';
 import TrialPaywall from '../../components/TrialPaywall';
 import ErrorState from '../../components/ErrorState';
@@ -356,17 +357,11 @@ export default function GeneratorStudio({
   renderItem, // (item, { table, onChange }) => JSX
   fullCopy, // (item) => string  — "copy full asset"
 }) {
-  // v5 Prompt 2: the completed brief survives auth, paywall and Stripe
-  // redirects — restore any local draft, and save on every change.
+  // v5 Prompt 2 / LB-V17-03: the completed brief survives auth, paywall and
+  // Stripe redirects — but recovery is now bounded, user/workspace-scoped and
+  // TTL'd via the draft registry, not indefinite raw localStorage.
   const draftKey = `lb-draft-${table || title}`;
-  const [values, setValues] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
-      return saved && typeof saved === 'object' ? { ...initial, ...saved } : initial;
-    } catch {
-      return initial;
-    }
-  });
+  const [values, setValues] = useState(initial);
   const [busy, setBusy] = useState(false);
   // v13 SC-P1-10: one typed state (lib/error-states) for the generate failure
   // path, plus a separate one anchored to the export button.
@@ -403,10 +398,28 @@ export default function GeneratorStudio({
   const chips = deriveContext({ profile, campaign, values });
   const fieldWarnings = validateFields(fields, values);
 
+  // LB-V17-03: owner scope for the bounded draft. account.email + the active
+  // workspace bind the draft so it never restores across logout or a workspace
+  // switch. These are the user's own identifiers.
+  const draftOwner = useMemo(
+    () => ({ userId: account?.email || '', workspaceId: getActiveWorkspace() || '' }),
+    [account?.email],
+  );
+
+  // Restore a still-valid draft once, after the owner scope is known.
+  const draftRestored = useRef(false);
+  useEffect(() => {
+    if (draftRestored.current || !account) return;
+    draftRestored.current = true;
+    const saved = loadDraft(draftKey, draftOwner);
+    if (saved && typeof saved === 'object') setValues((prev) => ({ ...prev, ...saved }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, draftKey]);
+
   function set(name, v) {
     setValues((prev) => {
       const next = { ...prev, [name]: v };
-      try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch { /* private mode */ }
+      saveDraft(draftKey, next, draftOwner);
       return next;
     });
   }
@@ -441,7 +454,7 @@ export default function GeneratorStudio({
       setWarnings(res.quality_warnings || []);
       // Newest first, prepended to any previously-saved assets.
       setItems((prev) => [...fresh, ...(prev || [])]);
-      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+      clearDraft(draftKey);
       setAnnounce(`${fresh.length} draft${fresh.length === 1 ? '' : 's'} created and saved to Library.`);
     } catch (e) {
       if ((e.status === 402 || e.code === 'UPGRADE') && (isFreePlan || e.plan === 'free')) {

@@ -6,6 +6,7 @@ import { BRAND } from '../brand';
 import TrialPaywall from '../components/TrialPaywall';
 import ErrorState from '../components/ErrorState';
 import { planVerificationState, exportFailureState, trackErrorState } from '../lib/error-states';
+import { clearAllDrafts, draftCount } from '../lib/local-drafts';
 
 // Prompts 8 + 14: account page — profile, billing (plan, trial countdown, next
 // charge, billing portal), usage, data export and account deletion.
@@ -27,6 +28,7 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [exportErr, setExportErr] = useState(null); // v13 SC-P1-10: typed export state
+  const [draftsCleared, setDraftsCleared] = useState(null); // LB-V17-03: null | count
   const [workspaces, setWorkspaces] = useState([]);
   const [renaming, setRenaming] = useState(null); // { id, name } while editing
   const [receipt, setReceipt] = useState(null); // Prompt 27: deletion receipt
@@ -104,6 +106,11 @@ export default function Account() {
     }
   }
 
+  async function clearDrafts() {
+    const n = clearAllDrafts();
+    setDraftsCleared(n);
+  }
+
   async function deleteAccount() {
     setBusy(true);
     setError(null);
@@ -111,6 +118,8 @@ export default function Account() {
       // Prompt 27: the backend returns a step-by-step deletion receipt. Show it
       // (with any failed steps) instead of promising a clean {ok:true}.
       const r = await api.deleteAccount();
+      // LB-V17-03: purge any device-only drafts on successful deletion too.
+      clearAllDrafts();
       setReceipt(r || { ok: true });
       setBusy(false);
     } catch (err) {
@@ -282,6 +291,22 @@ export default function Account() {
         </p>
         <button className="btn-secondary" onClick={exportData}>Export all account data</button>
         <ErrorState state={exportErr} onRetry={exportData} supportHref={`mailto:${BRAND.supportEmail}`} />
+
+        <h3 style={{ marginTop: 24 }}>Local drafts on this device</h3>
+        <p className="muted">
+          Unsaved studio and campaign forms are kept only in this browser so your work survives a
+          reload or sign-in redirect. They expire automatically and are cleared when you sign out.
+          This is device-only recovery — not encrypted secure storage. Clearing them does not delete
+          any campaign or asset already saved to your account.
+        </p>
+        <button className="btn-secondary" onClick={clearDrafts}>
+          Clear local drafts on this device{draftCount() ? ` (${draftCount()})` : ''}
+        </button>
+        {draftsCleared != null && (
+          <p className="muted" role="status">
+            {draftsCleared === 0 ? 'No local drafts to clear.' : `Cleared ${draftsCleared} local draft${draftsCleared === 1 ? '' : 's'} from this device.`}
+          </p>
+        )}
       </section>
 
       <section className="account-section danger">

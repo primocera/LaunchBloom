@@ -81,7 +81,8 @@ function renderIdea(item, { navigate }) {
         <button
           className="btn-secondary"
           onClick={() => {
-            localStorage.setItem('of-website-brief', ideaToPageBrief(item));
+            // LB-V17-03: transient one-time handoff → sessionStorage, not localStorage.
+            try { sessionStorage.setItem('of-website-brief', ideaToPageBrief(item)); } catch { /* private mode */ }
             navigate('/app/website');
           }}
         >

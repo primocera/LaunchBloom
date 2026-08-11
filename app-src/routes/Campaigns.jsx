@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api, getActiveWorkspace } from '../lib/api';
+import { saveDraft, loadDraft, clearDraft } from '../lib/local-drafts';
 import { EMPTY_BRIEF as EMPTY, TEMPLATES, missingDecisions, totalAssets, sectionPath } from './campaign/shared';
 
 // ---------------------------------------------------------------------------
@@ -126,10 +127,15 @@ function Templates({ onCreated }) {
   );
 }
 
-// v8 LB-S05: the create-campaign form survives auth/paywall/checkout detours.
+// v8 LB-S05 / LB-V17-03: the create-campaign form survives auth/paywall/checkout
+// detours — but recovery is now bounded (TTL'd, user-scoped, size-capped) via
+// the draft registry rather than indefinite raw localStorage.
 const DRAFT_KEY = 'campaign_form_draft';
-function loadDraft() {
-  try { return JSON.parse(localStorage.getItem(DRAFT_KEY)) || null; } catch { return null; }
+function draftOwner() {
+  return { userId: getActiveWorkspace() || '' };
+}
+function loadFormDraft() {
+  return loadDraft(DRAFT_KEY, draftOwner());
 }
 
 // A quiet overflow menu keeps archive/delete/duplicate off the main work path.
@@ -152,13 +158,11 @@ function CampaignMenu({ campaign, onArchive, onDuplicate, onRemove }) {
 export default function Campaigns() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState(null);
-  const [form, setFormState] = useState(loadDraft); // null = closed, object = create form
+  const [form, setFormState] = useState(loadFormDraft); // null = closed, object = create form
   const setForm = (next) => {
     setFormState(next);
-    try {
-      if (next) localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
-      else localStorage.removeItem(DRAFT_KEY);
-    } catch { /* storage unavailable — draft just won't survive a reload */ }
+    if (next) saveDraft(DRAFT_KEY, next, draftOwner());
+    else clearDraft(DRAFT_KEY);
   };
   const [error, setError] = useState(null);
 

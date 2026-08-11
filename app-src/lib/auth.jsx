@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { api } from './api';
 import { microcopy } from './microcopy';
+import { clearAllDrafts, purgeExpiredDrafts } from './local-drafts';
 
 const AuthContext = createContext(null);
 
@@ -52,6 +53,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
+    purgeExpiredDrafts(); // LB-V17-03: drop TTL-expired/incompatible drafts on load.
     refresh().finally(() => {
       if (cancelled) return;
     });
@@ -81,6 +83,9 @@ export function AuthProvider({ children }) {
     } catch {
       /* clear locally regardless */
     }
+    // LB-V17-03: never leave client-confidential campaign drafts on a device
+    // after sign-out — a shared browser profile must not expose them.
+    clearAllDrafts();
     setAccount(null);
   }, []);
 
