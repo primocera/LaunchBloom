@@ -18,11 +18,11 @@ copied between them.
 
 | # | Isolation property | How Scalvya enforces it (code) | Test |
 |---|---|---|---|
-| 1 | Customer/session/subscription carry a Scalvya namespace | Customer `metadata.source = 'launchbloom'` + `app_user_id`; Checkout Session `metadata.scalvya='1'` + `app_user_id`; `subscription_data.metadata.app_user_id` — `backend/routes/payments.js` | `billing-idempotent-customer.test.js` ("verified no customer …"), `cross-app-isolation.test.js` |
+| 1 | Customer/session/subscription carry a Scalvya namespace | Customer `metadata.source = 'launchbloom'` + `app_user_id`; Checkout Session `metadata.scalvya='1'` + `app_user_id`; **`subscription_data.metadata.source = 'launchbloom'` + `app_user_id`** (LB-V17-02 — the subscription is now self-identifying by exact source, not a bare key) — `backend/routes/payments.js` | `billing-idempotent-customer.test.js`, `cross-app-isolation.test.js` |
 | 2 | Idempotency key is app + stable user id, never email | `stripeCustomerIdempotencyKey()` → `scalvya:customer:create:<uuid>` — `payments.js` | `cross-app-isolation.test.js` ("idempotency key is app-namespaced …") |
 | 3 | Recovery never adopts a foreign customer | `recoverScalvyaCustomer()` matches `source='launchbloom'` **and** `app_user_id` — a foreign `source` (e.g. `mellowa`) with the same email/user id is skipped — `payments.js` | `cross-app-isolation.test.js` ("recovery matches only Scalvya-owned metadata …"), `billing-idempotent-customer.test.js` ("a foreign-product customer … is never adopted") |
 | 4 | Multiple candidates fail closed, never arbitrary selection | `CustomerReconciliationRequiredError` — `payments.js` | `cross-app-isolation.test.js`, `billing-idempotent-customer.test.js` ("multiple recovery candidates …") |
-| 5 | Foreign webhook event acknowledged, never mutated/emailed/counted | `isOurSubscription()` / `isOurCharge()` (presence of our stamp or our price; unknown → foreign, fail safe) + `ignoreForeign()` emits a `foreign_event_ignored` ops-signal and returns without DB/email/analytics — `backend/routes/webhooks.js` | `cross-app-isolation.test.js` ("a foreign subscription … is NOT ours", "a charge is ours only with our stamp") |
+| 5 | Foreign webhook event acknowledged, never mutated/emailed/counted | **LB-V17-02 exact ownership:** `ownsSubscription()` accepts ours ONLY via exact `metadata.source='launchbloom'` / `scalvya='1'`; a foreign stamp (`source`≠ours, `app`≠ours, `supabase_user_id`, `mellowa`/`frost`) fails closed; a configured Scalvya price with **no** foreign stamp is a narrow, *measured* legacy fallback. `isOurCharge()` is async and exact: our stamp, else a trusted parent (the charge's Stripe customer is one we own). A **bare `app_user_id` key is no longer proof.** `ignoreForeign()` emits `foreign_event_ignored` and returns with no DB/email/analytics — `backend/routes/webhooks.js` | `cross-app-isolation.test.js` ("only an EXACT source/scalvya stamp …", "a foreign stamp blocks the legacy price fallback", "a charge is ours only via an exact stamp or a customer we own"), `webhook-isolation.test.js` |
 | 6 | Product/price ownership on every configured price | `pricePlans()` maps only the configured `STRIPE_PRICE_*` env ids to a plan; an unconfigured (foreign) price returns undefined — `backend/routes/customers.js` | `cross-app-isolation.test.js` ("every configured Stripe price maps to a Scalvya plan"), `customers-unknown-price.test.js` |
 | 7 | Logs expose opaque ids only (no email/PII) | `redactEmail()`, `ops-signal` field allowlist + email scrub — `customers.js`, `lib/ops-signal.js` | `billing-privacy.test.js`, `billing-idempotent-customer.test.js` ("logs … leak neither the full email nor a secret") |
 
@@ -36,6 +36,18 @@ user id** (a foreign `source` with the same `app_user_id` value is not ours),
 subscription is not ours), **missing app metadata** (unstamped event → foreign,
 fail safe), **deleted customer** (stale link recovers deterministically), and
 **multiple candidate recovery** (reconciliation-required, no arbitrary pick).
+
+**LB-V17-02 additions (exact-ownership per object):** a **bare/empty
+`app_user_id`** key is now dropped (previously accepted as our stamp); a
+**foreign stamp** (`supabase_user_id`/`source=mellowa`) blocks the legacy price
+fallback even on a configured price; **charge/dispute** ownership is proven by an
+exact stamp or a **trusted parent** (the charge's Stripe customer is one we own —
+only our stamped checkout ever writes `customers.stripe_customer_id`), never a
+bare key or a price match. Object provenance: **Customer/Session** → exact
+`source`/`scalvya` stamp; **Subscription** (created/updated/deleted/trial_will_end)
+→ `ownsSubscription()`; **Invoice** → mirrored subscription or configured price;
+**Charge/Dispute** → `isOurCharge()` exact stamp or owned-customer parent;
+**Portal** → server-config return URL + owned customer only.
 
 ## Gaps / required follow-up
 
