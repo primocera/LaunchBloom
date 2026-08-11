@@ -6,11 +6,11 @@
 > second opinion.
 >
 > **Before proposing a new prompt pack, read `docs/PROMPT_PACK_SCOPE_NOTE.md`.**
-> The authenticated E2E matrix, the live-money rehearsal and the router
-> advisory are owner-gated and cannot be closed by a pack — do not write one
-> around them.
+> The authenticated E2E matrix has been executed and is CLOSED (45/45); do not
+> re-scaffold it. The live-money rehearsal and the router advisory remain
+> owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-05T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-11T00:00:00Z
 
 ## Verdict
 

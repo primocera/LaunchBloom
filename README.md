@@ -121,7 +121,8 @@ automatically.
 | [`docs/GOLDEN_EVAL_V10.md`](docs/GOLDEN_EVAL_V10.md) | What the quality gate does and does not measure |
 | [`docs/LIFECYCLE_EMAIL_V10.md`](docs/LIFECYCLE_EMAIL_V10.md) | Every email, its trigger, dedupe key and category |
 | [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal (still outstanding) |
-| [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) | **Start here.** Current owner handoff: state, accepted risks, next steps |
+| [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) | **Start here.** Current owner/next-writer handoff: state, closed work, accepted risks, next focus |
+| [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) | Prior owner handoff (SUPERSEDED by v16) |
 | [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | Generated launch truth — never edit by hand |
 | [`docs/RUNBOOK_AUTH_E2E.md`](docs/RUNBOOK_AUTH_E2E.md) | Running the signed-in browser matrix |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) · [`DEVELOPMENT.md`](DEVELOPMENT.md) | Deploy and local setup |
@@ -137,20 +138,23 @@ tracks are not on the same footing, and accepted risk never produces a full GO:
 | Track | Verdict | On what |
 |---|---|---|
 | Capped beta | GO | evidence |
-| Public paid launch | CONDITIONAL GO | evidence, with three required conditions riding on accepted risk |
+| Public paid launch | CONDITIONAL GO | evidence, with two required conditions riding on accepted risk (live-money, router advisory) |
 
 Proven against production: migrations `001`–`037` applied, configuration
 verified via `/api/admin/readiness` (`mode: production`, all readiness checks
 green, 0 blockers), unsubscribe suppression honoured in both directions, and a
 daily AI spend ceiling live.
 
-Accepted rather than proven, each signed and dated in the record: no automated
-signed-in browser matrix, and no live billing rehearsal (the canonical
-eight-transition A–H matrix). Each item keeps its real status — `skipped`,
-`not_run` — so the record still says what is true, and withdrawing any
-acceptance returns the verdict to NO-GO on its own. (Exact counts and the full
-blocker list live in the canonical launch-state, not here.)
+The automated signed-in browser matrix has since been **executed** against a
+disposable non-production Supabase and is now **45/45 green** (`passed_locally`) —
+the `P0-no-authenticated-e2e` blocker is **closed**. What remains accepted rather
+than proven, signed and dated in the record: the live billing rehearsal (the
+canonical eight-transition A–H matrix, `not_run` — one real $11.31 charge has been
+taken, but the full ordered sequence with refund and late `payment_failed` is
+still outstanding) and the router RSC advisory. Withdrawing any acceptance returns
+the verdict to NO-GO on its own. (Exact counts and the full blocker list live in
+the canonical launch-state, not here.)
 
-Start with [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) for the full
-picture and what to pick up next. Earlier GO/NO-GO and handoff documents (`v9`,
-`v10`, `v12`) are historical and carry SUPERSEDED banners.
+Start with [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) for the
+full picture and what to pick up next. Earlier GO/NO-GO and handoff documents
+(`v9`, `v10`, `v12`, `v15`) are historical and carry SUPERSEDED banners.

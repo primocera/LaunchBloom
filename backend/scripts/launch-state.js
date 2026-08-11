@@ -173,9 +173,9 @@ function render(state, observed) {
   p('> second opinion.');
   p('>');
   p('> **Before proposing a new prompt pack, read `docs/PROMPT_PACK_SCOPE_NOTE.md`.**');
-  p('> The authenticated E2E matrix, the live-money rehearsal and the router');
-  p('> advisory are owner-gated and cannot be closed by a pack — do not write one');
-  p('> around them.');
+  p('> The authenticated E2E matrix has been executed and is CLOSED (45/45); do not');
+  p('> re-scaffold it. The live-money rehearsal and the router advisory remain');
+  p('> owner-gated and cannot be closed by a pack — do not write one around them.');
   p();
   p(`Repository \`${state.repository}\` · branch \`${c.branch}\` · generated ${state.generated_at_utc}`);
   p();
