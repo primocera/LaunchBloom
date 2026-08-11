@@ -10,7 +10,7 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-11T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `v17` · generated 2026-08-11T00:00:00Z
 
 ## Verdict
 
@@ -28,9 +28,9 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `27117060f3856258de9fae0f7cb4629ffc429b63` (frozen)
-- HEAD now: `27117060f3856258de9fae0f7cb4629ffc429b63`
-- Bundle: index-KvmoZn9d.js, index-Ck_SQ1wq.css
+- Candidate SHA: `64e76914e7e0d1637726d5c08b9d07e0dccded21` (frozen)
+- HEAD now: `64e76914e7e0d1637726d5c08b9d07e0dccded21`
+- Bundle: index-DVEF1GCL.js, index-Ck_SQ1wq.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
@@ -72,17 +72,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `2711706` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `2711706` | yes |
-| Production build | `npm run build:app` | passed locally | `2711706` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `2711706` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `2711706` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `2711706` | yes |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `2711706` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `2711706` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `2711706` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `2711706` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `2711706` | yes |
+| ESLint | `npm run lint` | passed locally | `64e7691` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `64e7691` | yes |
+| Production build | `npm run build:app` | passed locally | `64e7691` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `64e7691` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `64e7691` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `64e7691` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `64e7691` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `64e7691` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `64e7691` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `64e7691` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `64e7691` | yes |
 
 ## Owner evidence
 
@@ -124,7 +124,7 @@ over it, and never that it was resolved.
 
 These remain in the repository as history. None of them is current truth.
 
-- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate 2711706 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
+- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate 64e7691 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
 - `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (the prior candidate b234dad). Kept as history.
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
 - `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.
