@@ -5,7 +5,7 @@
   "generated_at_utc": "2026-08-11T00:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
-    "branch": "v17",
+    "branch": "main",
     "sha": "64e76914e7e0d1637726d5c08b9d07e0dccded21",
     "state": "frozen",
     "environment_class": "production",

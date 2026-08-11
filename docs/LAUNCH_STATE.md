@@ -10,7 +10,7 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `v17` · generated 2026-08-11T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-11T00:00:00Z
 
 ## Verdict
 
