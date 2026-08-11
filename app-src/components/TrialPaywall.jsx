@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { microcopy } from '../lib/microcopy';
-import { checkoutConfigState, planVerificationState, trialUnavailableState, trackErrorState } from '../lib/error-states';
+import { checkoutConfigState, planVerificationState, trackErrorState } from '../lib/error-states';
 
 // ---------------------------------------------------------------------------
 // v5 Prompt 2: contextual trial paywall. Shown when a free account attempts
@@ -68,7 +68,6 @@ export default function TrialPaywall({ open, onClose }) {
       .catch(() => {});
     loadEligibility(ref);
     return () => { ref.cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   function retryEligibility() {
