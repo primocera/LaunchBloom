@@ -10,7 +10,7 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-11T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-14T00:00:00Z
 
 ## Verdict
 
@@ -28,15 +28,17 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `64e76914e7e0d1637726d5c08b9d07e0dccded21` (frozen)
-- HEAD now: `64e76914e7e0d1637726d5c08b9d07e0dccded21`
-- Bundle: index-DVEF1GCL.js, index-Ck_SQ1wq.css
+- Candidate SHA: `163fd6d47583dd93dcc413a8646d2be8f6488a36` (frozen)
+- HEAD now: `163fd6d47583dd93dcc413a8646d2be8f6488a36`
+- Bundle: index-C2TMZ4Jk.js, index-KNfjvmSJ.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
 
 | Commit | Subject | Already closes |
 |---|---|---|
+| `163fd6d` | test(e2e): run authenticated matrix single-worker for a deterministic gate (v18) | The authenticated RC runner (scripts/e2e-auth.mjs) now passes --workers=1. The three authenticated projects share one seeding webServer and each seeds/deletes its own auth user; under parallel workers a torn-down test's trailing request races another test's seed and the shared server cold-starts under load, producing non-deterministic timeouts (billing) and focus-timing failures (keyboard) that all pass in isolation. Single-worker makes the release gate deterministic; the public suite keeps workers:2. Evidence: 45/45 green at 163fd6d. |
+| `3fff6c3` | feat(v18): close scale-pack gaps X01/S06/S13/S05/X02/X04/X06 | Only the genuine pack gaps, built on top of the shipped v6-v17 work: X01 cohort staff/test exclusion (reuses existing roster); S06 first_value_reached server-only event behind default-on first_value_event flag; S13 frozen paywall-reason contract surfaced by TrialPaywall; S05 read-only pull-based Stripe webhook reconciler reusing the canonical subscriptionMirrorRow + isOurSubscription rule (owner-gated --apply); X02 traceparent/x-trace-id logger propagation + docs/SLOS.md; X04 axe-core public-route scan (fixed three real WCAG-AA contrast misses); X06 docs/THREAT_MODEL.md. Tests: +29 (cohort/first-value/logger-trace/paywall-reasons/webhook-reconcile) at 961/961. |
 | `271e31c` | fix(billing): fail closed when entitlement cannot be verified (SC-P0-01) | A temporary Supabase/database failure is no longer read as 'no paid plan'. resolveEntitlement() distinguishes verified-free / entitled / unmapped / unavailable; checkout fails closed (no Stripe session) on unavailable, verify-plan never renders a paying user as Free. Tests: backend/tests/entitlement-fail-closed.test.js (11/11). |
 | `ebcfe5c` | fix(billing): highest valid entitlement wins across overlapping subscriptions (SC-P0-02) | One pure canonical resolver (highest valid entitlement, deterministic tie-break) reused by checkout, account, usage and support; overlaps are flagged as a redacted anomaly without silent downgrade or cross-product entitlement. Tests: backend/tests/entitlement-canonical.test.js (30/30). |
 | `6380016` | fix(billing): one server catalog decides displayed and charged currency (SC-P0-03) | Removed the catch-and-retry-in-another-currency path; displayed and charged currency now originate from one server catalog selection. Production EUR is impossible with an incomplete catalog (EUR_PRICING_ENABLED + EUR_PRICES_VERIFIED). Tests: currency/payments/pricing-contract (41/41). |
@@ -72,17 +74,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `64e7691` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `64e7691` | yes |
-| Production build | `npm run build:app` | passed locally | `64e7691` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `64e7691` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `64e7691` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `64e7691` | yes |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `64e7691` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `64e7691` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `64e7691` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `64e7691` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `64e7691` | yes |
+| ESLint | `npm run lint` | passed locally | `163fd6d` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `163fd6d` | yes |
+| Production build | `npm run build:app` | passed locally | `163fd6d` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `163fd6d` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `163fd6d` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `163fd6d` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `163fd6d` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `163fd6d` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `163fd6d` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `163fd6d` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `163fd6d` | yes |
 
 ## Owner evidence
 
@@ -105,7 +107,7 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond v14's scope. `npm audit --omit=dev` reports 2 high at 81993ff. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). ACCEPTED for public_paid on 2026-08-04 with the rationale below; it keeps its real status (the advisory is NOT closed) and is revisited at the react-router 8 / React 19 / Vite 7 migration or sooner if a 7.x backport ships. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
+| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at v18 candidate 163fd6d (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
 **Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
@@ -116,15 +118,15 @@ over it, and never that it was resolved.
 ## Rollback
 
 - **reference:** docs/RUNBOOK_INCIDENTS.md
-- **code:** v13 commits are independent and additive; revert the offending commit and rebuild app/. SC-P0-01..06 and SC-P1-07,08,10,11,12 each landed as one focused commit on branch v13.
-- **data:** No migration is introduced by v13 (git diff a11afda..879e1bb over backend/migrations/ is empty). Nothing to roll back at the data layer.
-- **flags:** Kill switches (all reversible env vars): AI_GENERATION_PAUSED=1 stops generation; SIGNUP_PAUSED=1 stops new signups; BETA_INVITE_CAP caps the cohort and FAILS CLOSED on a missing/invalid value. New in v13: the production launch-config gate fails closed automatically (SC-P0-04) — a missing legal URL or incomplete currency catalog blocks paid checkout by design. See docs/RUNBOOK_INCIDENTS.md.
+- **code:** v18 commits are independent and additive; revert the offending commit and rebuild app/. The v18 gap work landed as one feature commit (3fff6c3, X01/S06/S13/S05/X02/X04/X06) plus the single-worker RC-runner change (163fd6d); reverting either does not touch migrations or the config gate.
+- **data:** No migration is introduced by v18 (git diff 64e7691..163fd6d over backend/migrations/ is empty). Nothing to roll back at the data layer.
+- **flags:** Kill switches (all reversible env vars): AI_GENERATION_PAUSED=1 stops generation; SIGNUP_PAUSED=1 stops new signups; BETA_INVITE_CAP caps the cohort and FAILS CLOSED on a missing/invalid value. The production launch-config gate fails closed automatically (SC-P0-04). New in v18: first_value_event and beta_feedback are default-on feature flags that degrade cleanly if disabled ('-flag' to turn off); reconcile:webhooks --apply is owner-gated (RECONCILE_OWNER_MODE=1) and read-only by default. See docs/RUNBOOK_INCIDENTS.md.
 
 ## Superseded documents
 
 These remain in the repository as history. None of them is current truth.
 
-- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16 candidate 64e7691 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
+- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16/v17 candidate SHA 64e7691 and now the v18 candidate 163fd6d (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
 - `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (the prior candidate b234dad). Kept as history.
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
 - `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.

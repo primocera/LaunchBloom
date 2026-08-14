@@ -13,9 +13,27 @@ user.
 
 ---
 
-## 📌 Writing the next prompt pack? Read this section first.
+## 🚦 The next focus is distribution, not another prompt pack.
 
-This repo has been built through successive prompt packs (v6 → v10). The most
+**As of the v18 candidate (2026-08-14), the product build is done for launch.**
+The engineering backlog has reached diminishing returns: v18 executed the whole
+Scale Prompt Pack and found that almost everything was already shipped in v6–v17
+— only seven genuine gaps remained, and they are now built, tested and merged
+(see [`docs/OWNER_HANDOFF_V18.md`](docs/OWNER_HANDOFF_V18.md)). Every automated
+gate is green at the candidate and the release gate is **capped-beta GO /
+public-paid CONDITIONAL GO**.
+
+Writing another feature/prompt pack now is very likely wasted motion. **The
+constraint on this business is no longer code — it is users.** The next work
+should be **marketing and distribution**: positioning and landing conversion,
+getting the first cohort of freelance marketers / boutique agencies in, activation
+and the value loop, pricing experiments, and channels (content, communities,
+outbound, partnerships). Ship features again only when real user evidence demands
+a specific one.
+
+## 📌 Writing a prompt pack anyway? Read this section first.
+
+This repo has been built through successive prompt packs (v6 → v18). The most
 common source of wasted work is a pack asking for something **that already
 exists**, because the pack was written from the product vision rather than from
 the code.
