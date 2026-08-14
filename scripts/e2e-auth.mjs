@@ -65,9 +65,17 @@ if (guard.isReleaseGate(process.env)) {
 mkdirSync(path.dirname(JSON_OUT), { recursive: true });
 const startedAtUtc = new Date().toISOString();
 
+// --workers=1: the three authenticated projects share ONE seeding webServer and
+// each seeds/deletes its own auth user in afterEach. Run in parallel, a trailing
+// request from a torn-down test races another test's seed and the shared server
+// cold-starts under load — producing non-deterministic timeouts (billing) and
+// focus-timing failures (keyboard) that all pass in isolation. A release-gate
+// suite must be deterministic, so the authenticated matrix runs single-worker;
+// the public suite (playwright.config.js) keeps workers:2. Speed is a non-issue
+// here — this is a local, opt-in gate, not CI.
 const child = spawn(
   'npx',
-  ['playwright', 'test', '--reporter=list,json', ...PROJECTS.flatMap((p) => ['--project', p])],
+  ['playwright', 'test', '--workers=1', '--reporter=list,json', ...PROJECTS.flatMap((p) => ['--project', p])],
   {
     stdio: 'inherit',
     shell: true,
