@@ -22,6 +22,7 @@ const { DELIVERABLES, campaignGap, validatePlan } = require('../lib/deliverables
 const { runConsistencyChecks, FINDING_META, RULES_VERSION } = require('../lib/consistency');
 const { PLAYBOOKS, playbookById, sanitizeTemplateData } = require('../lib/playbooks');
 const { campaignImpact, diffFingerprint, briefDiffForAsset, MATERIAL_FIELDS } = require('../lib/brief-impact');
+const { enabled: flagEnabled } = require('../lib/flags');
 
 router.use(express.json({ limit: '16kb' }));
 
@@ -1006,6 +1007,16 @@ router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, ne
         packet_version: manifest.packet_version,
       },
     });
+    // v18 S06: the named first-value milestone. Deduped once per workspace so
+    // only the FIRST real handoff export fires it; re-exports and later
+    // campaigns are silent no-ops (onConflict(dedupe_key), ignoreDuplicates).
+    // Flag-gated so the emission can be rolled back without a deploy.
+    if (flagEnabled('first_value_event')) {
+      track('first_value_reached', {
+        userId: req.userId, workspaceId: ws.id, dedupeKey: `firstvalue:${ws.id}`,
+        properties: { format },
+      });
+    }
 
     res.setHeader('Content-Type', spec.mime);
     res.setHeader('Content-Length', body.length);

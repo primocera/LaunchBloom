@@ -24,15 +24,42 @@ function log(level, msg, meta = {}) {
   (level === 'error' ? console.error : console.log)(JSON.stringify(line));
 }
 
-/** Express middleware: attach a request id + log completion of API requests. */
+// v18 X02: a distributed TRACE id correlates one logical operation across the
+// edge, this API and background jobs — unlike `req.id`, which identifies a
+// single request (a span). We honour an inbound trace id so an upstream proxy
+// or a client that already started a trace keeps the same id end-to-end:
+//   • W3C `traceparent`: 00-<32-hex trace-id>-<16-hex span>-<flags>
+//   • or an opaque `x-trace-id` header
+// Anything malformed is ignored (never trusted as-is), and we mint a fresh id.
+const TRACEPARENT_RE = /^\d{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$/i;
+const OPAQUE_TRACE_RE = /^[A-Za-z0-9._-]{8,128}$/;
+
+function traceIdFrom(headers = {}) {
+  const traceparent = headers['traceparent'];
+  if (typeof traceparent === 'string') {
+    const m = traceparent.trim().match(TRACEPARENT_RE);
+    // All-zero trace-id is the W3C "invalid" sentinel — reject it.
+    if (m && !/^0{32}$/.test(m[1])) return m[1].toLowerCase();
+  }
+  const opaque = headers['x-trace-id'];
+  if (typeof opaque === 'string' && OPAQUE_TRACE_RE.test(opaque.trim())) return opaque.trim();
+  return null;
+}
+
+/** Express middleware: attach request + trace ids and log API request completion. */
 function requestLogger(req, res, next) {
   req.id = req.headers['x-request-id'] || crypto.randomUUID();
+  // The trace id spans services; the request id is this hop. When no inbound
+  // trace exists, the request starts the trace, so the two ids seed together.
+  req.traceId = traceIdFrom(req.headers) || req.id;
   res.setHeader('X-Request-Id', req.id);
+  res.setHeader('X-Trace-Id', req.traceId);
   const start = Date.now();
   res.on('finish', () => {
     if (!req.path.startsWith('/api')) return;
     log(res.statusCode >= 500 ? 'error' : 'info', 'request', {
       req_id: req.id,
+      trace_id: req.traceId,
       method: req.method,
       path: req.path,
       status: res.statusCode,
@@ -44,6 +71,7 @@ function requestLogger(req, res, next) {
 
 module.exports = {
   requestLogger,
+  traceIdFrom,
   logInfo: (msg, meta) => log('info', msg, meta),
   logError: (msg, meta) => log('error', msg, meta),
 };

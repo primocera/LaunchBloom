@@ -17,6 +17,14 @@
 // be shown to a customer or used as public proof.
 // ---------------------------------------------------------------------------
 
+// The auditable staff/test/demo exclusion roster is defined once in
+// beta-scorecard.js and already scrubs the weekly scorecard (SC-95). v18 X01
+// wires the SAME roster into the north-star cohort funnel so both surfaces
+// measure real customers by one rule — no second exclusion registry. Reusing
+// classifyAccount keeps the reason codes (staff_email/domain/workspace/user)
+// identical, so an operator can audit exactly which accounts left either base.
+const { classifyAccount } = require('./beta-scorecard');
+
 // Below this many accounts in the denominator, rates are suppressed. 5 is the
 // conventional small-cell threshold; with a 15–25 user beta it will bite often,
 // which is correct — most weeks genuinely will not be conclusive.
@@ -111,17 +119,34 @@ function step({ def, reached, cohort, previous, minCohort = MIN_COHORT, instrume
  * The denominator is the FIRST step (accounts that entered), not a rolling
  * base, so every rate is comparable down the funnel.
  */
-function computeFunnel(rows = [], { minCohort = MIN_COHORT, window = null } = {}) {
+function computeFunnel(rows = [], { minCohort = MIN_COHORT, window = null, roster = {}, excludedWorkspaces = new Set() } = {}) {
   // Coerce rather than guard: a non-array (a failed query returning null, a
   // number, a string) must degrade to an empty funnel, not throw inside an
   // admin request. `for...of` on a number throws.
   const safeRows = Array.isArray(rows) ? rows : [];
+  const excludedWs = excludedWorkspaces instanceof Set ? excludedWorkspaces : new Set(excludedWorkspaces || []);
+
+  // Staff/test/demo rows are removed BEFORE any subject is counted, so an
+  // internal account can never inflate a numerator (or the entered
+  // denominator). Default roster is empty, so callers that pass nothing keep
+  // the un-excluded behaviour — the exclusion only bites when admin.js supplies
+  // rosterFromEnv(). Every dropped subject is tallied for the audit line below.
+  const excluded = new Set();
+  const isExcludedRow = (r) => {
+    if (r.workspace_id && excludedWs.has(String(r.workspace_id))) { excluded.add(String(r.workspace_id)); return true; }
+    if (classifyAccount({ userId: r.user_id, workspaceId: r.workspace_id }, roster).excluded) {
+      excluded.add(String(r.workspace_id || r.user_id));
+      return true;
+    }
+    return false;
+  };
 
   const subjectsFor = (eventName, scope) => {
     const key = scope === 'campaign' ? 'campaign_id' : 'workspace_id';
     const set = new Set();
     for (const r of safeRows) {
       if (!r || typeof r !== 'object' || r.event !== eventName) continue;
+      if (isExcludedRow(r)) continue;
       const id = r[key] || r.workspace_id || r.user_id;
       if (id) set.add(String(id));
     }
@@ -144,6 +169,10 @@ function computeFunnel(rows = [], { minCohort = MIN_COHORT, window = null } = {}
     min_cohort: minCohort,
     window,
     reportable: entered >= minCohort,
+    // Auditable: how many distinct staff/test/demo subjects were removed before
+    // counting. 0 with an empty roster is the honest "no exclusion configured"
+    // signal, not a claim that every account is real.
+    excluded_subjects: excluded.size,
     steps,
   };
 }

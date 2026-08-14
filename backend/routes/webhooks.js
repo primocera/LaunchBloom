@@ -101,6 +101,36 @@ function isOurSubscription(subscription) {
   return ownsSubscription(subscription).ours;
 }
 
+/**
+ * The single canonical projection of a Stripe subscription into the local
+ * `subscriptions` mirror row. Extracted so the webhook handler AND the v18 S05
+ * pull-based reconciliation job write the SAME shape — Stripe stays the one
+ * billing truth; this is only its deterministic mirror, never a second source.
+ * Pure and side-effect-free.
+ *
+ * Stripe moved current_period_start/end OFF the subscription object and ONTO
+ * the subscription item in recent API versions (2025+/2026 dahlia). Read the
+ * top-level field first for older versions, then fall back to the item — else
+ * the renewal date is stored as null and the account page shows "renews on .".
+ */
+function subscriptionMirrorRow(subscription, customerId, eventAt) {
+  const item = subscription.items?.data?.[0];
+  const periodStartUnix = subscription.current_period_start ?? item?.current_period_start ?? null;
+  const periodEndUnix = subscription.current_period_end ?? item?.current_period_end ?? null;
+  return {
+    stripe_subscription_id: subscription.id,
+    customer_id: customerId ?? null,
+    stripe_price_id: item?.price?.id ?? null,
+    status: subscription.status,
+    current_period_start: periodStartUnix ? new Date(periodStartUnix * 1000).toISOString() : null,
+    current_period_end: periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null,
+    trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+    cancel_at_period_end: subscription.cancel_at_period_end,
+    metadata: subscription.metadata,
+    stripe_event_at: eventAt,
+  };
+}
+
 /** An invoice is ours iff we already mirror its subscription, or its line
  *  price is one of ours (covers the event-before-row race). */
 async function isOurInvoice(invoice) {
@@ -430,33 +460,8 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     .eq('stripe_customer_id', subscription.customer)
     .single();
 
-  // Stripe moved current_period_start/end OFF the subscription object and ONTO
-  // the subscription item in recent API versions (2025+/2026 dahlia). Read the
-  // top-level field first for older versions, then fall back to the item — else
-  // the renewal date is stored as null and the account page shows "renews on .".
-  const item = subscription.items?.data?.[0];
-  const periodStartUnix = subscription.current_period_start ?? item?.current_period_start ?? null;
-  const periodEndUnix = subscription.current_period_end ?? item?.current_period_end ?? null;
-
   const { error } = await supabase.from('subscriptions').upsert(
-    {
-      stripe_subscription_id: subscription.id,
-      customer_id: customer?.id ?? null,
-      stripe_price_id: item?.price?.id ?? null,
-      status: subscription.status,
-      current_period_start: periodStartUnix
-        ? new Date(periodStartUnix * 1000).toISOString()
-        : null,
-      current_period_end: periodEndUnix
-        ? new Date(periodEndUnix * 1000).toISOString()
-        : null,
-      trial_end: subscription.trial_end
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : null,
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      metadata: subscription.metadata,
-      stripe_event_at: eventAt,
-    },
+    subscriptionMirrorRow(subscription, customer?.id ?? null, eventAt),
     { onConflict: 'stripe_subscription_id' }
   );
 
@@ -652,3 +657,8 @@ module.exports = router;
 // be adopted, mutated, emailed or counted.
 module.exports.isOurSubscription = isOurSubscription;
 module.exports.isOurCharge = isOurCharge;
+// v18 S05: the pull-based reconciliation job reuses the exact ownership rule and
+// mirror projection, so it can never adopt a foreign subscription or write a row
+// shape that drifts from the webhook's.
+module.exports.ownsSubscription = ownsSubscription;
+module.exports.subscriptionMirrorRow = subscriptionMirrorRow;

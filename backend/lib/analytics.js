@@ -94,6 +94,12 @@ const CANONICAL_EVENTS = {
   subscription_renewed: 'A recurring invoice was paid after the first one — the customer paid a second time.',
   primary_path_started: 'The user entered the recommended path (stage code + entitlement).',
   primary_path_completed: 'The user reached the end of the recommended path — a first asset created against an approved brief (stage code + entitlement).',
+  // ── v18 S06 — the single named first-value milestone. The workspace exported
+  // its FIRST real handoff packet: a server-verified, durable product fact (a
+  // downloaded deliverable), never a page view. Deduped once per workspace
+  // (firstvalue:{workspaceId}) so re-exports never re-fire it. Gated behind the
+  // removable `first_value_event` flag so the emission can be rolled back. ──
+  first_value_reached: 'A workspace exported its first real handoff packet — the first-value moment (format band only, deduped once per workspace).',
 };
 
 // ── The one canonical value funnel (LB-S09). Ordered milestones; each is a

@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { microcopy } from '../lib/microcopy';
 import { checkoutConfigState, planVerificationState, trackErrorState } from '../lib/error-states';
+import { resolvePaywallReason, paywallCopy } from '../lib/paywall-reasons';
 
 // ---------------------------------------------------------------------------
 // v5 Prompt 2: contextual trial paywall. Shown when a free account attempts
@@ -24,7 +25,7 @@ function chargeDate() {
   return tz ? `${date} (${tz})` : date;
 }
 
-export default function TrialPaywall({ open, onClose }) {
+export default function TrialPaywall({ open, onClose, reason = null }) {
   const [catalog, setCatalog] = useState(null);
   const [plan, setPlan] = useState(() => {
     try { return localStorage.getItem('of-pending-plan') || 'starter'; } catch { return 'starter'; }
@@ -61,14 +62,18 @@ export default function TrialPaywall({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     const ref = { cancelled: false };
-    api.trackEvent('paywall_viewed'); // v5 Prompt 18: funnel instrumentation
+    // v18 S13: every paywall view is tagged with its typed reason, so the
+    // boundary that opened it is measurable from one contract, not inferred.
+    api.trackEvent('paywall_viewed', { reason: resolvePaywallReason({ reason }) });
     fetch('/api/plans')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (!ref.cancelled && data?.plans) setCatalog(data); })
       .catch(() => {});
     loadEligibility(ref);
     return () => { ref.cancelled = true; };
-  }, [open]);
+    // `reason` is included for lint correctness; callers pass a fixed reason per
+    // open, so this does not cause the paywall_viewed event to re-fire.
+  }, [open, reason]);
 
   function retryEligibility() {
     setError(null);
@@ -77,6 +82,18 @@ export default function TrialPaywall({ open, onClose }) {
   }
 
   if (!open) return null;
+
+  // v18 S13: when a caller names a non-trial reason (quota reached, export not
+  // in plan, payment past due, cancelled, permission denied), the header comes
+  // from the one reason contract. The trial reasons keep the richer eligState
+  // copy below (exact allowance, charge date), so passing no reason is
+  // unchanged behaviour.
+  const resolvedReason = resolvePaywallReason({
+    reason,
+    trialEligible: eligState === 'eligible' ? true : eligState === 'ineligible' ? false : null,
+  });
+  const isTrialReason = resolvedReason === 'trial_required' || resolvedReason === 'trial_expired';
+  const reasonCopy = paywallCopy(resolvedReason);
 
   const selected = catalog?.plans?.find((p) => p.plan === plan) || null;
   const price = selected ? selected.price.display[interval] : null;
@@ -124,7 +141,12 @@ export default function TrialPaywall({ open, onClose }) {
         tabIndex={-1}
         ref={cardRef}
       >
-        {eligState === 'ineligible' ? (
+        {!isTrialReason ? (
+          <>
+            <h2 id="paywall-title">{reasonCopy.title}</h2>
+            <p className="paywall-sub">{reasonCopy.lead}</p>
+          </>
+        ) : eligState === 'ineligible' ? (
           <>
             <h2 id="paywall-title">Choose a plan to keep generating</h2>
             <p className="paywall-sub">

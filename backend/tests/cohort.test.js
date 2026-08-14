@@ -164,3 +164,40 @@ test('a non-array payload degrades to an empty funnel', () => {
     assert.equal(funnel.steps.length, COHORT_FUNNEL.length);
   }
 });
+
+// ── v18 X01: staff/test/demo exclusion on the north-star funnel ─────────────
+
+test('with no roster, nothing is excluded (backward compatible)', () => {
+  const funnel = computeFunnel(rowsFor(many(8), 2));
+  assert.equal(funnel.cohort_size, 8, 'the default empty roster must not remove any real account');
+  assert.equal(funnel.excluded_subjects, 0, '0 with an empty roster is the honest "no exclusion configured" signal');
+});
+
+test('a staff workspace never enters the cohort or inflates a step', () => {
+  // 6 real accounts + 3 staff ones, all reaching the first two steps.
+  const rows = [...rowsFor(many(6, 'real'), 2), ...rowsFor(['wStaff-a', 'wStaff-b', 'wStaff-c'], 2)];
+  const roster = { workspaceIds: ['wStaff-a', 'wStaff-b', 'wStaff-c'] };
+  const funnel = computeFunnel(rows, { roster });
+  assert.equal(funnel.cohort_size, 6, 'staff workspaces are removed from the denominator');
+  assert.equal(funnel.steps[0].numerator, 6);
+  assert.equal(funnel.steps[1].numerator, 6, 'staff cannot inflate a numerator');
+  assert.equal(funnel.excluded_subjects, 3, 'the removed count is auditable');
+});
+
+test('an excludedWorkspaces set is honoured alongside the roster', () => {
+  const rows = [...rowsFor(many(6, 'real'), 1), ...rowsFor(['wBad'], 1)];
+  const funnel = computeFunnel(rows, { excludedWorkspaces: new Set(['wBad']) });
+  assert.equal(funnel.cohort_size, 6);
+  assert.equal(funnel.excluded_subjects, 1);
+});
+
+test('exclusion uses the same reason rules as the scorecard (staff_user)', () => {
+  // Rows carry a user_id but no workspace_id — the roster still catches them.
+  const rows = [
+    { event: 'workspace_created', user_id: 'u-real', created_at: '2026-07-01T00:00:00Z' },
+    { event: 'workspace_created', user_id: 'u-staff', created_at: '2026-07-01T00:00:00Z' },
+  ];
+  const funnel = computeFunnel(rows, { minCohort: 1, roster: { userIds: ['u-staff'] } });
+  assert.equal(funnel.cohort_size, 1, 'the staff user is excluded by user id');
+  assert.equal(funnel.excluded_subjects, 1);
+});

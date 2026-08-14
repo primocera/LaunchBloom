@@ -4,8 +4,8 @@
   --border: #e8e2da;
   --border-strong: #d8cfc3;
   --text: #2b2320;
-  --text-muted: #8a7f75;
-  --text-faint: #a99e93;
+  --text-muted: #767068; /* v18 X04: was #8a7f75 (3.91:1 on white) — now 4.90:1, WCAG AA */
+  --text-faint: #7a736b; /* v18 X04: was #a99e93 (2.63:1) — now 4.67:1, AA, still a step lighter than muted */
   --accent: #8a6851;
   --accent-soft: rgba(138, 104, 81, 0.08);
   --accent-ring: rgba(138, 104, 81, 0.28);

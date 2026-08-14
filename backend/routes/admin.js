@@ -215,6 +215,7 @@ router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
     const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
 
     const { computeFunnel, biggestDropOff, costPerOutcome, COHORT_FUNNEL } = require('../lib/cohort');
+    const { rosterFromEnv } = require('../lib/beta-scorecard');
     const wanted = COHORT_FUNNEL.map((f) => f.event).filter(Boolean);
 
     // ids + timestamps only — `properties` is deliberately not selected.
@@ -225,8 +226,11 @@ router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
       .gte('created_at', since)
       .limit(20000);
 
+    // v18 X01: exclude staff/test/demo subjects using the same auditable roster
+    // as the weekly scorecard, so the north-star funnel measures real customers.
     const funnel = computeFunnel(Array.isArray(eventRows) ? eventRows : [], {
       window: { days, since },
+      roster: rosterFromEnv(),
     });
 
     // AI cost per outcome, from the ledger. Null rather than a divide-by-zero.

@@ -16,6 +16,8 @@
     "test:e2e": "playwright test",
     "_comment_e2e_auth": "v11 SC-03: the signed-in matrix. Needs a NON-PRODUCTION Supabase project — see docs/RUNBOOK_AUTH_E2E.md. Not running it is a release blocker, not a pass.",
     "test:e2e:auth": "node scripts/e2e-auth.mjs",
+    "_comment_e2e_a11y": "v18 X04: axe-core automated accessibility scan on public routes. Local-only. One-time: npx playwright install chromium.",
+    "test:e2e:a11y": "playwright test a11y-axe",
     "check:app-fresh": "node scripts/check-app-fresh.mjs",
     "_comment_check_router": "SC-05: fail if any RSC/SSR/server-router indicator appears, keeping the accepted react-router advisory mechanically unreachable.",
     "check:router": "node backend/scripts/check-router-reachability.js",
@@ -36,10 +38,12 @@
     "_comment_export_integrity": "DOCX/PDF/ZIP structural validation and bounds — the export path that protects the paid deliverable.",
     "test:export": "node --test backend/tests/handoff-export-integrity.test.js",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js",
-  "_comment_rehearsal": "SC-04: validate a completed live-money rehearsal record against the canonical eight-transition matrix. Read-only; owner runs the rehearsal itself.",
-  "rehearsal:validate": "node backend/scripts/validate-rehearsal.js",
-  "_comment_readiness": "LB-V17-05: validate a production-readiness evidence record (candidate/env/freshness/ready/blockers/attestation/redaction). Read-only; owner runs GET /api/admin/readiness against the deployed candidate.",
-  "readiness:validate": "node backend/scripts/validate-readiness.js"
+    "_comment_reconcile_webhooks": "v18 S05: pull-based reconciliation — detects Stripe subscriptions whose webhook was never delivered (missing/stale local mirror). Read-only by default; --apply is owner-gated (RECONCILE_OWNER_MODE=1).",
+    "reconcile:webhooks": "node backend/scripts/reconcile-stripe-webhooks.js",
+    "_comment_rehearsal": "SC-04: validate a completed live-money rehearsal record against the canonical eight-transition matrix. Read-only; owner runs the rehearsal itself.",
+    "rehearsal:validate": "node backend/scripts/validate-rehearsal.js",
+    "_comment_readiness": "LB-V17-05: validate a production-readiness evidence record (candidate/env/freshness/ready/blockers/attestation/redaction). Read-only; owner runs GET /api/admin/readiness against the deployed candidate.",
+    "readiness:validate": "node backend/scripts/validate-readiness.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
@@ -56,6 +60,7 @@
     "stripe": "^14.10.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "@vitejs/plugin-react": "^4.3.1",

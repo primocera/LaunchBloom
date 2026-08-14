@@ -93,6 +93,37 @@ checkout and read as unmapped until the env var is corrected).
 **Support reply:** confirm no charge and no access change occurred, ask them to
 retry, and quote the `req_id` from their error notice.
 
+## Reconciliation — missed / out-of-order webhooks (v18 S05)
+
+Two read-only reconcilers, both fail-closed and idempotent. Neither ever
+re-charges or invents entitlement; on the shared Stripe account both use the
+exact `webhooks.isOurSubscription` ownership rule, so a peer product's
+subscription is never adopted.
+
+| Tool | Detects | Talks to Stripe? |
+|------|---------|------------------|
+| `npm run reconcile:webhooks` | a Stripe subscription whose create/update webhook was never delivered → **missing_local** (no local row) or **status_drift** (stale local status) | yes (read-only `subscriptions.list`) |
+| `node backend/scripts/reconcile-entitlements.js` | impossible/ambiguous states in rows we already mirror (overlap, unmapped price) | no |
+
+**When to run:** after a `webhook_failures_24h` spike that does not clear on
+Stripe retry, after a Stripe outage, or when a paying user reports missing
+access but Stripe shows them active.
+
+**Procedure:**
+1. `npm run reconcile:webhooks -- --json` — dry-run, read-only. Exit `1` means
+   findings exist; `2` means BLOCKED (missing `STRIPE_SECRET_KEY`/Supabase env —
+   never read as "0 in sync").
+2. Review the reason-coded findings (opaque subscription ids only, no email).
+3. Repair only if warranted: `RECONCILE_OWNER_MODE=1 npm run reconcile:webhooks -- --apply`.
+   The repair upserts the local mirror via the **one** canonical
+   `subscriptionMirrorRow` projection (idempotent), emits an
+   `ops-signal reconciliation_correction` per fix, and deliberately does **not**
+   send lifecycle email — reconciliation is a data-sync, not an event replay.
+4. Re-run the dry-run to confirm `missing_local` / `status_drift` are `0`.
+
+**Escalate when:** findings persist after `--apply`, or a foreign subscription
+count changes unexpectedly (possible metadata/ownership regression).
+
 ## External processors
 
 Adopt an external log/alert processor **only after** its subprocessor and
