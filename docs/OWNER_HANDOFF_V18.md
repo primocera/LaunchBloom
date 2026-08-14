@@ -1,6 +1,6 @@
 # Owner handoff — v18
 
-**Candidate:** `163fd6d47583dd93dcc413a8646d2be8f6488a36` (branch `main`, frozen 2026-08-14)
+**Candidate:** `017ece27baa3d9b200bc920b5e7f194299d9b91c` (branch `main`, frozen 2026-08-14)
 **Bundle:** `index-C2TMZ4Jk.js` + `index-KNfjvmSJ.css`
 **Machine truth:** [`docs/LAUNCH_STATE.md`](LAUNCH_STATE.md), generated from
 [`docs/launch/launch-state.json`](launch/launch-state.json). Where this prose and
@@ -49,7 +49,7 @@ prompts (O01–O04).
 
 ---
 
-## Every check, re-run at the candidate `163fd6d`
+## Every check, re-run at the candidate `017ece2`
 
 | Check | Result |
 |-------|--------|
@@ -68,7 +68,7 @@ prompts (O01–O04).
 
 Production config gate (`release_config`) and the migration-applied evidence are
 **carried forward** from the prior candidate — valid because
-`git diff 64e7691..163fd6d` over `backend/migrations/` and over the config-gate
+`git diff 64e7691..017ece2` over `backend/migrations/` and over the config-gate
 files (`backend/lib/launch-config.js`, `backend/scripts/release-check.js`) is
 **empty**. The v18 `webhooks.js` refactor is not in those files and is covered by
 the re-run webhook test suites.
@@ -87,7 +87,7 @@ These are owner decisions; Claude must not perform them.
    out-of-order webhooks. Complete it to convert this accepted risk to satisfied.
 2. **Re-confirm production readiness** at the deployed candidate: `GET
    /api/admin/readiness` should report `ready=true`, `0` blockers. Do this after
-   deploying `163fd6d` and after any production config change.
+   deploying `017ece2` and after any production config change.
 3. **Router advisory (accepted risk).** `npm audit` is now clean, so you may
    choose to close blocker `P1-router-rsc-csrf-advisory` outright — that closure
    is your call, not the build's.
@@ -113,6 +113,19 @@ longer engineering; it is **users**. The recommended next focus:
 - **Pricing experiments** — starter/pro/studio, monthly/yearly, trial conversion.
 - **Channels** — content/SEO, relevant communities, targeted outbound,
   agency partnerships.
+
+### E2E testing is complete — do not re-run it as new work
+
+The browser test effort is **done**. Both suites exist, pass, and are wired to
+the gate: the public matrix (57) and the authenticated seeded matrix (45/45,
+desktop + mobile + keyboard, real Supabase). They cover the signed-in journeys,
+cross-account isolation, keyboard/phone operation and the failure-recovery paths.
+
+If a future prompt pack asks to "add E2E tests," treat that as **already
+satisfied** — verify the existing suites still pass at the new candidate and stop
+there. Building a fresh E2E layer would be duplicated work. The only legitimate
+reason to touch them is a genuinely new user-facing flow that has no coverage; add
+a spec for *that flow only*, never a wholesale re-do.
 
 Ship a new feature again only when real user evidence points at a specific one.
 Before writing any future prompt pack, read
