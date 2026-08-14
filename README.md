@@ -31,6 +31,12 @@ and the value loop, pricing experiments, and channels (content, communities,
 outbound, partnerships). Ship features again only when real user evidence demands
 a specific one.
 
+**E2E testing is complete.** The public (57) and authenticated (45/45 — desktop,
+mobile, keyboard, real Supabase) browser matrices exist, pass and gate the
+release. If a future pack asks to "add E2E tests," that is **already satisfied** —
+verify the existing suites at the new candidate and stop; do not rebuild them.
+Add a spec only for a genuinely new, uncovered user flow.
+
 ## 📌 Writing a prompt pack anyway? Read this section first.
 
 This repo has been built through successive prompt packs (v6 → v18). The most
