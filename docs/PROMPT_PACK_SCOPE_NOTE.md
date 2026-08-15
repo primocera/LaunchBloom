@@ -1,6 +1,24 @@
-# Note to the prompt-pack author — stop re-selling the same three items
+# Note to the prompt-pack author — the code is done; the problem is distribution
 
-**Read this before writing the next pack (v16+).**
+> **🚦 STOP — read this first (as of v18, 2026-08).**
+> **The product build is finished for launch. The constraint on this business is
+> no longer code — it is users.** Every automated gate is green at the candidate,
+> the authenticated + public browser E2E matrices pass, `npm audit` is clean, and
+> the release gate is **capped-beta GO / public-paid CONDITIONAL GO**.
+>
+> **Do not write another feature/hardening prompt pack.** The highest-value work
+> now is **marketing and distribution**: landing conversion, getting the first
+> cohort of freelance marketers / boutique agencies in, activation and the value
+> loop (brief → assets → first handoff export, instrumented as `first_value_reached`),
+> pricing experiments, and channels (content/SEO, communities, outbound,
+> partnerships). Write a *code* pack again only when **real user evidence** points
+> at one specific missing thing — never from the product vision.
+>
+> **E2E testing is complete.** Both browser matrices exist, pass, and gate the
+> release. A pack asking to "add E2E tests" is **already satisfied** — verify the
+> existing suites at the candidate and stop; do not rebuild them.
+
+**If you are writing a pack anyway, read the rest of this note.**
 
 > **Hard rule, up front:** if the pack you are about to write is about the
 > **authenticated E2E matrix**, the **live-money rehearsal**, or the
@@ -67,17 +85,20 @@ re-describe a gap that only the owner can close?** Ship the first. Skip the seco
 ## Where the launch actually stands (so the next pack starts from truth)
 
 Single source of truth: `docs/launch/launch-state.json` (rendered:
-`docs/LAUNCH_STATE.md`). At candidate **`b234dad`** (rollback `81993ff`):
+`docs/LAUNCH_STATE.md`). As of the **v18** candidate (see the manifest for the
+exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
 
-- **Capped beta: GO.** Nothing blocks it. It needs a **deploy** (LAUNCH-01), not
-  more evidence. The three items above do **not** gate the beta.
-- **Public paid: CONDITIONAL GO.** Gated on exactly the three items above — and
-  they convert to "satisfied" only by owner action, never by a pack.
+- **Capped beta: GO.** Nothing blocks it. It needs a **deploy**, not more
+  evidence. The authenticated E2E matrix now passes 45/45, so the old E2E blocker
+  is closed.
+- **Public paid: CONDITIONAL GO.** Gated only on the live-money rehearsal (and the
+  not-reachable router advisory, now also `npm audit`-clean) — owner actions,
+  never a pack.
 
-**Therefore:** the highest-value next step is not v16. It is (a) deploy the
-capped beta, or (b) the owner spends one afternoon closing the E2E matrix and the
-live-money rehearsal. Either one moves the product forward. Another pack about
-the same three items does not.
+**Therefore:** the highest-value next step is not another pack. It is (a) deploy
+the capped beta and get real users, or (b) the owner spends one afternoon on the
+live-money rehearsal to convert the last public-paid condition. Everything else is
+**marketing and distribution** — that is where the work is now.
 
 ---
 
