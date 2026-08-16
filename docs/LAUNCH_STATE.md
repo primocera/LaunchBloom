@@ -10,14 +10,14 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-08-14T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `v19` · generated 2026-08-16T00:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: router-rsc-advisory, live-money |
+| Public paid launch | **NO-GO** | required check e2e_authenticated is not_run |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -28,15 +28,18 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `017ece27baa3d9b200bc920b5e7f194299d9b91c` (frozen)
-- HEAD now: `017ece27baa3d9b200bc920b5e7f194299d9b91c`
-- Bundle: index-C2TMZ4Jk.js, index-KNfjvmSJ.css
+- Candidate SHA: `cce67aab2129e1fe1960aa89bbecaa04473de1f7` (frozen)
+- HEAD now: `cce67aab2129e1fe1960aa89bbecaa04473de1f7`
+- Bundle: index-Cq2NTdSE.js, index-KNfjvmSJ.css
 - Environment class: production
 
 ### Drift from the reviewed baseline
 
 | Commit | Subject | Already closes |
 |---|---|---|
+| `cce67aa` | fix(billing): safe webhook ownership hardening (LB-01) | v19 LB-01 safe hardening only: isStaleSubscriptionEvent distinguishes no-row (PGRST116, proceed) from unavailable-read (throws → retry, never letting a possibly-older event overwrite newer data); subscription value/billing analytics emit AFTER the durable upsert so a failed+redelivered event can't double-count un-persisted state; customer.created/updated applies the same source policy as other events (a foreign-stamped customer is dropped). Tests: webhook-isolation 14/14 (+2 customer-gate). The ownership-architecture/schema trio was deferred by owner decision. |
+| `35ebc5f` | feat(ops): readiness fails closed on missing data; bounded reconciler batch; 10x capacity model (LB-05) | v19 LB-05: the readiness roll-up returns 'degraded' (never silently 'ok') when a signal is unmeasured — absence of data is never healthy; reconcile:webhooks --apply is bounded per run (--max/RECONCILE_MAX_BATCH, default 50) with the remainder deferred idempotently; docs/CAPACITY_MODEL_V19.md models a 10x cohort from the real configured caps and marks every unmeasured provider/infra number UNAVAILABLE with the exact measurement to close it. Tests: readiness-thresholds 6/6, webhook-reconcile 8/8. |
+| `e253924` | fix(privacy): scope browser drafts by stable user UUID, not workspace/email (LB-02) | v19 LB-02: /api/auth/me exposes the stable Supabase user UUID from the validated session; studio and campaign recovery drafts scope by that UUID + the active workspace instead of the mutable email or a workspace id used AS an identity; the campaign draft is restored only after identity resolves; transient sessionStorage handoffs are governed by the storage-inventory contract (declared allowlist) plus a regression assertion that draft owners derive from account.id. Tests: storage-inventory 7/7. |
 | `163fd6d` | test(e2e): run authenticated matrix single-worker for a deterministic gate (v18) | The authenticated RC runner (scripts/e2e-auth.mjs) now passes --workers=1. The three authenticated projects share one seeding webServer and each seeds/deletes its own auth user; under parallel workers a torn-down test's trailing request races another test's seed and the shared server cold-starts under load, producing non-deterministic timeouts (billing) and focus-timing failures (keyboard) that all pass in isolation. Single-worker makes the release gate deterministic; the public suite keeps workers:2. Evidence: 45/45 green at the candidate. |
 | `3fff6c3` | feat(v18): close scale-pack gaps X01/S06/S13/S05/X02/X04/X06 | Only the genuine pack gaps, built on top of the shipped v6-v17 work: X01 cohort staff/test exclusion (reuses existing roster); S06 first_value_reached server-only event behind default-on first_value_event flag; S13 frozen paywall-reason contract surfaced by TrialPaywall; S05 read-only pull-based Stripe webhook reconciler reusing the canonical subscriptionMirrorRow + isOurSubscription rule (owner-gated --apply); X02 traceparent/x-trace-id logger propagation + docs/SLOS.md; X04 axe-core public-route scan (fixed three real WCAG-AA contrast misses); X06 docs/THREAT_MODEL.md. Tests: +29 (cohort/first-value/logger-trace/paywall-reasons/webhook-reconcile) at 961/961. |
 | `271e31c` | fix(billing): fail closed when entitlement cannot be verified (SC-P0-01) | A temporary Supabase/database failure is no longer read as 'no paid plan'. resolveEntitlement() distinguishes verified-free / entitled / unmapped / unavailable; checkout fails closed (no Stripe session) on unavailable, verify-plan never renders a paying user as Free. Tests: backend/tests/entitlement-fail-closed.test.js (11/11). |
@@ -74,17 +77,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `017ece2` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `017ece2` | yes |
-| Production build | `npm run build:app` | passed locally | `017ece2` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `017ece2` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `017ece2` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed locally | `017ece2` | yes |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `017ece2` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `017ece2` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `017ece2` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `017ece2` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `017ece2` | yes |
+| ESLint | `npm run lint` | passed locally | `cce67aa` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `cce67aa` | yes |
+| Production build | `npm run build:app` | passed locally | `cce67aa` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `cce67aa` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `cce67aa` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | not run | `cce67aa` | no |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `cce67aa` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `cce67aa` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `cce67aa` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `cce67aa` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `cce67aa` | yes |
 
 ## Owner evidence
 
@@ -107,10 +110,10 @@ over it, and never that it was resolved.
 
 | Severity | Item | Status | Owner | Closure requirement |
 |---|---|---|---|---|
-| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at v18 candidate 017ece2 (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
+| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at prior candidate 017ece2 (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
-**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
+**Public paid launch (NO-GO) rests on these accepted risks:**
 
 - `router-rsc-advisory` — react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-router-rsc-csrf-advisory)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
@@ -126,7 +129,7 @@ over it, and never that it was resolved.
 
 These remain in the repository as history. None of them is current truth.
 
-- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16/v17 candidate SHA 64e7691 and now the v18 candidate 017ece2 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
+- `docs/OWNER_HANDOFF_V15.md` — v15 owner handoff, pinned to the prior candidate b234dad. Superseded by the v16/v17 candidate SHA 64e7691 and now the prior candidate 017ece2 (this launch-state record); the canonical current truth is docs/LAUNCH_STATE.md, regenerated from this manifest. Kept as history.
 - `docs/OWNER_HANDOFF_V14.md` — v14 owner handoff, pinned to the prior candidate 81993ff. Superseded by docs/OWNER_HANDOFF_V15.md (the prior candidate b234dad). Kept as history.
 - `docs/GO_NO_GO_V9.md` — Historical v9 gate. Its verdict and evidence belong to commit 20673ae and must not be read as current.
 - `docs/GO_NO_GO_V10.md` — Historical v10 gate pinned to fd354ad. Its migration claim conflicts with docs/CONFIGURED_STATE.md and is not evidence for any later commit.
