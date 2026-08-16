@@ -58,6 +58,11 @@ async function accountStatus(email, userId) {
   const ws = await ensureWorkspace(email, userId);
   const usage = await usageFor(ws.id, plan, email, userId);
   return {
+    // LB-V19 (LB-02): expose the STABLE Supabase user UUID so the client can
+    // scope device-local drafts by identity — never by the mutable email or the
+    // workspace id. This comes from the validated server session, not a client
+    // claim (login/signup pass data.user.id; /me passes req.userId).
+    id: userId || null,
     email,
     plan,
     plan_label: limits.label,

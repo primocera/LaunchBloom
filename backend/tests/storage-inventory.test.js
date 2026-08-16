@@ -34,6 +34,20 @@ function read(p) { return fs.readFileSync(p, 'utf8'); }
 // localStorage.setItem('key' — first string-literal argument.
 const SET_ITEM = /localStorage\.setItem\(\s*['"]([^'"]+)['"]/g;
 
+// sessionStorage.setItem('key' — first string-literal argument. LB-V19 (LB-02):
+// transient navigation handoffs live in sessionStorage; every one must be
+// declared here so a new undeclared handoff can't leak client content silently.
+const SESSION_SET_ITEM = /sessionStorage\.setItem\(\s*['"]([^'"]+)['"]/g;
+
+// The only allowed transient navigation-handoff keys. Each is short-lived
+// (sessionStorage clears on tab close) and consumed once (removeItem on read):
+//   of-draft         — an AskBox idea handed to the campaign create flow.
+//   of-website-brief — a SEO idea handed to the Website studio as a page brief.
+const ALLOWED_SESSION_KEYS = new Set([
+  'of-draft',
+  'of-website-brief',
+]);
+
 // Harmless, non-confidential preference/identifier keys allowed to be written
 // directly. NONE of these carry client campaign content.
 const ALLOWED_RAW_KEYS = new Set([
@@ -65,6 +79,25 @@ test('LB-V17-03: no client-confidential draft is written via raw localStorage.se
   );
 });
 
+test('LB-V19: no undeclared sessionStorage handoff key is written', () => {
+  const offenders = [];
+  for (const f of files) {
+    const src = read(f);
+    let m;
+    SESSION_SET_ITEM.lastIndex = 0;
+    while ((m = SESSION_SET_ITEM.exec(src)) !== null) {
+      const key = m[1];
+      if (!ALLOWED_SESSION_KEYS.has(key)) {
+        offenders.push(`${path.relative(APP_SRC, f)} → sessionStorage.setItem('${key}')`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders, [],
+    `every sessionStorage handoff key must be declared in ALLOWED_SESSION_KEYS (a transient, consume-once navigation handoff):\n${offenders.join('\n')}`,
+  );
+});
+
 test('LB-V17-03: the draft registry declares the studio and campaign draft keys', () => {
   const registry = read(path.join(APP_SRC, 'lib', 'local-drafts.js'));
   assert.match(registry, /'lb-draft-'/, 'studio generator draft prefix must be declared');
@@ -81,6 +114,24 @@ test('LB-V17-03: generator and Campaigns use the registry, not raw draft writes'
     assert.ok(!/localStorage\.setItem\(\s*['"](lb-draft|campaign_form_draft)/.test(src),
       `${name} must not write drafts through raw localStorage`);
   }
+});
+
+test('LB-V19 (LB-02): drafts are scoped by the stable user UUID, never workspace-as-identity', () => {
+  const generator = read(path.join(APP_SRC, 'routes', 'studios', 'generator.jsx'));
+  const campaigns = read(path.join(APP_SRC, 'routes', 'Campaigns.jsx'));
+
+  // The studio + campaign draft owners must bind to account.id (the stable
+  // Supabase UUID exposed by /api/auth/me), not to the mutable email.
+  assert.match(generator, /userId:\s*account\?\.id/, 'generator draft owner must scope by account.id (stable UUID)');
+  assert.match(campaigns, /userId:\s*account\?\.id/, 'Campaigns draft owner must scope by account.id (stable UUID)');
+  assert.ok(!/userId:\s*account\?\.email/.test(generator), 'generator draft must not scope by mutable email');
+
+  // The regressed pattern: the campaign draft owner keyed userId to the
+  // workspace id (getActiveWorkspace) — a workspace id is not an identity.
+  assert.ok(
+    !/userId:\s*getActiveWorkspace\(\)/.test(campaigns),
+    'Campaigns must not use the workspace id as the user identity for draft scope',
+  );
 });
 
 test('LB-V17-03: logout purges local drafts', () => {

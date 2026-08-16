@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, getActiveWorkspace } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { saveDraft, loadDraft, clearDraft } from '../lib/local-drafts';
 import { EMPTY_BRIEF as EMPTY, TEMPLATES, missingDecisions, totalAssets, sectionPath } from './campaign/shared';
 
@@ -129,14 +130,10 @@ function Templates({ onCreated }) {
 
 // v8 LB-S05 / LB-V17-03: the create-campaign form survives auth/paywall/checkout
 // detours — but recovery is now bounded (TTL'd, user-scoped, size-capped) via
-// the draft registry rather than indefinite raw localStorage.
+// the draft registry rather than indefinite raw localStorage. LB-V19 (LB-02):
+// the owner scope is the STABLE user UUID + active workspace, resolved from the
+// authenticated session — never the workspace id used as an identity.
 const DRAFT_KEY = 'campaign_form_draft';
-function draftOwner() {
-  return { userId: getActiveWorkspace() || '' };
-}
-function loadFormDraft() {
-  return loadDraft(DRAFT_KEY, draftOwner());
-}
 
 // A quiet overflow menu keeps archive/delete/duplicate off the main work path.
 function CampaignMenu({ campaign, onArchive, onDuplicate, onRemove }) {
@@ -157,13 +154,34 @@ function CampaignMenu({ campaign, onArchive, onDuplicate, onRemove }) {
 
 export default function Campaigns() {
   const navigate = useNavigate();
+  const { account } = useAuth();
   const [campaigns, setCampaigns] = useState(null);
-  const [form, setFormState] = useState(loadFormDraft); // null = closed, object = create form
+  // null = closed, object = create form. Starts closed; a still-valid draft is
+  // only restored AFTER identity resolves (below), never at mount under an
+  // unresolved/other identity.
+  const [form, setFormState] = useState(null);
+
+  // LB-V19 (LB-02): bind recovery to the stable user UUID + active workspace.
+  const draftOwner = useMemo(
+    () => ({ userId: account?.id || '', workspaceId: getActiveWorkspace() || '' }),
+    [account?.id],
+  );
   const setForm = (next) => {
     setFormState(next);
-    if (next) saveDraft(DRAFT_KEY, next, draftOwner());
+    if (next) saveDraft(DRAFT_KEY, next, draftOwner);
     else clearDraft(DRAFT_KEY);
   };
+
+  // Restore a still-valid draft exactly once, and only once identity is known,
+  // so a draft can never be read under an unresolved or different identity.
+  const draftRestored = useRef(false);
+  useEffect(() => {
+    if (draftRestored.current || !account) return;
+    draftRestored.current = true;
+    const saved = loadDraft(DRAFT_KEY, draftOwner);
+    if (saved && typeof saved === 'object') setFormState(saved);
+  }, [account, draftOwner]);
+
   const [error, setError] = useState(null);
 
   function load() {

@@ -35,7 +35,11 @@ export const DRAFT_REGISTRY = {
   },
   'campaign_form_draft': {
     prefix: false,
-    scope: 'user',
+    // LB-V19 (LB-02): scoped to the STABLE user UUID + active workspace. It used
+    // to be `user`-only and its consumer passed the workspace id AS the user id
+    // (a workspace id is not an identity); the draft now binds to the real user
+    // UUID so it can never restore under another user on a shared browser.
+    scope: 'user+workspace',
     ttlMs: DEFAULT_TTL_MS,
     sensitivity: 'client-confidential',
     purpose: 'New-campaign form recovery across auth/paywall detours.',
@@ -60,9 +64,9 @@ function store() {
   try { return window.localStorage; } catch { return null; }
 }
 
-// A stable, non-PII-leaking scope tag. We keep the raw values (a workspace UUID
-// and the user's own email) only inside the envelope for an exact-match check;
-// they are the user's own identifiers, never another party's.
+// A stable, non-PII-leaking scope tag. We keep the raw values (the user's own
+// stable UUID and the active workspace UUID) only inside the envelope for an
+// exact-match check; they are the user's own identifiers, never another party's.
 function scopeTag(policy, { userId, workspaceId }) {
   if (policy.scope === 'user+workspace') return `${userId || ''}::${workspaceId || ''}`;
   return `${userId || ''}`;

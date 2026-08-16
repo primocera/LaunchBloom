@@ -398,12 +398,13 @@ export default function GeneratorStudio({
   const chips = deriveContext({ profile, campaign, values });
   const fieldWarnings = validateFields(fields, values);
 
-  // LB-V17-03: owner scope for the bounded draft. account.email + the active
-  // workspace bind the draft so it never restores across logout or a workspace
-  // switch. These are the user's own identifiers.
+  // LB-V17-03 / LB-V19 (LB-02): owner scope for the bounded draft. The STABLE
+  // user UUID (account.id) + the active workspace bind the draft so it never
+  // restores across logout, a different user or a workspace switch. The UUID is
+  // the identity — email is mutable contact data and must not be the scope key.
   const draftOwner = useMemo(
-    () => ({ userId: account?.email || '', workspaceId: getActiveWorkspace() || '' }),
-    [account?.email],
+    () => ({ userId: account?.id || '', workspaceId: getActiveWorkspace() || '' }),
+    [account?.id],
   );
 
   // Restore a still-valid draft once, after the owner scope is known.
