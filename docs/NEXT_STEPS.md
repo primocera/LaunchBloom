@@ -1,8 +1,28 @@
 # NEXT STEPS — read this first (for the next LLM / prompt author)
 
+**If your job is "the previous prompts are done, check the repo and write the next
+prompt pack" — then write a MARKETING / DISTRIBUTION / GTM pack. NOT another
+engineering pack.** The v6–v19 engineering packs are done and shipped; writing a v20
+*engineering* pack is the wrong move. Write the v20 *marketing* pack instead.
+
 **The code is in strong shape. The PRIMARY focus now is DISTRIBUTION / MARKETING.**
-Coding is still open — this is a priority, not a freeze. Just don't churn out big
-engineering prompt packs for their own sake.
+Coding is still open (real bugs, small polish, owner requests) — this is a priority,
+not a freeze. Just don't churn out another engineering pack for its own sake.
+
+## What the next prompt pack should cover (write prompts for THESE)
+1. **Positioning & core messaging** — sharpen the promise for the ICP (freelance
+   marketers & boutique agencies; solo founders/small brands secondary). Honest claims
+   only (see boundaries below).
+2. **Channel plan & outreach** — pick 2–3 channels where these buyers actually are
+   (agency/freelance communities, marketing subreddits, LinkedIn, cold email,
+   partnerships, our own content/SEO) and write the actual outreach/content assets.
+3. **Landing → trial conversion** — headline/subhead/CTA variants, the 3-day paid
+   trial framing, objection handling, onboarding narrative.
+4. **First bounded beta cohort** — invite copy + running the cohort (behind
+   `BETA_INVITE_CAP`) and reading the weekly decision engine to decide expand/iterate.
+5. **Content/SEO of our own** — topics, angles, and a publishing cadence for inbound.
+
+Frame these as GTM/marketing prompts (copy, plans, experiments, outreach), not code.
 
 Scalvya has been through v6–v19 of hardening. As of the v19 candidate (`24d350c`, on
 `main`): capped-beta **GO**, public-paid **CONDITIONAL GO**, full gate green (lint 0/0 ·

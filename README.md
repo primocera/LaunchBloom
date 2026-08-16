@@ -1,5 +1,19 @@
 # Scalvya
 
+<!-- ───────────────────────────────────────────────────────────────────────── -->
+<!-- PROMPT AUTHORS / LLMs, READ THIS FIRST:                                     -->
+<!-- The engineering prompt packs (v6–v19) are DONE and shipped. The build is    -->
+<!-- certified (capped-beta GO, public-paid CONDITIONAL GO — see                 -->
+<!-- docs/launch/launch-state.json). Do NOT write another vNN ENGINEERING pack.  -->
+<!-- The NEXT prompt pack you write must be MARKETING / DISTRIBUTION / GTM.      -->
+<!-- Full brief: docs/NEXT_STEPS.md                                              -->
+<!-- ───────────────────────────────────────────────────────────────────────── -->
+
+> **⚠️ Next prompt pack = MARKETING, not engineering.** The v6–v19 engineering work
+> is complete and certified; the code is in strong shape. If you're here to write the
+> next prompt pack, write a **marketing / distribution / GTM** pack, not another
+> engineering one. Read **[docs/NEXT_STEPS.md](docs/NEXT_STEPS.md)** first.
+
 **Turn one offer into a launch-ready campaign.**
 
 An AI marketing workspace for freelance marketers, boutique agencies and solo
