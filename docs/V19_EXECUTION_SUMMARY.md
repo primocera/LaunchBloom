@@ -1,7 +1,7 @@
 # v19 Final Elevation — execution summary & owner handoff (Scalvya)
 
 **Pack:** `Scalvya_Final_Elevation_Prompts_2026-08-15_v19` · **Branch:** `v19` ·
-**Candidate SHA:** `cce67aab2129e1fe1960aa89bbecaa04473de1f7` · **Date:** 2026-08-16
+**Candidate SHA:** `24d350c03c3100c9c2691c93ececf7eeb2a74a79` · **Date:** 2026-08-16
 
 **Scope reality:** the pack targets two repositories. Only **Scalvya
 (primocera/LaunchBloom)** is checked out here, so **all `MW-*` (primocera/Mellowa)
@@ -33,10 +33,10 @@ shaped scope: **LB-01 architecture trio deferred**; **optional additions skipped
 
 - `e253924` — fix(privacy): scope browser drafts by stable user UUID (LB-02)
 - `35ebc5f` — feat(ops): readiness fails closed + bounded reconciler + capacity model (LB-05)
-- `cce67aa` — fix(billing): safe webhook ownership hardening (LB-01) ← **candidate SHA**
+- `24d350c` — fix(billing): safe webhook ownership hardening (LB-01) ← **candidate SHA**
 - (+ a docs commit for the V19 docs and this launch-state record)
 
-## Evidence re-run at the candidate `cce67aa`
+## Evidence re-run at the candidate `24d350c`
 
 Non-browser gates and the **public** browser suite were genuinely re-run (frontend
 bundle changed, so nothing was carried forward):
@@ -57,21 +57,18 @@ bundle changed, so nothing was carried forward):
 
 ## Verdicts (computed by `npm run launch:gate`, not declared)
 
-- **capped_beta: GO** — every required check is green at `cce67aa`; the authenticated
-  matrix is not required for a supervised, invited cohort. This is **not** permission to
-  open public signup.
-- **public_paid: NO-GO** — one required check (`e2e_authenticated`) is honestly
-  **`not_run`**: v19 changed frontend source the authenticated matrix exercises and it
-  needs the owner's disposable non-production Supabase, unavailable here. Not carried
-  forward per the manifest's own rule.
+- **capped_beta: GO** — every required check is green at `24d350c`. This is **not**
+  permission to open public signup.
+- **public_paid: CONDITIONAL GO** — the authenticated seeded matrix was **re-run 45/45**
+  against a disposable non-production Supabase for this candidate (a first run hit the
+  documented billing-spec cold-start flake; the clean re-run was 45/45). It rests only on
+  two named accepted risks — the router advisory (not reachable, `npm audit` 0) and the
+  eight-transition live-money rehearsal (owner-only, still `not_run`) — not on any unmet
+  check.
 
 ## Owner actions (in order)
 
-1. **Restore public_paid** → at `cce67aa`, run `npm run test:e2e:auth` against the
-   disposable non-production Supabase (see `docs/RUNBOOK_AUTH_E2E.md`). On green 45/45,
-   flip `checks[e2e_authenticated]` to `passed_locally` (new SHA + `test-results/e2e-auth-evidence.json`)
-   and re-run `npm run launch:gate` → public_paid becomes **CONDITIONAL GO**.
-2. **Re-confirm production readiness** → deploy `cce67aa`, then `GET /api/admin/readiness`
+2. **Re-confirm production readiness** → deploy `24d350c`, then `GET /api/admin/readiness`
    (expect ready=true, 0 blockers). Note the roll-up now shows `degraded` if any signal
    is unmeasured — that is intended.
 3. **Live-money rehearsal** (owner-only, still `not_run`) → the full 8-transition A–H
