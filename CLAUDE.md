@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+> ## ⛔ STOP — IF YOU ARE WRITING A PROMPT PACK, READ THIS FIRST (binding)
+> The engineering build is **done and certified** (v6–v19; capped-beta GO, public-paid
+> CONDITIONAL GO — see `docs/launch/launch-state.json`). **Do NOT audit this codebase
+> for gaps, and do NOT write another engineering / hardening / closure / elevation /
+> scale / security prompt pack (no LB-*, XAPP-*, S*, X*, no migrations, no refactors).**
+> Auditing a mature repo always turns up something to "harden" — that is an infinite
+> loop, and it has repeated for 5 versions. It stops here.
+>
+> **The next prompt pack MUST be MARKETING / DISTRIBUTION / GTM** (positioning,
+> channels & outreach, landing→trial conversion, the bounded beta cohort, content/SEO)
+> — output copy, plans and experiments, never code. Full brief: `docs/NEXT_STEPS.md`;
+> ready-to-use instruction: `docs/PROMPT_FOR_NEXT_LLM.md`. If your task was merely
+> "the previous prompts are done, check the repo, write the next ones," the correct
+> next pack is a **marketing** pack. Do not proceed with an engineering pack.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
