@@ -10,7 +10,7 @@
 >
 > **The next prompt pack MUST be MARKETING / DISTRIBUTION / GTM** (positioning,
 > channels & outreach, landing→trial conversion, the bounded beta cohort, content/SEO)
-> — output copy, plans and experiments, never code. Full brief: `docs/NEXT_STEPS.md`;
+> — output copy, plans and experiments, never code. Full brief: `docs/V20_MOVING_TOWARD_MARKETING.md`;
 > ready-to-use instruction: `docs/PROMPT_FOR_NEXT_LLM.md`. If your task was merely
 > "the previous prompts are done, check the repo, write the next ones," the correct
 > next pack is a **marketing** pack. Do not proceed with an engineering pack.

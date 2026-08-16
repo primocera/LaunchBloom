@@ -1,4 +1,4 @@
-# NEXT STEPS — read this first (for the next LLM / prompt author)
+# v20 — Moving Toward Marketing (next pack) — read this first
 
 **If your job is "the previous prompts are done, check the repo and write the next
 prompt pack" — then write a MARKETING / DISTRIBUTION / GTM pack. NOT another

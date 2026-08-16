@@ -21,7 +21,7 @@ v6–v19 **engineering** packs are DONE, shipped, and certified — the code is 
   instead.
 
 **Your only deliverable: a MARKETING / DISTRIBUTION / GTM prompt pack.** Scope is in
-`docs/NEXT_STEPS.md`. Produce prompts that generate:
+`docs/V20_MOVING_TOWARD_MARKETING.md`. Produce prompts that generate:
 1. Positioning & core messaging for the ICP (freelance marketers & boutique agencies;
    solo founders/small brands secondary).
 2. A 2–3 channel outreach plan plus the actual outreach/content assets.

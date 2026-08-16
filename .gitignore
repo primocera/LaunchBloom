@@ -16,3 +16,9 @@ playwright-report/
 LaunchBloom_*.docx
 verify.env
 key.txt
+
+# local secret env notes (never commit)
+.env*.txt
+"*.local.txt"
+env*.txt
+*local.txt

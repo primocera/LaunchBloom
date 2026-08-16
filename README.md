@@ -6,13 +6,13 @@
 <!-- certified (capped-beta GO, public-paid CONDITIONAL GO — see                 -->
 <!-- docs/launch/launch-state.json). Do NOT write another vNN ENGINEERING pack.  -->
 <!-- The NEXT prompt pack you write must be MARKETING / DISTRIBUTION / GTM.      -->
-<!-- Full brief: docs/NEXT_STEPS.md                                              -->
+<!-- Full brief: docs/V20_MOVING_TOWARD_MARKETING.md                                              -->
 <!-- ───────────────────────────────────────────────────────────────────────── -->
 
 > **⚠️ Next prompt pack = MARKETING, not engineering.** The v6–v19 engineering work
 > is complete and certified; the code is in strong shape. If you're here to write the
 > next prompt pack, write a **marketing / distribution / GTM** pack, not another
-> engineering one. Read **[docs/NEXT_STEPS.md](docs/NEXT_STEPS.md)** first.
+> engineering one. Read **[docs/V20_MOVING_TOWARD_MARKETING.md](docs/V20_MOVING_TOWARD_MARKETING.md)** first.
 
 **Turn one offer into a launch-ready campaign.**
 
