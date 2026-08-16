@@ -289,3 +289,32 @@ test('every foreign event is still recorded in the ledger as processed', async (
     assert.equal(db._events.get(id).status, 'processed', `${id} should be marked processed`);
   }
 });
+
+// ── LB-V19 (LB-01): customer.created/updated obeys the ownership policy ──────
+
+test('LB-V19: a foreign-stamped customer.updated is dropped, never syncs our row', async () => {
+  reset();
+  const r = await post({
+    id: 'evt_foreign_customer', type: 'customer.updated', created: CREATED,
+    data: { object: {
+      id: 'cus_mellowa', email: 'attacker@example.com',
+      metadata: { app: 'mellowa', supabase_user_id: 'mellowa-user' },
+    } },
+  });
+  assert.equal(r.status, 200, 'foreign event must be acked, never 5xx');
+  assert.deepEqual(db._writes, [], 'a foreign customer must not mutate our customers table');
+});
+
+test('LB-V19: an un-stamped customer.updated still syncs (no false drop of ours)', async () => {
+  reset();
+  const r = await post({
+    id: 'evt_our_customer', type: 'customer.updated', created: CREATED,
+    data: { object: { id: 'cus_scalvya', email: 'user@example.com', metadata: {} } },
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(
+    db._writes,
+    [{ table: 'customers', op: 'update', payload: { email: 'user@example.com' } }],
+    'a non-foreign customer event still updates our row scoped by stripe_customer_id',
+  );
+});

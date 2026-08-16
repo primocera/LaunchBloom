@@ -590,10 +590,12 @@ test('a full GO is impossible while any required condition rides on accepted ris
 
 test('an accepted risk never rewrites the underlying status', () => {
   const state = loadState();
-  // The authenticated matrix now runs and passes (v16, candidate f37e0e1); the
-  // remaining accepted risk that must not be rewritten is the live-money item.
+  // v19: the authenticated matrix is honestly not_run at the candidate (frontend
+  // source it exercises changed; owner re-runs locally). The check records its
+  // real status — an accepted risk never rewrites it. The remaining accepted risk
+  // that must not be rewritten is the live-money item.
   const check = state.checks.find((c) => c.id === 'e2e_authenticated');
-  assert.equal(check.status, 'passed_locally', 'the recorded status must be the real run result');
+  assert.equal(check.status, 'not_run', 'the recorded status must be the real run result');
   const money = state.owner_evidence.find((e) => e.id === 'live_money_rehearsal');
   assert.equal(money.status, 'not_run', 'the live-money accepted risk keeps its real not_run status');
   for (const b of state.blockers.filter((x) => x.status === 'accepted')) {

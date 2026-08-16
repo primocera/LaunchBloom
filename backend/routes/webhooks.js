@@ -351,6 +351,12 @@ async function handleEvent(event) {
       break;
     case 'customer.created':
     case 'customer.updated':
+      // LB-V19 (LB-01): apply the same source/ownership policy the other events
+      // use. A customer carrying a foreign stamp is dropped, never used to mutate
+      // a local row. (The update itself is already scoped to a stripe_customer_id
+      // that only our own stamped checkout ever writes, so this is defense in
+      // depth; it makes the policy explicit and drops foreign events early.)
+      if (hasForeignStamp(data.metadata)) { ignoreForeign(); return; }
       await onCustomerUpdated(data);
       break;
     default:
@@ -391,11 +397,19 @@ async function isOurCharge(object) {
  * an out-of-order (older) delivery must not overwrite it.
  */
 async function isStaleSubscriptionEvent(subscriptionId, eventAt) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('subscriptions')
     .select('stripe_event_at')
     .eq('stripe_subscription_id', subscriptionId)
     .single();
+  // LB-V19 (LB-01): distinguish "no local row yet" from "could not read". PGRST116
+  // is the expected no-row case (not stale — proceed). Any other error means the
+  // mirror was unreadable; fail CLOSED (throw → 5xx → Stripe redelivers) rather
+  // than treating an unavailable read as "not stale" and letting a possibly-older
+  // event overwrite newer data.
+  if (error && error.code !== 'PGRST116') {
+    throw new Error(`stale-check read unavailable for ${subscriptionId}: ${error.message}`);
+  }
   return !!(data && data.stripe_event_at && new Date(data.stripe_event_at) > new Date(eventAt));
 }
 
@@ -444,16 +458,6 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     return;
   }
 
-  const userId = (subscription.metadata && subscription.metadata.app_user_id) || null;
-  if (eventType === 'customer.subscription.created') {
-    track('subscription_created', { userId, properties: { status: subscription.status } });
-    if (subscription.status === 'trialing') {
-      track('trial_started', { userId, properties: { trial_end: subscription.trial_end || null } });
-    }
-  } else {
-    track('subscription_updated', { userId, properties: { status: subscription.status } });
-  }
-
   const { data: customer } = await supabase
     .from('customers')
     .select('id')
@@ -470,6 +474,21 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
   }
 
   console.log(`Subscription ${subscription.status}: ${subscription.id}`);
+
+  // LB-V19 (LB-01): emit value/billing analytics only AFTER the durable upsert
+  // succeeds. Before this, a failed upsert (which throws and is redelivered)
+  // would have already fired subscription_created/trial_started for state that
+  // never persisted, double-counting on retry. Now analytics reflect only
+  // durably-persisted state, matching the lifecycle-email ordering below.
+  const userId = (subscription.metadata && subscription.metadata.app_user_id) || null;
+  if (eventType === 'customer.subscription.created') {
+    track('subscription_created', { userId, properties: { status: subscription.status } });
+    if (subscription.status === 'trialing') {
+      track('trial_started', { userId, properties: { trial_end: subscription.trial_end || null } });
+    }
+  } else {
+    track('subscription_updated', { userId, properties: { status: subscription.status } });
+  }
 
   // Lifecycle emails — AFTER the durable upsert, idempotent by dedupe key,
   // and never allowed to fail billing processing (v5 Prompt 14).
