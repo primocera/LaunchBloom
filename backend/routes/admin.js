@@ -164,7 +164,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       checks, // presence booleans + detail strings, no secret values
       live,
       signals,
-      operational_status: status, // 'ok' | 'warn' | 'stop'
+      operational_status: status, // 'ok' | 'degraded' | 'warn' | 'stop' (degraded = a signal could not be measured; never silently 'ok')
       note: 'Automated readiness is not a paid-launch GO. A live low-value charge + cancel/recover ' +
         'rehearsal with owner-recorded evidence is required (see docs/RUNBOOK_TRANSACTION_REHEARSAL.md).',
     });

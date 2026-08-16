@@ -94,3 +94,16 @@ test('mixed batch: real gaps found, foreign ignored, synced ignored', () => {
   });
   assert.deepEqual(counts, { total: 4, owned: 3, foreign_skipped: 1, missing_local: 1, status_drift: 1, ok: 1 });
 });
+
+// LB-V19 (LB-05): the owner-gated --apply repair loop is bounded per run.
+test('LB-V19: resolveMaxBatch bounds the repair batch (arg > env > default)', () => {
+  const { resolveMaxBatch, DEFAULT_MAX_BATCH } = require('../scripts/reconcile-stripe-webhooks');
+  assert.equal(resolveMaxBatch([]), DEFAULT_MAX_BATCH);
+  assert.equal(resolveMaxBatch(['--max', '10']), 10);
+  assert.equal(resolveMaxBatch(['--max', '0']), DEFAULT_MAX_BATCH, 'non-positive falls back to the default');
+  assert.equal(resolveMaxBatch(['--max', 'nope']), DEFAULT_MAX_BATCH, 'non-numeric falls back to the default');
+  process.env.RECONCILE_MAX_BATCH = '7';
+  assert.equal(resolveMaxBatch([]), 7, 'env is honored when no --max arg');
+  assert.equal(resolveMaxBatch(['--max', '3']), 3, 'the --max arg wins over env');
+  delete process.env.RECONCILE_MAX_BATCH;
+});

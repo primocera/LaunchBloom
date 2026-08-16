@@ -38,3 +38,24 @@ test('the overall status is the worst actionable signal', () => {
   assert.equal(classifyReadiness({ webhook_failures_24h: 0, outbox_backlog: 30 }).status, 'warn');
   assert.equal(classifyReadiness({ webhook_failures_24h: 6, outbox_backlog: 0 }).status, 'stop');
 });
+
+test('LB-V19 (LB-05): absence of data never rolls up to ok — it degrades', () => {
+  // A fully quiet-but-measured system is ok.
+  assert.equal(classifyReadiness({
+    webhook_failures_24h: 0, outbox_backlog: 0, reservation_leakage: 0,
+    ai_spend_24h_usd: 1, ai_spend_ceiling_usd: 15,
+  }).status, 'ok');
+
+  // A signal we could not measure (null count) must NOT read as healthy.
+  assert.equal(classifyReadiness({
+    webhook_failures_24h: null, outbox_backlog: 0, reservation_leakage: 0,
+    ai_spend_24h_usd: 1, ai_spend_ceiling_usd: 15,
+  }).status, 'degraded');
+
+  // Everything unmeasured (e.g. the DB is unreachable) is degraded, not ok.
+  assert.equal(classifyReadiness({}).status, 'degraded');
+
+  // An actionable warn/stop still outranks a mere unavailable signal.
+  assert.equal(classifyReadiness({ webhook_failures_24h: null, outbox_backlog: 30 }).status, 'warn');
+  assert.equal(classifyReadiness({ webhook_failures_24h: null, outbox_backlog: 200 }).status, 'stop');
+});

@@ -61,10 +61,24 @@ async function localCustomerId(supabase, stripeCustomerId) {
   return data ? data.id : null;
 }
 
+// LB-V19 (LB-05): a bounded per-run repair batch so --apply can never rewrite an
+// unbounded number of rows in one pass. Override with --max <n> or
+// RECONCILE_MAX_BATCH; findings beyond the cap are reported and left for the next
+// run (which is safe — repair is idempotent).
+const DEFAULT_MAX_BATCH = 50;
+
+function resolveMaxBatch(args) {
+  const idx = args.indexOf('--max');
+  const raw = idx !== -1 ? args[idx + 1] : process.env.RECONCILE_MAX_BATCH;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_BATCH;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const asJson = args.includes('--json');
   const apply = args.includes('--apply');
+  const maxBatch = resolveMaxBatch(args);
 
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error('BLOCKED: STRIPE_SECRET_KEY is not set. No Stripe pull was performed.');
@@ -92,10 +106,13 @@ async function main() {
   });
 
   let repaired = 0;
+  let batch_capped = 0;
   if (apply && findings.length) {
     const now = new Date().toISOString();
     const byId = new Map(stripeSubs.map((s) => [s.id, s]));
     for (const f of findings) {
+      // Stop at the bounded batch size; the remainder is left for the next run.
+      if (repaired >= maxBatch) { batch_capped = findings.length - repaired; break; }
       const sub = byId.get(f.subscription_id);
       if (!sub) continue;
       const customerId = await localCustomerId(supabase, sub.customer);
@@ -121,6 +138,8 @@ async function main() {
     counts,
     findings,
     repaired: apply ? repaired : undefined,
+    batch_cap: apply ? maxBatch : undefined,
+    batch_capped: apply ? batch_capped : undefined,
   };
 
   if (asJson) {
@@ -132,7 +151,7 @@ async function main() {
     for (const f of findings) {
       console.log(`  ${f.reason}: ${f.subscription_id}  stripe=${f.stripe_status}  local=${f.local_status ?? 'none'}`);
     }
-    if (apply) console.log(`repaired: ${repaired}`);
+    if (apply) console.log(`repaired: ${repaired} (batch cap ${maxBatch}${batch_capped ? `, ${batch_capped} deferred to next run` : ''})`);
   }
 
   // In apply mode, remaining gaps after repair are the exit signal; in dry-run,
@@ -148,4 +167,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { listAllStripeSubscriptions };
+module.exports = { listAllStripeSubscriptions, resolveMaxBatch, DEFAULT_MAX_BATCH };

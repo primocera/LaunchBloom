@@ -50,8 +50,15 @@ function classifyReadiness(live = {}) {
     signals.ai_spend = 'unknown';
   }
 
+  // LB-V19 (LB-05): absence of data must NEVER read as healthy. A signal that is
+  // `unknown` means we could not measure it (e.g. a failed count) — so when no
+  // actionable warn/stop is present but some signal is unmeasured, the roll-up is
+  // `degraded`, not `ok`. Order: stop > warn > degraded (unavailable) > ok.
   const values = Object.values(signals);
-  const status = values.includes('stop') ? 'stop' : values.includes('warn') ? 'warn' : 'ok';
+  const status = values.includes('stop') ? 'stop'
+    : values.includes('warn') ? 'warn'
+      : values.includes('unknown') ? 'degraded'
+        : 'ok';
   return { signals, status };
 }
 
