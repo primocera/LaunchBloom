@@ -23,6 +23,11 @@
   },
   "drift_from_baseline": [
     {
+      "sha": "972f420",
+      "subject": "feat(billing): complete the deferred Stripe ownership architecture (SV-01/v20)",
+      "closes_requirement": "v20 SV-01: lands the ownership-architecture trio the owner deferred at v19, additively and with zero runtime behaviour change (978/978 unit tests, incl. all 55 billing/isolation suites; lint 0/0; bundle index-Cq2NTdSE unchanged). ONE canonical typed service lib/stripe-ownership.js (typed states owned/foreign/legacy_mapped/legacy_price/ambiguous/unavailable) that webhooks.js, payments.js and the reconciler delegate to — email/price are never sufficient proof, a conflicting exact+foreign stamp is ambiguous and never adopted. Additive migration 038_stripe_object_ownership.sql (customers.app_user_id + stripe_object_ownership legacy map) with preflight/apply/verify/rollback, plus scripts/backfill-stripe-ownership.js (read-only inventory default, bounded --apply, resume cursor, PII-free receipt) and docs/RUNBOOK_STRIPE_OWNERSHIP.md. OWNER-ONLY, NOT RUN: apply migration 038; run the backfill and reconcile every ambiguous row; then sunset the price-only fallback (each fallback use is measured by legacy_price_ownership_fallback). This does NOT advance public_paid to full GO and does NOT freeze a new candidate — v20 changed backend code and added migration 038, so a new RC must be cut before the pinned candidate moves past 24d350c."
+    },
+    {
       "sha": "24d350c",
       "subject": "fix(billing): safe webhook ownership hardening (LB-01)",
       "closes_requirement": "v19 LB-01 safe hardening only: isStaleSubscriptionEvent distinguishes no-row (PGRST116, proceed) from unavailable-read (throws → retry, never letting a possibly-older event overwrite newer data); subscription value/billing analytics emit AFTER the durable upsert so a failed+redelivered event can't double-count un-persisted state; customer.created/updated applies the same source policy as other events (a foreign-stamped customer is dropped). Tests: webhook-isolation 14/14 (+2 customer-gate). The ownership-architecture/schema trio was deferred by owner decision."
