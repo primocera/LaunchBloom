@@ -183,8 +183,8 @@
   ],
   "migrations": {
     "range": "001-037",
-    "on_disk_count": 39,
-    "on_disk_note": "37 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only — applying it to production would hand production the opt-in).",
+    "on_disk_count": 40,
+    "on_disk_note": "38 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only). The applied range is still 001-037: 038_stripe_object_ownership.sql (SV-01/v20) is on disk but NOT YET APPLIED — it is an owner-only migration (additive customers.app_user_id + stripe_object_ownership legacy-map). Its preflight/apply/verify/rollback are in the file header; until the owner applies it and re-runs CHECK_APPLIED, the runtime keeps the existing price-only legacy fallback and 038 stays a pending owner action.",
     "applied_verification": {
       "status": "observed",
       "source": "backend/migrations/CHECK_APPLIED.sql",

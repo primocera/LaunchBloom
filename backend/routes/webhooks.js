@@ -13,6 +13,12 @@ const { track } = require('../lib/analytics');
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 // v12 SC-V12-04: structured, PII-free operational signals.
 const { opsSignal } = require('../lib/ops-signal');
+// SV-01 (v20): the ONE canonical, typed ownership rule. webhooks delegates to it
+// so checkout, the reconciler, the portal and account deletion cannot drift to a
+// second rule. Behaviour is identical to the prior inline logic; the typed states
+// (owned/foreign/legacy_mapped/legacy_price/ambiguous) are mapped back to this
+// file's { ours, legacy } shape so every existing consumer/test is unaffected.
+const ownership = require('../lib/stripe-ownership');
 
 /**
  * Derive { planLabel, price, interval } from a Stripe subscription so lifecycle
@@ -49,28 +55,11 @@ function priceInfo(subscription) {
 // mail for other products' trials) and never thrown on (permanently failing
 // deliveries get the endpoint disabled by Stripe).
 
-// Scalvya's exact ownership tag in the SHARED Stripe account (mirrors
-// payments.js APP_STRIPE_SOURCE). On this account, `source` — not a bare
-// app_user_id key any product could also set — is what proves ownership.
-const APP_STRIPE_SOURCE = 'launchbloom';
-
-// Known peer-product discriminators on the shared account. Their PRESENCE is
-// positive proof an object is NOT ours, so we never fall through to the legacy
-// price fallback for them (Mellowa stamps app=mellowa + supabase_user_id).
-function hasForeignStamp(meta) {
-  if (!meta || typeof meta !== 'object') return false;
-  if (meta.app && meta.app !== APP_STRIPE_SOURCE) return true;
-  if (meta.source && meta.source !== APP_STRIPE_SOURCE) return true;
-  if (meta.mellowa || meta.frost) return true;
-  if (Object.prototype.hasOwnProperty.call(meta, 'supabase_user_id')) return true;
-  return false;
-}
-
-function configuredPrice(subscription) {
-  const priceId = subscription?.items?.data?.[0]?.price?.id;
-  const { pricePlans } = require('./customers');
-  return !!(priceId && pricePlans()[priceId]);
-}
+// Peer-product stamp detector, canonical in lib/stripe-ownership.js. On the
+// shared account, `source` — not a bare app_user_id key any product could also
+// set — is what proves ownership; the full typed rule lives in that service and
+// is reached here through ownsSubscription / isOurCharge.
+const { hasForeignStamp } = ownership;
 
 /**
  * LB-V17-02: a subscription is ours ONLY via exact proof, never via the mere
@@ -88,12 +77,22 @@ function configuredPrice(subscription) {
  *
  * Returns a result object; use `isOurSubscription(sub).ours` for a boolean.
  */
-function ownsSubscription(subscription) {
-  const meta = subscription?.metadata || {};
-  if (meta.source === APP_STRIPE_SOURCE || meta.scalvya === '1') return { ours: true, legacy: false };
-  if (hasForeignStamp(meta)) return { ours: false, legacy: false };
-  if (configuredPrice(subscription)) return { ours: true, legacy: true };
-  return { ours: false, legacy: false };
+function ownsSubscription(subscription, options = {}) {
+  const result = ownership.classifySubscription(subscription, {
+    isConfiguredPrice: (priceId) => {
+      const { pricePlans } = require('./customers');
+      return !!(priceId && pricePlans()[priceId]);
+    },
+    legacyMap: options.legacyMap,
+  });
+  return {
+    ours: ownership.isOwning(result),
+    // `legacy` keeps its historical meaning: the narrow price-only fallback was
+    // used (the signal the sunset plan measures). An explicit owner-verified
+    // legacy mapping is a proven adoption, not the fallback, so it is not flagged.
+    legacy: ownership.isLegacyPriceFallback(result),
+    state: result,
+  };
 }
 
 /** Boolean convenience wrapper kept for the exported isolation-test surface. */
@@ -377,9 +376,12 @@ async function handleEvent(event) {
  * events into ours — this errs to the safe side.
  */
 async function isOurCharge(object) {
-  const meta = object?.metadata || {};
-  if (meta.source === APP_STRIPE_SOURCE || meta.scalvya === '1') return true;
-  if (hasForeignStamp(meta)) return false;
+  // Metadata half via the canonical service: OWNED → ours; FOREIGN/AMBIGUOUS →
+  // not ours (a conflicting exact+foreign stamp is never adopted for money
+  // events); null → undecided, fall through to the trusted-parent lookup.
+  const byMeta = ownership.classifyChargeMeta(object);
+  if (byMeta === ownership.OWNERSHIP.OWNED) return true;
+  if (byMeta === ownership.OWNERSHIP.FOREIGN || byMeta === ownership.OWNERSHIP.AMBIGUOUS) return false;
   const stripeCustomerId = object?.customer;
   if (stripeCustomerId) {
     const { data } = await supabase

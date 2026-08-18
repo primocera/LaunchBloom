@@ -66,7 +66,7 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Migrations
 
-- On disk: 39 files, range 001-037. 37 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only — applying it to production would hand production the opt-in).
+- On disk: 40 files, range 001-037. 38 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only). The applied range is still 001-037: 038_stripe_object_ownership.sql (SV-01/v20) is on disk but NOT YET APPLIED — it is an owner-only migration (additive customers.app_user_id + stripe_object_ownership legacy-map). Its preflight/apply/verify/rollback are in the file header; until the owner applies it and re-runs CHECK_APPLIED, the runtime keeps the existing price-only legacy fallback and 038 stays a pending owner action.
 - **Applied to the database: observed** — source `backend/migrations/CHECK_APPLIED.sql`, last run 2026-07-28T00:00:00Z.
 
 Presence in `backend/migrations` is not applied-ness. `release-check`

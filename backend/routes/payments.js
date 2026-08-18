@@ -17,11 +17,15 @@ const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
 const { selectCatalog, selectionTelemetry } = require('../lib/plan-catalog');
 const { opsSignal } = require('../lib/ops-signal');
+// SV-01 (v20): the canonical, typed ownership service. payments shares its exact
+// source tag and customer classifier so checkout and the webhook decide identity
+// with ONE rule.
+const ownership = require('../lib/stripe-ownership');
 
 // Scalvya's ownership tag in the SHARED Stripe account. Every customer this app
 // creates carries metadata.source = this value; recovery and reconciliation only
 // ever match on it, so a Mellowa (or any foreign) customer is never adopted.
-const APP_STRIPE_SOURCE = 'launchbloom';
+const APP_STRIPE_SOURCE = ownership.APP_STRIPE_SOURCE;
 
 /**
  * v15 SC-02: multiple Scalvya-owned Stripe customers exist for one user. This is
@@ -52,13 +56,9 @@ class CustomerReconciliationRequiredError extends Error {
  * when the email or user id look identical.
  */
 function isOwnedScalvyaCustomer(customer, userId) {
-  return Boolean(
-    customer
-    && !customer.deleted
-    && customer.metadata
-    && customer.metadata.source === APP_STRIPE_SOURCE
-    && customer.metadata.app_user_id === userId,
-  );
+  // Delegates to the canonical typed classifier; a customer is adoptable only
+  // when it is exactly OWNED by this app AND this stable user id.
+  return ownership.classifyCustomer(customer, userId) === ownership.OWNERSHIP.OWNED;
 }
 
 /**
