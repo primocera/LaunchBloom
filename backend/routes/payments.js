@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
-const { resolveEntitlement, readFailed, redactEmail } = require('./customers');
+const { resolveEntitlement, readFailed, redactEmail, findCustomerRow } = require('./customers');
 const {
   planUnavailableBody,
   EntitlementUnavailableError,
@@ -146,12 +146,10 @@ async function ensureStripeCustomer(email, userId) {
   // user who already has one. Distinguish a verified no-row (PGRST116) from a
   // real failure and throw the canonical unavailable error on the latter, before
   // any Stripe mutation.
-  const { data: existing, error: existingErr } = await supabase
-    .from('customers')
-    .select('id, stripe_customer_id')
-    .eq('email', email)
-    .single();
-  if (readFailed(existingErr)) throw new EntitlementUnavailableError(existingErr);
+  // SV-21-01: canonical identity — findCustomerRow keys on app_user_id under
+  // enforcement (email is mutable display data) and on email before it, and fails
+  // closed on a read error or on multiple app_user_id rows.
+  const existing = await findCustomerRow({ userId, email }, 'id, stripe_customer_id');
 
   if (existing && existing.stripe_customer_id) {
     // Shared-Stripe fallout: the stored id can point at a customer that only
@@ -222,12 +220,19 @@ async function ensureStripeCustomer(email, userId) {
   // customer on a failed link (no proven-safe idempotent compensation without
   // first proving no subscription/session references it); the recovery lookup
   // above reclaims it on the next attempt. Log a redacted event and fail closed.
+  // SV-21-01: under enforcement, app_user_id is a first-class column AND the
+  // canonical conflict key — a changing email can no longer create, orphan or
+  // switch billing identity, and `onConflict: 'email'` is never the final key.
+  // (Enforcement is only turned on after migration 038 + the additive uniqueness
+  // in 039 are applied and app_user_id is backfilled, so the conflict target
+  // exists.) Before enforcement the historical email key is preserved unchanged.
+  const enforced = ownership.ownershipEnforced();
+  const upsertRow = enforced
+    ? { app_user_id: userId, email, stripe_customer_id: customerId, metadata: { app_user_id: userId } }
+    : { email, stripe_customer_id: customerId, metadata: { app_user_id: userId } };
   const { error: upsertErr } = await supabase
     .from('customers')
-    .upsert(
-      { email, stripe_customer_id: customerId, metadata: { app_user_id: userId } },
-      { onConflict: 'email' }
-    );
+    .upsert(upsertRow, { onConflict: enforced ? 'app_user_id' : 'email' });
   if (upsertErr) {
     console.error(JSON.stringify({
       code: 'STRIPE_CUSTOMER_PERSIST_FAILED',
@@ -244,11 +249,22 @@ async function ensureStripeCustomer(email, userId) {
   // customer we happened to create. Prefer the persisted winner if it is live;
   // otherwise fail closed for reconciliation. A read-back miss (no row / read
   // error) is treated as transient and does not undo the durable write above.
-  const { data: linked } = await supabase
-    .from('customers')
-    .select('stripe_customer_id')
-    .eq('email', email)
-    .single();
+  // SV-21-01: read back by the same canonical key we wrote. A read-back miss,
+  // read error or (under enforcement) an unexpected multi-row result is treated
+  // as transient and MUST NOT undo the durable write above — fall through and
+  // return the customer we created.
+  let linked;
+  try {
+    if (enforced) {
+      const { data } = await supabase
+        .from('customers').select('stripe_customer_id').eq('app_user_id', userId).limit(2);
+      linked = Array.isArray(data) && data.length === 1 ? data[0] : null;
+    } else {
+      const { data } = await supabase
+        .from('customers').select('stripe_customer_id').eq('email', email).single();
+      linked = data || null;
+    }
+  } catch { linked = null; }
   if (linked && linked.stripe_customer_id && linked.stripe_customer_id !== customerId) {
     try {
       const winner = await stripe.customers.retrieve(linked.stripe_customer_id);
@@ -267,8 +283,15 @@ async function ensureStripeCustomer(email, userId) {
   return customerId;
 }
 
-/** 404s unless the subscription's customer email matches the session email. */
-async function ownsSubscription(subscriptionId, userEmail) {
+/**
+ * True only when the signed-in user owns the subscription's local customer row.
+ * SV-21-01: under enforcement ownership is decided by the stable app_user_id
+ * (an email change never grants or revokes access); before enforcement the
+ * historical email match is preserved. `identity` is { userId, userEmail }.
+ */
+async function ownsSubscription(subscriptionId, identity) {
+  const userId = identity && identity.userId;
+  const userEmail = (identity && identity.userEmail) || '';
   const { data: sub } = await supabase
     .from('subscriptions')
     .select('customer_id')
@@ -276,12 +299,21 @@ async function ownsSubscription(subscriptionId, userEmail) {
     .single();
   if (!sub?.customer_id) return false;
 
+  if (ownership.ownershipEnforced() && userId) {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('app_user_id')
+      .eq('id', sub.customer_id)
+      .single();
+    return !!customer && customer.app_user_id === userId;
+  }
+
   const { data: customer } = await supabase
     .from('customers')
     .select('email')
     .eq('id', sub.customer_id)
     .single();
-  return customer?.email?.toLowerCase() === userEmail.toLowerCase();
+  return !!customer?.email && !!userEmail && customer.email.toLowerCase() === userEmail.toLowerCase();
 }
 
 // v13 SC-P0-03: price resolution lives in the catalog (plan-catalog.js
@@ -302,15 +334,17 @@ async function ownsSubscription(subscriptionId, userEmail) {
  * "no prior trial" is exactly how a returning user is handed a second free
  * trial. Callers must resolve this BEFORE mutating anything in Stripe.
  */
-async function hadTrialOrActiveSubscription(email) {
-  email = (email || '').trim().toLowerCase();
-  if (!email) return false;
-  const { data: customer, error: customerErr } = await supabase
-    .from('customers')
-    .select('id')
-    .eq('email', email)
-    .single();
-  if (readFailed(customerErr)) throw new EntitlementUnavailableError(customerErr);
+async function hadTrialOrActiveSubscription(identity) {
+  // SV-21-01: accept either the legacy bare email string OR { email, userId }.
+  // findCustomerRow resolves the row by app_user_id under enforcement and by
+  // email before it, and fails closed (throws) on a read error — so an outage is
+  // never mistaken for "no prior trial". Keying on the stable app_user_id also
+  // stops a returning user getting a second free trial after an email change.
+  const email = (typeof identity === 'string' ? identity : (identity && identity.email) || '').trim().toLowerCase();
+  const userId = typeof identity === 'string' ? null : (identity && identity.userId) || null;
+  if (!email && !userId) return false;
+
+  const customer = await findCustomerRow({ userId, email }, 'id');
   if (!customer) return false;
 
   const { data: subs, error: subsErr } = await supabase
@@ -402,7 +436,7 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // or mutating anything in Stripe. Trial eligibility is verified here; if it
     // cannot be verified, hadTrialOrActiveSubscription throws before any Stripe
     // customer exists. 3-day free trial for first-time subscribers only.
-    const giveTrial = !(await hadTrialOrActiveSubscription(email));
+    const giveTrial = !(await hadTrialOrActiveSubscription({ email, userId }));
 
     const baseUrl = resolveBaseUrl();
     const customerId = await ensureStripeCustomer(email, userId);
@@ -477,7 +511,7 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // v15 SC-02: multiple Scalvya-owned Stripe customers for one user. Not
     // retryable by the buyer — an operator must reconcile. Emit a redacted,
     // PII-free signal (the count only) and fail closed with the safe copy.
-    if (err instanceof CustomerReconciliationRequiredError) {
+    if (err instanceof CustomerReconciliationRequiredError || err.code === 'CUSTOMER_RECONCILIATION_REQUIRED') {
       opsSignal('reconciliation_correction', {
         reason: `multiple_stripe_customers:${err.candidateCount}`,
         severity: 'high',
@@ -513,7 +547,7 @@ router.post('/cancel-subscription', requireAuth, async (req, res) => {
     if (!subscriptionId) {
       return res.status(400).json({ error: 'subscriptionId is required' });
     }
-    if (!(await ownsSubscription(subscriptionId, req.userEmail))) {
+    if (!(await ownsSubscription(subscriptionId, { userId: req.userId, userEmail: req.userEmail }))) {
       return res.status(404).json({ error: 'Subscription not found' });
     }
 
@@ -548,7 +582,7 @@ router.post('/cancel-subscription', requireAuth, async (req, res) => {
  */
 router.get('/subscription/:subscriptionId', requireAuth, async (req, res) => {
   try {
-    if (!(await ownsSubscription(req.params.subscriptionId, req.userEmail))) {
+    if (!(await ownsSubscription(req.params.subscriptionId, { userId: req.userId, userEmail: req.userEmail }))) {
       return res.status(404).json({ error: 'Subscription not found' });
     }
     const subscription = await stripe.subscriptions.retrieve(req.params.subscriptionId, {

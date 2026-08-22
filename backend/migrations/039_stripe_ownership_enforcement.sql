@@ -1,0 +1,46 @@
+-- ---------------------------------------------------------------------------
+-- Migration 039 — additive uniqueness for canonical billing identity (SV-21-01 / v21)
+--
+-- The LAST schema step before the runtime can be switched to canonical
+-- app_user_id billing identity (STRIPE_OWNERSHIP_ENFORCED=1). It is ADDITIVE,
+-- IDEMPOTENT and REVERSIBLE. It moves no money, deletes no rows and changes no
+-- runtime behaviour on its own — the enforcement flag is a SEPARATE, owner-only
+-- env change made only AFTER this index is created cleanly.
+--
+-- Requires migration 038 applied first (adds customers.app_user_id + backfill).
+--
+-- What it adds:
+--   A PARTIAL UNIQUE index on customers(app_user_id) WHERE app_user_id IS NOT
+--   NULL. This is what makes `onConflict: 'app_user_id'` a safe canonical
+--   billing conflict key: one local customer row per stable Supabase user. Legacy
+--   rows that still have a NULL app_user_id are untouched (the partial predicate
+--   excludes them), so the index can be created without a full backfill — but the
+--   runtime MUST NOT be switched to enforcement until the preflight below returns
+--   ZERO duplicates AND every launch-scope row has been backfilled (see
+--   docs/RUNBOOK_STRIPE_OWNERSHIP.md).
+--
+-- Run once in the Supabase SQL editor. Safe to re-run (idempotent).
+--
+-- PREFLIGHT (read-only — run BEFORE applying; the CREATE UNIQUE INDEX will FAIL
+-- if this returns any row, which is the desired fail-closed behaviour: resolve
+-- the duplicates by hand first, never by picking an arbitrary winner):
+--   select app_user_id, count(*) as rows
+--     from public.customers
+--    where app_user_id is not null
+--    group by app_user_id
+--   having count(*) > 1;
+--
+-- VERIFY (run AFTER applying):
+--   select to_regclass('public.customers_app_user_id_key') is not null as index_exists;
+--
+-- ROLLBACK (data-safe — drops only what this migration added):
+--   drop index if exists public.customers_app_user_id_key;
+-- ---------------------------------------------------------------------------
+
+-- Partial uniqueness: one customer row per stable app user. NULLs (un-backfilled
+-- legacy rows) are excluded, so this is additive and does not require every row
+-- to be backfilled before it is created. It DOES fail if two non-null rows share
+-- an app_user_id — resolve those with the preflight above first.
+create unique index if not exists customers_app_user_id_key
+  on public.customers (app_user_id)
+  where app_user_id is not null;

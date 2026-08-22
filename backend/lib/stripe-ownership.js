@@ -47,6 +47,19 @@ const OWNING_STATES = Object.freeze([
   OWNERSHIP.LEGACY_PRICE,
 ]);
 
+// SV-21-01 (v21): the enforcement switch that SUNSETS the narrow price-only
+// fallback. It is the last owner-only step of the ownership rollout (see
+// docs/RUNBOOK_STRIPE_OWNERSHIP.md): once migration 038 is applied, legacy Stripe
+// objects are backfilled and every ambiguous row is reconciled, the owner sets
+// STRIPE_OWNERSHIP_ENFORCED=1. From then on an unstamped object on a configured
+// Scalvya price is NO LONGER adopted — only an exact stamp or an explicit,
+// owner-verified legacy mapping proves ownership. Default OFF preserves the
+// capped-beta behaviour byte-for-byte, so this flip cannot silently change a
+// running beta and is fully reversible (unset the env var).
+function ownershipEnforced() {
+  return String(process.env.STRIPE_OWNERSHIP_ENFORCED || '').trim() === '1';
+}
+
 /** Our exact, self-identifying stamp. No email or price is ever consulted. */
 function hasExactStamp(meta) {
   if (!meta || typeof meta !== 'object') return false;
@@ -72,8 +85,18 @@ function hasConflictingStamp(meta) {
   return hasExactStamp(meta) && hasForeignStamp(meta);
 }
 
-/** Convenience: does a typed result grant ownership? */
-function isOwning(result) {
+/**
+ * Convenience: does a typed result grant ownership?
+ *
+ * SV-21-01: when enforcement is active the narrow `legacy_price` fallback no
+ * longer grants ownership — an unstamped object on a configured price is NOT
+ * ours once the fallback is sunset. `enforced` defaults to the live env switch,
+ * so every caller sunsets the fallback together the moment the owner flips it;
+ * pass an explicit boolean in tests to assert both regimes. Callers that need
+ * the pure, regime-independent membership can pass { enforced: false }.
+ */
+function isOwning(result, { enforced = ownershipEnforced() } = {}) {
+  if (result === OWNERSHIP.LEGACY_PRICE) return !enforced;
   return OWNING_STATES.includes(result);
 }
 
@@ -158,6 +181,7 @@ module.exports = {
   APP_STRIPE_SOURCE,
   OWNERSHIP,
   OWNING_STATES,
+  ownershipEnforced,
   hasExactStamp,
   hasForeignStamp,
   hasConflictingStamp,

@@ -130,19 +130,113 @@ function subscriptionMirrorRow(subscription, customerId, eventAt) {
   };
 }
 
-/** An invoice is ours iff we already mirror its subscription, or its line
- *  price is one of ours (covers the event-before-row race). */
-async function isOurInvoice(invoice) {
-  if (!invoice.subscription) return false;
-  const { data } = await supabase
+/**
+ * Resolve the Stripe subscription id an invoice references, across the API
+ * shapes this repo sees: the classic top-level `invoice.subscription` (a string
+ * or an expanded object) and the 2025+/2026 shape where the reference moved under
+ * `invoice.parent.subscription_details.subscription` or the line item. Returns
+ * null for a genuinely non-subscription invoice.
+ */
+function invoiceSubscriptionId(invoice) {
+  const direct = invoice.subscription;
+  if (typeof direct === 'string' && direct) return direct;
+  if (direct && typeof direct === 'object' && direct.id) return direct.id;
+  const viaParent =
+    invoice.parent?.subscription_details?.subscription ||
+    invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription ||
+    invoice.lines?.data?.[0]?.subscription;
+  if (typeof viaParent === 'string' && viaParent) return viaParent;
+  if (viaParent && typeof viaParent === 'object' && viaParent.id) return viaParent.id;
+  return null;
+}
+
+/**
+ * SV-21-01 (v21): canonical invoice ownership — replaces the old price-only
+ * isOurInvoice, which adopted ANY invoice whose first line used a configured
+ * Scalvya price (so a foreign product's invoice on a shared price would be
+ * processed). An invoice is now ours ONLY when its SUBSCRIPTION classifies as
+ * owned / legacy_mapped (or, until the fallback is sunset, legacy_price via the
+ * subscription's own metadata) — the invoice line price is never proof.
+ *
+ * Returns { ours, legacy, state, unavailable }:
+ *   - a trusted local mirror row is accepted, but a stored-metadata foreign or
+ *     conflicting stamp still rejects it (defense in depth);
+ *   - for the event-before-row race (no mirror yet), the referenced Stripe
+ *     subscription is retrieved and classified by exact metadata / legacy map;
+ *   - a DB read failure or a transient Stripe error → unavailable:true so the
+ *     caller fails closed with a retryable 5xx (never adopted, never dropped as
+ *     foreign, event not marked processed).
+ */
+async function classifyInvoiceOwnership(invoice, options = {}) {
+  const notOurs = { ours: false, legacy: false, state: ownership.OWNERSHIP.FOREIGN, unavailable: false };
+  const unavailable = { ours: false, legacy: false, state: ownership.OWNERSHIP.UNAVAILABLE, unavailable: true };
+
+  const subId = invoiceSubscriptionId(invoice);
+  if (!subId) return notOurs; // non-subscription invoice — not ours (parity with prior behaviour)
+
+  const classifyOpts = {
+    isConfiguredPrice: (priceId) => {
+      const { pricePlans } = require('./customers');
+      return !!(priceId && pricePlans()[priceId]);
+    },
+    legacyMap: options.legacyMap,
+  };
+
+  // 1. Trusted local mirror. A real read failure is NOT "no row" — fail closed
+  //    (retryable) rather than misclassify an unreadable mirror as foreign.
+  const { data: mirror, error } = await supabase
     .from('subscriptions')
-    .select('stripe_subscription_id')
-    .eq('stripe_subscription_id', invoice.subscription)
+    .select('metadata, stripe_subscription_id')
+    .eq('stripe_subscription_id', subId)
     .single();
-  if (data) return true;
+  if (error && error.code !== 'PGRST116') return unavailable;
+  if (mirror) {
+    // A mirror is only ever written for an owned subscription, so its presence is
+    // ownership proof. Still fail closed if its STORED metadata actively PROVES
+    // the object foreign/conflicting (defense in depth) — but absence of a stamp
+    // (older rows carry no source metadata) does NOT prove foreign, so an
+    // unstamped mirror stays ours and enforcement never revokes a subscription we
+    // are actively mirroring.
+    const meta = mirror.metadata || {};
+    if (ownership.hasConflictingStamp(meta)) {
+      return { ours: false, legacy: false, state: ownership.OWNERSHIP.AMBIGUOUS, unavailable: false };
+    }
+    if (ownership.hasForeignStamp(meta)) {
+      return { ours: false, legacy: false, state: ownership.OWNERSHIP.FOREIGN, unavailable: false };
+    }
+    return { ours: true, legacy: false, state: ownership.OWNERSHIP.OWNED, unavailable: false };
+  }
+
+  // 2. Event-before-row race (no mirror yet). Before spending a Stripe read on
+  //    EVERY sibling product's invoice on the shared account, apply a cheap
+  //    NEGATIVE filter: an invoice is only plausibly ours if it carries our exact
+  //    stamp, an explicit legacy mapping, or a configured Scalvya price. The
+  //    price is used ONLY to decide whether to look — never to adopt (adoption
+  //    still requires the retrieved subscription's metadata / legacy map below).
+  const invoiceMeta = invoice.subscription_details?.metadata || invoice.metadata || {};
   const priceId = invoice.lines?.data?.[0]?.price?.id;
-  const { pricePlans } = require('./customers');
-  return !!(priceId && pricePlans()[priceId]);
+  const configuredPrice = classifyOpts.isConfiguredPrice(priceId);
+  const mappedLegacy = !!(options.legacyMap && typeof options.legacyMap.has === 'function' && options.legacyMap.has(subId));
+  if (ownership.hasForeignStamp(invoiceMeta)) return notOurs;
+  if (!(ownership.hasExactStamp(invoiceMeta) || mappedLegacy || configuredPrice)) return notOurs;
+
+  // 3. Plausibly ours — classify the referenced Stripe subscription by its exact
+  //    metadata (or an explicit legacy mapping). The invoice line price is never
+  //    used as proof; a transient retrieve failure fails closed (retryable).
+  let subscription;
+  try {
+    subscription = await stripe.subscriptions.retrieve(subId);
+  } catch (err) {
+    if (err && err.code === 'resource_missing') return notOurs; // gone / never ours
+    return unavailable;
+  }
+  const state = ownership.classifySubscription(subscription, classifyOpts);
+  return {
+    ours: ownership.isOwning(state),
+    legacy: ownership.isLegacyPriceFallback(state),
+    state,
+    unavailable: false,
+  };
 }
 
 /** Customer email for a Stripe customer id (null when unknown). */
@@ -291,6 +385,24 @@ async function handleEvent(event) {
     return true;
   };
 
+  // SV-21-01: the invoice analogue. Ownership is decided by the SUBSCRIPTION
+  // (canonical typed rule), never the invoice line price. An UNAVAILABLE
+  // ownership read throws so Stripe receives a retryable failure and the event is
+  // NOT marked processed — it is never converted to foreign or to owned.
+  const ownInvoiceOrDrop = async () => {
+    const own = await classifyInvoiceOwnership(data);
+    if (own.unavailable) {
+      throw new Error(`invoice ownership unavailable for ${data.id || 'unknown'} — retry`);
+    }
+    if (!own.ours) { ignoreForeign(); return false; }
+    if (own.legacy) {
+      opsSignal('legacy_price_ownership_fallback', {
+        event_id: event.id, event_type: event.type, subscription_id: invoiceSubscriptionId(data), severity: 'info',
+      });
+    }
+    return true;
+  };
+
   switch (event.type) {
     case 'checkout.session.completed':
       // XAPP-95-01: require our EXACT discriminator, not merely a present
@@ -319,17 +431,11 @@ async function handleEvent(event) {
       await onTrialWillEnd(data);
       break;
     case 'invoice.paid':
-      if (!(await isOurInvoice(data))) {
-        ignoreForeign();
-        return;
-      }
+      if (!(await ownInvoiceOrDrop())) return;
       await onInvoicePaid(data, eventAt);
       break;
     case 'invoice.payment_failed':
-      if (!(await isOurInvoice(data))) {
-        ignoreForeign();
-        return;
-      }
+      if (!(await ownInvoiceOrDrop())) return;
       await onInvoicePaymentFailed(data, eventAt);
       break;
     // A refund or a dispute does NOT itself change the subscription status, so
@@ -418,7 +524,53 @@ async function isStaleSubscriptionEvent(subscriptionId, eventAt) {
 async function onCheckoutSessionCompleted(session) {
   const email = (session.customer_details?.email || session.customer_email || '').toLowerCase();
   const stripeCustomerId = session.customer;
+  // The stable app identity established when checkout was CREATED (payments.js
+  // stamps both session.metadata.app_user_id and client_reference_id).
+  const appUserId = session.metadata?.app_user_id || session.client_reference_id || null;
 
+  // SV-21-01 (v21): under enforcement the customer row is keyed and linked by the
+  // stable app_user_id, NEVER relinked by checkout email — and this event, the
+  // only one that writes customers.stripe_customer_id, verifies the live Stripe
+  // Customer's EXACT source + this-user stamp before persisting. So a foreign or
+  // wrong-user customer id can never be adopted even when the email matches.
+  if (ownership.ownershipEnforced()) {
+    if (!appUserId || !stripeCustomerId) {
+      // Acknowledged (already gated on the exact scalvya stamp upstream), but an
+      // unidentifiable session persists nothing.
+      opsSignal('ownership_mismatch', { reason: 'checkout_missing_app_user_id', severity: 'high' });
+      return;
+    }
+    let customerObj;
+    try {
+      customerObj = await stripe.customers.retrieve(stripeCustomerId);
+    } catch (err) {
+      // Transient provider read — throw so Stripe retries; never persist blind.
+      throw new Error(`checkout customer unavailable for ${stripeCustomerId}: ${err.message}`, { cause: err });
+    }
+    if (ownership.classifyCustomer(customerObj, appUserId) !== ownership.OWNERSHIP.OWNED) {
+      opsSignal('ownership_mismatch', { reason: 'checkout_customer_ownership_unproven', severity: 'high' });
+      return; // acked, never adopted
+    }
+    const linkEmail = (customerObj.email || email || '').toLowerCase();
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .upsert(
+        { app_user_id: appUserId, email: linkEmail, stripe_customer_id: stripeCustomerId, metadata: { app_user_id: appUserId } },
+        { onConflict: 'app_user_id', ignoreDuplicates: false },
+      )
+      .select('id')
+      .single();
+    if (customerError) {
+      throw new Error(`Supabase upsert failed for customer on checkout: ${customerError.message}`);
+    }
+    if (session.mode === 'subscription' && session.subscription) {
+      await supabase.from('subscriptions').update({ customer_id: customer.id }).eq('stripe_subscription_id', session.subscription);
+      console.log(`Checkout subscription linked: ${session.subscription} → customer ${customer.id}`);
+    }
+    return;
+  }
+
+  // Pre-enforcement (capped beta / pre-038 schema): unchanged email-keyed link.
   if (!email) {
     console.warn('checkout.session.completed: no email found', { sessionId: session.id });
     return;
@@ -683,3 +835,11 @@ module.exports.isOurCharge = isOurCharge;
 // shape that drifts from the webhook's.
 module.exports.ownsSubscription = ownsSubscription;
 module.exports.subscriptionMirrorRow = subscriptionMirrorRow;
+// SV-21-01 (v21): canonical invoice ownership (replaces the price-only
+// isOurInvoice) + the API-shape-tolerant subscription-id resolver, exported so
+// the adversarial invoice tests can assert owned/foreign/ambiguous/unavailable.
+module.exports.classifyInvoiceOwnership = classifyInvoiceOwnership;
+module.exports.invoiceSubscriptionId = invoiceSubscriptionId;
+// SV-21-01: exported so the enforced-path test can assert a wrong-user / foreign
+// checkout customer is never persisted and the owner key is app_user_id.
+module.exports.onCheckoutSessionCompleted = onCheckoutSessionCompleted;

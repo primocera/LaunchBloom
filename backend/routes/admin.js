@@ -155,6 +155,40 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
     const { classifyReadiness } = require('../lib/readiness-thresholds');
     const { signals, status } = classifyReadiness(live);
 
+    // SV-21-01: Stripe-ownership rollout readiness. Each probe DEGRADES to null
+    // (→ classified as not-ready) rather than throwing, so a pre-migration schema
+    // reports migration_missing instead of 500ing the whole report. paid_ready is
+    // fail-closed: true only when the migration is applied, the backfill is
+    // complete, zero rows are ambiguous AND the price-only fallback is disabled.
+    const { classifyOwnershipReadiness } = require('../lib/ownership-readiness');
+    const { ownershipEnforced } = require('../lib/stripe-ownership');
+    // migration 038 applied ⇔ customers.app_user_id exists. Selecting the column
+    // errors (undefined column) before the migration; treat that as not-applied.
+    let migrationApplied = null;
+    let unbackfilledCount = null;
+    try {
+      const probe = await supabase.from('customers').select('app_user_id').limit(1);
+      if (probe.error) migrationApplied = false;
+      else {
+        migrationApplied = true;
+        unbackfilledCount = await countOf(() =>
+          supabase.from('customers').select('id', { count: 'exact', head: true })
+            .not('stripe_customer_id', 'is', null).is('app_user_id', null));
+      }
+    } catch { migrationApplied = null; }
+    // ambiguous legacy-map rows (0 = none). Table missing ⇒ migration not applied.
+    const ambiguousCount = migrationApplied === false
+      ? null
+      : await countOf(() =>
+          supabase.from('stripe_object_ownership').select('id', { count: 'exact', head: true })
+            .eq('status', 'ambiguous'));
+    const ownership = classifyOwnershipReadiness({
+      enforced: ownershipEnforced(),
+      migrationApplied,
+      unbackfilledCount,
+      ambiguousCount,
+    });
+
     await audit(req, 'readiness');
     res.json({
       mode,
@@ -164,6 +198,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       checks, // presence booleans + detail strings, no secret values
       live,
       signals,
+      ownership, // { state, paid_ready, enforced, blockers[] } — fail-closed paid readiness
       operational_status: status, // 'ok' | 'degraded' | 'warn' | 'stop' (degraded = a signal could not be measured; never silently 'ok')
       note: 'Automated readiness is not a paid-launch GO. A live low-value charge + cancel/recover ' +
         'rehearsal with owner-recorded evidence is required (see docs/RUNBOOK_TRANSACTION_REHEARSAL.md).',

@@ -40,6 +40,57 @@ function pricePlans() {
   return map;
 }
 
+/**
+ * SV-21-01 (v21): resolve the caller's local `customers` row by CANONICAL
+ * identity. This is the single place the runtime decides which column IS the
+ * owner key, so payments, the billing portal, cancellation, account deletion and
+ * the billing display can never drift to different keys.
+ *
+ *   - Enforcement ON (owner has applied migration 038, backfilled app_user_id and
+ *     applied the additive uniqueness in 039): the stable Supabase user UUID
+ *     column `app_user_id` is the owner key. Email is mutable display data and is
+ *     never the identity, so an email change can neither orphan nor switch billing
+ *     identity. Multiple rows for one app_user_id FAIL CLOSED (reconciliation
+ *     required) — never an arbitrary winner.
+ *   - Enforcement OFF (capped beta / pre-038 schema): the historical email key is
+ *     used, so behaviour and the applied schema are unchanged.
+ *
+ * A real read error throws EntitlementUnavailableError (fail closed — never read
+ * as "no customer"); a verified no-row returns null.
+ */
+async function findCustomerRow(identity, columns = 'id, stripe_customer_id') {
+  const { ownershipEnforced } = require('../lib/stripe-ownership');
+  const userId = identity && identity.userId;
+  const email = ((identity && identity.email) || '').trim().toLowerCase();
+
+  if (ownershipEnforced() && userId) {
+    const { data, error } = await supabase
+      .from('customers')
+      .select(columns)
+      .eq('app_user_id', userId);
+    if (error) throw new EntitlementUnavailableError(error);
+    const rows = data || [];
+    if (rows.length === 0) return null;
+    if (rows.length > 1) {
+      const e = new Error('customer reconciliation required');
+      e.code = 'CUSTOMER_RECONCILIATION_REQUIRED';
+      e.candidateCount = rows.length;
+      e.reason = 'multiple_rows_for_app_user_id';
+      throw e;
+    }
+    return rows[0];
+  }
+
+  if (!email) return null;
+  const { data, error } = await supabase
+    .from('customers')
+    .select(columns)
+    .eq('email', email)
+    .single();
+  if (readFailed(error)) throw new EntitlementUnavailableError(error);
+  return data || null;
+}
+
 // v13 SC-P0-05 — REMOVED: POST /api/customers.
 // It took the billing email from the request body, so any signed-in user could
 // mint a Stripe customer for someone else's address and forward arbitrary
@@ -229,3 +280,7 @@ module.exports.pricePlans = pricePlans;
 module.exports.readFailed = readFailed;
 module.exports.NO_ROWS = NO_ROWS;
 module.exports.redactEmail = redactEmail;
+// SV-21-01: the ONE canonical local-customer lookup (app_user_id under
+// enforcement, email before it), reused by payments, account and billing so the
+// owner key can never diverge across billing entry points.
+module.exports.findCustomerRow = findCustomerRow;

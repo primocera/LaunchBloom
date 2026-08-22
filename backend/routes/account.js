@@ -12,7 +12,8 @@ const stripe = require('../lib/stripe');
 const { requireAuth } = require('../lib/auth');
 const { clearSessionCookies } = require('../lib/session');
 const { ensureWorkspace } = require('./workspaces');
-const { planFor } = require('./customers');
+const { planFor, findCustomerRow } = require('./customers');
+const { ownershipEnforced } = require('../lib/stripe-ownership');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
@@ -41,6 +42,17 @@ async function ownedStripeCustomerStatus(stripeCustomerId, userId) {
   return isOwnedScalvyaCustomer(customer, userId) ? 'owned' : 'foreign';
 }
 
+/**
+ * SV-21-01: clear a stale/foreign stripe_customer_id link, scoped by the SAME
+ * canonical key the row was resolved by (app_user_id under enforcement, email
+ * before it) so an email change can never clear the wrong row.
+ */
+async function clearCustomerLink({ userId, email }) {
+  const q = supabase.from('customers').update({ stripe_customer_id: null });
+  if (ownershipEnforced() && userId) return q.eq('app_user_id', userId);
+  return q.eq('email', (email || '').trim().toLowerCase());
+}
+
 /** Which interval a stored price id represents, from the env allowlist. */
 function intervalForPrice(priceId) {
   if (!priceId) return null;
@@ -67,13 +79,11 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
     let trialEligible = false;
     if (plan === 'free') {
       const { hadTrialOrActiveSubscription } = require('./payments');
-      trialEligible = !(await hadTrialOrActiveSubscription(email));
+      trialEligible = !(await hadTrialOrActiveSubscription({ email, userId: req.userId }));
     }
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('email', email)
-      .single();
+    // SV-21-01: resolve the billing row by canonical identity (app_user_id under
+    // enforcement, email before it).
+    const customer = await findCustomerRow({ userId: req.userId, email }, 'id');
     if (customer) {
       const { data: sub } = await supabase
         .from('subscriptions')
@@ -136,11 +146,8 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
         req_id: req.id,
       });
     }
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('stripe_customer_id')
-      .eq('email', req.userEmail)
-      .single();
+    // SV-21-01: resolve the billing row by canonical identity.
+    const customer = await findCustomerRow({ userId: req.userId, email: req.userEmail }, 'stripe_customer_id');
     if (!customer || !customer.stripe_customer_id) {
       return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
     }
@@ -150,7 +157,7 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
     if (ownership === 'missing') {
       // Stale id from a test-mode/foreign checkout on the shared Stripe account.
       // Clear it so the next checkout mints a fresh live customer.
-      await supabase.from('customers').update({ stripe_customer_id: null }).eq('email', req.userEmail);
+      await clearCustomerLink({ userId: req.userId, email: req.userEmail });
       return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
     }
     if (ownership === 'foreign') {
@@ -174,7 +181,7 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
       });
     } catch (err) {
       if (err.code === 'resource_missing') {
-        await supabase.from('customers').update({ stripe_customer_id: null }).eq('email', req.userEmail);
+        await clearCustomerLink({ userId: req.userId, email: req.userEmail });
         return res.status(404).json({ error: 'No billing account yet. Start a plan first.' });
       }
       throw err;
@@ -232,11 +239,8 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
 
     // 1. Cancel any active Stripe subscriptions.
     try {
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id, stripe_customer_id')
-        .eq('email', email)
-        .single();
+      // SV-21-01: resolve the billing row by canonical identity.
+      const customer = await findCustomerRow({ userId, email }, 'id, stripe_customer_id');
       if (customer && customer.stripe_customer_id) {
         // XAPP-95-01: never LIST or CANCEL subscriptions on a customer we cannot
         // prove is ours — cancelling a foreign product's live subscriptions would
