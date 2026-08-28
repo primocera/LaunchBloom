@@ -420,7 +420,11 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     // down) or an entitling subscription exists on a price we cannot map, we do
     // NOT create a Checkout Session — an unverified "no plan" is exactly how a
     // paying customer ends up with a second subscription.
-    const { state, plan: currentPlan } = await resolveEntitlement(email);
+    // SV-22-01: the duplicate-subscription guard MUST resolve entitlement by the
+    // same canonical owner key (stable app_user_id under enforcement) as the
+    // account plan display and checkout customer lookup — otherwise an email
+    // change would hide the existing subscription and let a second one be created.
+    const { state, plan: currentPlan } = await resolveEntitlement({ userId, email });
     if (state === 'unavailable' || state === 'unmapped') {
       return res.status(503).json(planUnavailableBody());
     }

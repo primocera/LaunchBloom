@@ -17,6 +17,22 @@
 > shipped on branch `v21` (SV-21-01). This exception is scoped to those named
 > gaps — it is **not** a licence to resume open-ended hardening; anything beyond
 > the v21 doc still defaults to the marketing pack above.
+>
+> **Approved exception — v22 Final MVP billing fix (owner decision, 2026-08-29):**
+> the owner explicitly authorised Prompt 1 of `Scalvya_Final_MVP_Fix_Prompts_v22.docx`
+> — closing the two verified v21 billing-correctness DEFECTS the owner named
+> directly (not a self-directed repo audit). Shipped on branch `v22` (SV-22-01):
+> **Defect A** — migration 039's PARTIAL unique index on `customers(app_user_id)`
+> is not an inferable arbiter for the predicate-less `ON CONFLICT (app_user_id)`
+> PostgREST emits, so migration `040` swaps it for a NON-partial unique index (real
+> PostgreSQL/pglite test proves it) + a readiness probe; **Defect B** —
+> `resolveEntitlement`/`planFor` now resolve the customer by the canonical
+> `findCustomerRow` (stable `app_user_id` under enforcement) so the plan display
+> and duplicate-subscription guard survive an email change; plus 038's UUID-cast
+> backfill hardened to exact validation. Scoped to those named defects only —
+> owner-only production steps (apply 038/039/040, backfill, enable
+> `STRIPE_OWNERSHIP_ENFORCED`, live-money rehearsal) remain **NOT RUN**; anything
+> beyond the v22 doc still defaults to the marketing pack above.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

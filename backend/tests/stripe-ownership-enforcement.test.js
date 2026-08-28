@@ -317,8 +317,10 @@ test('findCustomerRow keys on email before enforcement (unchanged beta behaviour
 
 // ── ownership rollout readiness — fail closed for paid ──────────────────────
 
-test('classifyOwnershipReadiness distinguishes the five rollout states', () => {
-  const base = { migrationApplied: true, unbackfilledCount: 0, ambiguousCount: 0 };
+test('classifyOwnershipReadiness distinguishes the rollout states', () => {
+  // SV-22-01: uniquenessReady is now a measured precondition (the non-partial
+  // ON CONFLICT arbiter from migration 040), so the fully-prepared base carries it.
+  const base = { migrationApplied: true, unbackfilledCount: 0, ambiguousCount: 0, uniquenessReady: true };
   assert.equal(classifyOwnershipReadiness({ ...base, migrationApplied: false }).state, STATE.MIGRATION_MISSING);
   assert.equal(classifyOwnershipReadiness({ ...base, unbackfilledCount: 3 }).state, STATE.BACKFILL_INCOMPLETE);
   assert.equal(classifyOwnershipReadiness({ ...base, ambiguousCount: 2 }).state, STATE.AMBIGUOUS_PRESENT);
@@ -326,8 +328,26 @@ test('classifyOwnershipReadiness distinguishes the five rollout states', () => {
   assert.equal(classifyOwnershipReadiness({ ...base, enforced: true }).state, STATE.ENFORCEMENT_ACTIVE);
 });
 
-test('paid_ready is fail-closed: true only in enforcement_active', () => {
+test('SV-22-01: a missing/partial uniqueness arbiter fails closed', () => {
   const base = { migrationApplied: true, unbackfilledCount: 0, ambiguousCount: 0 };
+  // 039-only partial index (or none): probe returns false → not paid-ready.
+  const missing = classifyOwnershipReadiness({ ...base, uniquenessReady: false, enforced: false });
+  assert.equal(missing.state, STATE.UNIQUENESS_MISSING);
+  assert.equal(missing.paid_ready, false);
+  // Enforcement flipped on WITHOUT the arbiter is an explicit blocker (the
+  // canonical upsert would fail with an ON CONFLICT mismatch).
+  const enforcedNoArbiter = classifyOwnershipReadiness({ ...base, uniquenessReady: false, enforced: true });
+  assert.equal(enforcedNoArbiter.state, STATE.UNIQUENESS_MISSING);
+  assert.ok(enforcedNoArbiter.blockers.includes('enforcement_on_without_uniqueness_arbiter'));
+  assert.equal(enforcedNoArbiter.paid_ready, false);
+  // Unmeasured uniqueness is never healthy.
+  const unmeasured = classifyOwnershipReadiness({ ...base, uniquenessReady: null });
+  assert.equal(unmeasured.state, STATE.UNKNOWN);
+  assert.ok(unmeasured.blockers.includes('uniqueness_state_unmeasured'));
+});
+
+test('paid_ready is fail-closed: true only in enforcement_active', () => {
+  const base = { migrationApplied: true, unbackfilledCount: 0, ambiguousCount: 0, uniquenessReady: true };
   assert.equal(classifyOwnershipReadiness({ ...base, enforced: true }).paid_ready, true);
   assert.equal(classifyOwnershipReadiness({ ...base, enforced: false }).paid_ready, false);
   assert.equal(classifyOwnershipReadiness({ ...base, ambiguousCount: 1, enforced: true }).paid_ready, false);

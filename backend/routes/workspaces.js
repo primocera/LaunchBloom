@@ -130,7 +130,8 @@ router.post('/api/workspaces', requireAuth, express.json({ limit: '2kb' }), asyn
   try {
     const { planFor } = require('./customers');
     const { limitsFor } = require('../lib/plan-limits');
-    const plan = (await planFor(req.userEmail)) || 'free';
+    // SV-22-01: resolve the plan by canonical identity (stable app_user_id).
+    const plan = (await planFor({ userId: req.userId, email: req.userEmail })) || 'free';
     const max = limitsFor(plan).workspaces;
 
     const active = await listWorkspaces(req.userId);

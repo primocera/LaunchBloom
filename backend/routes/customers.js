@@ -136,6 +136,22 @@ function reportBillingAnomaly(email, anomaly) {
 }
 
 /**
+ * Normalize the accepted identity shapes into { userId, email }. SV-22-01: the
+ * entitlement path keys on the STABLE app_user_id under enforcement, so it must
+ * receive the user id — but the historical bare-email string is still accepted
+ * (and used before enforcement) so no caller or test breaks.
+ */
+function normalizeIdentity(identity) {
+  if (identity && typeof identity === 'object') {
+    return {
+      userId: identity.userId || null,
+      email: (identity.email || '').trim().toLowerCase(),
+    };
+  }
+  return { userId: null, email: (identity || '').trim().toLowerCase() };
+}
+
+/**
  * The explicit entitlement result model (v13 SC-P0-01). Exactly one of:
  *
  *   { state: 'free',        plan: null }  verified: no entitling subscription
@@ -146,18 +162,23 @@ function reportBillingAnomaly(email, anomaly) {
  * 'unavailable' must never be collapsed into 'free' by a caller. planFor()
  * throws EntitlementUnavailableError for it so a caller cannot ignore it by
  * accident; use resolveEntitlement() directly when the state matters.
+ *
+ * SV-22-01 (v22): accepts a stable identity `{ userId, email }` (a bare email
+ * string is still accepted for back-compat / pre-enforcement) and resolves the
+ * local customer row through the ONE canonical helper findCustomerRow —
+ * app_user_id under STRIPE_OWNERSHIP_ENFORCED, email before it. This is what
+ * makes the account plan display and the duplicate-subscription guard resolve
+ * entitlement by the SAME owner key as checkout, so a changed authentication
+ * email can neither drop paid access nor unlock a second subscription.
  */
-async function resolveEntitlement(email) {
-  email = (email || '').trim().toLowerCase();
-  if (!email) return { state: 'free', plan: null };
+async function resolveEntitlement(identity) {
+  const { userId, email } = normalizeIdentity(identity);
+  if (!userId && !email) return { state: 'free', plan: null };
   try {
-    const { data: customer, error: customerErr } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    if (readFailed(customerErr)) throw new EntitlementUnavailableError(customerErr);
+    // Canonical, fail-closed customer resolution: throws EntitlementUnavailableError
+    // on a real read error and CUSTOMER_RECONCILIATION_REQUIRED on multiple
+    // canonical rows (both handled below) — a failure is NEVER read as "no customer".
+    const customer = await findCustomerRow({ userId, email }, 'id');
     if (!customer) return { state: 'free', plan: null };
 
     // A customer can hold more than one entitling row — an old subscription on a
@@ -199,6 +220,17 @@ async function resolveEntitlement(email) {
     return { state: unmapped ? 'unmapped' : 'free', plan: null };
   } catch (e) {
     if (isEntitlementUnavailable(e)) return { state: 'unavailable', plan: null };
+    // SV-22-01: multiple canonical customer rows for one identity is an ambiguous
+    // ownership state. FAIL CLOSED — never grant, never collapse to "free" — and
+    // surface it for reconciliation exactly like the checkout path does.
+    if (e && e.code === 'CUSTOMER_RECONCILIATION_REQUIRED') {
+      reportBillingAnomaly(email, {
+        code: 'customer_reconciliation_required',
+        reason: e.reason || null,
+        candidate_count: e.candidateCount || null,
+      });
+      return { state: 'unavailable', plan: null };
+    }
     // Any other throw (network reset, proxy blow-up) is equally "we do not
     // know" — it is never evidence that the customer is on the free plan.
     console.error(JSON.stringify({
@@ -216,16 +248,20 @@ async function resolveEntitlement(email) {
  * 'trial' | 'starter' | 'pro' | 'studio' | null — the single source of plan
  * truth. THROWS EntitlementUnavailableError when the lookup could not be
  * verified, so no caller can mistake a failure for "verified free".
+ *
+ * SV-22-01: takes the same stable identity `{ userId, email }` as
+ * resolveEntitlement (a bare email string still works for back-compat).
  */
-async function planFor(email) {
-  const result = await resolveEntitlement(email);
+async function planFor(identity) {
+  const result = await resolveEntitlement(identity);
   if (result.state === 'unavailable') throw new EntitlementUnavailableError();
   return result.plan;
 }
 
 async function verifyPlanHandler(req, res) {
   // Only ever answers for the signed-in account — no probing other emails.
-  const { state, plan } = await resolveEntitlement(req.userEmail);
+  // SV-22-01: resolve by canonical identity (stable app_user_id under enforcement).
+  const { state, plan } = await resolveEntitlement({ userId: req.userId, email: req.userEmail });
   if (state === 'unavailable') {
     // Do NOT report active:false — the UI must keep the access it already shows.
     return res.status(503).json({ ...planUnavailableBody(), plan: null, active: null });
@@ -263,9 +299,13 @@ function sanitizeCustomer(customer) {
   return safe;
 }
 
-/** True when the email has an active/trialing subscription or a succeeded one-time payment. */
-async function isPlanActive(email) {
-  return !!(await planFor(email));
+/**
+ * True when the identity has an active/trialing subscription or a succeeded
+ * one-time payment. SV-22-01: accepts `{ userId, email }` (or a bare email for
+ * back-compat), so the credit gate resolves by the same canonical owner key.
+ */
+async function isPlanActive(identity) {
+  return !!(await planFor(identity));
 }
 
 module.exports = router;

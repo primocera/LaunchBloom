@@ -44,12 +44,22 @@ alter table public.customers
 
 -- Backfill from the metadata already stamped by ensureStripeCustomer. This copies
 -- an existing, self-supplied fact — it never derives ownership from email/price.
--- Guarded so a malformed metadata value can never abort the migration.
+-- SV-22-01 (v22): guard the ::uuid cast with EXACT UUID validation, not a loose
+-- 36-char class. The old pattern `^[0-9a-fA-F-]{36}$` also matched 36-character
+-- strings that are NOT valid UUIDs (e.g. all-dashes, or hex in the wrong 8-4-4-4-12
+-- grouping), and a single such value would make `::uuid` raise and abort the WHOLE
+-- bounded backfill. The canonical 8-4-4-4-12 pattern below only ever hands `::uuid`
+-- a well-formed value, so one malformed Stripe metadata entry can never abort the
+-- migration. Invalid values are NOT coerced — the row is simply left with a NULL
+-- app_user_id, which keeps it counted in the readiness "unbackfilled" total for
+-- explicit operator reconciliation (never silently guessed). Re-run safe (the
+-- `app_user_id is null` guard makes repeat applies idempotent).
 update public.customers
    set app_user_id = (metadata ->> 'app_user_id')::uuid
  where app_user_id is null
    and metadata ? 'app_user_id'
-   and (metadata ->> 'app_user_id') ~ '^[0-9a-fA-F-]{36}$';
+   and (metadata ->> 'app_user_id')
+       ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 
 create index if not exists customers_app_user_id_idx
   on public.customers (app_user_id);

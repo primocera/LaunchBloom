@@ -31,6 +31,11 @@ const STATE = Object.freeze({
   MIGRATION_MISSING: 'migration_missing',
   BACKFILL_INCOMPLETE: 'backfill_incomplete',
   AMBIGUOUS_PRESENT: 'ambiguous_present',
+  // SV-22-01 (v22): migration applied, but the deployed uniqueness on
+  // customers(app_user_id) is NOT a valid ON CONFLICT arbiter (the 039-only
+  // PARTIAL index, or none) — so the canonical upsert would fail under
+  // enforcement. Migration 040 fixes this; the DB probe measures the invariant.
+  UNIQUENESS_MISSING: 'uniqueness_missing',
   FALLBACK_ENABLED: 'fallback_enabled',
   ENFORCEMENT_ACTIVE: 'enforcement_active',
   UNKNOWN: 'unknown', // a required observation could not be made — fail closed
@@ -48,6 +53,11 @@ const STATE = Object.freeze({
  *                                            NULL app_user_id (0 = complete).
  * @param {number|null}  o.ambiguousCount     stripe_object_ownership rows with
  *                                            status='ambiguous' (0 = none).
+ * @param {boolean|null} o.uniquenessReady    SV-22-01: a NON-partial, single-column
+ *                                            UNIQUE index on customers(app_user_id)
+ *                                            exists (a valid ON CONFLICT arbiter),
+ *                                            as measured by the DB probe. null =
+ *                                            could not measure (fail closed).
  * @returns {{ state, paid_ready, enforced, blockers: string[] }}
  */
 function classifyOwnershipReadiness(o = {}) {
@@ -80,8 +90,23 @@ function classifyOwnershipReadiness(o = {}) {
     return { state: STATE.AMBIGUOUS_PRESENT, paid_ready: false, enforced, blockers };
   }
 
-  // Migration applied, backfill complete, zero ambiguous rows. The only remaining
-  // question is whether the price-only fallback has been switched off.
+  // SV-22-01: the EXACT uniqueness invariant — verified through a DB probe, never
+  // mere column presence. Under enforcement the canonical customer upsert relies
+  // on `ON CONFLICT (app_user_id)` inferring a NON-partial unique index; if that
+  // arbiter is absent the upsert fails, so an unmeasured or missing invariant must
+  // fail closed. (Before enforcement the runtime keys on email and never exercises
+  // this arbiter, so it is a not-ready signal, not a running-beta blocker.)
+  if (o.uniquenessReady == null) {
+    return { state: STATE.UNKNOWN, paid_ready: false, enforced, blockers: ['uniqueness_state_unmeasured'] };
+  }
+  if (!o.uniquenessReady) {
+    if (enforced) blockers.push('enforcement_on_without_uniqueness_arbiter');
+    return { state: STATE.UNIQUENESS_MISSING, paid_ready: false, enforced, blockers };
+  }
+
+  // Migration applied, backfill complete, zero ambiguous rows, uniqueness arbiter
+  // present. The only remaining question is whether the price-only fallback has
+  // been switched off.
   if (!enforced) {
     // Fully prepared but the last switch is not flipped — safe capped-beta state.
     return { state: STATE.FALLBACK_ENABLED, paid_ready: false, enforced, blockers: [] };

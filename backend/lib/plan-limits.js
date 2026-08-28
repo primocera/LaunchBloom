@@ -115,7 +115,9 @@ function planGate(feature) {
   return function (req, res, next) {
     requireAuth(req, res, async () => {
       try {
-        const plan = (await planFor(req.userEmail)) || 'free';
+        // SV-22-01: resolve the plan by canonical identity (stable app_user_id
+        // under enforcement, email before it) so metering matches the owner key.
+        const plan = (await planFor({ userId: req.userId, email: req.userEmail })) || 'free';
         const limits = limitsFor(plan);
         req.userPlan = plan;
         req.planLimits = limits;

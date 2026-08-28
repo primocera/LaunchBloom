@@ -67,7 +67,9 @@ function intervalForPrice(priceId) {
 router.get('/api/account/billing', requireAuth, async (req, res, next) => {
   try {
     const email = req.userEmail;
-    const plan = (await planFor(email)) || 'free';
+    // SV-22-01: plan display resolves by canonical identity, the SAME owner key
+    // findCustomerRow (below) and the duplicate-subscription guard use.
+    const plan = (await planFor({ userId: req.userId, email })) || 'free';
     const limits = limitsFor(plan);
     const ws = await ensureWorkspace(email, req.userId);
     const usage = await usageFor(ws.id, plan, email, req.userId);

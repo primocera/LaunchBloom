@@ -53,7 +53,9 @@ function callbackUrl() {
 }
 
 async function accountStatus(email, userId) {
-  const plan = (await planFor(email)) || 'free';
+  // SV-22-01: resolve the plan by canonical identity (stable app_user_id under
+  // enforcement, email before it), never a bare email.
+  const plan = (await planFor({ userId, email })) || 'free';
   const limits = limitsFor(plan);
   const ws = await ensureWorkspace(email, userId);
   const usage = await usageFor(ws.id, plan, email, userId);

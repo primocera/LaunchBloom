@@ -182,11 +182,27 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       : await countOf(() =>
           supabase.from('stripe_object_ownership').select('id', { count: 'exact', head: true })
             .eq('status', 'ambiguous'));
+    // SV-22-01: verify the EXACT uniqueness invariant via the DB probe (migration
+    // 040's stripe_ownership_uniqueness_ready()), not mere column presence. A
+    // NON-partial single-column unique index on customers(app_user_id) is what
+    // makes `onConflict: 'app_user_id'` a valid arbiter; the 039-only partial index
+    // is NOT inferable and would fail the canonical upsert under enforcement. Any
+    // probe failure (function absent on a pre-040 schema, or a read error) degrades
+    // to null → classified UNKNOWN/UNIQUENESS_MISSING, never silently "ready".
+    let uniquenessReady = null;
+    if (migrationApplied === true) {
+      try {
+        const probe = await supabase.rpc('stripe_ownership_uniqueness_ready');
+        if (!probe.error && typeof probe.data === 'boolean') uniquenessReady = probe.data;
+        else if (!probe.error && probe.data == null) uniquenessReady = null;
+      } catch { uniquenessReady = null; }
+    }
     const ownership = classifyOwnershipReadiness({
       enforced: ownershipEnforced(),
       migrationApplied,
       unbackfilledCount,
       ambiguousCount,
+      uniquenessReady,
     });
 
     await audit(req, 'readiness');

@@ -11,15 +11,21 @@ const authLib = require('./auth');
 const { isPlanActive } = require('../routes/customers');
 const { isEntitlementUnavailable } = require('./subscription-state');
 
-const planCache = new Map(); // email -> { active, ts }
+const planCache = new Map(); // cacheKey -> { active, ts }
 
-async function planActiveCached(email) {
+// SV-22-01: cache and resolve by the STABLE user id when we have it (email is
+// mutable), so a changed email cannot serve a stale "paid" answer to the wrong
+// key. Falls back to email before enforcement / when no id is present.
+async function planActiveCached(identity) {
   try {
-    if (!email) return false;
-    const hit = planCache.get(email);
+    const userId = identity && typeof identity === 'object' ? identity.userId : null;
+    const email = ((identity && typeof identity === 'object' ? identity.email : identity) || '');
+    const cacheKey = userId || email;
+    if (!cacheKey) return false;
+    const hit = planCache.get(cacheKey);
     if (hit && Date.now() - hit.ts < 10 * 60 * 1000) return hit.active;
-    const active = await isPlanActive(email);
-    planCache.set(email, { active, ts: Date.now() });
+    const active = await isPlanActive({ userId, email });
+    planCache.set(cacheKey, { active, ts: Date.now() });
     return active;
   } catch (e) {
     // v13 SC-P0-01: "could not verify" is NOT "not paid" — let it propagate so
@@ -38,7 +44,7 @@ function creditGate(cost = 1) {
     authLib.requireAuth(req, res, async () => {
       try {
         req.creditCost = cost;
-        req.userPaid = await planActiveCached(req.userEmail);
+        req.userPaid = await planActiveCached({ userId: req.userId, email: req.userEmail });
         if (req.userPaid) return next();
         const used = await authLib.creditsUsed(req.userEmail);
         if (used + cost > authLib.FREE_CREDITS) {
