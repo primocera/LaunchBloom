@@ -325,8 +325,8 @@
       "required": true,
       "status": "observed_production",
       "observed_at_sha": "7e08768add5cd758093adc90ea46bdc43623a560",
-      "evidence": "Production configuration gate. CARRY-FORWARD pinned to candidate 7e08768 by this manifest's own standard: `git diff 24d350c..7e08768` over backend/lib/launch-config.js + backend/scripts/release-check.js is EMPTY, so the owner-confirmed production observation (GET /api/admin/readiness, 2026-08-04: mode=production, ready=TRUE, blockers=0, external=0; launch:config all requirements met, stripe price allowlist live, cron secret set, email delivery configured, ai spend ceiling set, unsafe bypass not set) still describes the config gate at this SHA. STANDING OWNER ACTION (NOT RUN): 7e08768 is not yet deployed - re-confirm GET /api/admin/readiness against the deployed SHA (now also fails closed on a missing/partial app_user_id uniqueness arbiter via stripe_ownership_uniqueness_ready()) before opening paid.",
-      "note": "Config-gate code byte-identical 24d350c..7e08768; production observation carried forward with a standing owner re-confirm against the deployed SHA. Not a fresh production run at 7e08768."
+      "evidence": "Production configuration gate RE-CONFIRMED in PRODUCTION on 2026-08-29 (the standing owner action from the candidate cut). Owner ran GET /api/admin/readiness against the live deployment: mode=production, ready=TRUE, blockers=0, external=0; all 14 config checks ok (launch:config all requirements met, stripe price allowlist all live prices set, cron secret set, email delivery Resend key+sender configured, ai spend ceiling $15, unsafe bypass not set); live signals ok (outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, spend_over_ceiling false). ownership.state=enforcement_active, paid_ready=TRUE, enforced=TRUE, blockers=[] - so the production readiness probe stripe_ownership_uniqueness_ready() returned TRUE, confirming migration 040's non-partial ON CONFLICT (app_user_id) arbiter is applied and the canonical app_user_id billing identity is LIVE under enforcement. RESIDUAL (owner): the readiness endpoint does not expose the running commit; the deployed commit carries the candidate 7e08768 code (the launch-state cut on top is docs-only) and is owner-confirmed in the Vercel Deployments dashboard. This is what closes Defect B in production (the entitlement/duplicate-guard code fix), which migration 040 alone does not.",
+      "note": "Fresh production readiness observation on 2026-08-29 against the deployed candidate (ownership enforcement_active, paid_ready true), replacing the earlier carry-forward standing action. Deploy-commit identity (the candidate 7e08768 code) is owner-confirmed via the Vercel dashboard, since /api/admin/readiness does not expose the SHA."
     },
     {
       "id": "launch_integrity",
@@ -401,6 +401,26 @@
           "public_paid"
         ],
         "rationale": "Same decision as blocker P1-live-money-unrehearsed. The item keeps its real status of `not_run`; nothing here claims the rehearsal happened."
+      },
+      "pending_evidence_template": {
+        "instructions": "PENDING - do NOT mark observed until the live rehearsal actually runs (docs/RUNBOOK_TRANSACTION_REHEARSAL.md). Run on a live current price with enforcement active. For each step capture the Stripe event id, customer id and subscription id with sensitive values redacted, plus the entitlement state observed AFTER the event. When complete, set status to 'observed', add evidence_ref, and re-run npm run launch:gate + launch:render.",
+        "sequence": [
+          "A. checkout -> entitlement becomes trial/active for the buyer's app_user_id",
+          "B. first charge succeeds -> entitlement active; exactly ONE customer row for the app_user_id (no duplicate)",
+          "C. cancel-at-period-end -> access retained until period end",
+          "D. reactivate -> access continues",
+          "E. payment failure (past_due) -> entitlement withheld",
+          "F. recovery (back to active) -> entitlement restored",
+          "G. refund alone -> entitlement UNCHANGED (a refund is not a status change)",
+          "H. duplicate webhook replay -> idempotent, no double-mirroring",
+          "PLUS (Defect B, now live under enforcement): change the auth email while subscribed -> access PERSISTS and a second checkout is BLOCKED (409 ALREADY_SUBSCRIBED)."
+        ],
+        "acceptance": [
+          "no duplicate customers for one app_user_id",
+          "email change keeps access and blocks a second subscription",
+          "refund alone does not change entitlement",
+          "readiness ownership.state stays enforcement_active throughout"
+        ]
       }
     },
     {
