@@ -32,13 +32,23 @@ const BLOCKED_MESSAGE = [
 
 const newRunId = () => `${Date.now().toString(36)}-${crypto.randomBytes(4).toString('hex')}`;
 
+// The secret arrives via an env/CI-secret, and a value set through the shell or
+// the GitHub secret UI routinely carries a trailing newline or stray whitespace
+// (`echo "…" | gh secret set` appends one). Node refuses to put a control char
+// in a header value — `Invalid character in header content ["x-e2e-seed-secret"]`
+// is thrown before the request is even sent, so every seed dies pre-flight and
+// no HTTP status is ever returned. missingEnv() already trims for its presence
+// check; the header value must be normalised the same way. The seed route trims
+// the expected secret identically, so both sides agree on the canonical value.
+const seedSecret = () => String(process.env.E2E_SEED_SECRET || '').trim();
+
 /**
  * Seed one scenario and return its credentials and ids. Talks to the
  * environment-gated seeding route; the browser then signs in normally.
  */
 async function seed(request, runId, scenario) {
   const res = await request.post('/api/e2e/seed', {
-    headers: { 'x-e2e-seed-secret': process.env.E2E_SEED_SECRET || '' },
+    headers: { 'x-e2e-seed-secret': seedSecret() },
     data: { run_id: runId, scenario },
   });
   if (!res.ok()) {
@@ -49,7 +59,7 @@ async function seed(request, runId, scenario) {
 
 async function cleanup(request, runId) {
   await request.delete(`/api/e2e/seed/${runId}`, {
-    headers: { 'x-e2e-seed-secret': process.env.E2E_SEED_SECRET || '' },
+    headers: { 'x-e2e-seed-secret': seedSecret() },
   }).catch(() => {});
 }
 

@@ -64,6 +64,23 @@ test('seeding refuses a missing or guessable secret', () => {
   }
 });
 
+// Regression: a CI secret set through the shell or the GitHub UI routinely
+// carries a trailing newline. Untrimmed, that value passed the length gate (25
+// chars) but the Playwright client threw "Invalid character in header content"
+// before any request left the browser, so every seeded authenticated test died
+// pre-flight and no HTTP status was ever produced. The secret is trimmed to its
+// canonical form on both sides, so a whitespace-wrapped value is accepted and
+// matches the (trimmed) header the client sends.
+test('a secret with surrounding whitespace is trimmed to its canonical value', () => {
+  withEnv({ ...NON_PRODUCTION, E2E_SEED_ENABLED: '1', E2E_SEED_SECRET: `\n  ${LONG_SECRET}\n` }, (router) => {
+    assert.equal(router.seedingAllowed(), null, 'a trimmed 32-char secret must be allowed');
+  });
+  // And whitespace can never pad a too-short secret over the 24-char floor.
+  withEnv({ ...NON_PRODUCTION, E2E_SEED_ENABLED: '1', E2E_SEED_SECRET: `${'x'.repeat(20)}     ` }, (router) => {
+    assert.match(router.seedingAllowed(), /E2E_SEED_SECRET/, 'trailing spaces must not satisfy the length floor');
+  });
+});
+
 test('seeding is allowed only when every condition holds at once', () => {
   withEnv({ ...NON_PRODUCTION, E2E_SEED_ENABLED: '1', E2E_SEED_SECRET: LONG_SECRET }, (router) => {
     assert.equal(router.seedingAllowed(), null);

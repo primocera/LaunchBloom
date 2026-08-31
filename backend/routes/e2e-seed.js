@@ -40,10 +40,21 @@ const json = express.json({ limit: '16kb' });
 const RUN_PREFIX = 'e2e-run-';
 const SEED_DOMAIN = 'e2e.invalid'; // reserved TLD: these addresses can never receive mail
 
+// The secret is supplied through env/CI secrets and routinely carries a trailing
+// newline or stray whitespace from the shell or the secret UI. That is not part
+// of the credential — trim it here and in secretMatches so the length gate and
+// the timing-safe compare both operate on the canonical value. The client
+// (e2e/authenticated/fixtures.js) trims the header identically, so both sides
+// agree; without this a newline-suffixed secret is 25 chars (passes the gate)
+// but blows up the client's header as an invalid character before any request.
+function seedSecret() {
+  return String(process.env.E2E_SEED_SECRET || '').trim();
+}
+
 function seedingAllowed() {
   if (launchMode() === 'production') return 'refusing to seed in production';
   if (process.env.E2E_SEED_ENABLED !== '1') return 'E2E_SEED_ENABLED is not 1';
-  const secret = process.env.E2E_SEED_SECRET || '';
+  const secret = seedSecret();
   if (secret.length < 24) return 'E2E_SEED_SECRET is missing or too short (24+ characters)';
   return null;
 }
@@ -77,9 +88,11 @@ async function seedTargetAllowed() {
 function _resetMarkerCache() { markerCache = null; }
 
 // Timing-safe comparison: a seeding secret is a credential like any other.
+// Both sides are trimmed so a stored value with trailing whitespace still
+// matches the (trimmed) header the client sends.
 function secretMatches(provided) {
-  const expected = process.env.E2E_SEED_SECRET || '';
-  const a = Buffer.from(String(provided || ''));
+  const expected = seedSecret();
+  const a = Buffer.from(String(provided || '').trim());
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
