@@ -478,7 +478,11 @@ test('the release-candidate workflow runs the launch-critical set, fail-closed, 
   assert.match(rc, /rc-evidence-\$\{\{ github\.sha \}\}-\$\{\{ github\.run_id \}\}/);
   // Owner-only live checks are stated as NOT RUN, never passed.
   assert.match(rc, /Owner-only live checks: NOT RUN/);
-  assert.match(rc, /Authenticated matrix NOT RUN/);
+  // SV-22-01: a missing authenticated-E2E environment is a HARD FAILURE under
+  // RC_GATE — never a silent skip-that-passes — so a green candidate genuinely
+  // means the authenticated matrix ran and uploaded a SHA-pinned artifact.
+  assert.match(rc, /Authenticated matrix REQUIRED \(fail closed when env unavailable\)/);
+  assert.match(rc, /Under RC_GATE this is a hard failure/);
 });
 
 test('every superseded release document carries a banner pointing at the canonical state', () => {
@@ -590,10 +594,13 @@ test('a full GO is impossible while any required condition rides on accepted ris
 
 test('an accepted risk never rewrites the underlying status', () => {
   const state = loadState();
-  // The authenticated matrix now runs and passes (v16, candidate f37e0e1); the
-  // remaining accepted risk that must not be rewritten is the live-money item.
+  // SV-22-01: the RC run at candidate 7e08768 SKIPPED the authenticated matrix
+  // (non-production Supabase E2E secrets not configured), so its real, un-fabricated
+  // status is `skipped` — never elevated to a pass. This is exactly the status the
+  // release-candidate workflow instructs the manifest to record, and it makes
+  // public_paid NO-GO until the matrix actually runs on the shipping SHA.
   const check = state.checks.find((c) => c.id === 'e2e_authenticated');
-  assert.equal(check.status, 'passed_locally', 'the recorded status must be the real run result');
+  assert.equal(check.status, 'skipped', 'the recorded status must be the real run result (skipped, never faked as passed)');
   const money = state.owner_evidence.find((e) => e.id === 'live_money_rehearsal');
   assert.equal(money.status, 'not_run', 'the live-money accepted risk keeps its real not_run status');
   for (const b of state.blockers.filter((x) => x.status === 'accepted')) {

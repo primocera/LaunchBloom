@@ -54,10 +54,12 @@ test('reintroducing the stale "pinned to v13 5523187" claim fails the scan', () 
   assert.ok(problems.some((p) => /candidate 5523187/.test(p) && /pinned candidate is/.test(p)), problems.join('\n'));
 });
 
-test('reintroducing a public-paid NO-GO verdict fails the scan', () => {
-  const docs = [{ path: 'h.md', text: '- **Public paid:** **NO-GO.** Three items stand.' }];
+test('a doc that overstates public paid (CONDITIONAL GO) contradicts the computed NO-GO and fails the scan', () => {
+  // SV-22-01: with e2e_authenticated skipped, computed public_paid is NO-GO. A
+  // handoff that still calls it CONDITIONAL GO (or GO) must be caught.
+  const docs = [{ path: 'h.md', text: '- **Public paid:** **CONDITIONAL GO.** Only two items stand.' }];
   const problems = activeDocumentProblems(STATE, docs);
-  assert.ok(problems.some((p) => /public_paid/.test(p) && /NO-GO/.test(p) && /CONDITIONAL GO/.test(p)), problems.join('\n'));
+  assert.ok(problems.some((p) => /public_paid/.test(p) && /CONDITIONAL GO/.test(p) && /NO-GO/.test(p)), problems.join('\n'));
 });
 
 test('reintroducing "router not accepted" while it is accepted fails the scan', () => {
@@ -106,7 +108,7 @@ test('a document may name a prior/historical candidate SHA as history', () => {
 test('the correct verdicts and canonical count do not trip the scan', () => {
   const docs = [{
     path: 'h.md',
-    text: '**Capped beta:** **GO**. **Public paid:** **CONDITIONAL GO**. The eight-transition rehearsal (steps A–H) remains not_run.',
+    text: '**Capped beta:** **GO**. **Public paid:** **NO-GO** (authenticated matrix not yet run). The eight-transition rehearsal (steps A–H) remains not_run.',
   }];
   assert.deepEqual(activeDocumentProblems(STATE, docs), []);
 });

@@ -160,20 +160,29 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      # Loud NOT RUN when the non-production project is not configured. Record
-      # e2e_authenticated as `skipped` in the manifest — never `passed_ci`.
-      - name: Authenticated matrix NOT RUN (non-production project unavailable)
+      # SV-22-01: under RC_GATE the authenticated matrix is MANDATORY. A missing
+      # non-production E2E environment is a HARD FAILURE, never a silent
+      # skip-and-pass — otherwise a green release-candidate run could be cited as
+      # evidence the matrix ran when it did not (the v22 release-truth defect). A
+      # green RC must mean the matrix actually ran and uploaded a SHA-pinned
+      # artifact. Outside RC_GATE (ad-hoc runs) it degrades to a loud warning and
+      # the manifest records `e2e_authenticated: skipped` — never `passed_ci`.
+      - name: Authenticated matrix REQUIRED (fail closed when env unavailable)
         if: steps.cfg.outputs.available != 'true'
         run: |
-          echo "::warning::authenticated E2E NOT RUN — non-production Supabase secrets unavailable. This job is NOT launch evidence."
           {
             echo "### Authenticated E2E: NOT RUN"
             echo ""
-            echo "Missing:${{ steps.cfg.outputs.missing }}"
+            echo "Missing secrets:${{ steps.cfg.outputs.missing }}"
             echo ""
-            echo "Record \`e2e_authenticated\` as \`skipped\` in docs/launch/launch-state.json."
-            echo "public paid stays at most CONDITIONAL GO. See docs/RUNBOOK_AUTH_E2E.md."
+            echo "Configure E2E_SUPABASE_URL / E2E_SUPABASE_ANON_KEY / E2E_SUPABASE_SERVICE_ROLE_KEY / E2E_SEED_SECRET"
+            echo "against a NON-PRODUCTION Supabase project. See docs/RUNBOOK_AUTH_E2E.md."
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${RC_GATE:-}" = "1" ]; then
+            echo "::error::authenticated E2E NOT RUN — non-production Supabase secrets unavailable:${{ steps.cfg.outputs.missing }}. Under RC_GATE this is a hard failure; a release candidate cannot be green without the authenticated matrix."
+            exit 1
+          fi
+          echo "::warning::authenticated E2E NOT RUN — non-production Supabase secrets unavailable. Record e2e_authenticated as \`skipped\`; this run is NOT launch evidence."
 
   # Owner-only live checks can never run in CI without live secrets and human
   # action. This job states plainly that they are NOT RUN, so a green workflow
