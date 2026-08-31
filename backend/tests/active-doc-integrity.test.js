@@ -18,6 +18,7 @@ const path = require('node:path');
 const {
   activeDocumentProblems,
   canonicalTransitionCount,
+  computeVerdicts,
 } = require('../lib/launch-state');
 const { loadState } = require('../scripts/launch-state');
 
@@ -54,12 +55,18 @@ test('reintroducing the stale "pinned to v13 5523187" claim fails the scan', () 
   assert.ok(problems.some((p) => /candidate 5523187/.test(p) && /pinned candidate is/.test(p)), problems.join('\n'));
 });
 
-test('a doc that overstates public paid (CONDITIONAL GO) contradicts the computed NO-GO and fails the scan', () => {
-  // SV-22-01: with e2e_authenticated skipped, computed public_paid is NO-GO. A
-  // handoff that still calls it CONDITIONAL GO (or GO) must be caught.
-  const docs = [{ path: 'h.md', text: '- **Public paid:** **CONDITIONAL GO.** Only two items stand.' }];
+test('a doc that states the wrong public_paid verdict contradicts the computed truth and fails the scan', () => {
+  // Verdict-agnostic: derive the computed verdict from the live manifest and
+  // feed a DIFFERENT one, so this holds at any candidate (NO-GO, CONDITIONAL GO
+  // or a future full GO) rather than pinning a moment-in-time verdict.
+  const want = computeVerdicts(STATE).public_paid.verdict;
+  const wrong = want === 'GO' ? 'CONDITIONAL GO' : 'GO';
+  const docs = [{ path: 'h.md', text: `- **Public paid:** **${wrong}.** overstated.` }];
   const problems = activeDocumentProblems(STATE, docs);
-  assert.ok(problems.some((p) => /public_paid/.test(p) && /CONDITIONAL GO/.test(p) && /NO-GO/.test(p)), problems.join('\n'));
+  assert.ok(
+    problems.some((p) => /public_paid/.test(p) && p.includes(`"${wrong}"`) && p.includes(`"${want}"`)),
+    `expected a public_paid ${wrong}-vs-${want} contradiction:\n${problems.join('\n')}`,
+  );
 });
 
 test('reintroducing "router not accepted" while it is accepted fails the scan', () => {
@@ -106,9 +113,12 @@ test('a document may name a prior/historical candidate SHA as history', () => {
 });
 
 test('the correct verdicts and canonical count do not trip the scan', () => {
+  // Build the doc from the actually-computed verdicts, so the "correct" fixture
+  // tracks the manifest instead of hard-coding a verdict that later drifts.
+  const v = computeVerdicts(STATE);
   const docs = [{
     path: 'h.md',
-    text: '**Capped beta:** **GO**. **Public paid:** **NO-GO** (authenticated matrix not yet run). The eight-transition rehearsal (steps A–H) remains not_run.',
+    text: `**Capped beta:** **${v.capped_beta.verdict}**. **Public paid:** **${v.public_paid.verdict}**. The eight-transition rehearsal (steps A–H) remains not_run.`,
   }];
   assert.deepEqual(activeDocumentProblems(STATE, docs), []);
 });

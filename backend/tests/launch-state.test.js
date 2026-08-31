@@ -594,15 +594,27 @@ test('a full GO is impossible while any required condition rides on accepted ris
 
 test('an accepted risk never rewrites the underlying status', () => {
   const state = loadState();
-  // SV-22-01: the RC run at candidate 7e08768 SKIPPED the authenticated matrix
-  // (non-production Supabase E2E secrets not configured), so its real, un-fabricated
-  // status is `skipped` — never elevated to a pass. This is exactly the status the
-  // release-candidate workflow instructs the manifest to record, and it makes
-  // public_paid NO-GO until the matrix actually runs on the shipping SHA.
-  const check = state.checks.find((c) => c.id === 'e2e_authenticated');
-  assert.equal(check.status, 'skipped', 'the recorded status must be the real run result (skipped, never faked as passed)');
+  // The point of this test is that an OWNER-ACCEPTED risk keeps its real,
+  // un-fabricated status — an acceptance lets a launch proceed over an item, it
+  // never elevates that item to a pass. The live-money rehearsal is the standing
+  // example: it is accepted for public_paid yet stays `not_run`.
   const money = state.owner_evidence.find((e) => e.id === 'live_money_rehearsal');
   assert.equal(money.status, 'not_run', 'the live-money accepted risk keeps its real not_run status');
+  // e2e_authenticated is the opposite case and guards the other direction: it is
+  // only ever `passed_ci` because the matrix ACTUALLY ran green in a committed
+  // workflow (rc/v22.1 authenticated-e2e), pinned to the candidate with an
+  // evidence reference — never a skip dressed up as a pass. A separate test
+  // ('no required check claims to have passed in CI that CI does not run')
+  // enforces that the passing command really exists in a workflow.
+  const check = state.checks.find((c) => c.id === 'e2e_authenticated');
+  if (check.status === 'passed_ci' || check.status === 'passed_locally' || check.status === 'observed_production') {
+    assert.ok(check.evidence, 'a passing e2e_authenticated must carry an evidence reference');
+    assert.equal(check.observed_at_sha, state.candidate.sha, 'a passing check must be pinned to the candidate SHA');
+  } else {
+    // If it is not passing it must read as its real, un-elevated status.
+    assert.ok(['skipped', 'not_run', 'failed', 'unknown'].includes(check.status),
+      `e2e_authenticated status must be a real run result, got ${check.status}`);
+  }
   for (const b of state.blockers.filter((x) => x.status === 'accepted')) {
     assert.ok(b.accepted_risk.rationale.length >= 40, `${b.id} needs a real rationale`);
     assert.ok(b.accepted_risk.accepted_by, `${b.id} must name who accepted it`);
