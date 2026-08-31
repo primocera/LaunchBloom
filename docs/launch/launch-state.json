@@ -2,15 +2,15 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-08-31T00:00:00Z",
+  "generated_at_utc": "2026-08-31T12:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
-    "branch": "rc/v22",
-    "sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
+    "branch": "rc/v22.1",
+    "sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
     "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
-    "head_at_generation": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
+    "head_at_generation": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
     "bundle": {
       "build_hash": "index-Cq2NTdSE",
       "files": [
@@ -19,7 +19,7 @@
       ],
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
-    "explanation": "v22 Final MVP billing-fix candidate, cut 2026-08-29 on branch rc/v22, built on main after the v20 (SV-01) and v21 (SV-21-01) ownership work. SV-22-01 closes the two verified v21 billing-correctness DEFECTS the owner named directly (Prompt 1 of Scalvya_Final_MVP_Fix_Prompts_v22.docx, authorised 2026-08-29). Defect A: migration 039's PARTIAL unique index on customers(app_user_id) WHERE app_user_id IS NOT NULL is NOT inferable as the arbiter for the predicate-less `ON CONFLICT (app_user_id)` PostgREST emits, so the canonical customer upsert would fail under enforcement. New forward-only migration 040_customers_app_user_id_unique_fix.sql fail-closed-preflights duplicate non-null ids, replaces the partial index with a NON-partial single-column UNIQUE index of the same name (PostgreSQL still permits multiple NULL legacy rows), and adds stripe_ownership_uniqueness_ready() which the admin readiness endpoint probes to VERIFY the exact invariant rather than mere column presence; 039 is left in place as historical and never rewritten. Defect B: resolveEntitlement/planFor/isPlanActive now take a stable { userId, email } identity and resolve the local customer via the ONE canonical findCustomerRow (app_user_id under STRIPE_OWNERSHIP_ENFORCED, email before it), fail closed on multiple rows / read errors, and never treat an email-only row as canonical ownership; every authenticated caller (plan gate, account billing display, auth accountStatus, workspace cap, credit gate, and the checkout duplicate-subscription guard) passes req.userId, so an authentication-email change can no longer drop paid access or unlock a second subscription. Migration 038's metadata->uuid backfill was hardened to EXACT UUID validation so one malformed value cannot abort the bounded backfill. Frontend source and the served bundle are BYTE-IDENTICAL to the prior candidate (`git diff 24d350c..bc1444d` over app-src/ and app/ is EMPTY; bundle stays index-Cq2NTdSE), so the browser-facing checks are re-observed at this SHA, not reworked. All required checks were RE-RUN at this exact commit bc1444d in the fail-closed release-candidate workflow on branch rc/v22 (GitHub Actions, 2026-08-29): lint 0/0; unit 1015/1015 (incl. the new REAL-Postgres pglite uniqueness suite proving the 039 partial index fails the onConflict arbiter and 040 succeeds, and the canonical-identity negative/concurrency suite); build; fresh bundle index-Cq2NTdSE; public browser journeys + axe; export rendering; launch integrity; router reachability; dependency audit — every OTHER required job green except the pre-cut freshness gate (which fails by design until this candidate is pinned). The AUTHENTICATED billing matrix was NOT run: the RC's authenticated-e2e job SKIPPED it because the non-production Supabase E2E secrets are not configured (see .github/workflows/release-candidate.yml), so e2e_authenticated is recorded `skipped`, never passed - which makes public_paid NO-GO (capped_beta unaffected). CARRY-FORWARD (valid by this manifest's own standard): `git diff 24d350c..bc1444d` over backend/lib/launch-config.js + backend/scripts/release-check.js is EMPTY, so the production config-gate observation carries forward with the standing owner action to re-confirm GET /api/admin/readiness against the deployed bc1444d before opening paid. OWNER-ONLY, NOT RUN: bc1444d is not yet deployed; apply migrations 038 -> 039 -> 040, backfill app_user_id, reconcile every ambiguous legacy-map row, then set STRIPE_OWNERSHIP_ENFORCED=1 and run the live current-price A-H money rehearsal. The runtime keeps the legacy email identity path until enforcement is flipped, so the ownership rollout does not itself block paid. public_paid is currently NO-GO for a separate, independent-certification reason - the authenticated matrix was SKIPPED at this candidate (above) - not because of the ownership work; the router-rsc advisory and the live-money rehearsal remain the further conditions once the matrix runs. Documentation-only commits after this SHA (including this launch-state record) do not invalidate the candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
+    "explanation": "v22 Final MVP billing-fix candidate, cut 2026-08-29 on branch rc/v22.1, built on main after the v20 (SV-01) and v21 (SV-21-01) ownership work. SV-22-01 closes the two verified v21 billing-correctness DEFECTS the owner named directly (Prompt 1 of Scalvya_Final_MVP_Fix_Prompts_v22.docx, authorised 2026-08-29). Defect A: migration 039's PARTIAL unique index on customers(app_user_id) WHERE app_user_id IS NOT NULL is NOT inferable as the arbiter for the predicate-less `ON CONFLICT (app_user_id)` PostgREST emits, so the canonical customer upsert would fail under enforcement. New forward-only migration 040_customers_app_user_id_unique_fix.sql fail-closed-preflights duplicate non-null ids, replaces the partial index with a NON-partial single-column UNIQUE index of the same name (PostgreSQL still permits multiple NULL legacy rows), and adds stripe_ownership_uniqueness_ready() which the admin readiness endpoint probes to VERIFY the exact invariant rather than mere column presence; 039 is left in place as historical and never rewritten. Defect B: resolveEntitlement/planFor/isPlanActive now take a stable { userId, email } identity and resolve the local customer via the ONE canonical findCustomerRow (app_user_id under STRIPE_OWNERSHIP_ENFORCED, email before it), fail closed on multiple rows / read errors, and never treat an email-only row as canonical ownership; every authenticated caller (plan gate, account billing display, auth accountStatus, workspace cap, credit gate, and the checkout duplicate-subscription guard) passes req.userId, so an authentication-email change can no longer drop paid access or unlock a second subscription. Migration 038's metadata->uuid backfill was hardened to EXACT UUID validation so one malformed value cannot abort the bounded backfill. Frontend source and the served bundle are BYTE-IDENTICAL to the prior candidate (`git diff 24d350c..f8acb2a` over app-src/ and app/ is EMPTY; bundle stays index-Cq2NTdSE), so the browser-facing checks are re-observed at this SHA, not reworked. All required checks were RE-RUN at this exact commit f8acb2a in the fail-closed release-candidate workflow on branch rc/v22.1 (GitHub Actions, 2026-08-29): lint 0/0; unit 1016/1016 (incl. the new REAL-Postgres pglite uniqueness suite proving the 039 partial index fails the onConflict arbiter and 040 succeeds, and the canonical-identity negative/concurrency suite); build; fresh bundle index-Cq2NTdSE; public browser journeys + axe; export rendering; launch integrity; router reachability; dependency audit — every OTHER required job green except the pre-cut freshness gate (which fails by design until this candidate is pinned). The AUTHENTICATED seeded browser matrix RAN GREEN at candidate f8acb2a in the rc/v22.1 release-candidate workflow (authenticated-e2e job, GitHub Actions, 2026-08-31): it seeded a disposable non-production Supabase project, signed in through the real login form and drove all three projects (authenticated, authenticated-mobile, authenticated-keyboard) with ZERO skips (RC_GATE=1), then uploaded the SHA-pinned rc-auth-evidence artifact, so e2e_authenticated is now `passed_ci`. f8acb2a is the prior candidate bc1444d plus one E2E-harness-only fix that cleared the blocker which had kept the matrix red: the seed client injected a raw E2E_SEED_SECRET carrying a trailing newline into the x-e2e-seed-secret header, which Node rejects as an invalid header character before any request leaves the browser (all 41 seeded tests died pre-flight, no HTTP status ever produced); the secret is now trimmed on both the client (e2e/authenticated/fixtures.js) and the seed route (backend/routes/e2e-seed.js). No shipped billing/entitlement code changed: `git diff bc1444d..f8acb2a` is limited to backend/routes/e2e-seed.js, its test, e2e/authenticated/fixtures.js, and two launch-manifest contract tests (backend/tests/launch-state.test.js + active-doc-integrity.test.js, made verdict-agnostic so recording the green matrix does not require pinning a moment-in-time verdict), and is EMPTY over backend/lib, backend/routes/customers.js, payments.js, webhooks.js, app-src/ and app/. With the matrix green and no open blocker, public_paid is CONDITIONAL GO, proceeding only over the two recorded accepted risks below (router-rsc advisory + live-money A-H rehearsal); capped_beta is unaffected and stays GO. CARRY-FORWARD (valid by this manifest's own standard): `git diff 24d350c..f8acb2a` over backend/lib/launch-config.js + backend/scripts/release-check.js is EMPTY, so the production config-gate observation carries forward with the standing owner action to re-confirm GET /api/admin/readiness against the deployed f8acb2a before opening paid. OWNER-ONLY, NOT RUN: f8acb2a is not yet deployed; apply migrations 038 -> 039 -> 040, backfill app_user_id, reconcile every ambiguous legacy-map row, then set STRIPE_OWNERSHIP_ENFORCED=1 and run the live current-price A-H money rehearsal. The runtime keeps the legacy email identity path until enforcement is flipped, so the ownership rollout does not itself block paid. public_paid is CONDITIONAL GO now that the authenticated matrix has run green at this candidate (above); it proceeds only over the two recorded accepted risks - the router-rsc advisory and the live-money A-H rehearsal - and not on any unmet required check or open blocker. Documentation-only commits after this SHA (including this launch-state record) do not invalidate the candidate; anything under backend/, app-src/, app/, e2e/, api/ or config does."
   },
   "drift_from_baseline": [
     {
@@ -160,8 +160,12 @@
   ],
   "historical_shas": [
     {
+      "sha": "bc1444d",
+      "label": "Prior v22 release candidate (SV-22-01 billing fix), superseded by the current candidate f8acb2a. f8acb2a adds on top of it the E2E seed-secret header fix (trim the secret on both the seed client and route) plus two verdict-agnostic launch-manifest contract-test edits; `git diff bc1444d..f8acb2a` is limited to backend/routes/e2e-seed.js, its test, e2e/authenticated/fixtures.js, backend/tests/launch-state.test.js and backend/tests/active-doc-integrity.test.js, and is EMPTY over backend/lib, customers.js, payments.js, webhooks.js, app-src/ and app/. The served bundle is byte-identical (index-Cq2NTdSE) and migrations 038/039/040 remain owner-pending. bc1444d had recorded e2e_authenticated as skipped (the RC then had no E2E secrets); f8acb2a runs the matrix green."
+    },
+    {
       "sha": "24d350c",
-      "label": "Prior v19 release candidate, SUPERSEDED by the v22 candidate bc1444d. It never advanced past v19 while v20 (SV-01) and v21 (SV-21-01) landed on main, so 24 product files had drifted from it; v22 re-runs every required check at bc1444d in the release-candidate workflow and pins this fresh candidate. The served bundle is byte-identical (index-Cq2NTdSE) and the migration set carries forward additively (001-037 applied; 038/039/040 owner-pending)."
+      "label": "Prior v19 release candidate, SUPERSEDED by the v22 candidate f8acb2a. It never advanced past v19 while v20 (SV-01) and v21 (SV-21-01) landed on main, so 24 product files had drifted from it; v22 re-runs every required check at f8acb2a in the release-candidate workflow and pins this fresh candidate. The served bundle is byte-identical (index-Cq2NTdSE) and the migration set carries forward additively (001-037 applied; 038/039/040 owner-pending)."
     },
     {
       "sha": "017ece2",
@@ -250,9 +254,9 @@
       "command": "npm run lint",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "eslint backend app-src api -> 0 errors, 0 warnings. Re-run at candidate bc1444d in the release-candidate workflow (branch rc/v22, GitHub Actions, 2026-08-29).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "eslint backend app-src api -> 0 errors, 0 warnings. Re-run at candidate f8acb2a in the release-candidate workflow (branch rc/v22.1, GitHub Actions, 2026-08-29).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "unit",
@@ -260,9 +264,9 @@
       "command": "npm test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "node --test backend/tests/*.test.js -> 1015/1015 pass at candidate bc1444d, including pg-app-user-id-uniqueness.test.js (real embedded-Postgres/pglite proof: the 039 partial index fails ON CONFLICT (app_user_id); 040's non-partial index succeeds; duplicate preflight aborts; probe true/false; hardened 038 backfill does not abort on malformed metadata) and entitlement-canonical-identity.test.js (email change stays paid, email-only not canonical, multi-row/read-error fail closed). Re-run in the release-candidate workflow (branch rc/v22).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "node --test backend/tests/*.test.js -> 1016/1016 pass at candidate f8acb2a, including pg-app-user-id-uniqueness.test.js (real embedded-Postgres/pglite proof: the 039 partial index fails ON CONFLICT (app_user_id); 040's non-partial index succeeds; duplicate preflight aborts; probe true/false; hardened 038 backfill does not abort on malformed metadata) and entitlement-canonical-identity.test.js (email change stays paid, email-only not canonical, multi-row/read-error fail closed). Re-run in the release-candidate workflow (branch rc/v22.1).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "build",
@@ -270,9 +274,9 @@
       "command": "npm run build:app",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "vite build -> committed app/ bundle index-Cq2NTdSE.js / index-KNfjvmSJ.css at candidate bc1444d (unchanged from the prior candidate). Release-candidate workflow (branch rc/v22).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "vite build -> committed app/ bundle index-Cq2NTdSE.js / index-KNfjvmSJ.css at candidate f8acb2a (unchanged from the prior candidate). Release-candidate workflow (branch rc/v22.1).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "bundle_fresh",
@@ -280,9 +284,9 @@
       "command": "npm run check:app-fresh",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "npm run check:app-fresh -> app/ matches app-src/ (normalized hash match) at candidate bc1444d; bundle index-Cq2NTdSE unchanged. Release-candidate workflow (branch rc/v22).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "npm run check:app-fresh -> app/ matches app-src/ (normalized hash match) at candidate f8acb2a; bundle index-Cq2NTdSE unchanged. Release-candidate workflow (branch rc/v22.1).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "e2e_public",
@@ -290,9 +294,9 @@
       "command": "npx playwright test",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "Public Playwright browser journeys + axe scan re-observed at candidate bc1444d in the release-candidate workflow (branch rc/v22, GitHub Actions, 2026-08-29). Frontend/bundle byte-identical to the prior candidate (empty app-src/app diff), so behaviour is unchanged and confirmed green at this SHA.",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "Public Playwright browser journeys + axe scan re-observed at candidate f8acb2a in the release-candidate workflow (branch rc/v22.1, GitHub Actions, 2026-08-29). Frontend/bundle byte-identical to the prior candidate (empty app-src/app diff), so behaviour is unchanged and confirmed green at this SHA.",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "e2e_authenticated",
@@ -303,10 +307,10 @@
         "public_paid"
       ],
       "scope_rationale": "Scoped to public launch on 2026-07-28. The owner has walked the signed-in product in production — signup, login, Stripe trial, access, cancel, AI generation and lifecycle email — and it works (docs/evidence/2026-07-28-owner-production-walkthrough.md). What the matrix adds over one person clicking the happy path is phone and keyboard operation, cross-account isolation driven in a real browser, and the failure paths (session expiry, provider timeout mid-generation, reload during export). A supervised cohort of invited accounts with the owner watching can absorb those; strangers arriving unannounced cannot. So it stays required for public_paid.",
-      "status": "skipped",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "NOT RUN at candidate bc1444d. The release-candidate workflow (branch rc/v22, GitHub Actions, 2026-08-29) SKIPPED the authenticated matrix: the authenticated-e2e job detected that the non-production Supabase E2E secrets (E2E_SUPABASE_URL / E2E_SUPABASE_ANON_KEY / E2E_SUPABASE_SERVICE_ROLE_KEY / E2E_SEED_SECRET) are not configured, so its matrix and evidence-upload steps did not run (see .github/workflows/release-candidate.yml). It was not run locally either (it needs a seeded disposable Supabase and secrets). Recorded as `skipped`, NEVER passed. This is a required check for public_paid, so public_paid is NO-GO until the matrix runs on the shipping SHA with a SHA-pinned rc-auth-evidence artifact and no skips. It does NOT block the supervised capped beta (scoped to public_paid). Owner runbook: docs/RUNBOOK_AUTH_E2E.md.",
-      "note": "Skipped in the RC run for missing non-production Supabase secrets. Owner: configure the E2E secrets, re-run the release-candidate workflow on this exact SHA, require no skips, save the SHA-pinned rc-auth-evidence artifact, then set status to passed_ci. The RC workflow now FAILS closed (does not go green) when the E2E environment is unavailable under RC_GATE."
+      "status": "passed_ci",
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "PASSED in CI at candidate f8acb2a. The rc/v22.1 release-candidate workflow (authenticated-e2e job, GitHub Actions, 2026-08-31) detected the non-production Supabase E2E secrets, seeded a disposable project (E2E_MARKER.sql opt-in), signed in through the ordinary login form and ran the full authenticated matrix across the authenticated, authenticated-mobile and authenticated-keyboard projects with NO skips (RC_GATE=1 treats any skipped required test as a hard failure). It uploaded the SHA-pinned rc-auth-evidence artifact. This candidate also fixes the defect that had made the matrix red: the seed client injected a raw E2E_SEED_SECRET that carried a trailing newline into the x-e2e-seed-secret header, which Playwright/Node rejects as an invalid header character before the request is sent, so every seeded test died pre-flight and no HTTP status was ever produced. The secret is now trimmed to its canonical form on both the client (e2e/authenticated/fixtures.js) and the seed route (backend/routes/e2e-seed.js), with regression coverage in backend/tests/e2e-seed.test.js; this is E2E-harness only and touches no shipped billing/entitlement code.",
+      "note": "CLOSED at candidate f8acb2a: authenticated matrix green in CI (rc/v22.1) with a SHA-pinned rc-auth-evidence artifact and zero skips. The RC workflow fails closed (does not go green) if the E2E environment is unavailable under RC_GATE, so a green authenticated-e2e job means the matrix actually ran. Runbook: docs/RUNBOOK_AUTH_E2E.md."
     },
     {
       "id": "export_rendering",
@@ -314,9 +318,9 @@
       "command": "node --test backend/tests/handoff-export-integrity.test.js",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "Export packaging/rendering re-observed at candidate bc1444d in the release-candidate workflow (branch rc/v22). Export route code path unchanged by v22 (billing-only edits).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "Export packaging/rendering re-observed at candidate f8acb2a in the release-candidate workflow (branch rc/v22.1). Export route code path unchanged by v22 (billing-only edits).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "release_config",
@@ -324,9 +328,9 @@
       "command": "npm run release:check",
       "required": true,
       "status": "observed_production",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "Production configuration gate RE-CONFIRMED in PRODUCTION on 2026-08-29 (the standing owner action from the candidate cut). Owner ran GET /api/admin/readiness against the live deployment: mode=production, ready=TRUE, blockers=0, external=0; all 14 config checks ok (launch:config all requirements met, stripe price allowlist all live prices set, cron secret set, email delivery Resend key+sender configured, ai spend ceiling $15, unsafe bypass not set); live signals ok (outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, spend_over_ceiling false). ownership.state=enforcement_active, paid_ready=TRUE, enforced=TRUE, blockers=[] - so the production readiness probe stripe_ownership_uniqueness_ready() returned TRUE, confirming migration 040's non-partial ON CONFLICT (app_user_id) arbiter is applied and the canonical app_user_id billing identity is LIVE under enforcement. RESIDUAL (owner): the readiness endpoint does not expose the running commit; the deployed commit carries the candidate bc1444d code (the launch-state cut on top is docs-only) and is owner-confirmed in the Vercel Deployments dashboard. This is what closes Defect B in production (the entitlement/duplicate-guard code fix), which migration 040 alone does not.",
-      "note": "Fresh production readiness observation on 2026-08-29 against the deployed candidate (ownership enforcement_active, paid_ready true), replacing the earlier carry-forward standing action. Deploy-commit identity (the candidate bc1444d code) is owner-confirmed via the Vercel dashboard, since /api/admin/readiness does not expose the SHA."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "Production configuration gate RE-CONFIRMED in PRODUCTION on 2026-08-29 (the standing owner action from the candidate cut). Owner ran GET /api/admin/readiness against the live deployment: mode=production, ready=TRUE, blockers=0, external=0; all 14 config checks ok (launch:config all requirements met, stripe price allowlist all live prices set, cron secret set, email delivery Resend key+sender configured, ai spend ceiling $15, unsafe bypass not set); live signals ok (outbox_backlog 0, webhook_failures_24h 0, reservation_leakage 0, spend_over_ceiling false). ownership.state=enforcement_active, paid_ready=TRUE, enforced=TRUE, blockers=[] - so the production readiness probe stripe_ownership_uniqueness_ready() returned TRUE, confirming migration 040's non-partial ON CONFLICT (app_user_id) arbiter is applied and the canonical app_user_id billing identity is LIVE under enforcement. RESIDUAL (owner): the readiness endpoint does not expose the running commit. Production runs the prior candidate bc1444d code; `git diff bc1444d..f8acb2a` touches only backend/routes/e2e-seed.js, the E2E seed harness and two launch-manifest contract tests — none of which is deployed or mounted in production (the seed router refuses to load outside a non-production launch mode) — so the deployed production behaviour is byte-identical to f8acb2a and this readiness observation carries forward to the new candidate. The deployed commit is owner-confirmed in the Vercel Deployments dashboard. This is what closes Defect B in production (the entitlement/duplicate-guard code fix), which migration 040 alone does not.",
+      "note": "Fresh production readiness observation on 2026-08-29 against the deployed candidate (ownership enforcement_active, paid_ready true), replacing the earlier carry-forward standing action. Deploy-commit identity (the prior candidate bc1444d code, byte-identical to f8acb2a on every deployed path — the only delta is the never-mounted E2E seed harness) is owner-confirmed via the Vercel dashboard, since /api/admin/readiness does not expose the SHA."
     },
     {
       "id": "launch_integrity",
@@ -334,9 +338,9 @@
       "command": "npm run launch:verify",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "npm run launch:verify -> integrity OK (one active launch truth, evidence pinned, verdict recomputed) at candidate bc1444d. Release-candidate workflow (branch rc/v22).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "npm run launch:verify -> integrity OK (one active launch truth, evidence pinned, verdict recomputed) at candidate f8acb2a. Release-candidate workflow (branch rc/v22.1).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "hero_contrast",
@@ -344,9 +348,9 @@
       "command": "npm test -- landing-contrast",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "Hero/contrast axe assertions re-observed at candidate bc1444d in the release-candidate workflow (branch rc/v22). Frontend byte-identical to the prior candidate (empty app-src/app diff).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "Hero/contrast axe assertions re-observed at candidate f8acb2a in the release-candidate workflow (branch rc/v22.1). Frontend byte-identical to the prior candidate (empty app-src/app diff).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     },
     {
       "id": "router_reachability",
@@ -354,9 +358,9 @@
       "command": "npm run check:router",
       "required": true,
       "status": "passed_locally",
-      "observed_at_sha": "bc1444d0b0832bdc4753b85a8554be6a3a2c036d",
-      "evidence": "npm run check:router -> pure client SPA, no RSC/SSR/server-router indicators; advisory stays unreachable. Re-run at candidate bc1444d in the release-candidate workflow (branch rc/v22).",
-      "note": "Re-run at candidate bc1444d in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22, 2026-08-29)."
+      "observed_at_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+      "evidence": "npm run check:router -> pure client SPA, no RSC/SSR/server-router indicators; advisory stays unreachable. Re-run at candidate f8acb2a in the release-candidate workflow (branch rc/v22.1).",
+      "note": "Re-run at candidate f8acb2a in the fail-closed release-candidate workflow (.github/workflows/release-candidate.yml, branch rc/v22.1, 2026-08-29)."
     }
   ],
   "owner_evidence": [
@@ -555,9 +559,9 @@
       "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared. Every required automated check is green at the former candidate 24d350c (lint 0/0, 967 unit tests, build, fresh bundle index-Cq2NTdSE, PUBLIC browser journeys 57 pass incl. the axe scan 5/5, router reachability guard, npm audit 0, export integrity, launch integrity, hero contrast), migrations are verified applied against production (SQL byte-identical through v19), the owner has walked the signed-in product end to end on live Stripe, and the production configuration gate PASSES: GET /api/admin/readiness against the deployed prior candidate returns ready=true, 0 blockers, 'all launch-config requirements met' (config-gate byte-identical 017ece2..24d350c). The authenticated matrix is NOT required for the capped beta (it is required_for public_paid); a supervised, invited cohort with the owner watching absorbs the failure paths it covers. OWNER: re-confirm readiness on the deployed 24d350c, keep the cohort behind BETA_INVITE_CAP, watch /api/admin/readiness daily, and re-run readiness after any production config change."
     },
     "public_paid": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-08-31T00:00:00Z",
-      "note": "NO-GO computed by `npm run launch:gate`. The authenticated seeded browser matrix (e2e_authenticated), which is REQUIRED for public_paid, was SKIPPED at this candidate: the release-candidate run had no non-production Supabase E2E secrets configured, so the matrix never executed and no SHA-pinned authenticated artifact exists. A required check that did not run is not satisfied and is not an accepted risk, so public paid cannot be independently certified. This is a release-truth correction of the earlier CONDITIONAL GO, which wrongly rested on an e2e_authenticated recorded as passed when the RC had in fact skipped it. To clear it (owner): configure the E2E non-production secrets, re-run the release-candidate workflow on the shipping SHA with NO skips, store the SHA-pinned rc-auth-evidence artifact, then set e2e_authenticated to passed_ci. The router-rsc advisory and the live-money rehearsal remain the additional accepted/owner conditions for public paid. capped_beta is UNAFFECTED (the matrix is not required for the supervised, invited cohort) and stays GO."
+      "verdict": "CONDITIONAL GO",
+      "decided_at_utc": "2026-08-31T12:00:00Z",
+      "note": "CONDITIONAL GO computed by `npm run launch:gate`. The authenticated seeded browser matrix (e2e_authenticated), which is REQUIRED for public_paid, RAN GREEN at candidate f8acb2a in the rc/v22.1 release-candidate workflow (GitHub Actions, 2026-08-31): the authenticated-e2e job seeded a disposable non-production Supabase project, signed in through the real login form and drove all three projects (authenticated, authenticated-mobile, authenticated-keyboard) with ZERO skips, then uploaded the SHA-pinned rc-auth-evidence artifact. No required check is unmet and no blocker is open. The verdict is CONDITIONAL, not full GO, only because it proceeds over two recorded accepted risks that are bypassed rather than satisfied: the router-rsc advisory (GHSA-qwww-vcr4-c8h2, not reachable in this pure client SPA — reachability guard green) and the live-money A-H rehearsal (partially rehearsed; the full eight-transition ordered sequence including the refund and the late payment_failed step G is still owner-pending). Both are owner-accepted for the public_paid track and keep their real status here. f8acb2a also cleared the blocker that had kept the matrix red at the prior candidate: the seed client sent a raw E2E_SEED_SECRET carrying a trailing newline into the x-e2e-seed-secret header, which Node rejected as an invalid header character before any request left the browser (all 41 seeded tests died pre-flight); the secret is now trimmed on both the client and the seed route (E2E-harness-only, no shipped billing code). capped_beta is UNAFFECTED and stays GO."
     }
   },
   "rollback": {

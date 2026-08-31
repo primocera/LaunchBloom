@@ -10,14 +10,14 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `rc/v22` · generated 2026-08-31T00:00:00Z
+Repository `primocera/LaunchBloom` · branch `rc/v22.1` · generated 2026-08-31T12:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **NO-GO** | required check e2e_authenticated is skipped |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: router-rsc-advisory, live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -28,8 +28,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `bc1444d0b0832bdc4753b85a8554be6a3a2c036d` (frozen)
-- HEAD now: `bc1444d0b0832bdc4753b85a8554be6a3a2c036d`
+- Candidate SHA: `f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d` (frozen)
+- HEAD now: `f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d`
 - Bundle: index-Cq2NTdSE.js, index-KNfjvmSJ.css
 - Environment class: production
 
@@ -78,17 +78,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `bc1444d` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `bc1444d` | yes |
-| Production build | `npm run build:app` | passed locally | `bc1444d` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `bc1444d` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `bc1444d` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | SKIPPED | `bc1444d` | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `bc1444d` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `bc1444d` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `bc1444d` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `bc1444d` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `bc1444d` | yes |
+| ESLint | `npm run lint` | passed locally | `f8acb2a` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `f8acb2a` | yes |
+| Production build | `npm run build:app` | passed locally | `f8acb2a` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `f8acb2a` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `f8acb2a` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed in CI | `f8acb2a` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `f8acb2a` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `f8acb2a` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `f8acb2a` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `f8acb2a` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `f8acb2a` | yes |
 
 ## Owner evidence
 
@@ -114,7 +114,7 @@ over it, and never that it was resolved.
 | P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at prior candidate 017ece2 (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
 | P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
 
-**Public paid launch (NO-GO) rests on these accepted risks:**
+**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
 
 - `router-rsc-advisory` — react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-router-rsc-csrf-advisory)
 - `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
