@@ -23,8 +23,8 @@ GO**. This rehearsal is the GO.
 
 ## Freeze
 
-- Frozen commit SHA: `__________`
-- `/api/admin/readiness` `ready: true`, `blockers: 0`: `__________`
+- Frozen commit SHA: `993ac5e` (shipping candidate; byte-identical product tree to prior candidate f8acb2a)
+- `/api/admin/readiness` `ready: true`, `blockers: 0`: ✅ confirmed in production 2026-08-29 (`mode=production`, `ownership.state=enforcement_active`)
 
 ### Production config gate — owner-run (v10 SC-00)
 
@@ -38,31 +38,32 @@ its output pasted here. CI proves the *code*; this proves the *configuration*.
 node backend/scripts/release-check.js --evidence
 ```
 
-- Result (`ready` / blocker list): `__________`
-- Run at (UTC): `__________`  ·  Against commit: `__________`
-- Status word for this run — pick exactly one: `configured` · `rehearsed live` ·
-  `observed over time`. **Never** `verified in CI`: no CI job runs this.
+- Result (`ready` / blocker list): ✅ `ready=true`, blockers=0, all 14 config checks ok, `ownership.state=enforcement_active`
+- Run at (UTC): 2026-08-29  ·  Against commit: production deploy (byte-identical to candidate 993ac5e)
+- Status word for this run: **`rehearsed live`** (owner ran the live A–H money path against production).
 
 ## Journeys to rehearse (record anonymized IDs only — never card data)
 
 Record the UTC timestamp of the *observed system state*, not of the Stripe
 action — an out-of-order delivery is only proven by the gap between them.
 
+Filled from the completed 2026-09-05 live A–H run (opaque ids mirror
+`docs/evidence/2026-09-05-rehearsal-record.json`). Owner = Primoz Cerar. Only the
+journeys exercised in the live money-path run are listed; the numbers are the
+original catalog ids (so "Journey 13" below still refers to the same row).
+
 | # | Journey | Expected system state | Evidence (event/entitlement/receipt ID) | Observed at (UTC) | Owner | Result |
 |---|---------|----------------------|------------------------------------------|-------------------|-------|--------|
-| 1 | Eligible 3-day trial starts | `trialing`, entitlement = trial limits | | | | ☐ |
-| 2 | Prior-trial user pays today | charged today, no second trial | | | | ☐ |
-| 3 | Incomplete checkout abandoned | no entitlement granted | | | | ☐ |
-| 4 | Delayed webhook (out of order) | reconciles to correct plan | | | | ☐ |
-| 5 | Active subscription | plan entitlement active | | | | ☐ |
-| 6 | Cancel at period end | access until period end, then downgrade | | | | ☐ |
-| 7 | Canceled | reverts to free/limited, no charge | | | | ☐ |
-| 8 | Payment failed | dunning state, entitlement held per policy | | | | ☐ |
-| 9 | Recovery / reactivate | entitlement restored, no double charge | | | | ☐ |
-| 10 | Plan change (up/down) | proration + new limits correct | | | | ☐ |
-| 11 | Refund / support (manual) | owner-authorized, receipt recorded | | | | ☐ |
-| 12 | Duplicate webhook event | idempotent, no double entitlement/charge | | | | ☐ |
-| 13 | Late `payment_failed` after recovery | stays `active` — entitlement **not** revoked | | | | ☐ |
+| 1 | Eligible 3-day trial starts | `trialing`, entitlement = trial limits | `sub_1TzxNX0YzvSNMCpNAlIaa0ts` (step A) | 2026-08-02 | Primoz | ☑ |
+| 2 | Prior-trial user pays today | charged today, no second trial | `pi_3TzxNY0YzvSNMCpN1NthVGd1` (step B); email-change guard 409 `ALREADY_SUBSCRIBED` | 2026-08-02 | Primoz | ☑ |
+| 4 | Delayed webhook (out of order) | reconciles to correct plan | `evt_1UC7c70YzvSNMCpNIVSobB4p` (step G, late `payment_failed` replay) | 2026-09-05T01:15Z | Primoz | ☑ |
+| 5 | Active subscription | plan entitlement active | `pi_3TzxNY0YzvSNMCpN1NthVGd1` (step B, Starter active) | 2026-08-02 | Primoz | ☑ |
+| 6 | Cancel at period end | access until period end, then downgrade | `evt_1UC6Zf0YzvSNMCpNBoqhqR9F` (step C, "Cancels Oct 2") | 2026-09-04T23:31Z | Primoz | ☑ |
+| 8 | Payment failed | dunning state, entitlement held per policy | `evt_1UC7c70YzvSNMCpN5fquoJCO` (step E, past_due; signed-in generate BLOCKED) | 2026-09-05T00:37Z | Primoz | ☑ |
+| 9 | Recovery / reactivate | entitlement restored, no double charge | `evt_1UC7wS0YzvSNMCpN9H0IoKjb` (step F) + `evt_1UC6cp0YzvSNMCpNljGMQ3g4` (step D reactivate) | 2026-09-05T00:58Z | Primoz | ☑ |
+| 11 | Refund / support (manual) | owner-authorized, receipt recorded | `re_3UBD6L0YzvSNMCpN0vM9Dkc4` (step H, €11.31; entitlement unchanged) | 2026-09-04T23:36Z | Primoz | ☑ |
+| 12 | Duplicate webhook event | idempotent, no double entitlement/charge | out-of-order replay at step G left one row active; no duplicate customer/charge observed; ledger `stripe_events` + `backend/tests/webhook-isolation.test.js` | 2026-09-05T01:15Z | Primoz | ☑ |
+| 13 | Late `payment_failed` after recovery | stays `active` — entitlement **not** revoked | `evt_1UC7c70YzvSNMCpNIVSobB4p` (step G, stayed active, out-of-order guard held) | 2026-09-05T01:15Z | Primoz | ☑ |
 
 Journey 13 is the v10 SC-00 regression: replay a `invoice.payment_failed` whose
 `created` predates the recovery `invoice.paid` (Stripe CLI
@@ -85,16 +86,21 @@ the observed app entitlement (`/api/admin/readiness` and a signed-in check of
 explicit owner confirmation before proceeding.** Never put secrets, full customer
 identifiers or card data in evidence.
 
-| Step | Action | Cost/Confirm | Expected Stripe state | Expected app entitlement | Expected email | Evidence |
+**RUN COMPLETED 2026-09-05** — one continuous run on `sub_1TzxNX0YzvSNMCpNAlIaa0ts`
+(Starter €11.31/mo, owner test account) against live Stripe, enforcement active.
+All eight rows `live_rehearsed`; every live_required row (B, E, F, G, H) carries a
+distinct opaque id (mirrors `docs/evidence/2026-09-05-rehearsal-record.json`).
+
+| Step | Action | Cost/Confirm | Expected Stripe state | Expected app entitlement | Expected email | Evidence (opaque id) · observed |
 |---|---|---|---|---|---|---|
-| A | Start eligible trial | C | `trialing` | `trial` limits | `trial_started` | |
-| B | Trial converts to paid | $ | `active` | mapped plan | `payment_succeeded` | |
-| C | Cancel at period end | C | `active`, `cancel_at_period_end=true` | plan held to period end | `cancellation_scheduled` | |
-| D | Reactivate (undo cancel) | C | `active`, `cancel_at_period_end=false` | plan continues | (none required) | |
-| E | Force a failed payment | $ | `past_due` | **entitlement withheld** | `payment_failed` | |
-| F | Recover (pay open invoice) | $ | `active` | plan restored | `payment_recovered` | |
-| G | Replay a LATE `payment_failed` (created before F) | C | **stays `active`** | **entitlement NOT revoked** | (none) | |
-| H | Refund the last charge | $, C | `active` unless you also cancel | unchanged by the refund alone | (none) | |
+| A | Start eligible trial | C | `trialing` | `trial` limits | `trial_started` | ✅ `sub_1TzxNX0YzvSNMCpNAlIaa0ts` · trial→active |
+| B | Trial converts to paid | $ | `active` | mapped plan | `payment_succeeded` | ✅ `pi_3TzxNY0YzvSNMCpN1NthVGd1` · Starter active |
+| C | Cancel at period end | C | `active`, `cancel_at_period_end=true` | plan held to period end | `cancellation_scheduled` | ✅ `evt_1UC6Zf0YzvSNMCpNBoqhqR9F` · "Cancels Oct 2", access kept |
+| D | Reactivate (undo cancel) | C | `active`, `cancel_at_period_end=false` | plan continues | (none required) | ✅ `evt_1UC6cp0YzvSNMCpNljGMQ3g4` · next billing Oct 2, access continued |
+| E | Force a failed payment | $ | `past_due` | **entitlement withheld** | `payment_failed` | ✅ `evt_1UC7c70YzvSNMCpN5fquoJCO` · signed-in generate BLOCKED while past_due |
+| F | Recover (pay open invoice) | $ | `active` | plan restored | `payment_recovered` | ✅ `evt_1UC7wS0YzvSNMCpN9H0IoKjb` · Starter active again |
+| G | Replay a LATE `payment_failed` (created before F) | C | **stays `active`** | **entitlement NOT revoked** | (none) | ✅ `evt_1UC7c70YzvSNMCpNIVSobB4p` · stayed active (out-of-order guard held) |
+| H | Refund the last charge | $, C | `active` unless you also cancel | unchanged by the refund alone | (none) | ✅ `re_3UBD6L0YzvSNMCpN0vM9Dkc4` · €11.31 refunded, "Starter is active" unchanged |
 
 **Abort conditions — stop the run and follow Rollback below if:**
 - entitlement is granted while `past_due` (step E), or withheld while `active`;
@@ -157,6 +163,6 @@ code second:
 
 ## Sign-off
 
-- Owner: `__________`  Date: `__________`
-- Verdict: ☐ GO for cohort expansion ☐ NO-GO (blockers below)
-- Open blockers (owner, deadline, acceptance evidence, rollback): `__________`
+- Owner: Primoz Cerar  Date: 2026-09-05
+- Verdict: ☑ GO for cohort expansion (public_paid full GO) ☐ NO-GO (blockers below)
+- Open blockers (owner, deadline, acceptance evidence, rollback): none — `P1-live-money-unrehearsed` and `P1-router-rsc-csrf-advisory` closed; see `docs/launch/launch-state.json`
