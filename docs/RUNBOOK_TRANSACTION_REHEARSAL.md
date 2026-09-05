@@ -1,5 +1,17 @@
 # Runbook — Paid Transaction Rehearsal (owner-operated)
 
+> ✅ **STATUS: COMPLETED 2026-09-05.** The owner executed the full eight-transition
+> ordered recovery sequence (steps A–H) against real live Stripe under enforcement
+> (`STRIPE_OWNERSHIP_ENFORCED=1`, readiness `ownership.state=enforcement_active`),
+> including E (past_due), F (recovery), G (late `payment_failed` after recovery,
+> out-of-order) and H (refund leaves entitlement unchanged). Anonymized evidence:
+> `docs/evidence/2026-09-05-rehearsal-record.json` (validator: complete for
+> public_paid) and `docs/evidence/2026-09-05-live-money-rehearsal.md`. This closed
+> blocker `P1-live-money-unrehearsed` and moved `live_money_rehearsal` to
+> `observed`; with the router-RSC advisory also closed, `public_paid` is **full GO**
+> (see `docs/launch/launch-state.json`). The procedure below is retained for
+> re-runs and future candidates.
+
 **Purpose:** prove, on a frozen commit, that every real money path works before
 expanding acquisition. Automated release checks (`npm run check`,
 `npm run release:evidence`, `GET /api/admin/readiness`) are necessary but **not a
