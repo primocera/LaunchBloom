@@ -1,0 +1,56 @@
+{
+  "schema": "rehearsal-record-1",
+  "candidate_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+  "matrix": "ordered_recovery_sequence",
+  "transition_count": 8,
+  "rows": [
+    {
+      "id": "A",
+      "status": "live_rehearsed",
+      "evidence": "sub_1TzxNX0YzvSNMCpNAlIaa0ts",
+      "observed_at_utc": "2026-08-02T11:16:27Z"
+    },
+    {
+      "id": "B",
+      "status": "live_rehearsed",
+      "evidence": "pi_3TzxNY0YzvSNMCpN1NthVGd1",
+      "observed_at_utc": "2026-08-02T11:16:27Z"
+    },
+    {
+      "id": "C",
+      "status": "live_rehearsed",
+      "evidence": "evt_1UC6Zf0YzvSNMCpNBoqhqR9F",
+      "observed_at_utc": "2026-09-04T23:31:11Z"
+    },
+    {
+      "id": "D",
+      "status": "live_rehearsed",
+      "evidence": "evt_1UC6cp0YzvSNMCpNljGMQ3g4",
+      "observed_at_utc": "2026-09-04T23:34:26Z"
+    },
+    {
+      "id": "E",
+      "status": "live_rehearsed",
+      "evidence": "evt_1UC7c70YzvSNMCpN5fquoJCO",
+      "observed_at_utc": "2026-09-05T00:37:47Z"
+    },
+    {
+      "id": "F",
+      "status": "live_rehearsed",
+      "evidence": "evt_1UC7wS0YzvSNMCpN9H0IoKjb",
+      "observed_at_utc": "2026-09-05T00:58:48Z"
+    },
+    {
+      "id": "G",
+      "status": "live_rehearsed",
+      "evidence": "evt_1UC7c70YzvSNMCpNIVSobB4p",
+      "observed_at_utc": "2026-09-05T01:15:00Z"
+    },
+    {
+      "id": "H",
+      "status": "live_rehearsed",
+      "evidence": "re_3UBD6L0YzvSNMCpN0vM9Dkc4",
+      "observed_at_utc": "2026-09-04T23:36:28Z"
+    }
+  ]
+}
