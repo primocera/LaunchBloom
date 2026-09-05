@@ -46,9 +46,9 @@ and the value loop, pricing experiments, and channels (content, communities,
 outbound, partnerships). Ship features again only when real user evidence demands
 a specific one.
 
-**E2E testing is complete.** The public (57) and authenticated (45/45 — desktop,
-mobile, keyboard, real Supabase) browser matrices exist, pass and gate the
-release. If a future pack asks to "add E2E tests," that is **already satisfied** —
+**E2E testing is complete.** The public and authenticated (desktop, mobile,
+keyboard, real non-production Supabase) browser matrices exist, pass green in CI
+and gate the release. If a future pack asks to "add E2E tests," that is **already satisfied** —
 verify the existing suites at the new candidate and stop; do not rebuild them.
 Add a spec only for a genuinely new, uncovered user flow.
 
@@ -159,7 +159,7 @@ automatically.
 | [`docs/V10_PLAN.md`](docs/V10_PLAN.md) | The v10 execution plan |
 | [`docs/GOLDEN_EVAL_V10.md`](docs/GOLDEN_EVAL_V10.md) | What the quality gate does and does not measure |
 | [`docs/LIFECYCLE_EMAIL_V10.md`](docs/LIFECYCLE_EMAIL_V10.md) | Every email, its trigger, dedupe key and category |
-| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal (still outstanding) |
+| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal — COMPLETED 2026-09-05 (A–H live) |
 | [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) | **Start here.** Current owner/next-writer handoff: state, closed work, accepted risks, next focus |
 | [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) | Prior owner handoff (SUPERSEDED by v16) |
 | [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | Generated launch truth — never edit by hand |
@@ -184,15 +184,17 @@ verified via `/api/admin/readiness` (`mode: production`, all readiness checks
 green, 0 blockers), unsubscribe suppression honoured in both directions, and a
 daily AI spend ceiling live.
 
-The automated signed-in browser matrix has since been **executed** against a
-disposable non-production Supabase and is now **45/45 green** (`passed_locally`) —
-the `P0-no-authenticated-e2e` blocker is **closed**. What remains accepted rather
-than proven, signed and dated in the record: the live billing rehearsal (the
-canonical eight-transition A–H matrix, `not_run` — one real $11.31 charge has been
-taken, but the full ordered sequence with refund and late `payment_failed` is
-still outstanding) and the router RSC advisory. Withdrawing any acceptance returns
-the verdict to NO-GO on its own. (Exact counts and the full blocker list live in
-the canonical launch-state, not here.)
+The automated signed-in browser matrix runs against a disposable non-production
+Supabase and is **green in CI** (`passed_ci`) at the shipping candidate — the
+`P0-no-authenticated-e2e` blocker is **closed**. Both conditions that formerly
+rode on accepted risk are now **satisfied and closed**: the live billing
+rehearsal — the canonical eight-transition A–H matrix — was **completed live on
+2026-09-05** (all eight transitions including refund and the late
+`payment_failed`-after-recovery step, anonymized evidence in
+`docs/evidence/2026-09-05-rehearsal-record.json`), and the router RSC advisory is
+**closed** (guard green, no RSC entry point). No P0/P1 blocker remains open or
+accepted, so `public_paid` is a full **GO**. (Exact counts and the full blocker
+list live in the canonical launch-state, not here.)
 
 Start with [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) for the
 full picture and what to pick up next. Earlier GO/NO-GO and handoff documents

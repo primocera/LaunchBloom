@@ -30,10 +30,12 @@
 > `resolveEntitlement`/`planFor` now resolve the customer by the canonical
 > `findCustomerRow` (stable `app_user_id` under enforcement) so the plan display
 > and duplicate-subscription guard survive an email change; plus 038's UUID-cast
-> backfill hardened to exact validation. Scoped to those named defects only —
-> owner-only production steps (apply 038/039/040, backfill, enable
-> `STRIPE_OWNERSHIP_ENFORCED`, live-money rehearsal) remain **NOT RUN**; anything
-> beyond the v22 doc still defaults to the marketing pack above.
+> backfill hardened to exact validation. Scoped to those named defects only. The
+> owner-only production steps are now **DONE** (2026-09-05): migrations 038/039/040
+> applied, `app_user_id` backfilled, `STRIPE_OWNERSHIP_ENFORCED=1` live
+> (readiness `ownership.state=enforcement_active`), and the live-money A–H
+> rehearsal completed — so with the router-RSC advisory also closed, `public_paid`
+> is **full GO**. Anything beyond the v22 doc still defaults to the marketing pack above.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

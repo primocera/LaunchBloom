@@ -43,20 +43,21 @@ This note draws the line between **real work** (keep doing) and **churn** (stop)
 
 ---
 
-## The three recurring items — why a pack can never close them
+## The three recurring items — ALL NOW CLOSED (2026-09-05)
 
-| Item | Status since | Closes *only* when… |
+These were the three owner-gated items a pack could never close. As of 2026-09-05
+**all three are done**, so `public_paid` is a full GO — none is outstanding.
+
+| Item | Status | Closed by |
 |---|---|---|
-| **Authenticated E2E matrix** (`test:e2e:auth`) | v11 | the owner runs it once against a **throwaway non-production Supabase** (new free org = 2 free slots, ~10 min) and pins `passed_locally` at the candidate SHA |
-| **Live-money rehearsal** (A–H) | v13 (only step 1 of 8 ever recorded — `docs/evidence/2026-08-02-live-money-rehearsal.md`) | the **owner** runs the ordered sequence on real Stripe and records it via `docs/evidence/rehearsal-record.json` + `npm run rehearsal:validate` |
-| **Router advisory** GHSA-qwww-vcr4-c8h2 | v11 | react-router leaves 7.x (React-19 / router-8 / Vite-7 migration). Until then it is **not reachable** (pure client SPA, guarded by `npm run check:router`), accepted with `review_by: 2026-11-04` |
+| **Authenticated E2E matrix** (`test:e2e:auth`) | ✅ **passed_ci** | ran GREEN in CI at the shipping candidate (release-candidate workflow on `rc/v22.2`, authenticated-e2e job, SHA-pinned `rc-auth-evidence` artifact, zero skips) |
+| **Live-money rehearsal** (A–H) | ✅ **complete (live)** | owner ran the full ordered A–H sequence on real Stripe 2026-09-05 — `docs/evidence/2026-09-05-rehearsal-record.json` (validator: complete) + `docs/evidence/2026-09-05-live-money-rehearsal.md` |
+| **Router advisory** GHSA-qwww-vcr4-c8h2 | ✅ **closed** | owner decision: not reachable (pure client SPA, `npm run check:router` green) and absent from `npm audit`; blocker `P1-router-rsc-csrf-advisory` closed |
 
-All three are **owner-gated by design**. Claude Code correctly refuses to run
-them (no live money, no production DB seeding). So a pack that "addresses" them
-can only add scaffolding — validators, guards, matrices, runbooks — which is
-what v13/v14/v15 each did. **The scaffolding is now complete.** There is nothing
-left to build here. The next status change is an owner *doing* the task, not a
-pack describing it.
+All three were **owner-gated by design** — Claude Code refused to run them (no
+live money, no production DB seeding). The owner has now done them, and the
+evidence is recorded in the canonical launch-state. There is nothing left to
+build or run here.
 
 ### The rule for the next pack
 
@@ -92,9 +93,8 @@ Single source of truth: `docs/launch/launch-state.json` (rendered:
 `docs/LAUNCH_STATE.md`). As of the **v18** candidate (see the manifest for the
 exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
 
-- **Capped beta: GO.** Nothing blocks it. It needs a **deploy**, not more
-  evidence. The authenticated E2E matrix now passes 45/45, so the old E2E blocker
-  is closed.
+- **Capped beta: GO.** Nothing blocks it. The authenticated E2E matrix passes
+  green in CI at the shipping candidate, so the old E2E blocker is closed.
 - **Public paid: GO.** Full GO as of 2026-09-05: the live-money A–H rehearsal is
   complete (all eight transitions live) and the not-reachable router advisory
   (GHSA-qwww-vcr4-c8h2, absent from `npm audit`) is closed by owner decision.
