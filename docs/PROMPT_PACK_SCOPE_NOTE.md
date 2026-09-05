@@ -3,7 +3,9 @@
 > **🚦 STOP — read this first (as of v18, 2026-08).**
 > **The product build is finished for launch. The constraint on this business is
 > no longer code — it is users.** Every automated gate is green at the candidate,
-> the authenticated + public browser E2E matrices pass, `npm audit` is clean, and
+> the authenticated + public browser E2E matrices pass, the react-router tree
+> carries no open advisory (three unrelated moderate `qs` advisories remain, fix
+> available), and
 > the release gate is **capped-beta GO / public-paid GO** (full GO as of
 > 2026-09-05 — the live-money A–H rehearsal is complete and the router-RSC
 > advisory is closed).
@@ -94,8 +96,9 @@ exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
   evidence. The authenticated E2E matrix now passes 45/45, so the old E2E blocker
   is closed.
 - **Public paid: GO.** Full GO as of 2026-09-05: the live-money A–H rehearsal is
-  complete (all eight transitions live) and the not-reachable, `npm audit`-clean
-  router advisory is closed by owner decision. Both were owner actions, never a pack.
+  complete (all eight transitions live) and the not-reachable router advisory
+  (GHSA-qwww-vcr4-c8h2, absent from `npm audit`) is closed by owner decision.
+  Both were owner actions, never a pack.
 
 **Therefore:** the highest-value next step is not another pack. It is (a) deploy
 the capped beta and get real users, or (b) the owner spends one afternoon on the

@@ -10,7 +10,7 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `rc/v22.1` · generated 2026-09-05T02:00:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-05T02:00:00Z
 
 ## Verdict
 
@@ -28,8 +28,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d` (frozen)
-- HEAD now: `f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d`
+- Candidate SHA: `993ac5e934afbc04348b44bc8f5022ef64d8b01f` (frozen)
+- HEAD now: `993ac5e934afbc04348b44bc8f5022ef64d8b01f`
 - Bundle: index-Cq2NTdSE.js, index-KNfjvmSJ.css
 - Environment class: production
 
@@ -78,17 +78,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `f8acb2a` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `f8acb2a` | yes |
-| Production build | `npm run build:app` | passed locally | `f8acb2a` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `f8acb2a` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `f8acb2a` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed in CI | `f8acb2a` | yes |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `f8acb2a` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `f8acb2a` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `f8acb2a` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `f8acb2a` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `f8acb2a` | yes |
+| ESLint | `npm run lint` | passed locally | `993ac5e` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `993ac5e` | yes |
+| Production build | `npm run build:app` | passed locally | `993ac5e` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `993ac5e` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `993ac5e` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed in CI | `993ac5e` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `993ac5e` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `993ac5e` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `993ac5e` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `993ac5e` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `993ac5e` | yes |
 
 ## Owner evidence
 

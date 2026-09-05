@@ -1,6 +1,6 @@
 {
   "schema": "rehearsal-record-1",
-  "candidate_sha": "f8acb2aefcfcaedc04af2ce3d13f885eddc6db1d",
+  "candidate_sha": "993ac5e934afbc04348b44bc8f5022ef64d8b01f",
   "matrix": "ordered_recovery_sequence",
   "transition_count": 8,
   "rows": [
