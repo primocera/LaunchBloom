@@ -10,14 +10,14 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `rc/v22.1` · generated 2026-08-31T12:00:00Z
+Repository `primocera/LaunchBloom` · branch `rc/v22.1` · generated 2026-09-05T02:00:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: router-rsc-advisory, live-money |
+| Public paid launch | **GO** | all conditions met |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -99,7 +99,7 @@ Supabase or production configuration access.
 |---|---|---|---|
 | All migrations verified applied against the production database | observed | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
 | Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email | observed | capped_beta | `docs/evidence/2026-07-28-owner-production-walkthrough.md` |
-| Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
+| Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | observed | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | live rehearsed | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
@@ -109,15 +109,7 @@ Accepted is neither closed nor passed. Every item below keeps its real
 status; an acceptance only records that a launch was allowed to proceed
 over it, and never that it was resolved.
 
-| Severity | Item | Status | Owner | Closure requirement |
-|---|---|---|---|---|
-| P1 | react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) | ACCEPTED (not closed) | owner | GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at prior candidate 017ece2 (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories. |
-| P1 | Live billing recovery has never been rehearsed against real Stripe | ACCEPTED (not closed) | owner | Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence. |
-
-**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
-
-- `router-rsc-advisory` — react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-router-rsc-csrf-advisory)
-- `live-money` — Live billing recovery has never been rehearsed against real Stripe — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
+None.
 
 ## Rollback
 

@@ -67,30 +67,44 @@ test('a server entry file is caught by its filename alone', () => {
 
 // --- accepted-risk review-date enforcement --------------------------------
 
-test('the router accepted risk carries the SC-05 metadata (owner, date, track, revisit, review_by, resolution paths)', () => {
+test('the router advisory stays mechanically governed: reachability basis on record, and full SC-05 metadata whenever it is an accepted risk', () => {
   const state = loadState();
   const b = state.blockers.find((x) => x.id === 'P1-router-rsc-csrf-advisory');
-  const acc = b.accepted_risk;
-  assert.equal(b.status, 'accepted', 'the advisory is accepted, never closed while the package is installed');
-  assert.ok(acc.accepted_by && acc.accepted_at_utc && acc.rationale);
-  assert.deepEqual(acc.tracks, ['public_paid']);
-  assert.ok(acc.revisit_at && acc.review_by, 'must carry a revisit trigger and a review_by date');
-  assert.ok(Array.isArray(acc.resolution_paths) && acc.resolution_paths.length === 2, 'two documented resolution paths');
+  assert.ok(b, 'the router advisory blocker must stay on record even once closed');
+  // The reachability basis is asserted regardless of open/accepted/closed, so
+  // the "not reachable" justification can never be quietly dropped.
+  assert.ok(
+    b.reachability_evidence && /no.?rsc|not.?reachable|pure client spa/i.test(b.reachability_evidence),
+    'reachability evidence must remain on the blocker',
+  );
+  // Status is an owner risk decision — accepted while unresolved, closed once the
+  // owner confirms (npm audit 0 + guard green) it no longer applies. It is not
+  // hard-coded here; the release gate proves the guard is still wired either way.
+  assert.ok(['accepted', 'closed', 'open'].includes(b.status));
+  if (b.status === 'accepted') {
+    const acc = b.accepted_risk;
+    assert.ok(acc.accepted_by && acc.accepted_at_utc && acc.rationale);
+    assert.deepEqual(acc.tracks, ['public_paid']);
+    assert.ok(acc.revisit_at && acc.review_by, 'an accepted advisory must carry a revisit trigger and a review_by date');
+    assert.ok(Array.isArray(acc.resolution_paths) && acc.resolution_paths.length === 2, 'two documented resolution paths');
+  }
 });
 
+// Review-date enforcement is a property of reviewProblems() itself, tested on a
+// synthetic accepted risk so it holds independently of whether the real router
+// advisory is currently accepted or has been closed by the owner.
 test('an accepted risk past its review_by fails release verification', () => {
-  const state = loadState();
-  const b = state.blockers.find((x) => x.id === 'P1-router-rsc-csrf-advisory');
-  const reviewBy = b.accepted_risk.review_by;
+  const reviewBy = '2026-11-04';
+  const state = { blockers: [{ id: 'P1-synthetic-advisory', status: 'accepted', accepted_risk: { review_by: reviewBy } }] };
   const dayAfter = new Date(Date.parse(reviewBy) + 24 * 3600 * 1000);
   const problems = reviewProblems(state, dayAfter);
-  assert.ok(problems.some((p) => /P1-router-rsc-csrf-advisory/.test(p) && /review_by/.test(p)), problems.join('\n'));
+  assert.ok(problems.some((p) => /P1-synthetic-advisory/.test(p) && /review_by/.test(p)), problems.join('\n'));
 });
 
 test('before the review date there is no review problem', () => {
-  const state = loadState();
-  const b = state.blockers.find((x) => x.id === 'P1-router-rsc-csrf-advisory');
-  const dayBefore = new Date(Date.parse(b.accepted_risk.review_by) - 24 * 3600 * 1000);
+  const reviewBy = '2026-11-04';
+  const state = { blockers: [{ id: 'P1-synthetic-advisory', status: 'accepted', accepted_risk: { review_by: reviewBy } }] };
+  const dayBefore = new Date(Date.parse(reviewBy) - 24 * 3600 * 1000);
   assert.deepEqual(reviewProblems(state, dayBefore), []);
 });
 

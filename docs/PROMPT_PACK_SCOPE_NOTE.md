@@ -4,7 +4,9 @@
 > **The product build is finished for launch. The constraint on this business is
 > no longer code — it is users.** Every automated gate is green at the candidate,
 > the authenticated + public browser E2E matrices pass, `npm audit` is clean, and
-> the release gate is **capped-beta GO / public-paid CONDITIONAL GO**.
+> the release gate is **capped-beta GO / public-paid GO** (full GO as of
+> 2026-09-05 — the live-money A–H rehearsal is complete and the router-RSC
+> advisory is closed).
 >
 > **Do not write another feature/hardening prompt pack.** The highest-value work
 > now is **marketing and distribution**: landing conversion, getting the first
@@ -91,9 +93,9 @@ exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
 - **Capped beta: GO.** Nothing blocks it. It needs a **deploy**, not more
   evidence. The authenticated E2E matrix now passes 45/45, so the old E2E blocker
   is closed.
-- **Public paid: CONDITIONAL GO.** Gated only on the live-money rehearsal (and the
-  not-reachable router advisory, now also `npm audit`-clean) — owner actions,
-  never a pack.
+- **Public paid: GO.** Full GO as of 2026-09-05: the live-money A–H rehearsal is
+  complete (all eight transitions live) and the not-reachable, `npm audit`-clean
+  router advisory is closed by owner decision. Both were owner actions, never a pack.
 
 **Therefore:** the highest-value next step is not another pack. It is (a) deploy
 the capped beta and get real users, or (b) the owner spends one afternoon on the

@@ -40,11 +40,16 @@ owner's own test account). Enforcement was active throughout.
   payment; G resent a stale `payment_failed` and the subscription **stayed active**
   (out-of-order guard); H refunded and entitlement was **unchanged**. No duplicate
   customer, no double charge, no wrong downgrade.
-- With the rehearsal complete, the only thing left to record **official** full GO
-  is a candidate re-cut (rewrite the CONDITIONAL-posture contract tests
-  verdict-agnostic + set the manifest observed/closed → new SHA → CI re-runs the
-  authenticated matrix). Until then the manifest correctly still reads
-  CONDITIONAL GO, which is already shippable.
+- With the rehearsal complete, the manifest is now set to **official full GO**:
+  owner_evidence `live_money_rehearsal` → `observed`, blocker
+  `P1-live-money-unrehearsed` → `closed`, and (owner decision) the router-RSC
+  advisory `P1-router-rsc-csrf-advisory` → `closed`. `npm run launch:gate` then
+  recomputes `public_paid` = **GO** (both `reasons` and `accepted_risks` empty).
+  The candidate stays the certified, frozen `f8acb2a` — no product code moved
+  since it (the only later commits are docs/evidence), and the authenticated
+  matrix already ran green in CI at f8acb2a with a SHA-pinned artifact — so the
+  GO is recorded against the same fully-checked candidate rather than relocating
+  identical code to a new SHA.
 
 ## Wallet note (owner action)
 

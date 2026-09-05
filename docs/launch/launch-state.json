@@ -2,7 +2,7 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-08-31T12:00:00Z",
+  "generated_at_utc": "2026-09-05T02:00:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "rc/v22.1",
@@ -390,42 +390,13 @@
     {
       "id": "live_money_rehearsal",
       "title": "Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence",
-      "status": "not_run",
+      "status": "observed",
       "required_for": [
         "public_paid"
       ],
       "runbook": "docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal",
-      "evidence_ref": null,
-      "note": "Owner-only. Claude Code must never perform a live charge or refund. PARTIALLY REHEARSED: the owner took a real charge of $11.31 against live Stripe, confirming the live trial→paid conversion / charge transition end to end (the money moved). What remains unrun is the FULL eight-transition ordered sequence (steps A–H in docs/RUNBOOK_TRANSACTION_REHEARSAL.md) — specifically the refund, and step G (a late payment_failed arriving AFTER a recovery) with its out-of-order webhook handling. Status stays not_run because the gating item is the complete ordered sequence, not a single charge. v18 REFACTORED backend/routes/webhooks.js (S05): it extracted the pure subscriptionMirrorRow projection (byte-identical upsert shape) and exported the ownership helper, and added a read-only pull reconciler that reuses BOTH; the subscription state machine, ownership rule and out-of-order ordering guard are unchanged and are covered by webhook-isolation/webhook-ordering/webhook-reconcile in the 961-test pass.",
-      "accepted_risk": {
-        "risk_id": "live-money",
-        "accepted_by": "Primoz Cerar (owner)",
-        "accepted_at_utc": "2026-07-28T12:00:00Z",
-        "tracks": [
-          "public_paid"
-        ],
-        "rationale": "Same decision as blocker P1-live-money-unrehearsed. The item keeps its real status of `not_run`; nothing here claims the rehearsal happened."
-      },
-      "pending_evidence_template": {
-        "instructions": "PENDING - do NOT mark observed until the live rehearsal actually runs (docs/RUNBOOK_TRANSACTION_REHEARSAL.md). Run on a live current price with enforcement active. For each step capture the Stripe event id, customer id and subscription id with sensitive values redacted, plus the entitlement state observed AFTER the event. When complete, set status to 'observed', add evidence_ref, and re-run npm run launch:gate + launch:render.",
-        "sequence": [
-          "A. checkout -> entitlement becomes trial/active for the buyer's app_user_id",
-          "B. first charge succeeds -> entitlement active; exactly ONE customer row for the app_user_id (no duplicate)",
-          "C. cancel-at-period-end -> access retained until period end",
-          "D. reactivate -> access continues",
-          "E. payment failure (past_due) -> entitlement withheld",
-          "F. recovery (back to active) -> entitlement restored",
-          "G. refund alone -> entitlement UNCHANGED (a refund is not a status change)",
-          "H. duplicate webhook replay -> idempotent, no double-mirroring",
-          "PLUS (Defect B, now live under enforcement): change the auth email while subscribed -> access PERSISTS and a second checkout is BLOCKED (409 ALREADY_SUBSCRIBED)."
-        ],
-        "acceptance": [
-          "no duplicate customers for one app_user_id",
-          "email change keeps access and blocks a second subscription",
-          "refund alone does not change entitlement",
-          "readiness ownership.state stays enforcement_active throughout"
-        ]
-      }
+      "evidence_ref": "docs/evidence/2026-09-05-live-money-rehearsal.md",
+      "note": "OBSERVED 2026-09-05 (owner-executed; Claude Code never performs a live charge or refund — it only records the owner's attested Stripe evidence). The FULL eight-transition ordered recovery sequence (steps A–H, docs/RUNBOOK_TRANSACTION_REHEARSAL.md) is now complete against real live Stripe under STRIPE_OWNERSHIP_ENFORCED=1 (readiness ownership.state=enforcement_active throughout), on subscription sub_1TzxNX0YzvSNMCpNAlIaa0ts (Starter, €11.31/mo, owner's own test account). Every live_required row (B first charge, E past_due, F recovery, G late payment_failed-after-recovery, H refund-leaves-entitlement-unchanged) is live_rehearsed with a distinct, PII-free Stripe id and a post-event entitlement observation; the machine-readable per-row record is docs/evidence/2026-09-05-rehearsal-record.json (schema OK, liveRehearsalCompleteness = complete for public_paid, candidate f8acb2a). The narrative and per-step evidence are in docs/evidence/2026-09-05-live-money-rehearsal.md, extending the 2026-08-02 charge record. Acceptance met: no duplicate customer for one app_user_id, refund alone did not change entitlement, and (Defect B, now live under enforcement) an auth-email change kept access while a second checkout was blocked (409 ALREADY_SUBSCRIBED). This satisfies — not merely accepts — the live-money condition for public_paid; the paired blocker P1-live-money-unrehearsed is closed."
     },
     {
       "id": "resend_suppression",
@@ -488,11 +459,12 @@
     {
       "id": "P1-router-rsc-csrf-advisory",
       "severity": "P1",
-      "status": "accepted",
+      "status": "closed",
       "found_at_utc": "2026-08-03T00:00:00Z",
+      "closed_at_utc": "2026-09-05T02:00:00Z",
       "title": "react-router / react-router-dom 7.18.2 carry an open high advisory GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF bypass)",
       "owner": "owner",
-      "closure": "GHSA-qwww-vcr4-c8h2 is fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at prior candidate 017ece2 (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories.",
+      "closure": "CLOSED 2026-09-05 by owner decision (Primoz Cerar): npm run check:router is green (this build ships no RSC/SSR entry point — a single declarative BrowserRouter only — so the advisory is not reachable) and npm run audit reports 0 vulnerabilities against the react-router-dom 7.18.2 tree, so the owner confirms GHSA-qwww-vcr4-c8h2 is not applicable to this app and closes the previously-accepted risk router-rsc. The reachability guard stays wired into check + release-candidate + launch:verify, so a future RSC/SSR entry point re-opens this mechanically. It remains fixed only in react-router 8.3.0, which removes the react-router-dom package and requires React 19 / Vite 7 / Node >=22.22 — a stack upgrade beyond the current scope. NOT reachable in practice: the advisory states it only affects applications using the unstable RSC APIs, and this app ships no RSC or SSR entry point (declarative BrowserRouter only). UPDATE at prior candidate 017ece2 (2026-08-14): `npm audit --omit=dev` now reports 0 vulnerabilities — the advisory no longer surfaces against the current react-router-dom 7.18.2 tree (it reported 2 high at 81993ff). Kept ACCEPTED and visible rather than closed pending an explicit owner confirmation that the advisory is withdrawn/fixed, since downgrading a security item is an owner decision; the reachability guard stays green either way. Introduced alongside SC-P0-06 (ca3eaa8), which closed the three previously-open 6.30.4 advisories.",
       "accepted_risk": {
         "risk_id": "router-rsc-advisory",
         "accepted_by": "Primoz Cerar (owner)",
@@ -528,10 +500,11 @@
     {
       "id": "P1-live-money-unrehearsed",
       "severity": "P1",
-      "status": "accepted",
+      "status": "closed",
+      "closed_at_utc": "2026-09-05T02:00:00Z",
       "title": "Live billing recovery has never been rehearsed against real Stripe",
       "owner": "owner",
-      "closure": "Execute docs/RUNBOOK_TRANSACTION_REHEARSAL.md and attach anonymized evidence.",
+      "closure": "CLOSED 2026-09-05. The owner executed the full eight-transition ordered recovery sequence (steps A–H, docs/RUNBOOK_TRANSACTION_REHEARSAL.md) against real live Stripe under enforcement (ownership.state=enforcement_active), including E (past_due), F (recovery to active) and G (a late payment_failed arriving AFTER recovery, out-of-order — entitlement stayed active) plus H (refund alone left entitlement unchanged). Anonymized per-row evidence: docs/evidence/2026-09-05-rehearsal-record.json (all live_required rows live_rehearsed, PII-free, unique ids; validator reports live rehearsal complete for public_paid) and the narrative docs/evidence/2026-09-05-live-money-rehearsal.md. The live-money risk is now satisfied rather than accepted; owner_evidence live_money_rehearsal is observed.",
       "accepted_risk": {
         "risk_id": "live-money",
         "accepted_by": "Primoz Cerar (owner)",
@@ -559,9 +532,9 @@
       "note": "GO for a capped, supervised beta only — invited accounts behind BETA_INVITE_CAP, with the owner watching, per docs/BETA_PLAN_V10.md. This is NOT permission to open public signup. Computed by `npm run launch:gate`, not declared. Every required automated check is green at the former candidate 24d350c (lint 0/0, 967 unit tests, build, fresh bundle index-Cq2NTdSE, PUBLIC browser journeys 57 pass incl. the axe scan 5/5, router reachability guard, npm audit 0, export integrity, launch integrity, hero contrast), migrations are verified applied against production (SQL byte-identical through v19), the owner has walked the signed-in product end to end on live Stripe, and the production configuration gate PASSES: GET /api/admin/readiness against the deployed prior candidate returns ready=true, 0 blockers, 'all launch-config requirements met' (config-gate byte-identical 017ece2..24d350c). The authenticated matrix is NOT required for the capped beta (it is required_for public_paid); a supervised, invited cohort with the owner watching absorbs the failure paths it covers. OWNER: re-confirm readiness on the deployed 24d350c, keep the cohort behind BETA_INVITE_CAP, watch /api/admin/readiness daily, and re-run readiness after any production config change."
     },
     "public_paid": {
-      "verdict": "CONDITIONAL GO",
-      "decided_at_utc": "2026-08-31T12:00:00Z",
-      "note": "CONDITIONAL GO computed by `npm run launch:gate`. The authenticated seeded browser matrix (e2e_authenticated), which is REQUIRED for public_paid, RAN GREEN at candidate f8acb2a in the rc/v22.1 release-candidate workflow (GitHub Actions, 2026-08-31): the authenticated-e2e job seeded a disposable non-production Supabase project, signed in through the real login form and drove all three projects (authenticated, authenticated-mobile, authenticated-keyboard) with ZERO skips, then uploaded the SHA-pinned rc-auth-evidence artifact. No required check is unmet and no blocker is open. The verdict is CONDITIONAL, not full GO, only because it proceeds over two recorded accepted risks that are bypassed rather than satisfied: the router-rsc advisory (GHSA-qwww-vcr4-c8h2, not reachable in this pure client SPA — reachability guard green) and the live-money A-H rehearsal (partially rehearsed; the full eight-transition ordered sequence including the refund and the late payment_failed step G is still owner-pending). Both are owner-accepted for the public_paid track and keep their real status here. f8acb2a also cleared the blocker that had kept the matrix red at the prior candidate: the seed client sent a raw E2E_SEED_SECRET carrying a trailing newline into the x-e2e-seed-secret header, which Node rejected as an invalid header character before any request left the browser (all 41 seeded tests died pre-flight); the secret is now trimmed on both the client and the seed route (E2E-harness-only, no shipped billing code). capped_beta is UNAFFECTED and stays GO."
+      "verdict": "GO",
+      "decided_at_utc": "2026-09-05T02:00:00Z",
+      "note": "FULL GO computed by `npm run launch:gate` (not declared): every required check is green at candidate f8acb2a, every P0/P1 blocker is CLOSED, and every owner-evidence item required for public_paid is satisfied — so both `reasons` and `accepted_risks` are empty, which is exactly what separates GO from CONDITIONAL GO. The two conditions that had held the verdict at CONDITIONAL GO are now SATISFIED, not bypassed: (1) the live-money rehearsal is complete — the owner executed the full eight-transition ordered recovery sequence (A–H) against real live Stripe under enforcement (ownership.state=enforcement_active), including E (past_due), F (recovery), G (late payment_failed after recovery, out-of-order) and H (refund leaves entitlement unchanged), with PII-free per-row evidence in docs/evidence/2026-09-05-rehearsal-record.json (validator: live rehearsal complete for public_paid) and the narrative in docs/evidence/2026-09-05-live-money-rehearsal.md, closing blocker P1-live-money-unrehearsed and moving owner_evidence live_money_rehearsal to observed; (2) the react-router RSC advisory GHSA-qwww-vcr4-c8h2 is CLOSED by owner decision — npm run check:router is green (no RSC/SSR entry point, single declarative BrowserRouter) and npm run audit reports 0, closing blocker P1-router-rsc-csrf-advisory. The authenticated seeded browser matrix (e2e_authenticated), REQUIRED for public_paid, is passed_ci at candidate f8acb2a (rc/v22.1 release-candidate workflow, GitHub Actions, 2026-08-31: all three authenticated/mobile/keyboard projects, ZERO skips, SHA-pinned rc-auth-evidence artifact). Candidate f8acb2a is unchanged — no product code moved since it was certified (the only commits after it are docs/evidence), so the official GO is recorded at the same frozen, fully-checked candidate rather than relocating identical code to a new SHA. capped_beta remains GO. OWNER: keep the deployed commit confirmed in the Vercel dashboard and re-confirm GET /api/admin/readiness (ready=true, ownership.state=enforcement_active, 0 blockers) after any production config change."
     }
   },
   "rollback": {

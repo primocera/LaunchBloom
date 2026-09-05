@@ -393,52 +393,65 @@ test('the capped-beta verdict is internally consistent and every passing check i
   }
 });
 
-test('public paid launch is never a full GO while accepted risks stand, and its accepted set is manifest-consistent', () => {
+test('public paid launch: the computed verdict and the accepted set it rests on are manifest-consistent at any posture', () => {
+  const CHECK_PASSING = ['passed_ci', 'passed_locally', 'observed_production'];
+  const EVIDENCE_PASSING = ['live_rehearsed', 'observed', 'observed_production'];
   const state = loadState();
   const v = computeVerdicts(state, { head_sha: state.candidate.sha, code_changes: [] });
-  // Posture-independent: the computed verdict must equal the declared one, and
-  // while accepted risks are scoped to public_paid it can never be a full GO.
-  // The durable invariant is that the computed accepted set matches exactly the
-  // items scoped to public_paid in the manifest — not any particular verdict.
+  // Posture-independent: the computed verdict must equal the declared one. This
+  // holds whether the launch is NO-GO, CONDITIONAL GO or a full GO — the test
+  // proves internal consistency, not any particular verdict.
   assert.equal(v.public_paid.verdict, state.verdicts.public_paid.verdict,
     `computed ${v.public_paid.verdict} but manifest declares ${state.verdicts.public_paid.verdict}`);
-  assert.notEqual(v.public_paid.verdict, 'GO');
 
-  // Freeze-stable: the accepted risks the verdict rests on must be exactly the
-  // set of accepted items scoped to public_paid — derived from the manifest, not
-  // hard-coded, so a future freeze that closes or accepts a risk needs no edit
-  // here. As of the v12 candidate that is authenticated-e2e and live-money
-  // (hero-contrast was fixed and is closed), but the assertion checks internal
-  // consistency rather than pinning those names.
+  // The accepted risks the verdict rests on must be exactly the set of items
+  // whose acceptance is STILL STANDING and scoped to public_paid — derived from
+  // the manifest, not hard-coded. A closed blocker may keep its accepted_risk
+  // block as history, so an acceptance only counts while its item is genuinely
+  // unresolved (mirrors computeVerdicts' own passing/closed filters).
   const acceptedForPublic = new Set();
-  for (const coll of [state.blockers, state.checks, state.owner_evidence]) {
-    for (const item of coll || []) {
-      const acc = item.accepted_risk;
-      if (acc && (acc.tracks || []).includes('public_paid')) {
-        acceptedForPublic.add(acc.risk_id || item.id);
-      }
+  for (const b of state.blockers || []) {
+    if (b.status === 'accepted' && b.accepted_risk && (b.accepted_risk.tracks || []).includes('public_paid')) {
+      acceptedForPublic.add(b.accepted_risk.risk_id || b.id);
+    }
+  }
+  for (const c of state.checks || []) {
+    if (c.accepted_risk && !CHECK_PASSING.includes(c.status) && (c.accepted_risk.tracks || []).includes('public_paid')) {
+      acceptedForPublic.add(c.accepted_risk.risk_id || c.id);
+    }
+  }
+  for (const e of state.owner_evidence || []) {
+    if (e.accepted_risk && !EVIDENCE_PASSING.includes(e.status) && (e.accepted_risk.tracks || []).includes('public_paid')) {
+      acceptedForPublic.add(e.accepted_risk.risk_id || e.id);
     }
   }
   const computedIds = new Set(v.public_paid.accepted_risks.map((r) => r.risk_id));
   assert.deepEqual([...computedIds].sort(), [...acceptedForPublic].sort(),
-    'the computed accepted risks must match the accepted items scoped to public_paid');
-  assert.ok(computedIds.size >= 1, 'a CONDITIONAL GO must rest on at least one accepted risk');
+    'the computed accepted risks must match the standing accepted items scoped to public_paid');
 
-  // Each acceptance is a recorded decision with a named owner — if all are
-  // removed, this verdict must fall back to NO-GO on its own.
-  const accepted = state.blockers.filter((b) => b.status === 'accepted');
-  assert.ok(accepted.length >= 1, 'the public launch verdict rests on accepted risks that must stay visible');
+  // The load-bearing invariant, both directions: a standing accepted risk can
+  // never read as a full GO, and a full GO can never secretly rest on one.
+  if (computedIds.size > 0) {
+    assert.notEqual(v.public_paid.verdict, 'GO', 'a standing accepted risk can never be a full GO');
+  } else {
+    assert.equal(v.public_paid.verdict, 'GO',
+      'with no standing accepted risk and no open blocker, the verdict must be a full GO');
+  }
 
+  // Withdrawing every recorded acceptance must never IMPROVE the verdict: where
+  // acceptances stand they are load-bearing (removing them → NO-GO); where none
+  // stand, removing nothing leaves the verdict unchanged.
   const stripped = clone(state);
   for (const b of stripped.blockers) { if (b.status === 'accepted') { b.status = 'open'; delete b.accepted_risk; } }
   for (const c of stripped.checks) delete c.accepted_risk;
   for (const e of stripped.owner_evidence) delete e.accepted_risk;
   const without = computeVerdicts(stripped, { head_sha: state.candidate.sha, code_changes: [] });
-  assert.equal(without.public_paid.verdict, 'NO-GO', 'withdrawing the acceptances must reverse the verdict');
-  // e2e_authenticated now passes (v16, candidate f37e0e1), so the remaining
-  // public_paid acceptances are the router advisory and the live-money rehearsal.
-  assert.match(without.public_paid.reasons.join(' '), /P1-router-rsc-csrf-advisory/);
-  assert.match(without.public_paid.reasons.join(' '), /live_money_rehearsal is not_run/);
+  if (computedIds.size > 0) {
+    assert.equal(without.public_paid.verdict, 'NO-GO', 'withdrawing load-bearing acceptances must reverse the verdict');
+  } else {
+    assert.equal(without.public_paid.verdict, v.public_paid.verdict,
+      'with no standing acceptance, stripping acceptances changes nothing');
+  }
 });
 
 
@@ -529,8 +542,15 @@ test('the rendered output lists accepted risks and never claims all conditions m
   for (const r of v.public_paid.accepted_risks) {
     assert.ok(doc.includes(r.risk_id), `rendered doc must name accepted risk ${r.risk_id}`);
   }
-  // "Accepted" is shown as distinct from "closed".
-  assert.match(doc, /ACCEPTED \(not closed\)/);
+  // "Accepted" is shown as distinct from "closed" — but only when something is
+  // actually still accepted. At a full GO with no standing accepted risk, the
+  // section legitimately lists none, so the phrasing is not required.
+  const anyAccepted = (state.blockers || []).some((b) => b.status === 'accepted')
+    || v.public_paid.accepted_risks.length > 0
+    || v.capped_beta.accepted_risks.length > 0;
+  if (anyAccepted) {
+    assert.match(doc, /ACCEPTED \(not closed\)/);
+  }
 });
 
 // --- accepted risk --------------------------------------------------------
@@ -596,10 +616,19 @@ test('an accepted risk never rewrites the underlying status', () => {
   const state = loadState();
   // The point of this test is that an OWNER-ACCEPTED risk keeps its real,
   // un-fabricated status — an acceptance lets a launch proceed over an item, it
-  // never elevates that item to a pass. The live-money rehearsal is the standing
-  // example: it is accepted for public_paid yet stays `not_run`.
-  const money = state.owner_evidence.find((e) => e.id === 'live_money_rehearsal');
-  assert.equal(money.status, 'not_run', 'the live-money accepted risk keeps its real not_run status');
+  // never elevates that item to a pass. Posture-agnostic: any owner-evidence
+  // item that STILL carries a standing acceptance must read as a real,
+  // un-elevated status, not a pass dressed up. (Once a risk is genuinely
+  // satisfied it stops being accepted and legitimately reads observed/
+  // live_rehearsed — e.g. live_money_rehearsal after the A–H rehearsal — which
+  // is the opposite, allowed case and correctly carries no accepted_risk.)
+  const EVIDENCE_PASSING = ['live_rehearsed', 'observed', 'observed_production'];
+  for (const e of state.owner_evidence) {
+    if (e.accepted_risk) {
+      assert.ok(!EVIDENCE_PASSING.includes(e.status),
+        `${e.id} still carries an accepted_risk, so it must not also claim a passing status (${e.status})`);
+    }
+  }
   // e2e_authenticated is the opposite case and guards the other direction: it is
   // only ever `passed_ci` because the matrix ACTUALLY ran green in a committed
   // workflow (rc/v22.1 authenticated-e2e), pinned to the candidate with an

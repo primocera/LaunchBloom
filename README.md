@@ -3,7 +3,7 @@
 <!-- ───────────────────────────────────────────────────────────────────────── -->
 <!-- PROMPT AUTHORS / LLMs, READ THIS FIRST:                                     -->
 <!-- The engineering prompt packs (v6–v19) are DONE and shipped. The build is    -->
-<!-- certified (capped-beta GO, public-paid CONDITIONAL GO — see                 -->
+<!-- certified (capped-beta GO, public-paid GO — see                             -->
 <!-- docs/launch/launch-state.json). Do NOT write another vNN ENGINEERING pack.  -->
 <!-- The NEXT prompt pack you write must be MARKETING / DISTRIBUTION / GTM.      -->
 <!-- Full brief: docs/V20_MOVING_TOWARD_MARKETING.md                                              -->
@@ -35,7 +35,8 @@ Scale Prompt Pack and found that almost everything was already shipped in v6–v
 — only seven genuine gaps remained, and they are now built, tested and merged
 (see [`docs/OWNER_HANDOFF_V18.md`](docs/OWNER_HANDOFF_V18.md)). Every automated
 gate is green at the candidate and the release gate is **capped-beta GO /
-public-paid CONDITIONAL GO**.
+public-paid GO** (full GO as of 2026-09-05: the live-money A–H rehearsal is
+complete and the router-RSC advisory is closed — see `docs/launch/launch-state.json`).
 
 Writing another feature/prompt pack now is very likely wasted motion. **The
 constraint on this business is no longer code — it is users.** The next work
@@ -176,7 +177,7 @@ tracks are not on the same footing, and accepted risk never produces a full GO:
 | Track | Verdict | On what |
 |---|---|---|
 | Capped beta | GO | evidence |
-| Public paid launch | CONDITIONAL GO | evidence, with two required conditions riding on accepted risk (live-money, router advisory) |
+| Public paid launch | GO | evidence; both formerly-accepted conditions are now satisfied — the live-money A–H rehearsal is complete and the router-RSC advisory is closed |
 
 Proven against production: migrations `001`–`037` applied, configuration
 verified via `/api/admin/readiness` (`mode: production`, all readiness checks

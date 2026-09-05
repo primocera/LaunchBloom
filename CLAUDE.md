@@ -1,8 +1,9 @@
 # CLAUDE.md
 
 > ## ⚠️ Prompt-pack scope note (binding, updated for v21)
-> The engineering build is **certified** (v6–v20; capped-beta GO, public-paid
-> CONDITIONAL GO — see `docs/launch/launch-state.json`). Do **not** invent a new
+> The engineering build is **certified** (v6–v22; capped-beta GO, public-paid
+> **GO** — full GO as of 2026-09-05, live-money A–H rehearsal complete and the
+> router-RSC advisory closed; see `docs/launch/launch-state.json`). Do **not** invent a new
 > engineering / hardening / elevation / scale / security pack by *auditing the repo
 > for gaps you were not asked about* — that turned into an infinite loop for 5
 > versions, so a generic "the previous prompts are done, check the repo, write the
