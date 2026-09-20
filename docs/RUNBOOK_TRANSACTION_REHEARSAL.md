@@ -1,16 +1,20 @@
 # Runbook — Paid Transaction Rehearsal (owner-operated)
 
-> ✅ **STATUS: COMPLETED 2026-09-05.** The owner executed the full eight-transition
-> ordered recovery sequence (steps A–H) against real live Stripe under enforcement
-> (`STRIPE_OWNERSHIP_ENFORCED=1`, readiness `ownership.state=enforcement_active`),
-> including E (past_due), F (recovery), G (late `payment_failed` after recovery,
-> out-of-order) and H (refund leaves entitlement unchanged). Anonymized evidence:
-> `docs/evidence/2026-09-05-rehearsal-record.json` (validator: complete for
-> public_paid) and `docs/evidence/2026-09-05-live-money-rehearsal.md`. This closed
-> blocker `P1-live-money-unrehearsed` and moved `live_money_rehearsal` to
-> `observed`; with the router-RSC advisory also closed, `public_paid` is **full GO**
-> (see `docs/launch/launch-state.json`). The procedure below is retained for
-> re-runs and future candidates.
+> ⚠️ **STATUS: ORDERED POST-G H OUTSTANDING (v23 correction, 2026-09-21).** The
+> owner ran the individual A–H transitions against real live Stripe on 2026-09-05
+> (kept as historical evidence: `docs/evidence/2026-09-05-rehearsal-record.json`
+> and `docs/evidence/2026-09-05-live-money-rehearsal.md`). BUT the recorded H
+> (refund) is timestamped `2026-09-04T23:36:28Z`, before E/F/G on 2026-09-05, so
+> the record is **not a valid ordered sequence** — `npm run rehearsal:validate`
+> now fails it (H before G), and H's precondition is "row F active with a real
+> charge". The genuine **ordered post-G H** (real refund id, observed after G,
+> with a post-event entitlement observation) is still owner-gated — see
+> `docs/evidence/POST_G_REFUND_H_TEMPLATE.md`. Accordingly blocker
+> `P1-live-money-unrehearsed` is **accepted** and `public_paid` is **CONDITIONAL
+> GO**, not a full GO (see `docs/launch/launch-state.json`). Separately, Stripe
+> ownership enforcement has no in-repo machine-readable probe, so
+> `migrations.ownership_enforcement` is `pending`. Run the procedure below to
+> record the ordered post-G H and close the accepted risk.
 
 **Purpose:** prove, on a frozen commit, that every real money path works before
 expanding acquisition. Automated release checks (`npm run check`,
@@ -163,6 +167,7 @@ code second:
 
 ## Sign-off
 
-- Owner: Primoz Cerar  Date: 2026-09-05
-- Verdict: ☑ GO for cohort expansion (public_paid full GO) ☐ NO-GO (blockers below)
+- Owner: Primoz Cerar  Date: 2026-09-05 (individual steps); ordered post-G H — NOT RUN
+- Verdict: ☑ capped_beta GO · ⚠️ public_paid **CONDITIONAL GO** (ordered post-G H
+  refund outstanding; data-rights drill above still blank/pending) ☐ full public_paid GO
 - Open blockers (owner, deadline, acceptance evidence, rollback): none — `P1-live-money-unrehearsed` and `P1-router-rsc-csrf-advisory` closed; see `docs/launch/launch-state.json`
