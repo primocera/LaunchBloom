@@ -50,7 +50,7 @@
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
+    "express": "^4.22.3",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "react": "^18.3.1",
@@ -70,6 +70,11 @@
     "globals": "^17.7.0",
     "supertest": "^7.2.2",
     "vite": "^5.4.8"
+  },
+  "_comment_overrides": "v23 SV-23-01 security patch: pin the transitive advisory chain above express's own ranges. body-parser ~1.20.5 would otherwise stay at the vulnerable 1.20.6 (GHSA-x5fp-wj9c-mxmx) and qs at 6.15.3 (GHSA-4mjr-xmp4-gh2g); force both to the fixed floors so npm audit --omit=dev returns 0. Stays in the 4.x line — no Express 5.",
+  "overrides": {
+    "body-parser": "1.20.8",
+    "qs": "6.16.0"
   },
   "engines": {
     "node": ">=20.0.0"

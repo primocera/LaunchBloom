@@ -537,6 +537,38 @@ function integrityProblems(state) {
         if (!av.last_run_utc) bad('migrations.applied_verification: claims verification with no run timestamp');
       }
     }
+
+    // v23 SV-23-03: the Stripe-ownership enforcement cross-field invariant. The
+    // manifest may NOT simultaneously assert enforcement is active / paid-ready
+    // and leave the enabling migrations (038-040) unproven. `applied_verification`
+    // above covers the base 001-037 schema; enforcement rests on 038-040 PLUS a
+    // live stripe_ownership_uniqueness_ready() probe, which is a distinct fact
+    // that must be recorded on its own — never inferred from prose that says
+    // "enforcement_active".
+    const oe = isPlainObject(mig.ownership_enforcement) ? mig.ownership_enforcement : null;
+    if (oe) {
+      const MIG_STATES = ['pending', 'unverified', 'applied_verified'];
+      const PROBE_STATES = ['not_run', 'true', 'false'];
+      if (!MIG_STATES.includes(oe.migrations_038_040)) {
+        bad(`migrations.ownership_enforcement.migrations_038_040 must be one of ${MIG_STATES.join(', ')}`);
+      }
+      if (!PROBE_STATES.includes(oe.uniqueness_probe)) {
+        bad(`migrations.ownership_enforcement.uniqueness_probe must be one of ${PROBE_STATES.join(', ')}`);
+      }
+      if (typeof oe.claimed_enforcement_active !== 'boolean') bad('migrations.ownership_enforcement.claimed_enforcement_active must be a boolean');
+      if (typeof oe.claimed_paid_ready !== 'boolean') bad('migrations.ownership_enforcement.claimed_paid_ready must be a boolean');
+
+      const claimsEnforcement = oe.claimed_enforcement_active === true || oe.claimed_paid_ready === true;
+      if (claimsEnforcement && oe.migrations_038_040 !== 'applied_verified') {
+        bad('migrations.ownership_enforcement claims enforcement_active/paid_ready but migrations 038-040 are not applied_verified — the launch state cannot assert Stripe ownership enforcement while its enabling migrations are pending/unverified');
+      }
+      if (oe.claimed_enforcement_active === true && oe.uniqueness_probe !== 'true') {
+        bad('migrations.ownership_enforcement claims enforcement_active but stripe_ownership_uniqueness_ready() is not recorded true (the exact ON CONFLICT arbiter probe must be observed, not inferred)');
+      }
+      if (oe.migrations_038_040 === 'applied_verified' && !oe.owner_probe_ref) {
+        bad('migrations.ownership_enforcement says 038-040 applied_verified but cites no owner_probe_ref — a machine-readable owner probe is required to claim applied-ness');
+      }
+    }
   }
 
   // The declared verdict is recomputed from the same data; a mismatch means

@@ -40,6 +40,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # v23 SV-23-02: production dependency audit is a MANDATORY, fail-closed
+      # gate — no continue-on-error. It writes a SHA-pinned JSON summary
+      # (severity counts + UTC time) under rc-evidence/ and blocks the candidate
+      # on ANY production advisory. A registry/parse failure is `unavailable`,
+      # never a silent pass (check-audit.js exits non-zero on both). This step
+      # must stay before the heavier checks so a vulnerable candidate fails fast.
+      - name: Production dependency audit (fail closed)
+        run: |
+          mkdir -p rc-evidence
+          audit_json="rc-evidence/audit-${GITHUB_SHA}.json"
+          set +e
+          npm audit --omit=dev --json > "$audit_json" 2> rc-evidence/audit-stderr-${GITHUB_SHA}.txt
+          set -e
+          node backend/scripts/check-audit.js "$audit_json" "${GITHUB_SHA}"
+
       - name: Lint
         run: npm run lint
 
@@ -81,7 +96,8 @@ jobs:
             echo "workflow_run_id=${GITHUB_RUN_ID}"
             echo "ref=${GITHUB_REF}"
             echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "checks=lint,launch:verify,test,build:app,check:app-fresh,check:router,test:export,test:e2e,launch:drift"
+            echo "checks=npm-audit,lint,launch:verify,test,build:app,check:app-fresh,check:router,test:export,test:e2e,launch:drift"
+            echo "audit_artifact=audit-summary-${GITHUB_SHA}.json"
           } > "rc-evidence/summary-${GITHUB_SHA}.txt"
 
       - name: Upload evidence

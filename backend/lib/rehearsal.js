@@ -124,6 +124,17 @@ const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 const CARD_RE = /\b(?:\d[ -]?){13,19}\b/;
 const SECRET_RE = /\b(sk_(live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|rk_(live|test)_[A-Za-z0-9]+)\b/;
 
+// v23 SV-23-04: an observation time must be an explicit-UTC ISO-8601 timestamp.
+// A bare local time (no zone designator) is ambiguous and cannot be ordered
+// deterministically, so it is rejected — the ordered A–H sequence is only
+// meaningful if every step carries a comparable instant.
+const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]00:00)$/;
+function isIsoUtc(s) {
+  if (typeof s !== 'string' || !ISO_UTC_RE.test(s)) return false;
+  const t = Date.parse(s);
+  return Number.isFinite(t);
+}
+
 /** A fresh not_run record skeleton for a candidate — the shape the owner fills. */
 function emptyRecord(candidateSha) {
   return {
@@ -180,6 +191,9 @@ function validateRehearsalRecord(record, { candidateSha } = {}) {
       // A "passed" row without observation is a headline, not evidence.
       if (!row.evidence) problems.push(`row ${row.id}: claims ${row.status} but carries no evidence`);
       if (!row.observed_at_utc) problems.push(`row ${row.id}: claims ${row.status} but has no observed_at_utc`);
+      else if (!isIsoUtc(row.observed_at_utc)) {
+        problems.push(`row ${row.id}: observed_at_utc ${JSON.stringify(row.observed_at_utc)} is not a valid ISO-8601 UTC timestamp (need an explicit zone, e.g. 2026-09-05T01:15:00Z)`);
+      }
       // Reused evidence across rows is how one observation is stretched to cover many.
       if (row.evidence) {
         const key = String(row.evidence).trim().toLowerCase();
@@ -199,6 +213,35 @@ function validateRehearsalRecord(record, { candidateSha } = {}) {
       if (EMAIL_RE.test(v)) problems.push(`row ${row.id}: ${field} contains an email — evidence must be opaque ids only`);
       if (CARD_RE.test(v)) problems.push(`row ${row.id}: ${field} contains card-like digits`);
       if (SECRET_RE.test(v)) problems.push(`row ${row.id}: ${field} contains a provider secret`);
+    }
+  }
+
+  // v23 SV-23-04: the ordered recovery sequence must be TIME-MONOTONE in the
+  // canonical order A,B,C,D,E,F,G,H. A later step observed strictly BEFORE an
+  // earlier one — most importantly H (refund) before E/F/G — is not a clean
+  // ordered A–H run even when every row is individually live_rehearsed: the
+  // refund's precondition is "row F active with a real charge", so a refund
+  // that predates the recovery describes a different, out-of-order reality.
+  // Equal timestamps are allowed (a documented same-instant pair such as A/B);
+  // only a strict inversion fails. Rows with a missing or malformed timestamp
+  // are skipped here — those are already reported above — so ordering is judged
+  // only over comparable, well-formed instants.
+  if (record.matrix === 'ordered_recovery_sequence') {
+    const timed = [];
+    for (const id of STEP_IDS) {
+      const row = rows.find((r) => r && r.id === id);
+      if (!row || row.observed_at_utc == null || !isIsoUtc(row.observed_at_utc)) continue;
+      timed.push({ id, t: Date.parse(row.observed_at_utc) });
+    }
+    for (let i = 1; i < timed.length; i += 1) {
+      const prev = timed[i - 1];
+      const cur = timed[i];
+      if (cur.t < prev.t) {
+        problems.push(
+          `row ${cur.id}: observed_at_utc is earlier than row ${prev.id} — the ordered A–H recovery sequence must be time-monotone `
+          + `(${cur.id} before ${prev.id} breaks the sequence and cannot count as a completed ordered run)`,
+        );
+      }
     }
   }
   return problems;
@@ -221,7 +264,14 @@ function liveRehearsalCompleteness(record) {
       : REHEARSED.includes(row.status);
     if (!ok) outstanding.push(spec.id);
   }
-  return { complete: outstanding.length === 0, outstanding, live_required: [...LIVE_REQUIRED_IDS] };
+  // v23 SV-23-04: completeness can never outrun validity. A record that fails
+  // validateRehearsalRecord (a broken timestamp, or an out-of-order A–H
+  // sequence such as H before G) is NOT a complete live rehearsal, even if
+  // every row's status is live_rehearsed. The validation problems are surfaced
+  // so a caller reports WHY it is incomplete rather than silently downgrading.
+  const validation_problems = validateRehearsalRecord(record);
+  const complete = outstanding.length === 0 && validation_problems.length === 0;
+  return { complete, outstanding, validation_problems, live_required: [...LIVE_REQUIRED_IDS] };
 }
 
 module.exports = {

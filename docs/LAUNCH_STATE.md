@@ -17,7 +17,7 @@ Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-05T02:0
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **GO** | all conditions met |
+| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: live-money |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -99,7 +99,7 @@ Supabase or production configuration access.
 |---|---|---|---|
 | All migrations verified applied against the production database | observed | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
 | Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email | observed | capped_beta | `docs/evidence/2026-07-28-owner-production-walkthrough.md` |
-| Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | observed | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
+| Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | live rehearsed | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
@@ -109,7 +109,13 @@ Accepted is neither closed nor passed. Every item below keeps its real
 status; an acceptance only records that a launch was allowed to proceed
 over it, and never that it was resolved.
 
-None.
+| Severity | Item | Status | Owner | Closure requirement |
+|---|---|---|---|---|
+| P1 | Live billing recovery has never been rehearsed against real Stripe (as an ordered A–H sequence) | ACCEPTED (not closed) | owner | undefined |
+
+**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
+
+- `live-money` — Live billing recovery has never been rehearsed against real Stripe (as an ordered A–H sequence) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
 
 ## Rollback
 

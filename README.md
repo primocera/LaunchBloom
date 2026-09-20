@@ -3,7 +3,7 @@
 <!-- ───────────────────────────────────────────────────────────────────────── -->
 <!-- PROMPT AUTHORS / LLMs, READ THIS FIRST:                                     -->
 <!-- The engineering prompt packs (v6–v19) are DONE and shipped. The build is    -->
-<!-- certified (capped-beta GO, public-paid GO — see                             -->
+<!-- certified (capped-beta GO, public-paid CONDITIONAL GO — see                 -->
 <!-- docs/launch/launch-state.json). Do NOT write another vNN ENGINEERING pack.  -->
 <!-- The NEXT prompt pack you write must be MARKETING / DISTRIBUTION / GTM.      -->
 <!-- Full brief: docs/V20_MOVING_TOWARD_MARKETING.md                                              -->
@@ -35,8 +35,12 @@ Scale Prompt Pack and found that almost everything was already shipped in v6–v
 — only seven genuine gaps remained, and they are now built, tested and merged
 (see [`docs/OWNER_HANDOFF_V18.md`](docs/OWNER_HANDOFF_V18.md)). Every automated
 gate is green at the candidate and the release gate is **capped-beta GO /
-public-paid GO** (full GO as of 2026-09-05: the live-money A–H rehearsal is
-complete and the router-RSC advisory is closed — see `docs/launch/launch-state.json`).
+public-paid CONDITIONAL GO** (v23 correction 2026-09-21: the recorded live-money
+H/refund is timestamped before E/F/G, so the ordered A–H sequence is not yet
+evidenced — the rehearsal validator now fails it — and Stripe ownership
+enforcement has no in-repo machine-readable probe; public_paid proceeds only over
+the accepted `live-money` risk until a genuine post-G H record lands. See
+`docs/launch/launch-state.json`).
 
 Writing another feature/prompt pack now is very likely wasted motion. **The
 constraint on this business is no longer code — it is users.** The next work
@@ -159,7 +163,7 @@ automatically.
 | [`docs/V10_PLAN.md`](docs/V10_PLAN.md) | The v10 execution plan |
 | [`docs/GOLDEN_EVAL_V10.md`](docs/GOLDEN_EVAL_V10.md) | What the quality gate does and does not measure |
 | [`docs/LIFECYCLE_EMAIL_V10.md`](docs/LIFECYCLE_EMAIL_V10.md) | Every email, its trigger, dedupe key and category |
-| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal — COMPLETED 2026-09-05 (A–H live) |
+| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal — individual A–H steps run 2026-09-05, but the ordered post-G H refund is OUTSTANDING (v23; recorded H predates E/F/G) |
 | [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) | **Start here.** Current owner/next-writer handoff: state, closed work, accepted risks, next focus |
 | [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) | Prior owner handoff (SUPERSEDED by v16) |
 | [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | Generated launch truth — never edit by hand |
@@ -177,24 +181,28 @@ tracks are not on the same footing, and accepted risk never produces a full GO:
 | Track | Verdict | On what |
 |---|---|---|
 | Capped beta | GO | evidence |
-| Public paid launch | GO | evidence; both formerly-accepted conditions are now satisfied — the live-money A–H rehearsal is complete and the router-RSC advisory is closed |
+| Public paid launch | CONDITIONAL GO | proceeds only over the accepted `live-money` risk — the ordered post-G H refund is not yet evidenced (v23) |
 
 Proven against production: migrations `001`–`037` applied, configuration
 verified via `/api/admin/readiness` (`mode: production`, all readiness checks
 green, 0 blockers), unsubscribe suppression honoured in both directions, and a
-daily AI spend ceiling live.
+daily AI spend ceiling live. Stripe ownership **enforcement** (migrations
+`038`–`040` + the `stripe_ownership_uniqueness_ready()` arbiter) is **pending** —
+there is no in-repo machine-readable owner probe, so `migrations.ownership_enforcement`
+is `pending` and no `enforcement_active` claim is made.
 
 The automated signed-in browser matrix runs against a disposable non-production
 Supabase and is **green in CI** (`passed_ci`) at the shipping candidate — the
-`P0-no-authenticated-e2e` blocker is **closed**. Both conditions that formerly
-rode on accepted risk are now **satisfied and closed**: the live billing
-rehearsal — the canonical eight-transition A–H matrix — was **completed live on
-2026-09-05** (all eight transitions including refund and the late
-`payment_failed`-after-recovery step, anonymized evidence in
-`docs/evidence/2026-09-05-rehearsal-record.json`), and the router RSC advisory is
-**closed** (guard green, no RSC entry point). No P0/P1 blocker remains open or
-accepted, so `public_paid` is a full **GO**. (Exact counts and the full blocker
-list live in the canonical launch-state, not here.)
+`P0-no-authenticated-e2e` blocker is **closed**. The router RSC advisory is
+**closed** (guard green, no RSC entry point). The live billing rehearsal exercised
+the individual A–H transitions on 2026-09-05, but the machine record is **not a
+valid ordered sequence**: its H (refund) is timestamped `2026-09-04T23:36:28Z`,
+before E/F/G on 2026-09-05, so `npm run rehearsal:validate` **fails** it as
+unordered (H before G). The ordered post-G refund H (real refund id, observed
+after G, with a post-event entitlement observation) is **outstanding**; blocker
+`P1-live-money-unrehearsed` is **accepted** and `public_paid` is therefore
+**CONDITIONAL GO**, not a full GO, until a genuine post-G H record lands. (Exact
+counts and the full blocker list live in the canonical launch-state, not here.)
 
 Start with [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) for the
 full picture and what to pick up next. Earlier GO/NO-GO and handoff documents

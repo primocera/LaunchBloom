@@ -6,9 +6,12 @@
 > the authenticated + public browser E2E matrices pass, the react-router tree
 > carries no open advisory (three unrelated moderate `qs` advisories remain, fix
 > available), and
-> the release gate is **capped-beta GO / public-paid GO** (full GO as of
-> 2026-09-05 — the live-money A–H rehearsal is complete and the router-RSC
-> advisory is closed).
+> the release gate is **capped-beta GO / public-paid CONDITIONAL GO** (v23
+> correction 2026-09-21 — the recorded live-money H/refund predates E/F/G so the
+> ordered A–H sequence is not yet evidenced and the validator fails it; Stripe
+> ownership enforcement has no in-repo machine-readable probe. public_paid
+> proceeds only over the accepted `live-money` risk until a genuine post-G H
+> record lands).
 >
 > **Do not write another feature/hardening prompt pack.** The highest-value work
 > now is **marketing and distribution**: landing conversion, getting the first
@@ -43,16 +46,24 @@ This note draws the line between **real work** (keep doing) and **churn** (stop)
 
 ---
 
-## The three recurring items — ALL NOW CLOSED (2026-09-05)
+## The three recurring items — two closed, live-money REOPENED (v23, 2026-09-21)
 
-These were the three owner-gated items a pack could never close. As of 2026-09-05
-**all three are done**, so `public_paid` is a full GO — none is outstanding.
+These were the three owner-gated items a pack could never close. Two are closed;
+the live-money rehearsal is **reopened** by the v23 correction because the
+recorded ordered sequence is invalid (H before E/F/G), so `public_paid` is
+**CONDITIONAL GO**, not a full GO.
 
-| Item | Status | Closed by |
+| Item | Status | Note |
 |---|---|---|
 | **Authenticated E2E matrix** (`test:e2e:auth`) | ✅ **passed_ci** | ran GREEN in CI at the shipping candidate (release-candidate workflow on `rc/v22.2`, authenticated-e2e job, SHA-pinned `rc-auth-evidence` artifact, zero skips) |
-| **Live-money rehearsal** (A–H) | ✅ **complete (live)** | owner ran the full ordered A–H sequence on real Stripe 2026-09-05 — `docs/evidence/2026-09-05-rehearsal-record.json` (validator: complete) + `docs/evidence/2026-09-05-live-money-rehearsal.md` |
+| **Live-money rehearsal** (A–H) | ⚠️ **accepted risk (ordered post-G H outstanding)** | the individual A–H steps were run 2026-09-05, but the recorded H (refund) is timestamped before E/F/G, so `npm run rehearsal:validate` fails it as unordered. Kept as historical evidence; a genuine post-G H (real refund id, after G, post-event entitlement observation) is still owner-gated — `docs/evidence/POST_G_REFUND_H_TEMPLATE.md` |
 | **Router advisory** GHSA-qwww-vcr4-c8h2 | ✅ **closed** | owner decision: not reachable (pure client SPA, `npm run check:router` green) and absent from `npm audit`; blocker `P1-router-rsc-csrf-advisory` closed |
+
+> Note: this still is NOT a licence to write another engineering pack around the
+> live-money item — it remains owner-gated and cannot be closed by a prompt. The
+> v23 correction was an explicit owner-named exception (dependency/security patch
+> + release-truth honesty), already shipped. The default for a new pack remains
+> **marketing / distribution**.
 
 All three were **owner-gated by design** — Claude Code refused to run them (no
 live money, no production DB seeding). The owner has now done them, and the
@@ -95,10 +106,13 @@ exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
 
 - **Capped beta: GO.** Nothing blocks it. The authenticated E2E matrix passes
   green in CI at the shipping candidate, so the old E2E blocker is closed.
-- **Public paid: GO.** Full GO as of 2026-09-05: the live-money A–H rehearsal is
-  complete (all eight transitions live) and the not-reachable router advisory
-  (GHSA-qwww-vcr4-c8h2, absent from `npm audit`) is closed by owner decision.
-  Both were owner actions, never a pack.
+- **Public paid: CONDITIONAL GO** (v23, 2026-09-21). The not-reachable router
+  advisory (GHSA-qwww-vcr4-c8h2, absent from `npm audit`) is closed by owner
+  decision. The live-money rehearsal's individual A–H steps were run, but the
+  recorded ordered sequence is invalid (H before E/F/G), so it is an **accepted
+  risk** until the owner records a genuine post-G H refund. That, plus the
+  read-only migration 038-040 enforcement probe, are the remaining owner actions —
+  never a pack.
 
 **Therefore:** the highest-value next step is not another pack. It is (a) deploy
 the capped beta and get real users, or (b) the owner spends one afternoon on the

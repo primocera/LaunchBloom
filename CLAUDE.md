@@ -1,9 +1,11 @@
 # CLAUDE.md
 
-> ## ⚠️ Prompt-pack scope note (binding, updated for v21)
-> The engineering build is **certified** (v6–v22; capped-beta GO, public-paid
-> **GO** — full GO as of 2026-09-05, live-money A–H rehearsal complete and the
-> router-RSC advisory closed; see `docs/launch/launch-state.json`). Do **not** invent a new
+> ## ⚠️ Prompt-pack scope note (binding, updated for v23)
+> The engineering build is **certified for capped beta (GO)**; public-paid is
+> **CONDITIONAL GO** (v23 correction 2026-09-21 — the recorded live-money H/refund
+> predates E/F/G so the ordered A–H sequence is not yet evidenced, and Stripe
+> ownership enforcement has no in-repo machine-readable probe; see
+> `docs/launch/launch-state.json`). Do **not** invent a new
 > engineering / hardening / elevation / scale / security pack by *auditing the repo
 > for gaps you were not asked about* — that turned into an infinite loop for 5
 > versions, so a generic "the previous prompts are done, check the repo, write the
@@ -31,11 +33,28 @@
 > `findCustomerRow` (stable `app_user_id` under enforcement) so the plan display
 > and duplicate-subscription guard survive an email change; plus 038's UUID-cast
 > backfill hardened to exact validation. Scoped to those named defects only. The
-> owner-only production steps are now **DONE** (2026-09-05): migrations 038/039/040
-> applied, `app_user_id` backfilled, `STRIPE_OWNERSHIP_ENFORCED=1` live
-> (readiness `ownership.state=enforcement_active`), and the live-money A–H
-> rehearsal completed — so with the router-RSC advisory also closed, `public_paid`
-> is **full GO**. Anything beyond the v22 doc still defaults to the marketing pack above.
+> owner-only production steps (apply migrations 038/039/040, backfill `app_user_id`,
+> set `STRIPE_OWNERSHIP_ENFORCED=1`, run the live-money A–H rehearsal) were
+> attested by the owner but are **NOT machine-verified in-repo** (see the v23
+> correction below). Anything beyond the v22 doc still defaults to the marketing pack above.
+>
+> **Approved exception — v23 Nujne MVP izboljšave (owner decision, 2026-09-21):**
+> the owner explicitly authorised Prompt 2 of `Nujne_MVP_Izboljsave_Scalvya_v23`
+> — a scoped safe-paid-MVP correction, named directly by the owner (not a
+> self-directed repo audit). Shipped on branch `v23` (SV-23-01/02/03/04): **(A)**
+> production dependency patch (express 4.22.3 / body-parser 1.20.8 / qs 6.16.0,
+> `npm audit --omit=dev` = 0), staying in the 4.x line; **(B)** a mandatory
+> fail-closed `npm audit` step in `release-candidate.yml` with a SHA-pinned JSON
+> artifact + contract test (`check-audit.js`); **(C)** a launch-state cross-field
+> invariant — the manifest may not claim `enforcement_active`/`paid_ready` while
+> migrations 038-040 are unproven (`migrations.ownership_enforcement` = `pending`,
+> as there is no in-repo machine-readable owner probe); **(D)** the rehearsal
+> validator now enforces time-monotone A–H, so the recorded H-before-E/F/G record
+> correctly **fails** as unordered; **(E)** the honest verdict — `public_paid`
+> returns to **CONDITIONAL GO** on the accepted `live-money` risk (ordered post-G
+> H outstanding), `capped_beta` stays **GO**. The migration 038-040 probe, the
+> genuine post-G H refund, the test-subscription cancellation and the data-rights
+> drill are **owner-only, pending** (Prompt 3). Scoped to the v23 doc only.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

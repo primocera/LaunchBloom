@@ -153,3 +153,82 @@ test('an unknown row status is rejected', () => {
   rec.rows[0].status = 'passed';
   assert.ok(validateRehearsalRecord(rec, { candidateSha: SHA }).some((p) => /unknown status/.test(p)));
 });
+
+// --- v23 SV-23-04: ordered A–H timestamps ---------------------------------
+
+// A record whose rows advance in canonical order at strictly increasing times.
+function orderedLiveRecord() {
+  const base = Date.UTC(2026, 8, 5, 0, 0, 0); // 2026-09-05T00:00:00Z
+  return {
+    schema: 'rehearsal-record-1',
+    candidate_sha: SHA,
+    matrix: 'ordered_recovery_sequence',
+    transition_count: 8,
+    rows: STEP_IDS.map((id, i) => ({
+      id,
+      status: 'live_rehearsed',
+      evidence: `evt_${id}_${i}`,
+      observed_at_utc: new Date(base + i * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z'),
+    })),
+  };
+}
+
+test('a valid time-ordered A–H sequence validates and is complete', () => {
+  const rec = orderedLiveRecord();
+  assert.deepEqual(validateRehearsalRecord(rec, { candidateSha: SHA }), []);
+  assert.equal(liveRehearsalCompleteness(rec).complete, true);
+});
+
+test('an equal timestamp on an adjacent pair (A/B same instant) is allowed', () => {
+  const rec = orderedLiveRecord();
+  rec.rows[1].observed_at_utc = rec.rows[0].observed_at_utc; // B shares A's instant
+  assert.deepEqual(validateRehearsalRecord(rec, { candidateSha: SHA }), []);
+  assert.equal(liveRehearsalCompleteness(rec).complete, true);
+});
+
+test('H observed before G is rejected as an out-of-order sequence', () => {
+  const rec = orderedLiveRecord();
+  const g = rec.rows.find((r) => r.id === 'G');
+  const h = rec.rows.find((r) => r.id === 'H');
+  h.observed_at_utc = new Date(Date.parse(g.observed_at_utc) - 3_600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const problems = validateRehearsalRecord(rec, { candidateSha: SHA });
+  assert.ok(problems.some((p) => /row H: observed_at_utc is earlier than row G/.test(p)), problems.join('; '));
+  assert.equal(liveRehearsalCompleteness(rec).complete, false);
+});
+
+test('G observed before F is rejected as an out-of-order sequence', () => {
+  const rec = orderedLiveRecord();
+  const f = rec.rows.find((r) => r.id === 'F');
+  const g = rec.rows.find((r) => r.id === 'G');
+  g.observed_at_utc = new Date(Date.parse(f.observed_at_utc) - 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  assert.ok(validateRehearsalRecord(rec, { candidateSha: SHA }).some((p) => /row G: observed_at_utc is earlier than row F/.test(p)));
+});
+
+test('a timestamp without a timezone designator is rejected', () => {
+  const rec = orderedLiveRecord();
+  rec.rows[4].observed_at_utc = '2026-09-05T00:37:47'; // no Z / offset
+  assert.ok(validateRehearsalRecord(rec, { candidateSha: SHA })
+    .some((p) => /row E: observed_at_utc .* is not a valid ISO-8601 UTC timestamp/.test(p)));
+});
+
+test('a malformed timestamp is rejected', () => {
+  const rec = orderedLiveRecord();
+  rec.rows[2].observed_at_utc = 'not-a-timestamp';
+  assert.ok(validateRehearsalRecord(rec, { candidateSha: SHA })
+    .some((p) => /row C: observed_at_utc .* is not a valid ISO-8601 UTC timestamp/.test(p)));
+});
+
+test('the on-disk 2026-09-05 rehearsal record now fails as unordered (H before E–G)', () => {
+  // This is the real recorded evidence. It must FAIL the new validator because
+  // H is timestamped 2026-09-04T23:36:28Z, before E/F/G on 2026-09-05 — proof
+  // that the ordering check is live. It must NOT be "fixed" by editing the
+  // timestamp; only a genuine post-G owner H record makes it pass.
+  const p = path.join(ROOT, 'docs/evidence/2026-09-05-rehearsal-record.json');
+  const rec = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const problems = validateRehearsalRecord(rec);
+  assert.ok(
+    problems.some((x) => /row H: observed_at_utc is earlier than row G/.test(x)),
+    `expected the unordered H to be caught; got: ${problems.join('; ') || '(none)'}`,
+  );
+  assert.equal(liveRehearsalCompleteness(rec).complete, false);
+});

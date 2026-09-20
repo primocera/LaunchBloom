@@ -51,8 +51,26 @@ owner's own test account). Enforcement was active throughout.
   GO is recorded against the same fully-checked candidate rather than relocating
   identical code to a new SHA.
 
-## Wallet note (owner action)
+## Wallet note — OWNER-ONLY OPEN TASK (v23 SV-23-04, NOT RUN)
 
-The live subscription was left **active** after F. Owner should **refund the €0.96
-recovery charge** (`in_1UC7c4…` / its charge `ch_3UC7c4…`) and **cancel the
-subscription** (end of period) so it does not renew.
+The live test subscription was left **active** after F, and the €0.96 recovery
+charge was never refunded. This is an **owner-only open task** — Claude Code does
+not refund or cancel. It must be closed **before the next renewal** (in-app billing
+showed the next billing date ~**2026-10-02**), or a real charge will be taken.
+
+| Action | Detail | Stop condition |
+|---|---|---|
+| Refund the €0.96 recovery charge | invoice `in_1UC7c4…` / charge `ch_3UC7c4…` | if the refund does not show `succeeded` in Stripe, stop and do not claim it |
+| Cancel the test subscription | end-of-period (`cancel_at_period_end`) so it does not renew | if the UI shows a false success while Stripe still shows it renewing, stop |
+| **Ordered post-G H** (separate) | perform the refund **after G** and record it per `docs/evidence/POST_G_REFUND_H_TEMPLATE.md` | do not invent a timestamp; use the real post-G time |
+
+Record only a **redacted** receipt id, UTC time, result and the post-event
+entitlement observation — never an email, card number or secret.
+
+## Data-rights drill — OWNER-ONLY, PENDING (NOT RUN)
+
+The live account **export** and a test-account **delete** (deletion receipt, and a
+re-export returning no user data) have **not** been drilled live. These stay
+**owner-only pending** — they are not marked completed anywhere — until the owner
+runs them on a dedicated test account. If cancellation or delete fails, the UI must
+not show a false success. See the owner checklist `docs/evidence/OWNER_CHECKLIST_v23.md`.
