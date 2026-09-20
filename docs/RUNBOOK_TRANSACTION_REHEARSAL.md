@@ -168,6 +168,7 @@ code second:
 ## Sign-off
 
 - Owner: Primoz Cerar  Date: 2026-09-05 (individual steps); ordered post-G H — NOT RUN
-- Verdict: ☑ capped_beta GO · ⚠️ public_paid **CONDITIONAL GO** (ordered post-G H
-  refund outstanding; data-rights drill above still blank/pending) ☐ full public_paid GO
+- Verdict: ☑ GO for cohort expansion (capped_beta) · ⚠️ public_paid **CONDITIONAL
+  GO** — ordered post-G H refund outstanding; data-rights drill above still
+  blank/pending ☐ full public_paid GO (blockers below)
 - Open blockers (owner, deadline, acceptance evidence, rollback): none — `P1-live-money-unrehearsed` and `P1-router-rsc-csrf-advisory` closed; see `docs/launch/launch-state.json`
