@@ -41,9 +41,18 @@ rotation or deploy was performed.
 | Stale-bundle | `npm run check:app-fresh` | ✅ pass | app/ matches app-src/ |
 | Router guard | `npm run check:router` | ✅ pass | pure client SPA, no RSC/SSR indicators |
 | Prod audit | `npm audit --omit=dev` | ✅ **0** | info/low/moderate/high/critical all 0 |
-| Launch integrity | `npm run launch:verify` | ✅ pass | one active truth, evidence pinned, verdict recomputed |
-| Launch gate | `npm run launch:gate` | ⚠️ exit 1 | capped_beta GO / public_paid CONDITIONAL GO (correct — not full GO) |
+| Launch integrity | `npm run launch:verify` | ✅ pass | one active truth, evidence pinned, declared verdict = computed |
+| Launch gate | `npm run launch:gate` | ⚠️ exit 1 | **NO-GO — stale candidate**: the manifest still pins `e9618f3`; the gate's drift check reports 11 code files changed since it was pinned. This is the honest "re-cut required" signal, not a verdict on the evidence (see below). |
 | Rehearsal | `npm run rehearsal:validate -- docs/evidence/2026-09-05-rehearsal-record.json` | ⚠️ exit 1 | **fails by design** — H before G (unordered) |
+
+**Two different questions, kept apart (as the system intends):**
+- `launch:verify` / `computeVerdicts` (evidence-based, no live drift) →
+  **capped_beta GO / public_paid CONDITIONAL GO**. This is the verdict the
+  *evidence* supports and what the re-cut candidate will carry.
+- `launch:gate` (adds live git drift) → **NO-GO for both**, solely because the
+  pinned candidate `e9618f3` is now stale relative to the v23 code HEAD. Freezing
+  the new candidate `a5df7af` (Phase 3 re-cut) clears the staleness; the
+  evidence-based verdict above then stands.
 
 Owner/CI-only, NOT run here (needs live secrets / CI): the authenticated seeded
 browser matrix (`test:e2e:auth`) at `a5df7af`, and the SHA-pinned audit/e2e
