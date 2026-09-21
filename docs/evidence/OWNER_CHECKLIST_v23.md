@@ -16,10 +16,17 @@ Every row starts **NOT RUN**. Nothing here may be marked DONE before a real outp
 ---
 
 ## 1. Deploy / candidate SHA parity  — status: NOT RUN
-- Freeze the v23 candidate (Prompt 4) and deploy **exactly that full SHA**.
+- The v23 candidate is FROZEN and pinned: **`176a7c6859364ee0fd904bc900ec93e159b70197`**
+  (short `176a7c6`). It is the CI-green rc/v23 tree `26c95b2` plus documentation-only
+  README/CLAUDE edits — executable tree byte-identical, bundle `index-Cq2NTdSE`, so
+  the deploy is runtime-identical. `main` and `rc/v23` are at `3739e10` (the docs-only
+  pin commit on top of the candidate).
+- Deploy **exactly `176a7c6`** (deploying the `main`/`rc/v23` tip `3739e10` is
+  equivalent — same executable tree).
 - Readiness does not expose the commit, so confirm the deployed commit in the
   **Vercel Deployments** dashboard and record the **deploy id + commit SHA**.
-- **Stop condition:** deployed SHA ≠ certified candidate SHA → do not open paid.
+- **Stop condition:** deployed SHA ≠ `176a7c6` (or its equivalent tip `3739e10`) → do
+  not open paid.
 
 ## 2. Read-only exact migration probe 038-040  — status: NOT RUN
 Run in the Supabase SQL editor (read-only), record each result:
