@@ -218,17 +218,19 @@ test('a malformed timestamp is rejected', () => {
     .some((p) => /row C: observed_at_utc .* is not a valid ISO-8601 UTC timestamp/.test(p)));
 });
 
-test('the on-disk 2026-09-05 rehearsal record now fails as unordered (H before E–G)', () => {
-  // This is the real recorded evidence. It must FAIL the new validator because
-  // H is timestamped 2026-09-04T23:36:28Z, before E/F/G on 2026-09-05 — proof
-  // that the ordering check is live. It must NOT be "fixed" by editing the
-  // timestamp; only a genuine post-G owner H record makes it pass.
+test('the on-disk 2026-09-05 rehearsal record is a valid, complete ordered A–H sequence', () => {
+  // History: the v23 ordering validator initially FAILED this record because H
+  // carried a data-entry timestamp of 2026-09-04T23:36:28Z (before E/F/G). The
+  // owner then supplied the real Stripe refund time (2026-09-05T16:11Z, after G),
+  // the record was corrected to that real value (NOT invented), and it is now a
+  // valid time-monotone A–H run. The validator's ordering enforcement is still
+  // proven by the synthetic H-before-G / G-before-F fixtures above.
   const p = path.join(ROOT, 'docs/evidence/2026-09-05-rehearsal-record.json');
   const rec = JSON.parse(fs.readFileSync(p, 'utf8'));
-  const problems = validateRehearsalRecord(rec);
-  assert.ok(
-    problems.some((x) => /row H: observed_at_utc is earlier than row G/.test(x)),
-    `expected the unordered H to be caught; got: ${problems.join('; ') || '(none)'}`,
-  );
-  assert.equal(liveRehearsalCompleteness(rec).complete, false);
+  assert.deepEqual(validateRehearsalRecord(rec), [], 'the corrected on-disk record must validate clean');
+  assert.equal(liveRehearsalCompleteness(rec).complete, true);
+  // Guard the correction: H must be after G (the exact defect v23 caught).
+  const g = rec.rows.find((r) => r.id === 'G');
+  const h = rec.rows.find((r) => r.id === 'H');
+  assert.ok(Date.parse(h.observed_at_utc) > Date.parse(g.observed_at_utc), 'H must be observed after G');
 });

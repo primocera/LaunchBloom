@@ -1,0 +1,15 @@
+{
+  "schema": "migration-probe-1",
+  "candidate_sha": "a5df7af301d299234adda12ce2bb2bc02b1d6b68",
+  "observed_at_utc": "2026-09-21T00:00:00Z",
+  "verified_by": "owner (Primoz Cerar)",
+  "source": "Supabase SQL editor — read-only probe per docs/evidence/OWNER_CHECKLIST_v23.md step 2",
+  "results": {
+    "app_user_id_column": { "present": true, "data_type": "uuid" },
+    "duplicate_non_null_app_user_id_rows": 0,
+    "unique_index_customers_app_user_id_key": { "indisunique": true, "non_partial": true },
+    "stripe_ownership_uniqueness_ready": true
+  },
+  "conclusion": "Migrations 038-040 are applied and the ownership arbiter is live: customers.app_user_id is present (uuid), there are no duplicate non-null app_user_id rows, the customers_app_user_id_key index is a NON-partial single-column UNIQUE index (a valid arbiter for the predicate-less ON CONFLICT (app_user_id)), and stripe_ownership_uniqueness_ready() returns TRUE. This is the machine-readable owner probe required by the v23 ownership-enforcement invariant.",
+  "redaction": "No PII, no secrets, no customer content — schema/index facts only."
+}

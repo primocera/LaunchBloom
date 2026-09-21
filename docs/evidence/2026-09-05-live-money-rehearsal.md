@@ -51,21 +51,15 @@ owner's own test account). Enforcement was active throughout.
   GO is recorded against the same fully-checked candidate rather than relocating
   identical code to a new SHA.
 
-## Wallet note — OWNER-ONLY OPEN TASK (v23 SV-23-04, NOT RUN)
+## Wallet note — OWNER ACTIONS (updated 2026-09-21)
 
-The live test subscription was left **active** after F, and the €0.96 recovery
-charge was never refunded. This is an **owner-only open task** — Claude Code does
-not refund or cancel. It must be closed **before the next renewal** (in-app billing
-showed the next billing date ~**2026-10-02**), or a real charge will be taken.
-
-| Action | Detail | Stop condition |
+| Action | Status | Detail |
 |---|---|---|
-| Refund the €0.96 recovery charge | invoice `in_1UC7c4…` / charge `ch_3UC7c4…` | if the refund does not show `succeeded` in Stripe, stop and do not claim it |
-| Cancel the test subscription | end-of-period (`cancel_at_period_end`) so it does not renew | if the UI shows a false success while Stripe still shows it renewing, stop |
-| **Ordered post-G H** (separate) | perform the refund **after G** and record it per `docs/evidence/POST_G_REFUND_H_TEMPLATE.md` | do not invent a timestamp; use the real post-G time |
+| Ordered post-G H (refund after G) | ✅ **DONE** | refund `re_3UBD6L…` confirmed in Stripe at **2026-09-05T16:11Z** (after G at 01:15Z); entitlement unchanged by the refund alone. The record's earlier `2026-09-04T23:36:28Z` was a data-entry error, corrected to this real Stripe time. |
+| Cancel the test subscription | ✅ **DONE** | Stripe shows the subscription **scheduled to cancel Oct 5, 2026** (`cancel_at_period_end`), so it will not renew. |
+| Refund the €0.96 recovery charge | owner-confirmed | invoice `in_1UC7c4…` — owner reported refunded in step 1. |
 
-Record only a **redacted** receipt id, UTC time, result and the post-event
-entitlement observation — never an email, card number or secret.
+Recorded with **redacted** ids only — no email, card number or secret.
 
 ## Data-rights drill — OWNER-ONLY, PENDING (NOT RUN)
 

@@ -3,7 +3,7 @@
 <!-- ───────────────────────────────────────────────────────────────────────── -->
 <!-- PROMPT AUTHORS / LLMs, READ THIS FIRST:                                     -->
 <!-- The engineering prompt packs (v6–v19) are DONE and shipped. The build is    -->
-<!-- certified (capped-beta GO, public-paid CONDITIONAL GO — see                 -->
+<!-- certified (capped-beta GO, public-paid GO — see                             -->
 <!-- docs/launch/launch-state.json). Do NOT write another vNN ENGINEERING pack.  -->
 <!-- The NEXT prompt pack you write must be MARKETING / DISTRIBUTION / GTM.      -->
 <!-- Full brief: docs/V20_MOVING_TOWARD_MARKETING.md                                              -->
@@ -35,11 +35,11 @@ Scale Prompt Pack and found that almost everything was already shipped in v6–v
 — only seven genuine gaps remained, and they are now built, tested and merged
 (see [`docs/OWNER_HANDOFF_V18.md`](docs/OWNER_HANDOFF_V18.md)). Every automated
 gate is green at the candidate and the release gate is **capped-beta GO /
-public-paid CONDITIONAL GO** (v23 correction 2026-09-21: the recorded live-money
-H/refund is timestamped before E/F/G, so the ordered A–H sequence is not yet
-evidenced — the rehearsal validator now fails it — and Stripe ownership
-enforcement has no in-repo machine-readable probe; public_paid proceeds only over
-the accepted `live-money` risk until a genuine post-G H record lands. See
+public-paid GO** (as of v23, 2026-09-21: the live-money A–H rehearsal is complete
+and ordered — the H/refund's real Stripe time is 2026-09-05T16:11Z, after G, after
+the record's data-entry timestamp was corrected — Stripe ownership enforcement is
+probe-verified, and the dependency audit is 0 after the v23 security patch. A
+re-cut at the v23 HEAD + deploy is the only remaining mechanical step. See
 `docs/launch/launch-state.json`).
 
 Writing another feature/prompt pack now is very likely wasted motion. **The
@@ -163,7 +163,7 @@ automatically.
 | [`docs/V10_PLAN.md`](docs/V10_PLAN.md) | The v10 execution plan |
 | [`docs/GOLDEN_EVAL_V10.md`](docs/GOLDEN_EVAL_V10.md) | What the quality gate does and does not measure |
 | [`docs/LIFECYCLE_EMAIL_V10.md`](docs/LIFECYCLE_EMAIL_V10.md) | Every email, its trigger, dedupe key and category |
-| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal — individual A–H steps run 2026-09-05, but the ordered post-G H refund is OUTSTANDING (v23; recorded H predates E/F/G) |
+| [`docs/RUNBOOK_TRANSACTION_REHEARSAL.md`](docs/RUNBOOK_TRANSACTION_REHEARSAL.md) | Owner-run live money rehearsal — ordered A–H COMPLETE (v23: H/refund real Stripe time 2026-09-05T16:11Z, after G) |
 | [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) | **Start here.** Current owner/next-writer handoff: state, closed work, accepted risks, next focus |
 | [`docs/OWNER_HANDOFF_V15.md`](docs/OWNER_HANDOFF_V15.md) | Prior owner handoff (SUPERSEDED by v16) |
 | [`docs/LAUNCH_STATE.md`](docs/LAUNCH_STATE.md) | Generated launch truth — never edit by hand |
@@ -181,28 +181,28 @@ tracks are not on the same footing, and accepted risk never produces a full GO:
 | Track | Verdict | On what |
 |---|---|---|
 | Capped beta | GO | evidence |
-| Public paid launch | CONDITIONAL GO | proceeds only over the accepted `live-money` risk — the ordered post-G H refund is not yet evidenced (v23) |
+| Public paid launch | GO | evidence — no open/accepted blocker; every required condition satisfied (v23) |
 
-Proven against production: migrations `001`–`037` applied, configuration
-verified via `/api/admin/readiness` (`mode: production`, all readiness checks
-green, 0 blockers), unsubscribe suppression honoured in both directions, and a
-daily AI spend ceiling live. Stripe ownership **enforcement** (migrations
-`038`–`040` + the `stripe_ownership_uniqueness_ready()` arbiter) is **pending** —
-there is no in-repo machine-readable owner probe, so `migrations.ownership_enforcement`
-is `pending` and no `enforcement_active` claim is made.
+Proven against production: migrations `001`–`040` applied (001-037 verified
+2026-07-28; 038-040 verified by the 2026-09-21 read-only owner probe), Stripe
+ownership **enforcement** live (`app_user_id` arbiter non-partial UNIQUE,
+`stripe_ownership_uniqueness_ready()` = true), configuration verified via
+`/api/admin/readiness` (`mode: production`, all readiness checks green, 0
+blockers), unsubscribe suppression honoured in both directions, and a daily AI
+spend ceiling live.
 
 The automated signed-in browser matrix runs against a disposable non-production
 Supabase and is **green in CI** (`passed_ci`) at the shipping candidate — the
 `P0-no-authenticated-e2e` blocker is **closed**. The router RSC advisory is
-**closed** (guard green, no RSC entry point). The live billing rehearsal exercised
-the individual A–H transitions on 2026-09-05, but the machine record is **not a
-valid ordered sequence**: its H (refund) is timestamped `2026-09-04T23:36:28Z`,
-before E/F/G on 2026-09-05, so `npm run rehearsal:validate` **fails** it as
-unordered (H before G). The ordered post-G refund H (real refund id, observed
-after G, with a post-event entitlement observation) is **outstanding**; blocker
-`P1-live-money-unrehearsed` is **accepted** and `public_paid` is therefore
-**CONDITIONAL GO**, not a full GO, until a genuine post-G H record lands. (Exact
-counts and the full blocker list live in the canonical launch-state, not here.)
+**closed** (guard green, no RSC entry point). The live billing rehearsal — the
+canonical eight-transition **ordered** A–H matrix — is **complete**: after the v23
+ordering validator caught a data-entry timestamp on H, the owner's Stripe evidence
+showed the refund (`re_3UBD6L…`) actually occurred `2026-09-05T16:11Z`, ~15h after
+G; corrected to that real time, `npm run rehearsal:validate` passes (time-monotone,
+complete) and the refund alone left entitlement unchanged. No P0/P1 blocker remains
+open or accepted, so `public_paid` is a full **GO** (the pre-v23 candidate is stale
+until the rc/v23 re-cut + deploy — a mechanical step). (Exact counts and the full
+blocker list live in the canonical launch-state, not here.)
 
 Start with [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) for the
 full picture and what to pick up next. Earlier GO/NO-GO and handoff documents

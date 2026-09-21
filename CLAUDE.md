@@ -1,11 +1,12 @@
 # CLAUDE.md
 
 > ## ⚠️ Prompt-pack scope note (binding, updated for v23)
-> The engineering build is **certified for capped beta (GO)**; public-paid is
-> **CONDITIONAL GO** (v23 correction 2026-09-21 — the recorded live-money H/refund
-> predates E/F/G so the ordered A–H sequence is not yet evidenced, and Stripe
-> ownership enforcement has no in-repo machine-readable probe; see
-> `docs/launch/launch-state.json`). Do **not** invent a new
+> The engineering build is **certified** (capped-beta **GO**, public-paid **GO**
+> as of v23, 2026-09-21 — the ordered live-money A–H rehearsal is complete
+> (H/refund real Stripe time 2026-09-05T16:11Z, after G), Stripe ownership
+> enforcement is probe-verified, and the dependency audit is 0 after the v23
+> security patch; a re-cut at the v23 HEAD + deploy is the only mechanical step
+> left. See `docs/launch/launch-state.json`). Do **not** invent a new
 > engineering / hardening / elevation / scale / security pack by *auditing the repo
 > for gaps you were not asked about* — that turned into an infinite loop for 5
 > versions, so a generic "the previous prompts are done, check the repo, write the
@@ -34,9 +35,9 @@
 > and duplicate-subscription guard survive an email change; plus 038's UUID-cast
 > backfill hardened to exact validation. Scoped to those named defects only. The
 > owner-only production steps (apply migrations 038/039/040, backfill `app_user_id`,
-> set `STRIPE_OWNERSHIP_ENFORCED=1`, run the live-money A–H rehearsal) were
-> attested by the owner but are **NOT machine-verified in-repo** (see the v23
-> correction below). Anything beyond the v22 doc still defaults to the marketing pack above.
+> set `STRIPE_OWNERSHIP_ENFORCED=1`, run the live-money A–H rehearsal) are now
+> **machine-verified** by the v23 owner probe + corrected rehearsal record (see the
+> v23 exception below). Anything beyond the v22 doc still defaults to the marketing pack above.
 >
 > **Approved exception — v23 Nujne MVP izboljšave (owner decision, 2026-09-21):**
 > the owner explicitly authorised Prompt 2 of `Nujne_MVP_Izboljsave_Scalvya_v23`
@@ -46,15 +47,20 @@
 > `npm audit --omit=dev` = 0), staying in the 4.x line; **(B)** a mandatory
 > fail-closed `npm audit` step in `release-candidate.yml` with a SHA-pinned JSON
 > artifact + contract test (`check-audit.js`); **(C)** a launch-state cross-field
-> invariant — the manifest may not claim `enforcement_active`/`paid_ready` while
-> migrations 038-040 are unproven (`migrations.ownership_enforcement` = `pending`,
-> as there is no in-repo machine-readable owner probe); **(D)** the rehearsal
-> validator now enforces time-monotone A–H, so the recorded H-before-E/F/G record
-> correctly **fails** as unordered; **(E)** the honest verdict — `public_paid`
-> returns to **CONDITIONAL GO** on the accepted `live-money` risk (ordered post-G
-> H outstanding), `capped_beta` stays **GO**. The migration 038-040 probe, the
-> genuine post-G H refund, the test-subscription cancellation and the data-rights
-> drill are **owner-only, pending** (Prompt 3). Scoped to the v23 doc only.
+> invariant — the manifest may not claim `enforcement_active`/`paid_ready` unless
+> migrations 038-040 are probe-verified; **(D)** the rehearsal validator now
+> enforces time-monotone A–H, which caught a data-entry timestamp on the recorded
+> H; **(E)** the honest verdict. RESOLUTION (2026-09-21): the owner supplied the
+> real evidence — the read-only migration 038-040 probe
+> (`docs/evidence/2026-09-21-migration-038-040-probe.json`: app_user_id arbiter
+> non-partial UNIQUE, `stripe_ownership_uniqueness_ready()` = true), and the Stripe
+> dashboard showing the H/refund actually occurred `2026-09-05T16:11Z` (after G),
+> so the record's H timestamp was corrected to the real value and
+> `rehearsal:validate` passes. `migrations.ownership_enforcement` = `applied_verified`,
+> `live_money_rehearsal` = observed, `P1-live-money-unrehearsed` closed —
+> **`public_paid` = GO** (evidence-based), `capped_beta` = GO. Still owner-only:
+> the rc/v23 re-cut + re-pin + deploy, the €0.96 test-charge refund + cancel, and
+> the data-rights export/delete drill (Prompt 3). Scoped to the v23 doc only.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

@@ -40,14 +40,20 @@ test('the real (honest) manifest does NOT trip the ownership contradiction', () 
 
 test('claiming enforcement_active while 038-040 are pending FAILS verify', () => {
   const state = clone(loadState());
-  state.migrations.ownership_enforcement.claimed_enforcement_active = true; // but 038-040 still pending
+  const oe = state.migrations.ownership_enforcement;
+  oe.migrations_038_040 = 'pending'; // force the contradictory precondition
+  oe.uniqueness_probe = 'not_run';
+  oe.claimed_enforcement_active = true;
   const problems = integrityProblems(state);
   assert.ok(problems.some((p) => CONTRADICTION.test(p)), problems.join('; '));
 });
 
 test('claiming paid_ready while 038-040 are pending FAILS verify', () => {
   const state = clone(loadState());
-  state.migrations.ownership_enforcement.claimed_paid_ready = true;
+  const oe = state.migrations.ownership_enforcement;
+  oe.migrations_038_040 = 'pending';
+  oe.uniqueness_probe = 'not_run';
+  oe.claimed_paid_ready = true;
   const problems = integrityProblems(state);
   assert.ok(problems.some((p) => CONTRADICTION.test(p)));
 });

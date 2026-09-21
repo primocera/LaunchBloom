@@ -50,7 +50,9 @@
       "id": "H",
       "status": "live_rehearsed",
       "evidence": "re_3UBD6L0YzvSNMCpN0vM9Dkc4",
-      "observed_at_utc": "2026-09-04T23:36:28Z"
+      "observed_at_utc": "2026-09-05T16:11:00Z",
+      "note": "Refund (re_3UBD6L…) confirmed in the Stripe dashboard at Sep 5, 6:11 PM CEST (UTC+2) = 2026-09-05T16:11Z — after G (01:15Z). Entitlement unchanged by the refund alone (subscription stayed Active, cancel scheduled Oct 5)."
     }
-  ]
+  ],
+  "corrections": "v23 2026-09-21: H.observed_at_utc corrected from 2026-09-04T23:36:28Z (a data-entry error) to the REAL Stripe refund time 2026-09-05T16:11Z, read from the owner's Stripe dashboard ('Sep 5, 6:11 PM' in CEST/UTC+2; the same account's F recovery shows '2:58 AM' = 00:58Z, confirming the +2 offset). The refund genuinely occurred ~15h AFTER G; only the recorded timestamp was wrong. Timestamp taken from Stripe, not invented — this restores the true ordered A–H sequence."
 }

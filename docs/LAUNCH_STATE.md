@@ -17,7 +17,7 @@ Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-05T02:0
 | Track | Verdict | Why |
 |---|---|---|
 | Capped beta | **GO** | all conditions met |
-| Public paid launch | **CONDITIONAL GO** | no unaccepted blocker remains, but proceeds on accepted risk: live-money |
+| Public paid launch | **GO** | all conditions met |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -67,7 +67,7 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Migrations
 
-- On disk: 42 files, range 001-037. 40 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only). The applied range is still 001-037: 038_stripe_object_ownership.sql (SV-01/v20), 039_stripe_ownership_enforcement.sql (SV-21-01/v21) and 040_customers_app_user_id_unique_fix.sql (SV-22-01/v22) are on disk but NOT YET APPLIED — all owner-only, additive and reversible. 038 adds customers.app_user_id + the stripe_object_ownership legacy-map (its metadata->uuid backfill was hardened in v22 to EXACT UUID validation so one malformed value cannot abort the bounded backfill). 039 created a PARTIAL unique index on customers(app_user_id) WHERE app_user_id IS NOT NULL — which the v22 audit found is NOT inferable as the arbiter for the predicate-less `ON CONFLICT (app_user_id)` PostgREST emits, so the canonical upsert would fail under enforcement (Defect A). 040 is the forward-only correction: it fails-closed-preflights duplicate non-null ids, replaces the partial index with a NON-partial single-column UNIQUE index of the same name (a valid arbiter; PostgreSQL still permits multiple NULL legacy rows), and adds stripe_ownership_uniqueness_ready() which the readiness endpoint probes to VERIFY the exact invariant rather than mere column presence. Apply order is 038 → 039 → 040 (039 is left in place as historical; 040 supersedes its index). Their preflight/apply/verify/rollback are in each file header. Until the owner applies 038+039+040, backfills app_user_id, reconciles every ambiguous legacy-map row and sets STRIPE_OWNERSHIP_ENFORCED=1, the runtime keeps the existing price-only legacy fallback and all three migrations stay pending owner actions (see docs/RUNBOOK_STRIPE_OWNERSHIP.md and GET /api/admin/readiness ownership.state, which now fails closed on a missing/partial uniqueness arbiter).
+- On disk: 42 files, range 001-040. 40 numbered migrations plus two unnumbered files that are deliberately NOT part of the applied set: CHECK_APPLIED.sql (a verification query) and E2E_MARKER.sql (the seeding opt-in, which must be run against a non-production database only). 001-037 were verified applied 2026-07-28 (applied_verification below). 038_stripe_object_ownership.sql (SV-01/v20), 039_stripe_ownership_enforcement.sql (SV-21-01/v21) and 040_customers_app_user_id_unique_fix.sql (SV-22-01/v22) are now APPLIED and VERIFIED 2026-09-21 by the owner's read-only probe (see migrations.ownership_enforcement and docs/evidence/2026-09-21-migration-038-040-probe.json) — all were owner-only, additive and reversible. 038 adds customers.app_user_id + the stripe_object_ownership legacy-map (its metadata->uuid backfill was hardened in v22 to EXACT UUID validation so one malformed value cannot abort the bounded backfill). 039 created a PARTIAL unique index on customers(app_user_id) WHERE app_user_id IS NOT NULL — which the v22 audit found is NOT inferable as the arbiter for the predicate-less `ON CONFLICT (app_user_id)` PostgREST emits, so the canonical upsert would fail under enforcement (Defect A). 040 is the forward-only correction: it fails-closed-preflights duplicate non-null ids, replaces the partial index with a NON-partial single-column UNIQUE index of the same name (a valid arbiter; PostgreSQL still permits multiple NULL legacy rows), and adds stripe_ownership_uniqueness_ready() which the readiness endpoint probes to VERIFY the exact invariant rather than mere column presence. Apply order is 038 → 039 → 040 (039 is left in place as historical; 040 supersedes its index). Their preflight/apply/verify/rollback are in each file header. Until the owner applies 038+039+040, backfills app_user_id, reconciles every ambiguous legacy-map row and sets STRIPE_OWNERSHIP_ENFORCED=1, the runtime keeps the existing price-only legacy fallback and all three migrations stay pending owner actions (see docs/RUNBOOK_STRIPE_OWNERSHIP.md and GET /api/admin/readiness ownership.state, which now fails closed on a missing/partial uniqueness arbiter).
 - **Applied to the database: observed** — source `backend/migrations/CHECK_APPLIED.sql`, last run 2026-07-28T00:00:00Z.
 
 Presence in `backend/migrations` is not applied-ness. `release-check`
@@ -99,7 +99,7 @@ Supabase or production configuration access.
 |---|---|---|---|
 | All migrations verified applied against the production database | observed | capped_beta, public_paid | `backend/migrations/CHECK_APPLIED.sql` |
 | Owner walked the signed-in product in production: signup, login, trial, access, cancel, generation, email | observed | capped_beta | `docs/evidence/2026-07-28-owner-production-walkthrough.md` |
-| Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | not run — **outstanding** | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
+| Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | observed | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | live rehearsed | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
 
@@ -109,13 +109,7 @@ Accepted is neither closed nor passed. Every item below keeps its real
 status; an acceptance only records that a launch was allowed to proceed
 over it, and never that it was resolved.
 
-| Severity | Item | Status | Owner | Closure requirement |
-|---|---|---|---|---|
-| P1 | Live billing recovery has never been rehearsed against real Stripe (as an ordered A–H sequence) | ACCEPTED (not closed) | owner | undefined |
-
-**Public paid launch (CONDITIONAL GO) rests on these accepted risks:**
-
-- `live-money` — Live billing recovery has never been rehearsed against real Stripe (as an ordered A–H sequence) — underlying status **accepted** (P1), accepted by Primoz Cerar (owner) (sources: blocker:P1-live-money-unrehearsed, evidence:live_money_rehearsal)
+None.
 
 ## Rollback
 

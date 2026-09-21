@@ -1,20 +1,19 @@
 # Runbook — Paid Transaction Rehearsal (owner-operated)
 
-> ⚠️ **STATUS: ORDERED POST-G H OUTSTANDING (v23 correction, 2026-09-21).** The
-> owner ran the individual A–H transitions against real live Stripe on 2026-09-05
-> (kept as historical evidence: `docs/evidence/2026-09-05-rehearsal-record.json`
-> and `docs/evidence/2026-09-05-live-money-rehearsal.md`). BUT the recorded H
-> (refund) is timestamped `2026-09-04T23:36:28Z`, before E/F/G on 2026-09-05, so
-> the record is **not a valid ordered sequence** — `npm run rehearsal:validate`
-> now fails it (H before G), and H's precondition is "row F active with a real
-> charge". The genuine **ordered post-G H** (real refund id, observed after G,
-> with a post-event entitlement observation) is still owner-gated — see
-> `docs/evidence/POST_G_REFUND_H_TEMPLATE.md`. Accordingly blocker
-> `P1-live-money-unrehearsed` is **accepted** and `public_paid` is **CONDITIONAL
-> GO**, not a full GO (see `docs/launch/launch-state.json`). Separately, Stripe
-> ownership enforcement has no in-repo machine-readable probe, so
-> `migrations.ownership_enforcement` is `pending`. Run the procedure below to
-> record the ordered post-G H and close the accepted risk.
+> ✅ **STATUS: ORDERED A–H COMPLETE (v23, 2026-09-21).** The owner ran the full
+> eight-transition ordered recovery sequence against real live Stripe on
+> 2026-09-05 (evidence: `docs/evidence/2026-09-05-rehearsal-record.json` +
+> `docs/evidence/2026-09-05-live-money-rehearsal.md`). The v23 ordering validator
+> caught a data-entry timestamp on H (`2026-09-04T23:36:28Z`); the owner's Stripe
+> dashboard showed the refund (`re_3UBD6L…`) actually occurred `2026-09-05T16:11Z`
+> (Sep 5, 6:11 PM CEST/UTC+2 — the same account's F recovery reads 00:58Z), ~15h
+> **after** G. Corrected to the real Stripe time (not invented),
+> `npm run rehearsal:validate` passes (time-monotone, complete) and the refund
+> alone left entitlement unchanged. Blocker `P1-live-money-unrehearsed` is
+> **closed** and `public_paid` is **GO** (see `docs/launch/launch-state.json`).
+> Stripe ownership enforcement is probe-verified
+> (`docs/evidence/2026-09-21-migration-038-040-probe.json`). The procedure below is
+> retained for re-runs and future candidates.
 
 **Purpose:** prove, on a frozen commit, that every real money path works before
 expanding acquisition. Automated release checks (`npm run check`,
@@ -167,8 +166,7 @@ code second:
 
 ## Sign-off
 
-- Owner: Primoz Cerar  Date: 2026-09-05 (individual steps); ordered post-G H — NOT RUN
-- Verdict: ☑ GO for cohort expansion (capped_beta) · ⚠️ public_paid **CONDITIONAL
-  GO** — ordered post-G H refund outstanding; data-rights drill above still
-  blank/pending ☐ full public_paid GO (blockers below)
+- Owner: Primoz Cerar  Date: 2026-09-05 (ordered A–H; H time corrected from Stripe 2026-09-21)
+- Verdict: ☑ GO for cohort expansion (capped_beta) · ☑ public_paid **GO** — ordered
+  A–H complete; data-rights drill still owner-pending (separate) ☐ NO-GO (blockers below)
 - Open blockers (owner, deadline, acceptance evidence, rollback): none — `P1-live-money-unrehearsed` and `P1-router-rsc-csrf-advisory` closed; see `docs/launch/launch-state.json`
