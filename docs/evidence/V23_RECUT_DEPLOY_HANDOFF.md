@@ -7,7 +7,10 @@
 > **(2) deploy** that SHA; **(3) data-rights drill**. This doc is the exact recipe.
 
 ## Context you can trust
-- Branch `main` and `rc/v23` are both at **`f4eeee6ba6eee8fb4e4883669ea75b8b9195f64e`**.
+- `main` and `rc/v23` track together. **`NEW` = the latest CI-green rc/v23 commit**
+  — resolve it at run time: `git rev-parse origin/rc/v23`. Do NOT hardcode an old
+  SHA; use whatever that command returns (it was `f4eeee6…`, then a docs commit on
+  top — always pin the latest green one).
 - The manifest `docs/launch/launch-state.json` still pins the PRE-v23 candidate
   `e9618f3…`, so `npm run launch:gate` reports NO-GO purely on **stale-candidate
   drift** (11 code files changed). `npm run launch:verify` is OK and the
@@ -20,8 +23,8 @@
 ---
 
 ## STEP 1 — confirm the rc/v23 CI run is green (except drift-by-design)
-Open GitHub Actions → `release-candidate` workflow → branch `rc/v23`, commit
-`f4eeee6`. Required to be GREEN: `npm audit` (0), lint, unit/contract tests,
+Open GitHub Actions → `release-candidate` workflow → branch `rc/v23`, latest
+commit (`git rev-parse origin/rc/v23`). Required to be GREEN: `npm audit` (0), lint, unit/contract tests,
 build, app-fresh, router, export, public browser suite, and the **authenticated
 matrix** (`authenticated-e2e` job, zero skips). EXPECTED to fail: the
 `launch:drift` / freshness step — it fails *by design* until the candidate is
