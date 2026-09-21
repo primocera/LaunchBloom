@@ -5,8 +5,10 @@
 > as of v23, 2026-09-21 — the ordered live-money A–H rehearsal is complete
 > (H/refund real Stripe time 2026-09-05T16:11Z, after G), Stripe ownership
 > enforcement is probe-verified, and the dependency audit is 0 after the v23
-> security patch; a re-cut at the v23 HEAD + deploy is the only mechanical step
-> left. See `docs/launch/launch-state.json`). Do **not** invent a new
+> security patch; the v23 re-cut is done — the candidate is re-pinned to the
+> CI-green rc/v23 commit and `launch:gate` is fully green — so only owner-operational
+> steps remain: deploy the pinned candidate and run the data-rights export/delete
+> drill. See `docs/launch/launch-state.json`). Do **not** invent a new
 > engineering / hardening / elevation / scale / security pack by *auditing the repo
 > for gaps you were not asked about* — that turned into an infinite loop for 5
 > versions, so a generic "the previous prompts are done, check the repo, write the
@@ -58,9 +60,12 @@
 > so the record's H timestamp was corrected to the real value and
 > `rehearsal:validate` passes. `migrations.ownership_enforcement` = `applied_verified`,
 > `live_money_rehearsal` = observed, `P1-live-money-unrehearsed` closed —
-> **`public_paid` = GO** (evidence-based), `capped_beta` = GO. Still owner-only:
-> the rc/v23 re-cut + re-pin + deploy, the €0.96 test-charge refund + cancel, and
-> the data-rights export/delete drill (Prompt 3). Scoped to the v23 doc only.
+> **`public_paid` = GO** (evidence-based), `capped_beta` = GO. The re-cut is now
+> DONE (2026-09-21): the candidate is re-pinned to the CI-green rc/v23 commit, all
+> 11 checks re-observed there, and `launch:gate` is fully green. Still owner-only:
+> deploy the pinned candidate on Vercel and confirm readiness, the test-charge
+> refund + cancel, and the data-rights export/delete drill (Prompt 3). Scoped to
+> the v23 doc only.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

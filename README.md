@@ -1,18 +1,15 @@
 # Scalvya
 
 <!-- ───────────────────────────────────────────────────────────────────────── -->
-<!-- PROMPT AUTHORS / LLMs, READ THIS FIRST:                                     -->
-<!-- The engineering prompt packs (v6–v19) are DONE and shipped. The build is    -->
-<!-- certified (capped-beta GO, public-paid GO — see                             -->
-<!-- docs/launch/launch-state.json). Do NOT write another vNN ENGINEERING pack.  -->
-<!-- The NEXT prompt pack you write must be MARKETING / DISTRIBUTION / GTM.      -->
-<!-- Full brief: docs/V20_MOVING_TOWARD_MARKETING.md                                              -->
+<!-- Prompt authors / LLMs: the engineering build (v6–v23) is complete and       -->
+<!-- certified — capped-beta GO and public-paid GO (docs/launch/launch-state.json).-->
+<!-- The next prompt pack is marketing / distribution / GTM, not engineering.     -->
+<!-- Brief: docs/V20_MOVING_TOWARD_MARKETING.md                                   -->
 <!-- ───────────────────────────────────────────────────────────────────────── -->
 
-> **⚠️ Next prompt pack = MARKETING, not engineering.** The v6–v19 engineering work
-> is complete and certified; the code is in strong shape. If you're here to write the
-> next prompt pack, write a **marketing / distribution / GTM** pack, not another
-> engineering one. Read **[docs/V20_MOVING_TOWARD_MARKETING.md](docs/V20_MOVING_TOWARD_MARKETING.md)** first.
+> **The engineering build is complete and certified — capped-beta GO / public-paid GO.**
+> The next prompt pack is **marketing / distribution / GTM**, not another engineering
+> one. Start from **[docs/V20_MOVING_TOWARD_MARKETING.md](docs/V20_MOVING_TOWARD_MARKETING.md)**.
 
 **Turn one offer into a launch-ready campaign.**
 
@@ -27,38 +24,35 @@ user.
 
 ---
 
-## 🚦 The next focus is distribution, not another prompt pack.
+## Status: the build is certified; the focus is distribution
 
-**As of the v18 candidate (2026-08-14), the product build is done for launch.**
-The engineering backlog has reached diminishing returns: v18 executed the whole
-Scale Prompt Pack and found that almost everything was already shipped in v6–v17
-— only seven genuine gaps remained, and they are now built, tested and merged
-(see [`docs/OWNER_HANDOFF_V18.md`](docs/OWNER_HANDOFF_V18.md)). Every automated
-gate is green at the candidate and the release gate is **capped-beta GO /
-public-paid GO** (as of v23, 2026-09-21: the live-money A–H rehearsal is complete
-and ordered — the H/refund's real Stripe time is 2026-09-05T16:11Z, after G, after
-the record's data-entry timestamp was corrected — Stripe ownership enforcement is
-probe-verified, and the dependency audit is 0 after the v23 security patch. A
-re-cut at the v23 HEAD + deploy is the only remaining mechanical step. See
-`docs/launch/launch-state.json`).
+The release gate is **capped-beta GO / public-paid GO** — computed, not declared,
+by `npm run launch:gate` from `docs/launch/launch-state.json`. As of the v23 re-cut
+(2026-09-21) the pinned candidate is CI-green on every required check: dependency
+audit 0 (after the v23 security patch), lint, the full unit and contract suite,
+build, the public and authenticated browser matrices, and launch integrity. The
+live-money recovery rehearsal (the ordered A–H sequence) is complete against real
+Stripe with the refund confirmed after the late-failure step, and Stripe-ownership
+enforcement is probe-verified. The re-cut is done; what remains is
+owner-operational rather than code — deploy the pinned candidate and run the
+data-rights export/delete drill.
 
-Writing another feature/prompt pack now is very likely wasted motion. **The
-constraint on this business is no longer code — it is users.** The next work
-should be **marketing and distribution**: positioning and landing conversion,
-getting the first cohort of freelance marketers / boutique agencies in, activation
-and the value loop, pricing experiments, and channels (content, communities,
-outbound, partnerships). Ship features again only when real user evidence demands
-a specific one.
+The constraint on this business is no longer code — it is users. The next work is
+**marketing and distribution**: positioning and landing conversion, getting the
+first cohort of freelance marketers and boutique agencies in, activation and the
+value loop, pricing experiments, and channels (content, communities, outbound,
+partnerships). Build features again only when real user evidence asks for a
+specific one.
 
-**E2E testing is complete.** The public and authenticated (desktop, mobile,
-keyboard, real non-production Supabase) browser matrices exist, pass green in CI
-and gate the release. If a future pack asks to "add E2E tests," that is **already satisfied** —
-verify the existing suites at the new candidate and stop; do not rebuild them.
-Add a spec only for a genuinely new, uncovered user flow.
+**End-to-end testing is complete.** The public and authenticated (desktop, mobile,
+keyboard, real non-production Supabase) browser matrices pass green in CI and gate
+the release. If a pack asks to "add E2E tests," verify the existing suites at the
+current candidate rather than rebuilding them; add a spec only for a genuinely new,
+uncovered user flow.
 
-## 📌 Writing a prompt pack anyway? Read this section first.
+## Before writing a prompt pack
 
-This repo has been built through successive prompt packs (v6 → v18). The most
+This repo has been built through successive prompt packs (v6 → v23). The most
 common source of wasted work is a pack asking for something **that already
 exists**, because the pack was written from the product vision rather than from
 the code.
