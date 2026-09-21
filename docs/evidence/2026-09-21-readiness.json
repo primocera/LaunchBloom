@@ -1,0 +1,13 @@
+{
+  "schema": "readiness-record-1",
+  "candidate_sha": "176a7c6859364ee0fd904bc900ec93e159b70197",
+  "deploy_class": "production",
+  "deploy_ref": "vercel:main@b6414f2 (docs-only descendant of candidate 176a7c6; executable tree identical, bundle index-Cq2NTdSE)",
+  "observed_at_utc": "2026-09-21T16:54:00Z",
+  "http_status": 200,
+  "ready": true,
+  "blocker_count": 0,
+  "blocker_categories": [],
+  "operator": "PC",
+  "attestation": "Owner observed authenticated GET /api/admin/readiness against the deployed production candidate: mode production, ready true, 0 blockers, 0 external; ownership.state enforcement_active, paid_ready true, enforced true; all 14 blocker-level config gates ok and all live signals ok (spend 0 of 15 ceiling). Counts only, no PII or secrets."
+}

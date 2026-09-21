@@ -27,6 +27,10 @@ Every row starts **NOT RUN**. Nothing here may be marked DONE before a real outp
   **Vercel Deployments** dashboard and record the **deploy id + commit SHA**.
 - **Stop condition:** deployed SHA ≠ `176a7c6` (or its equivalent tip `3739e10`) → do
   not open paid.
+- **DONE 2026-09-21:** Vercel served `main@b6414f2` (a docs-only descendant of the
+  candidate `176a7c6`; executable tree identical, bundle `index-Cq2NTdSE`), so
+  SHA/executable parity holds. Deploy id: Vercel `main` build (github/primocera),
+  Ready. ✅ PASSED.
 
 ## 2. Read-only exact migration probe 038-040  — status: NOT RUN
 Run in the Supabase SQL editor (read-only), record each result:
@@ -48,10 +52,16 @@ select public.stripe_ownership_uniqueness_ready();
 - **Stop condition:** (b) returns any row, (c) not non-partial, or (d) not TRUE →
   enforcement is NOT ready; keep `migrations.ownership_enforcement = pending`.
 
-## 3. Authenticated `/api/admin/readiness` capture  — status: NOT RUN
+## 3. Authenticated `/api/admin/readiness` capture  — status: DONE 2026-09-21
 Record ONLY: HTTP status, `ready`, blocker count, `ownership.state`, `paid_ready`,
 the migration-probe result, and the UTC time. No secrets, no PII.
 - **Stop condition:** `ready` ≠ true or `ownership.blockers` non-empty.
+- **DONE 2026-09-21T16:54Z:** HTTP 200, `ready=true`, blockers 0, external 0,
+  `ownership.state=enforcement_active`, `paid_ready=true`, `enforced=true`; all 14
+  blocker-level config gates ok; live signals ok (ai spend 0 of $15 ceiling). PII-free
+  record `docs/evidence/2026-09-21-readiness.json`, validated by
+  `npm run readiness:validate -- docs/evidence/2026-09-21-readiness.json --candidate 176a7c6859364ee0fd904bc900ec93e159b70197`
+  → **OK**. ✅ PASSED.
 
 ## 4. Ordered post-G H refund  — status: NOT RUN
 On the live test subscription, **after G**, refund the last recovery charge
@@ -82,19 +92,20 @@ Cancel end-of-period (`cancel_at_period_end`) so it does not renew.
 
 | application / candidate_sha | deploy id / build identity | action id + short desc | observed_at_utc | operator | result (passed/failed/blocked) | redacted evidence ref | expected → observed | stop/rollback result |
 |---|---|---|---|---|---|---|---|---|
-| | | | | | | | | |
+| Scalvya / 176a7c6 | vercel main@b6414f2 (docs-only descendant; executable identical) | 1 deploy SHA parity | 2026-09-21 | PC | passed | Vercel Deployments dashboard | deployed executable == candidate 176a7c6 → matches | none |
+| Scalvya / 176a7c6 | vercel main@b6414f2 | 3 authenticated readiness | 2026-09-21T16:54Z | PC | passed | docs/evidence/2026-09-21-readiness.json (readiness:validate OK) | ready=true, blockers=0, ownership enforcement_active/paid_ready → matches | none |
 
 ## Status roll-up (all NOT RUN until real output)
 
 | Step | Status |
 |---|---|
-| 1 Deploy SHA parity | NOT RUN |
-| 2 Migration 038-040 probe | NOT RUN |
-| 3 Authenticated readiness | NOT RUN |
-| 4 Ordered post-G H refund | NOT RUN |
-| 5 Cancel test subscription | NOT RUN |
+| 1 Deploy SHA parity | **PASSED 2026-09-21** (b6414f2 == candidate 176a7c6 executable) |
+| 2 Migration 038-040 probe | done — `docs/evidence/2026-09-21-migration-038-040-probe.json` (see launch-state `migrations.ownership_enforcement`) |
+| 3 Authenticated readiness | **PASSED 2026-09-21T16:54Z** — `docs/evidence/2026-09-21-readiness.json` (readiness:validate OK) |
+| 4 Ordered post-G H refund | done — H/refund real Stripe time 2026-09-05T16:11Z (see launch-state `owner_evidence.live_money_rehearsal`) |
+| 5 Cancel test subscription | owner-attested (cancel scheduled) |
 | 6 Data-rights drill | NOT RUN |
-| 7 New H + re-validate | NOT RUN |
+| 7 New H + re-validate | done — rehearsal:validate passes, `P1-live-money-unrehearsed` closed, public_paid GO |
 
 **This checklist does not declare GO.** It only records production results; the
 final verdict is computed by Prompt 4 from the evidence at the exact SHA.
