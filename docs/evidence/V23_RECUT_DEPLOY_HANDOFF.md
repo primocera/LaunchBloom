@@ -1,5 +1,27 @@
 # v23 re-cut + deploy + data-rights — session handoff
 
+> ## ✅ STATUS 2026-09-21 — RE-CUT DONE (STEPS 1–3 complete)
+> The re-cut is finished and pushed. What happened:
+> - The rc/v23 release-candidate workflow ran GREEN at `26c95b2` (every required
+>   job incl. `authenticated-e2e` with zero skips; only the by-design `launch:drift`
+>   step failed, as expected pre-pin). The owner unpaused the non-production E2E
+>   Supabase project so `authenticated-e2e` could run.
+> - Because `README.md` / `CLAUDE.md` are **not** drift-exempt, the doc-truth
+>   updates (mature README, GO/GO wording, "re-cut done") were folded into the
+>   **candidate itself**: the frozen candidate is now **`176a7c6`** = the CI-green
+>   tree `26c95b2` **plus documentation-only edits** to README.md/CLAUDE.md
+>   (executable tree byte-identical, bundle `index-Cq2NTdSE`, deploy runtime-identical).
+> - `docs/launch/launch-state.json` re-pinned: `candidate.sha` + `head_at_generation`
+>   + all 11 check `observed_at_sha` → `176a7c6`; `26c95b2` and `e9618f3` recorded in
+>   `historical_shas`; stale/"RE-CUT REQUIRED" language cleared.
+> - `npm run launch:verify` OK, `npm run launch:gate` **fully GREEN (exit 0,
+>   capped_beta GO / public_paid GO)**, `npm test` **1039/1039**.
+> - Committed + pushed to `main` and `rc/v23`.
+>
+> **LEFT FOR THE NEXT SESSION / OWNER:** STEP 4 (deploy exactly `176a7c6` on Vercel
+> + confirm readiness) and STEP 5 (the data-rights export/delete drill). Steps 1–3
+> below are historical — the recipe that was executed.
+
 > For a fresh Claude Code session. Everything code-side is DONE and merged to
 > `main` (commit `f4eeee6`). The evidence-based verdict is **capped_beta GO /
 > public_paid GO**. Only two things remain, both mechanical/owner:

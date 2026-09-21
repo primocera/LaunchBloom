@@ -28,8 +28,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-- Candidate SHA: `e9618f3607a04d80b60f02fea4eb582a409135ae` (frozen)
-- HEAD now: `e9618f3607a04d80b60f02fea4eb582a409135ae`
+- Candidate SHA: `176a7c6859364ee0fd904bc900ec93e159b70197` (frozen)
+- HEAD now: `176a7c6859364ee0fd904bc900ec93e159b70197`
 - Bundle: index-Cq2NTdSE.js, index-KNfjvmSJ.css
 - Environment class: production
 
@@ -78,17 +78,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | passed locally | `e9618f3` | yes |
-| Unit / contract / safety tests | `npm test` | passed locally | `e9618f3` | yes |
-| Production build | `npm run build:app` | passed locally | `e9618f3` | yes |
-| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `e9618f3` | yes |
-| Public browser journeys | `npx playwright test` | passed locally | `e9618f3` | yes |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed in CI | `e9618f3` | yes |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `e9618f3` | yes |
-| Production configuration gate | `npm run release:check` | observed in production | `e9618f3` | yes |
-| Launch-state document integrity | `npm run launch:verify` | passed locally | `e9618f3` | yes |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `e9618f3` | yes |
-| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `e9618f3` | yes |
+| ESLint | `npm run lint` | passed locally | `176a7c6` | yes |
+| Unit / contract / safety tests | `npm test` | passed locally | `176a7c6` | yes |
+| Production build | `npm run build:app` | passed locally | `176a7c6` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed locally | `176a7c6` | yes |
+| Public browser journeys | `npx playwright test` | passed locally | `176a7c6` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed in CI | `176a7c6` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | passed locally | `176a7c6` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `176a7c6` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed locally | `176a7c6` | yes |
+| Hero contrast and responsive layout | `npm test -- landing-contrast` | passed locally | `176a7c6` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed locally | `176a7c6` | yes |
 
 ## Owner evidence
 

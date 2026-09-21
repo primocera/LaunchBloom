@@ -10,7 +10,9 @@
 > the ordered live-money A–H rehearsal is complete — the H/refund's real Stripe
 > time is 2026-09-05T16:11Z, after G, once a data-entry timestamp was corrected —
 > Stripe ownership enforcement is probe-verified, and the dependency audit is 0
-> after the v23 security patch; only the rc/v23 re-cut + deploy remain).
+> after the v23 security patch; the re-cut is done — the candidate is re-pinned to
+> the CI-green rc/v23 tree and `launch:gate` is fully green — so only the deploy and
+> the data-rights drill remain, both owner-operational).
 >
 > **Do not write another feature/hardening prompt pack.** The highest-value work
 > now is **marketing and distribution**: landing conversion, getting the first
@@ -106,13 +108,15 @@ exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
   (GHSA-qwww-vcr4-c8h2, absent from `npm audit`) is closed by owner decision. The
   ordered live-money A–H rehearsal is complete (H/refund real Stripe time
   2026-09-05T16:11Z, after G, once a data-entry timestamp was corrected), and the
-  read-only migration 038-040 enforcement probe is verified. The only remaining
-  steps are the rc/v23 re-cut + deploy — mechanical, never a pack.
+  read-only migration 038-040 enforcement probe is verified. The re-cut is done
+  (candidate re-pinned to the CI-green rc/v23 tree, `launch:gate` fully green); the
+  only remaining steps are the owner-operational deploy + data-rights drill — never
+  a pack.
 
-**Therefore:** the highest-value next step is not another pack. It is (a) deploy
-the capped beta and get real users, or (b) the owner spends one afternoon on the
-live-money rehearsal to convert the last public-paid condition. Everything else is
-**marketing and distribution** — that is where the work is now.
+**Therefore:** the highest-value next step is not another pack. Both launch
+conditions are met; the owner-operational close-out is (a) deploy the pinned
+candidate and (b) run the data-rights export/delete drill. After that, the work is
+**marketing and distribution** — that is where it is now.
 
 ---
 
