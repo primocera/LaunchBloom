@@ -70,15 +70,30 @@ On the live test subscription, **after G**, refund the last recovery charge
 - Record per `docs/evidence/POST_G_REFUND_H_TEMPLATE.md` with the real post-G UTC time.
 - **Stop condition:** refund not verified in Stripe, or the refund alone changes entitlement.
 
-## 5. Cancel the test subscription  — status: NOT RUN
+## 5. Cancel the test subscription  — status: DONE 2026-09-21 (owner-attested)
 Cancel end-of-period (`cancel_at_period_end`) so it does not renew.
 - Deadline: **before the next renewal (~2026-10-02)**, else a real charge is taken.
 - **Stop condition:** UI shows success while Stripe still schedules the next charge.
+- **DONE 2026-09-21 (owner-attested, not repo-verifiable):** owner confirms the test
+  subscription is set to `cancel_at_period_end` — remains valid until the next
+  period, then terminates (no renewal charge). ✅ PASSED (owner attestation).
 
-## 6. Data-rights drill (export + delete)  — status: NOT RUN
+## 6. Data-rights drill (export + delete)  — status: DONE 2026-09-21
 - Run a live **account export**; then a **test account delete** on a dedicated test
   account; confirm a deletion receipt and that a **re-export returns no user data**.
 - **Stop condition:** cancellation or delete fails but the UI shows a false success.
+- **DONE 2026-09-21 (owner, live app UI, dedicated test account — redacted ids only):**
+  - **Export** ✅ — downloaded `scalvya-export.json`, `export_version: 2`, correct
+    account (user `548e…5682`), `workspace_count: 1` (ws `024a…39e0`), all data tables
+    present (empty on this account). Machine-readable packet as specified.
+  - **Delete** ✅ — UI showed "Deletion request completed" (receipt `completed: true`);
+    account/workspace/assets removed; deletion-record email sent; Stripe invoices +
+    anonymized analytics retained by design (stated in receipt).
+  - **Re-login** ✅ — sign-in with the same account rejected ("Incorrect email or
+    password") → auth user deleted, sessions revoked, no user data returned.
+  - **False-success guard** ✅ — `receipt.completed` is `true` only when every step is
+    `ok`; a failed step flips it and adds a support note.
+  - ✅ PASSED. (No PII stored: email omitted; ids truncated.)
 
 ## 7. Record new H + re-validate  — status: NOT RUN
 - Write the genuine post-G H into the rehearsal record (real time after G).
@@ -94,6 +109,8 @@ Cancel end-of-period (`cancel_at_period_end`) so it does not renew.
 |---|---|---|---|---|---|---|---|---|
 | Scalvya / 176a7c6 | vercel main@b6414f2 (docs-only descendant; executable identical) | 1 deploy SHA parity | 2026-09-21 | PC | passed | Vercel Deployments dashboard | deployed executable == candidate 176a7c6 → matches | none |
 | Scalvya / 176a7c6 | vercel main@b6414f2 | 3 authenticated readiness | 2026-09-21T16:54Z | PC | passed | docs/evidence/2026-09-21-readiness.json (readiness:validate OK) | ready=true, blockers=0, ownership enforcement_active/paid_ready → matches | none |
+| Scalvya / 176a7c6 | production (live UI) | 5 test subscription cancel | 2026-09-21 | PC | passed | owner attestation (Stripe) | cancel_at_period_end, no renewal → matches | none |
+| Scalvya / 176a7c6 | production (live UI) | 6 data-rights drill (export/delete/re-login) | 2026-09-21T17:01Z | PC | passed | export_version 2 + deletion receipt completed + re-login rejected (ids redacted) | export packet, receipt completed, no data after delete → matches | none |
 
 ## Status roll-up (all NOT RUN until real output)
 
@@ -103,8 +120,8 @@ Cancel end-of-period (`cancel_at_period_end`) so it does not renew.
 | 2 Migration 038-040 probe | done — `docs/evidence/2026-09-21-migration-038-040-probe.json` (see launch-state `migrations.ownership_enforcement`) |
 | 3 Authenticated readiness | **PASSED 2026-09-21T16:54Z** — `docs/evidence/2026-09-21-readiness.json` (readiness:validate OK) |
 | 4 Ordered post-G H refund | done — H/refund real Stripe time 2026-09-05T16:11Z (see launch-state `owner_evidence.live_money_rehearsal`) |
-| 5 Cancel test subscription | owner-attested (cancel scheduled) |
-| 6 Data-rights drill | NOT RUN |
+| 5 Cancel test subscription | **DONE 2026-09-21** (owner-attested: cancel_at_period_end, no renewal) |
+| 6 Data-rights drill | **PASSED 2026-09-21** (export ✅ / delete receipt completed ✅ / re-login rejected ✅) |
 | 7 New H + re-validate | done — rehearsal:validate passes, `P1-live-money-unrehearsed` closed, public_paid GO |
 
 **This checklist does not declare GO.** It only records production results; the
