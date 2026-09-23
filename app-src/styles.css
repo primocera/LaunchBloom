@@ -939,11 +939,23 @@ button {
 
 /* ── Login ────────────────────────────────────────────────────────────── */
 
+/* Auth pages (login, signup, forgot/reset password) share the landing hero's
+   sky: the approved blue (#2f6ceb, landing.css --sky-top) held at the top and
+   fading through pale blue to white. The card itself stays opaque white, so
+   every text colour inside it keeps its existing contrast. */
 .login {
   display: grid;
   place-items: center;
-  height: 100%;
+  min-height: 100%;
   padding: 24px;
+  background: linear-gradient(
+    180deg,
+    #2f6ceb 0%,
+    #2f6ceb 38%,
+    #7ba4f3 62%,
+    #cfdefa 82%,
+    #ffffff 100%
+  );
 }
 
 .login-card {
@@ -952,8 +964,9 @@ button {
   padding: 30px 28px;
   text-align: center;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 16px;
+  box-shadow: 0 24px 60px -24px rgba(17, 45, 110, 0.45), 0 2px 8px rgba(17, 45, 110, 0.08);
 }
 
 .login-card h1 {
@@ -982,6 +995,11 @@ button {
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   outline: none;
+}
+
+/* Breathing room between stacked fields (email / password / …). */
+.login-card input:not([type='checkbox']) + input:not([type='checkbox']) {
+  margin-top: 12px;
 }
 
 .login-card input:not([type='checkbox']):focus {
