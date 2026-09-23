@@ -113,6 +113,16 @@ function documentProblems(state, root = ROOT, overrides = {}) {
   }
   for (const p of activeDocumentProblems(state, activeDocs)) problems.push(p);
 
+  // v24 SV-24-01: an evidence reference in an active document must resolve —
+  // a DONE step that cites a docs/evidence/ file nobody committed is a pass
+  // with nothing behind it.
+  for (const doc of activeDocs) {
+    const refs = new Set(doc.text.match(/docs\/evidence\/[\w.-]+\.(?:md|json)\b/g) || []);
+    for (const ref of refs) {
+      if (!fs.existsSync(path.join(root, ref))) problems.push(`active doc ${doc.path}: cites evidence ${ref}, which does not exist`);
+    }
+  }
+
   // SC-95-02: the high-traffic AI-agent entry documents (README, CLAUDE.md, the
   // prompt-pack scope note) are hand-authored prose, not generated, so they get
   // a lighter scan that fails on a retired auth model, a public-paid-open claim
@@ -210,17 +220,33 @@ function render(state, observed) {
   p('## Release candidate');
   p();
   if (!c.sha) {
-    p(`**No candidate is pinned.** ${c.explanation || ''}`);
+    p(`**No candidate is pinned${c.state ? ` (state: ${c.state})` : ''}.** ${c.explanation || ''}`);
     p();
     p(`- Reviewed baseline: \`${c.baseline_sha}\``);
     p(`- HEAD when this record was written: \`${c.head_at_generation}\``);
+    p(`- Bundle: ${(c.bundle && c.bundle.files || []).join(', ') || 'not built'}`);
   } else {
     p(`- Candidate SHA: \`${c.sha}\` (${c.state})`);
     p(`- HEAD now: \`${observed.head_sha || 'unknown'}\`${observed.head_sha && observed.head_sha !== c.sha ? ' — **drifted, candidate is stale**' : ''}`);
     p(`- Bundle: ${(c.bundle && c.bundle.files || []).join(', ') || 'not built'}`);
   }
   p(`- Environment class: ${c.environment_class}`);
+  if (c.freeze_rule) p(`- Freeze rule: ${c.freeze_rule}`);
   p();
+  // v24 SV-24-01: the concrete GitHub Actions runs behind every CI claim.
+  if ((state.rc_runs || []).length) {
+    p('### Recorded release-candidate runs');
+    p();
+    p('A run proves only the commit in its head_sha.');
+    p();
+    p('| Run | Branch | head_sha | Conclusion | Started → completed (UTC) | Jobs |');
+    p('|---|---|---|---|---|---|');
+    for (const r of state.rc_runs) {
+      const jobs = (r.jobs || []).map((j) => `${j.name}: ${j.conclusion}`).join(', ');
+      p(`| [${r.run_id}](${r.url}) | \`${r.head_branch}\` | \`${String(r.head_sha).slice(0, 12)}\` | ${r.conclusion} | ${r.created_at_utc} → ${r.completed_at_utc} | ${jobs} |`);
+    }
+    p();
+  }
   if ((state.drift_from_baseline || []).length) {
     p('### Drift from the reviewed baseline');
     p();

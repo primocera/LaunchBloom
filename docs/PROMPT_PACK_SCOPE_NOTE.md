@@ -6,13 +6,14 @@
 > the authenticated + public browser E2E matrices pass, the react-router tree
 > carries no open advisory (three unrelated moderate `qs` advisories remain, fix
 > available), and
-> the release gate is **capped-beta GO / public-paid GO** (as of v23, 2026-09-21:
-> the ordered live-money A–H rehearsal is complete — the H/refund's real Stripe
-> time is 2026-09-05T16:11Z, after G, once a data-entry timestamp was corrected —
-> Stripe ownership enforcement is probe-verified, and the dependency audit is 0
-> after the v23 security patch; the re-cut is done — the candidate is re-pinned to
-> the CI-green rc/v23 tree and `launch:gate` is fully green — so only the deploy and
-> the data-rights drill remain, both owner-operational).
+> the product evidence is complete (the ordered live-money A–H rehearsal — H/refund
+> real Stripe time 2026-09-05T16:11Z, after G — Stripe ownership enforcement
+> probe-verified, dependency audit 0, data-rights drill passed 2026-09-21). As of
+> v24 (2026-09-23) the release gate is **PENDING OWNER RC** (computed NO-GO for both
+> tracks) purely on release integrity: v23's CI provenance was not exact-SHA, so the
+> owner freezes one v24 FINAL SHA, runs the release-candidate workflow on it,
+> deploys exactly it (`GET /health` reports the version) and re-observes readiness
+> — `docs/evidence/OWNER_CHECKLIST_v24.md`, all owner-operational.
 >
 > **Do not write another feature/hardening prompt pack.** The highest-value work
 > now is **marketing and distribution**: landing conversion, getting the first
@@ -102,21 +103,23 @@ Single source of truth: `docs/launch/launch-state.json` (rendered:
 `docs/LAUNCH_STATE.md`). As of the **v18** candidate (see the manifest for the
 exact pinned SHA and the full owner handoff in `docs/OWNER_HANDOFF_V18.md`):
 
-- **Capped beta: GO.** Nothing blocks it. The authenticated E2E matrix passes
-  green in CI at the shipping candidate, so the old E2E blocker is closed.
-- **Public paid: GO** (v23, 2026-09-21). The not-reachable router advisory
+- **Capped beta: PENDING OWNER RC (v24).** No product blocker; the authenticated
+  E2E matrix is closed and passed on the v23 line. It must run once more at the
+  exact v24 FINAL SHA (owner RC).
+- **Public paid: PENDING OWNER RC** (v24, 2026-09-23; v23 computed GO without
+  exact-SHA CI provenance). The not-reachable router advisory
   (GHSA-qwww-vcr4-c8h2, absent from `npm audit`) is closed by owner decision. The
   ordered live-money A–H rehearsal is complete (H/refund real Stripe time
   2026-09-05T16:11Z, after G, once a data-entry timestamp was corrected), and the
-  read-only migration 038-040 enforcement probe is verified. The re-cut is done
-  (candidate re-pinned to the CI-green rc/v23 tree, `launch:gate` fully green); the
-  only remaining steps are the owner-operational deploy + data-rights drill — never
-  a pack.
+  read-only migration 038-040 enforcement probe is verified. The only remaining
+  steps are the owner-operational exact-SHA RC, deploy and readiness in
+  `docs/evidence/OWNER_CHECKLIST_v24.md`. Never write a pack for them.
 
-**Therefore:** the highest-value next step is not another pack. Both launch
-conditions are met; the owner-operational close-out is (a) deploy the pinned
-candidate and (b) run the data-rights export/delete drill. After that, the work is
-**marketing and distribution** — that is where it is now.
+**Therefore:** the highest-value next step is not another pack. The product
+conditions are met. The owner-operational close-out is the v24 exact-SHA RC,
+deploy and readiness (`docs/evidence/OWNER_CHECKLIST_v24.md`), then the Prompt 4
+independent certification. After that, the work is **marketing and
+distribution**.
 
 ---
 

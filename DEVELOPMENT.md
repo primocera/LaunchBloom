@@ -5,9 +5,14 @@ This is the reproducible build/test workflow added in Phase 1 (audit Prompt 1).
 ## One-command setup
 
 ```bash
-npm ci            # root deps (Vite frontend + shared tooling)
-cd backend && npm ci && cd ..   # backend runtime deps
+npm ci            # ALL deps — backend runtime + Vite frontend + tooling
 ```
+
+**One dependency manifest.** The root `package.json` + `package-lock.json` are
+the only dependency source (dev, CI and Vercel all install from the root).
+`backend/package.json` holds convenience scripts only and has no lockfile — do
+not run `npm install` inside `backend/`; a nested `node_modules` there would
+shadow the patched root tree. `backend/tests/single-manifest.test.js` enforces this.
 
 Backend needs a `.env` — copy `backend/.env.example` and fill it in. Unit tests do **not** need any secrets (see below).
 

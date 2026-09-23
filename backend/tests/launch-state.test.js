@@ -43,6 +43,17 @@ const VALID = Object.freeze({
     capped_beta: { verdict: 'GO' },
     public_paid: { verdict: 'GO' },
   },
+  // v24 SV-24-01: a frozen candidate and every passed_ci claim need a recorded
+  // green release-candidate run at that exact SHA.
+  rc_runs: [{
+    run_id: '100',
+    url: 'https://github.com/primocera/LaunchBloom/actions/runs/100',
+    head_sha: SHA,
+    conclusion: 'success',
+    created_at_utc: '2026-07-27T00:00:00Z',
+    completed_at_utc: '2026-07-27T00:05:00Z',
+    jobs: [{ name: 'candidate-gate', conclusion: 'success' }, { name: 'authenticated-e2e', conclusion: 'success' }],
+  }],
   rollback: {},
   superseded_documents: [],
 });
@@ -434,8 +445,10 @@ test('public paid launch: the computed verdict and the accepted set it rests on 
   if (computedIds.size > 0) {
     assert.notEqual(v.public_paid.verdict, 'GO', 'a standing accepted risk can never be a full GO');
   } else {
-    assert.equal(v.public_paid.verdict, 'GO',
-      'with no standing accepted risk and no open blocker, the verdict must be a full GO');
+    // With nothing accepted, the verdict is a full GO exactly when no reason
+    // blocks it (an unpinned candidate or an unrun check is a NO-GO reason).
+    assert.equal(v.public_paid.verdict, v.public_paid.reasons.length ? 'NO-GO' : 'GO',
+      'with no standing accepted risk, the verdict is GO iff nothing blocks it');
   }
 
   // Withdrawing every recorded acceptance must never IMPROVE the verdict: where
@@ -667,4 +680,103 @@ test('acceptance without a named person, date, tracks or a real rationale is rej
   const untracked = clone(VALID);
   untracked.blockers.push({ id: 'B', severity: 'P1', status: 'accepted', title: 't', owner: 'o', closure: 'c', accepted_risk: { ...base, tracks: [] } });
   assert.match(integrityProblems(untracked).join(' '), /must name the tracks/);
+});
+
+// --- v24 SV-24-01 (C): real release-candidate provenance --------------------
+// A CI claim is only as good as the GitHub Actions run behind it, and a run
+// proves only the commit in its head_sha — never an ancestor or a docs-only
+// descendant.
+
+const OTHER = 'b'.repeat(40);
+
+test('passed_ci without a recorded green run at that exact SHA is rejected', () => {
+  const state = clone(VALID);
+  state.rc_runs = [];
+  const problems = integrityProblems(state).join('\n');
+  assert.match(problems, /check unit: claims passed_ci at a{40} but no recorded green release-candidate run has that exact head_sha/);
+  assert.match(problems, /is frozen but no recorded green release-candidate run/);
+});
+
+test('a green run at a docs-only descendant does not certify the candidate', () => {
+  const state = clone(VALID);
+  state.rc_runs[0].head_sha = OTHER;
+  const problems = integrityProblems(state).join('\n');
+  assert.match(problems, /is frozen but no recorded green release-candidate run/);
+});
+
+test('a "success" run whose authenticated-e2e job was skipped is not a green RC', () => {
+  const state = clone(VALID);
+  state.rc_runs[0].jobs[1].conclusion = 'skipped';
+  const problems = integrityProblems(state).join('\n');
+  assert.match(problems, /conclusion success but required job authenticated-e2e is skipped/);
+  assert.match(problems, /claims passed_ci/);
+});
+
+test('a failed run never counts as green', () => {
+  const state = clone(VALID);
+  state.rc_runs[0].conclusion = 'failure';
+  assert.match(integrityProblems(state).join('\n'), /is frozen but no recorded green release-candidate run/);
+});
+
+test('an rc_runs record must carry the concrete run URL, full head_sha, conclusion, times and jobs', () => {
+  const state = clone(VALID);
+  state.rc_runs[0] = { run_id: '100', url: 'release-candidate workflow was green', head_sha: 'aaaaaaa', conclusion: 'green' };
+  const problems = integrityProblems(state).join('\n');
+  for (const re of [/url must be the concrete run URL/, /head_sha must be the full 40-char/, /unknown conclusion/, /created_at_utc/, /completed_at_utc/, /must list the jobs/]) {
+    assert.match(problems, re);
+  }
+});
+
+test('candidate.state is a closed vocabulary tied to whether a SHA is pinned', () => {
+  const pendingWithSha = clone(VALID);
+  pendingWithSha.candidate.state = 'pending_owner_rc';
+  assert.match(integrityProblems(pendingWithSha).join('\n'), /pending_owner_rc but candidate\.sha is set/);
+
+  const frozenNoSha = clone(VALID);
+  frozenNoSha.candidate.sha = null;
+  assert.match(integrityProblems(frozenNoSha).join('\n'), /frozen but candidate\.sha is null/);
+
+  const unknown = clone(VALID);
+  unknown.candidate.state = 'certified';
+  assert.match(integrityProblems(unknown).join('\n'), /candidate\.state must be one of/);
+});
+
+test('a pending candidate is NO-GO on both tracks and names no current candidate in prose', () => {
+  const state = clone(VALID);
+  state.candidate = { branch: 'main', sha: null, state: 'pending_owner_rc', environment_class: 'production', bundle: { files: [] } };
+  for (const c of state.checks) { c.status = 'not_run'; c.observed_at_sha = null; c.evidence = null; }
+  const v = computeVerdicts(state, {});
+  assert.equal(v.capped_beta.verdict, 'NO-GO');
+  assert.equal(v.public_paid.verdict, 'NO-GO');
+  assert.match(v.public_paid.reasons.join(' '), /no release candidate is pinned .*pending_owner_rc/);
+  state.verdicts = { capped_beta: { verdict: 'NO-GO' }, public_paid: { verdict: 'NO-GO' } };
+  state.candidate.explanation = 'Everything was re-run at candidate deadbee1.';
+  assert.match(integrityProblems(state).join('\n'), /names "candidate deadbee1" as current but no candidate is frozen/);
+});
+
+test('the real manifest records the v23 provenance truthfully and does not recycle an old SHA', () => {
+  const state = loadState();
+  const { greenRcRunAt } = require('../lib/launch-state');
+  const runs = state.rc_runs || [];
+  // Posture-agnostic: pending (main) or frozen (the owner's evidence branch).
+  assert.ok(!['176a7c6859364ee0fd904bc900ec93e159b70197', '502ec4e4e8521fe642b60aa57aab897c4061dab9'].includes(state.candidate.sha),
+    'the v24 candidate may not recycle 176a7c6 or 502ec4e');
+  if (state.candidate.state === 'frozen') {
+    assert.ok(greenRcRunAt(runs, state.candidate.sha), 'a frozen candidate needs a green RC run at its exact SHA');
+    return;
+  }
+  assert.equal(state.candidate.state, 'pending_owner_rc');
+  assert.equal(state.candidate.sha, null, 'a new code SHA may not be pre-certified');
+  assert.ok(runs.length >= 1);
+  assert.ok(!runs.some((r) => r.head_sha.startsWith('176a7c6')), 'no GitHub run has head_sha 176a7c6');
+  const cited = runs.find((r) => r.run_id === '35630538498');
+  assert.ok(cited, 'the audited run 35630538498 is recorded');
+  assert.equal(cited.head_sha, '502ec4e4e8521fe642b60aa57aab897c4061dab9');
+  assert.equal(cited.url, 'https://github.com/primocera/LaunchBloom/actions/runs/35630538498');
+  for (const c of state.checks) {
+    assert.ok(!CHECK_PASSING.includes(c.status), `${c.id} may not claim a pass before the owner RC at the FINAL SHA`);
+  }
+  for (const track of ['capped_beta', 'public_paid']) {
+    assert.notEqual(state.verdicts[track].verdict, 'GO', `${track} may not be GO before the owner RC`);
+  }
 });

@@ -1,14 +1,16 @@
 # CLAUDE.md
 
-> ## ⚠️ Prompt-pack scope note (binding, updated for v23)
-> The engineering build is **certified** (capped-beta **GO**, public-paid **GO**
-> as of v23, 2026-09-21 — the ordered live-money A–H rehearsal is complete
-> (H/refund real Stripe time 2026-09-05T16:11Z, after G), Stripe ownership
-> enforcement is probe-verified, and the dependency audit is 0 after the v23
-> security patch; the v23 re-cut is done — the candidate is re-pinned to the
-> CI-green rc/v23 commit and `launch:gate` is fully green — so only owner-operational
-> steps remain: deploy the pinned candidate and run the data-rights export/delete
-> drill. See `docs/launch/launch-state.json`). Do **not** invent a new
+> ## ⚠️ Prompt-pack scope note (binding, updated for v24)
+> **v24 status (2026-09-23):** the release is **PENDING OWNER RC** — `launch:gate`
+> computes capped-beta and public-paid **NO-GO** until a green release-candidate
+> run, an exact deploy (`GET /health` version) and post-deploy readiness exist at
+> ONE v24 FINAL SHA (`docs/evidence/OWNER_CHECKLIST_v24.md`). That is a
+> release-integrity hold, not a product regression. The ordered live-money A–H
+> rehearsal is complete (H/refund real Stripe time 2026-09-05T16:11Z, after G),
+> Stripe ownership enforcement is probe-verified, the dependency audit is 0, and
+> the data-rights export/delete drill passed on 2026-09-21. v23 computed GO, but
+> its CI provenance was not exact-SHA: no release-candidate run ever had the v23
+> candidate's own head SHA. See `docs/launch/launch-state.json`. Do **not** invent a new
 > engineering / hardening / elevation / scale / security pack by *auditing the repo
 > for gaps you were not asked about* — that turned into an infinite loop for 5
 > versions, so a generic "the previous prompts are done, check the repo, write the
@@ -66,6 +68,25 @@
 > deploy the pinned candidate on Vercel and confirm readiness, the test-charge
 > refund + cancel, and the data-rights export/delete drill (Prompt 3). Scoped to
 > the v23 doc only.
+>
+> **Approved exception — v24 Finalni MVP release popravki (owner decision, 2026-09-23):**
+> the owner explicitly authorised Prompt 1 of `Finalni_MVP_Release_Popravki_Scalvya_v24`
+> and lifted the no-engineering default for it. It names release-integrity gaps from
+> the 2026-09-22 independent audit; it is not a self-directed repo audit. Shipped on branch
+> `v24` (SV-24-01): **(A)** one consistent active release record —
+> `CERTIFICATION_v23.md` and `OWNER_CHECKLIST_v23.md` reconciled and added to
+> `active_documents`, and the active-doc validator now reads Historical sections
+> as history and fails on DONE-vs-NOT-RUN steps, a wrong A–H range/count and a blocker
+> one document calls open while another calls it closed; **(B)** `GET /health`
+> returns a redacted `version` (12-hex prefix of `VERCEL_GIT_COMMIT_SHA`, `-dev`
+> fallback); **(C)** real RC provenance — `rc_runs` records each GitHub Actions
+> run (URL, head_sha, conclusion, times, jobs), and a `passed_ci` claim or frozen
+> candidate needs a green run at that exact SHA. The candidate is
+> `pending_owner_rc` (no SHA), so a FINAL SHA is frozen by its RC run and tag,
+> never by a later manifest commit; **(D)** the unused nested
+> `backend/package-lock.json` is removed (one-manifest test). Prompts 3 (owner
+> deploy) and 4 (independent certification) remain owner-run. Scoped to the v24
+> doc only.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

@@ -181,11 +181,17 @@ if (process.env.E2E_SEED_ENABLED === '1') {
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------
+// v24 SV-24-01: the deployed commit as a short hex prefix (resolved once, never
+// per request), so production parity can be verified against the RC SHA.
+const { resolveVersion, rootPackageVersion } = require('./lib/version');
+const APP_VERSION = resolveVersion(process.env, rootPackageVersion());
+
 app.get('/health', (_req, res) => {
   // Public health check must not expose model / AI-mode / config details (Prompt 10).
   res.json({
     status: 'ok',
     app: BRAND.name,
+    version: APP_VERSION,
     timestamp: new Date().toISOString(),
   });
 });

@@ -129,9 +129,8 @@ both id and owner**.
 ## Working on it
 
 ```bash
-cd backend
-npm install
-npm run dev          # nodemon, port 3002
+npm ci               # at the repo root — the ONE dependency manifest (root package.json + package-lock.json)
+npm run dev          # node --watch backend/server.js, port 3002
 npm test             # unit + contract tests, no credentials needed
 npm run lint
 npm run build:app    # rebuild app/ from app-src/
@@ -174,8 +173,13 @@ tracks are not on the same footing, and accepted risk never produces a full GO:
 
 | Track | Verdict | On what |
 |---|---|---|
-| Capped beta | GO | evidence |
-| Public paid launch | GO | evidence — no open/accepted blocker; every required condition satisfied (v23) |
+| Capped beta | NO-GO (pending owner RC) | v24 changed code; no candidate is frozen at an exact SHA yet |
+| Public paid launch | NO-GO (pending owner RC) | needs a green RC run, deploy and readiness at the exact v24 FINAL SHA |
+
+This is a release-integrity hold, not a product regression: every P0/P1 blocker
+stays closed and the owner evidence below carries forward (the v24 diff touches
+no billing, webhook, AI or migration runtime). The owner steps that restore GO
+are in [`docs/evidence/OWNER_CHECKLIST_v24.md`](docs/evidence/OWNER_CHECKLIST_v24.md).
 
 Proven against production: migrations `001`–`040` applied (001-037 verified
 2026-07-28; 038-040 verified by the 2026-09-21 read-only owner probe), Stripe
@@ -186,17 +190,20 @@ blockers), unsubscribe suppression honoured in both directions, and a daily AI
 spend ceiling live.
 
 The automated signed-in browser matrix runs against a disposable non-production
-Supabase and is **green in CI** (`passed_ci`) at the shipping candidate — the
-`P0-no-authenticated-e2e` blocker is **closed**. The router RSC advisory is
+Supabase and ran **green in CI** on the v23 line (release-candidate runs on the
+docs-only descendants of the v23 tree) — the `P0-no-authenticated-e2e` blocker is
+**closed**; for v24 it must run again at the exact FINAL SHA. The router RSC advisory is
 **closed** (guard green, no RSC entry point). The live billing rehearsal — the
 canonical eight-transition **ordered** A–H matrix — is **complete**: after the v23
 ordering validator caught a data-entry timestamp on H, the owner's Stripe evidence
 showed the refund (`re_3UBD6L…`) actually occurred `2026-09-05T16:11Z`, ~15h after
 G; corrected to that real time, `npm run rehearsal:validate` passes (time-monotone,
 complete) and the refund alone left entitlement unchanged. No P0/P1 blocker remains
-open or accepted, so `public_paid` is a full **GO** (the pre-v23 candidate is stale
-until the rc/v23 re-cut + deploy — a mechanical step). (Exact counts and the full
-blocker list live in the canonical launch-state, not here.)
+open or accepted. v23 computed a full GO, but its CI provenance was not exact-SHA
+(no release-candidate run ever had the v23 candidate's own head SHA, and `/health`
+exposed no version), so v24 re-establishes it at one FINAL SHA — `GET /health` now
+reports the deployed commit's short SHA. (Exact counts and the full blocker list
+live in the canonical launch-state, not here.)
 
 Start with [`docs/prompts/v16/HANDOFF.md`](docs/prompts/v16/HANDOFF.md) for the
 full picture and what to pick up next. Earlier GO/NO-GO and handoff documents

@@ -1,4 +1,74 @@
-# v23 exact-SHA release certification (Prompt 4)
+# v23 release certification — final record (corrected by v24)
+
+> **This is the final state of the v23 certification.** The v23 release candidate
+> `176a7c6` is **superseded**: v24 (SV-24-01, 2026-09-23) changed executable code,
+> so no v23 commit may be the release candidate. The one current launch truth is
+> [`docs/LAUNCH_STATE.md`](../LAUNCH_STATE.md), rendered from
+> `docs/launch/launch-state.json`. The original v23 Prompt 4 text (written at
+> `a5df7af` before the re-cut) is kept verbatim at the bottom under a
+> Historical heading and is **not** current truth.
+
+**Repository:** primocera/LaunchBloom (Scalvya)
+**Record updated (UTC):** 2026-09-23
+**v23 superseded candidate:** `176a7c6859364ee0fd904bc900ec93e159b70197` (bundle `index-Cq2NTdSE.js` / `index-KNfjvmSJ.css`)
+**Next candidate:** none frozen — v24 FINAL SHA pending the owner RC (`docs/evidence/OWNER_CHECKLIST_v24.md`)
+
+## Current verdict (computed by `npm run launch:gate`)
+
+- **Capped beta:** **NO-GO** — pending owner RC. Release-integrity hold, not a
+  product regression: no candidate is frozen at an exact SHA and no required
+  check is observed at the v24 FINAL SHA yet.
+- **Public paid:** **NO-GO** — pending owner RC, exact-SHA deploy parity
+  (`GET /health` version) and post-deploy readiness at the v24 FINAL SHA.
+- Supervised paid MVP: **PENDING** — same exact-SHA RC and deploy evidence; no
+  billing evidence is missing (see below).
+- Scale expansion: **NOT CERTIFIED** — no mature cohort evidence; never merged
+  into an MVP verdict.
+
+## What v23 genuinely established (production evidence that carries forward)
+
+The v24 diff touches no billing, entitlement, webhook, AI, migration or
+mail-suppression runtime, so these observations stay valid and the live-money
+rehearsal is **not** repeated:
+
+| Evidence | Result | Redacted reference |
+|---|---|---|
+| Production dependency audit (v23 tree) | `npm audit --omit=dev` = 0 (express 4.22.3 / body-parser 1.20.8 / qs 6.16.0) | `docs/evidence/2026-09-21-dependency-security-patch.md` |
+| Unit / contract tests (v23 tree) | 1039/1039, 0 skipped | release-candidate runs below |
+| Migration 038-040 probe (read-only, owner) | `app_user_id` uuid present, 0 duplicate non-null rows, `customers_app_user_id_key` non-partial UNIQUE, `stripe_ownership_uniqueness_ready()` = true | `docs/evidence/2026-09-21-migration-038-040-probe.json` |
+| Live-money rehearsal — eight-transition, ordered A–H | complete and time-monotone; H refund `re_3UBD6L…` at 2026-09-05T16:11Z, after G (01:15Z); `npm run rehearsal:validate` passes | `docs/evidence/2026-09-05-rehearsal-record.json` |
+| Authenticated readiness (owner) | 2026-09-21T16:54Z: HTTP 200, `ready=true`, 0 blockers, `ownership.state=enforcement_active`, `paid_ready=true` — observed on the deployed docs-only descendant `b6414f2` | `docs/evidence/2026-09-21-readiness.json` |
+
+Blocker `P1-live-money-unrehearsed` is closed; no P0/P1 blocker is open or accepted.
+
+## v24 corrections — release integrity, not product
+
+1. **No CI run ever had head SHA `176a7c6`.** GitHub Actions returns zero runs
+   for it (API query 2026-09-23). v23 prose claimed every required check re-ran at
+   `176a7c6`; the green runs were on its docs-only descendants:
+
+   | Run | head_sha | Conclusion | Required jobs |
+   |---|---|---|---|
+   | [35558190476](https://github.com/primocera/LaunchBloom/actions/runs/35558190476) | `26c95b2` | **failure** (candidate-gate failed at Code-drift) | candidate-gate failure, authenticated-e2e success |
+   | [35624269093](https://github.com/primocera/LaunchBloom/actions/runs/35624269093) | `3739e10` | success | candidate-gate success, authenticated-e2e success |
+   | [35630538498](https://github.com/primocera/LaunchBloom/actions/runs/35630538498) | `502ec4e` | success | candidate-gate success, authenticated-e2e success |
+
+   `26c95b2` was therefore never "CI-green". The manifest now records every run
+   in `rc_runs`, and `launch:verify` rejects any `passed_ci` claim or frozen
+   candidate without a green run at that exact SHA.
+2. **Deploy parity was executable-tree parity, not exact-SHA parity.** Production
+   served `b6414f2`, and `/health` exposed no version. v24 adds a redacted
+   `version` to `GET /health` (the short `VERCEL_GIT_COMMIT_SHA`).
+3. **This certificate and the v23 owner checklist were never validated.**
+   `active_documents` listed only `docs/LAUNCH_STATE.md`. Both files are now
+   active documents: the scan checks candidate, verdict, step status, bundle,
+   the A–H count and blocker status in them.
+
+## Historical record (superseded) — v23 Prompt 4 certification as written at a5df7af on 2026-09-21
+
+> Verbatim, not current truth. Its candidate, its CONDITIONAL GO and its
+> 'rehearsal fails by design' reflect the state before the v23 re-cut and the
+> owner's H-timestamp correction; see the sections above.
 
 **Repository:** primocera/LaunchBloom (Scalvya)
 **Branch:** `v23`
@@ -10,7 +80,7 @@ rotation or deploy was performed.
 
 ---
 
-## Phase 1 — candidate identity
+### Phase 1 — candidate identity
 
 - Branch `v23`, HEAD `a5df7af` (this doc + the runbook fix land as a docs-only
   follow-up; both are non-code, so they do not invalidate the code candidate).
@@ -31,7 +101,7 @@ rotation or deploy was performed.
   re-pinning to `a5df7af` REQUIRES re-running the checks at `a5df7af` in the
   release-candidate workflow (below). That re-pin is deliberately NOT done by hand.
 
-## Phase 2 — automated gates (run locally at `a5df7af`)
+### Phase 2 — automated gates (run locally at `a5df7af`)
 
 | Gate | Command | Result | Count / notes |
 |---|---|---|---|
@@ -60,7 +130,7 @@ artifacts. These are produced by pushing `v23` / cutting `rc/v23` so the
 release-candidate workflow runs them at the exact SHA — that is what re-pins every
 check's `observed_at_sha` to `a5df7af`. Missing here = NOT RUN, never a pass.
 
-## Dependency versions + audit
+### Dependency versions + audit
 
 | Package | Before | After |
 |---|---|---|
@@ -71,7 +141,7 @@ check's `observed_at_sha` to `a5df7af`. Missing here = NOT RUN, never a pass.
 `npm audit --omit=dev` = **0** vulnerabilities. GHSA-x5fp-wj9c-mxmx (body-parser)
 and GHSA-4mjr-xmp4-gh2g (qs) closed. Stays in the Express 4.x line.
 
-## Phase 3/4 — verdicts (computed from evidence, not declared)
+### Phase 3/4 — verdicts (computed from evidence, not declared)
 
 | Track | Verdict | Basis |
 |---|---|---|
@@ -80,7 +150,7 @@ and GHSA-4mjr-xmp4-gh2g (qs) closed. Stays in the Express 4.x line.
 | supervised paid MVP | **CONDITIONAL GO** | same accepted `live-money` risk; not a full GO |
 | scale expansion | **NOT CERTIFIED** | out of scope — post-MVP; not merged into any MVP verdict |
 
-## Owner-only, pending (see `docs/evidence/OWNER_CHECKLIST_v23.md`)
+### Owner-only, pending (see `docs/evidence/OWNER_CHECKLIST_v23.md`)
 
 1. Freeze `a5df7af` as the RC (push `v23` / cut `rc/v23`) so the workflow re-runs
    every check + the mandatory audit + the authenticated matrix at that SHA, then
@@ -93,7 +163,7 @@ and GHSA-4mjr-xmp4-gh2g (qs) closed. Stays in the Express 4.x line.
 5. Data-rights export + delete drill on a test account.
 6. Deploy parity: deploy exactly the certified SHA; confirm in the Vercel dashboard.
 
-## Statements
+### Statements
 
 - **No missing evidence was interpreted as a pass.** The rehearsal record fails
   the validator and the live-money condition is an accepted risk, not satisfied.
