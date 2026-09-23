@@ -86,15 +86,16 @@ body must contain only `status`, `app`, `version`, `timestamp`.
 As the owner admin, open `GET /api/admin/readiness` on production **after** step 4.
 Required: HTTP 200, `ready=true`, blockers 0, `ownership.state=enforcement_active`,
 `paid_ready=true`, every blocker-level config gate ok (Stripe, AI spend ceiling,
-email, legal, cron freshness). Save a PII-free record from
+email, legal, cron secret). Readiness does NOT measure cron freshness — that is
+step 8 (Prompt 4 finding #1). Save a PII-free record from
 `docs/evidence/readiness-record.template.json` as
 `docs/evidence/<date>-readiness-v24.json` with `candidate_sha` = FINAL SHA
 (on the `evidence/v24` branch), then:
 ```bash
 npm run readiness:validate -- docs/evidence/<date>-readiness-v24.json --candidate "$FINAL_SHA"
 ```
-- **Stop condition:** any blocker, stale cron, missing legal/Stripe/email/AI
-  config, or a record that would need a secret or PII.
+- **Stop condition:** any blocker, missing legal/Stripe/email/AI/cron-secret
+  config, or a record that would need a secret or PII (stale cron: step 8).
 - **DONE 2026-09-23T14:04Z (owner):** HTTP 200, mode production, `ready=true`, blockers 0, external 0, all 14 blocker-level config gates ok, `ownership.state=enforcement_active`, `paid_ready=true`, live signals ok (outbox 0, webhook failures 0, leakage 0, AI spend 0 of 15); admin health 24h: 0 webhook failures, 0 failed generations. Record `docs/evidence/2026-09-23-readiness-v24.json`; `readiness:validate --candidate` FINAL SHA → OK.
 
 ## 6. Record the evidence and re-run the launch gates  — status: DONE 2026-09-23
@@ -134,6 +135,18 @@ carries forward and no live charge is repeated.
 
 ---
 
+## 8. Cron freshness  — status: DONE 2026-09-23
+Added after the Prompt 4 independent certification (deviation #1, P1): readiness only
+checks that `CRON_SECRET` is set, and the email-outbox worker is triggered externally
+by cron-job.org, so its last run must be read from the scheduler.
+- Read-only: cron-job.org → the `/api/cron/email-outbox` job → execution history →
+  last run time + result. Trigger nothing.
+- **Stop condition:** no successful run after the FINAL SHA deploy, or last success
+  older than 1 hour.
+- **DONE 2026-09-23T15:12Z (owner):** last successful run 2026-09-23T15:00:38Z (shown as
+  5:00:38 PM CEST), Successful, 1.77 s — after the FINAL SHA production deploy
+  (13:59:50Z); next run 15:15:00Z. Record `docs/evidence/2026-09-23-cron-freshness.json`.
+
 ## Evidence record — fill one row per step actually performed
 
 | application / FINAL SHA | deploy id / build identity | action id + short desc | observed_at_utc | operator | result (passed/failed/blocked) | redacted evidence ref | expected → observed | stop/rollback result |
@@ -145,6 +158,7 @@ carries forward and no live charge is repeated.
 | Scalvya / 9be75d1 | vercel:main@9be75d1 | 5 authenticated readiness | 2026-09-23T14:04Z | PC | passed | docs/evidence/2026-09-23-readiness-v24.json (readiness:validate OK) | ready=true, 0 blockers, enforcement_active → matches | none |
 | Scalvya / 9be75d1 | vercel:main@9be75d1 | 6 evidence branch + gates | 2026-09-23T14:10Z | PC | passed | docs/launch/launch-state.json (evidence/v24) | all gates green → matches | none |
 | Scalvya / 9be75d1 | vercel:main@9be75d1 | 7 billing runtime diff | 2026-09-23T14:05Z | PC | passed | docs/evidence/2026-09-05-rehearsal-record.json (carried forward) | empty diff → matches | none |
+| Scalvya / 9be75d1 | vercel:main@9be75d1 | 8 cron freshness | 2026-09-23T15:00:38Z | PC | passed | docs/evidence/2026-09-23-cron-freshness.json | success after deploy → matches | none |
 
 ## Status roll-up (one status per step; missing evidence = NOT RUN)
 
@@ -157,6 +171,7 @@ carries forward and no live charge is repeated.
 | 5 Authenticated readiness | DONE 2026-09-23 |
 | 6 Evidence branch + launch gates | DONE 2026-09-23 |
 | 7 Billing runtime diff | DONE 2026-09-23 |
+| 8 Cron freshness | DONE 2026-09-23 |
 
 ## Final owner result (fill after step 6)
 
@@ -167,11 +182,12 @@ carries forward and no live charge is repeated.
 | Workflow run (URL, head_sha, conclusion) | https://github.com/primocera/LaunchBloom/actions/runs/35870080139 · 9be75d1 · success |
 | Deployed `/health` version | `9be75d1b03d5` |
 | Readiness observed at (UTC) | 2026-09-23T14:04Z |
+| Cron freshness (last successful run, UTC) | 2026-09-23T15:00:38Z |
 | audit / lint / unit / build / app-fresh / router / export / public E2E / authenticated E2E / launch integrity | all success in run 35870080139 |
 | Verdict: capped beta | GO (computed) |
 | Verdict: supervised paid MVP | GO (computed) |
-| Verdict: strict public paid | GO (computed; Prompt 4 certifies) |
+| Verdict: strict public paid | GO (computed; Prompt 4 P1 cron freshness closed by step 8) |
 | Verdict: scale expansion | NOT CERTIFIED (needs a mature cohort report) |
 
-After this checklist, run Prompt 4 (the independent read-only exact-SHA
-certification) against the deployed FINAL SHA. Its result is the launch verdict.
+Prompt 4 (the independent read-only exact-SHA certification) ran on 2026-09-23
+against the deployed FINAL SHA: see `docs/evidence/CERTIFICATION_v24.md`.

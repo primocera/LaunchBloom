@@ -2,7 +2,7 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-09-23T14:10:00Z",
+  "generated_at_utc": "2026-09-23T15:15:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "main",
@@ -271,7 +271,8 @@
     "docs/evidence/CERTIFICATION_v23.md",
     "docs/evidence/OWNER_CHECKLIST_v23.md",
     "docs/evidence/OWNER_CHECKLIST_v24.md",
-    "docs/evidence/V24_COMPLIANCE_CHECKLIST.md"
+    "docs/evidence/V24_COMPLIANCE_CHECKLIST.md",
+    "docs/evidence/CERTIFICATION_v24.md"
   ],
   "agent_documents": [
     "README.md",
@@ -486,6 +487,18 @@
       "runbook": "docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling",
       "evidence_ref": "docs/evidence/2026-07-28-production-readiness.md",
       "note": "Confirmed live 2026-07-28: /api/admin/readiness reports ai_spend_ceiling_usd 15 and ai:spend_ceiling ok in production mode. Still an ALARM, not a brake — see the evidence file. Re-confirmed as part of the post-deploy readiness re-run required by checks[release_config]. v24 carry-forward (2026-09-23): the v24 diff touches no billing, entitlement, webhook, AI, migration or mail-suppression runtime, so this production observation carries forward; the v24 rule re-runs live money only on a billing/webhook runtime diff."
+    },
+    {
+      "id": "cron_freshness",
+      "title": "Email-outbox cron ran recently in production (last successful GET /api/cron/email-outbox, UTC + HTTP status)",
+      "status": "observed",
+      "required_for": [
+        "public_paid"
+      ],
+      "runbook": "docs/evidence/OWNER_CHECKLIST_v24.md#8-cron-freshness",
+      "evidence_ref": "docs/evidence/2026-09-23-cron-freshness.json",
+      "note": "Added 2026-09-23 from the Prompt 4 independent certification (deviation #1, P1, release integrity). GET /api/admin/readiness only checks that CRON_SECRET is set (cron:secret); the outbox worker is triggered externally by cron-job.org (every 15 min), so no in-app signal proves it ran. NOT RUN until the owner records the last successful run (UTC time + HTTP 200) from the cron-job.org execution history. Not a product bug and needs no code change or new candidate. Not required for capped_beta: a supervised cohort absorbs a delayed lifecycle email, and the owner watches the live outbox_backlog signal (0 at 2026-09-23T14:04Z). RESOLVED 2026-09-23: the owner read the cron-job.org execution history — last successful run 2026-09-23T15:00:38Z (shown as 5:00:38 PM CEST), Successful, 1.77 s, i.e. after the FINAL SHA production deploy at 13:59:50Z; next run scheduled 15:15:00Z. Record docs/evidence/2026-09-23-cron-freshness.json.",
+      "scope_rationale": "Owner-verifiable scheduler evidence; strict public paid needs it, a supervised capped beta does not (outbox_backlog is watched live)."
     }
   ],
   "blockers": [
@@ -586,12 +599,12 @@
     "capped_beta": {
       "verdict": "GO",
       "decided_at_utc": "2026-09-23T14:10:00Z",
-      "note": "Computed by `npm run launch:gate` (not declared) at the exact FINAL SHA 9be75d1: green release-candidate run at that SHA, production deployed from it (/health version 9be75d1b03d5), owner readiness after the deploy, every required check passed, no open P0. GO for a capped, supervised beta behind BETA_INVITE_CAP only."
+      "note": "Computed by `npm run launch:gate` (not declared) at the exact FINAL SHA 9be75d1: green release-candidate run at that SHA, production deployed from it (/health version 9be75d1b03d5), owner readiness after the deploy, every required check passed, no open P0. GO for a capped, supervised beta behind BETA_INVITE_CAP only. Confirmed GO by the Prompt 4 independent certification (docs/evidence/CERTIFICATION_v24.md)."
     },
     "public_paid": {
       "verdict": "GO",
-      "decided_at_utc": "2026-09-23T14:10:00Z",
-      "note": "Computed by `npm run launch:gate` (not declared). Exact-SHA evidence chain at FINAL SHA 9be75d1: RC run 35870080139 green (authenticated matrix ran), production /health version 9be75d1b03d5, authenticated readiness ready=true / 0 blockers / enforcement_active / paid_ready after the deploy; every P0/P1 blocker closed; live-money A–H carried forward on an empty billing runtime diff. Final launch verdict remains Prompt 4 (independent read-only exact-SHA certification)."
+      "decided_at_utc": "2026-09-23T15:15:00Z",
+      "note": "Computed by `npm run launch:gate`. Exact-SHA chain at FINAL SHA 9be75d1 independently verified by the Prompt 4 certification (RC run 35870080139, production /health 9be75d1b03d5, owner readiness after deploy). Its only P1 — cron freshness not evidenced — is closed by the owner record docs/evidence/2026-09-23-cron-freshness.json (last successful run 15:00:38Z, after the deploy). Remaining Prompt 4 findings are P2 follow-ups (docs/evidence/CERTIFICATION_v24.md)."
     }
   },
   "rollback": {
@@ -759,6 +772,21 @@
       ],
       "note": "v24 FINAL SHA release-candidate run (tag rc/v24-final). candidate-gate: every step success (npm audit fail-closed, lint, launch:verify, npm test, build:app, check:app-fresh, check:router, test:export, public browser suite, launch:drift). authenticated-e2e: \"Authenticated matrix (release-candidate mode)\" success (ran, not skipped); the fail-closed REQUIRED fallback step skipped because the non-production E2E environment was available.",
       "retrieved_at_utc": "2026-09-23T14:00:00Z"
+    }
+  ],
+  "certifications": [
+    {
+      "prompt": "Finalni_MVP_Release_Popravki_Scalvya_v24 — Prompt 4 (independent exact-SHA certification)",
+      "run_at_utc": "2026-09-23T14:30:00Z",
+      "reviewed_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "record": "docs/evidence/CERTIFICATION_v24.md",
+      "verdicts": {
+        "capped_beta": "GO",
+        "supervised_paid_mvp": "GO",
+        "strict_public_paid": "NO-GO (release-integrity P1: cron freshness NOT RUN)",
+        "scale_expansion": "NOT CERTIFIED / GATHERING DATA"
+      },
+      "resolution": "Deviation #1 (P1) closed 2026-09-23T15:12Z by owner evidence docs/evidence/2026-09-23-cron-freshness.json; no code change, no new candidate. Deviations #2–#8 are P2 (owner follow-ups in docs/evidence/CERTIFICATION_v24.md) and do not block."
     }
   ]
 }

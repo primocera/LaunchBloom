@@ -10,7 +10,7 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-23T14:10:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-23T15:15:00Z
 
 ## Verdict
 
@@ -114,6 +114,7 @@ Supabase or production configuration access.
 | Live charge -> cancel -> reactivate -> recover -> refund with recorded evidence | observed | public_paid | `docs/OWNER_EVIDENCE_V11.md#a--live-money-rehearsal` |
 | Unsubscribe suppresses optional mail while billing mail still arrives (after migration 036) | live rehearsed | public_paid | `docs/OWNER_EVIDENCE_V11.md#b--resend-suppression-after-migration-036` |
 | AI_SPEND_DAILY_CEILING_USD set in production | observed | capped_beta, public_paid | `docs/OWNER_EVIDENCE_V11.md#c--daily-ai-spend-ceiling` |
+| Email-outbox cron ran recently in production (last successful GET /api/cron/email-outbox, UTC + HTTP status) | observed | public_paid | `docs/evidence/OWNER_CHECKLIST_v24.md#8-cron-freshness` |
 
 ## Unresolved blockers and accepted risks
 

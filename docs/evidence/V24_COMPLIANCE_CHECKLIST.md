@@ -54,7 +54,7 @@ A ✅ needs an evidence reference. **NOT RUN** means no evidence exists yet, and
 
 | Item | Status |
 |---|---|
-| Independent read-only exact-SHA certification against deployed `9be75d1` | **NOT RUN** — run Prompt 4 in a fresh session; its result is the final launch verdict |
+| Independent read-only exact-SHA certification against deployed `9be75d1` | ✅ DONE 2026-09-23 — `docs/evidence/CERTIFICATION_v24.md`: no P0; the one P1 (cron freshness) was closed with `docs/evidence/2026-09-23-cron-freshness.json`; 7 × P2 owner follow-ups |
 
 ## D. `Nujne_MVP_Izboljsave_Scalvya_v23` — Prompt 2 (code, DONE (v23), re-checked 2026-09-23)
 
@@ -90,7 +90,7 @@ A ✅ needs an evidence reference. **NOT RUN** means no evidence exists yet, and
 |---|---|
 | Capped beta | **GO** |
 | Supervised paid MVP | **GO** |
-| Strict public paid | **GO** (computed; Prompt 4 gives the independent final verdict) |
+| Strict public paid | **GO** (computed; Prompt 4 P1 closed) |
 | Scale expansion | **NOT CERTIFIED** (no mature cohort report) |
 
 No missing evidence was interpreted as a pass.

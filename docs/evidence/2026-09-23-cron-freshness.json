@@ -1,0 +1,17 @@
+{
+  "schema": "cron-freshness-record-1",
+  "candidate_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+  "job": "email-outbox worker — GET https://scalvya.com/api/cron/email-outbox (Authorization: Bearer CRON_SECRET, value not recorded)",
+  "scheduler": "cron-job.org (external; every 15 min)",
+  "last_successful_run_utc": "2026-09-23T15:00:38Z",
+  "last_successful_run_as_displayed": "Today at 5:00:38 PM (owner's cron-job.org account timezone CEST, UTC+2)",
+  "result": "Successful (cron-job.org: HTTP 2xx)",
+  "duration_s": 1.77,
+  "next_scheduled_as_displayed": "Today at 5:15:00 PM (= 2026-09-23T15:15:00Z)",
+  "after_final_sha_deploy": "yes — production deployment of 9be75d1 at 2026-09-23T13:59:50Z; run at 15:00:38Z",
+  "recorded_at_utc": "2026-09-23T15:12:30Z",
+  "operator": "PC",
+  "source": "Owner read the cron-job.org execution history (read-only) and pasted the last run; nothing was triggered manually.",
+  "closes": "Prompt 4 independent certification deviation #1 (P1, release integrity): cron freshness had no evidence.",
+  "redaction": "No secret, token, email or PII; the CRON_SECRET value is never recorded."
+}
