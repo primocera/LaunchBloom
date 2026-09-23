@@ -1,0 +1,13 @@
+{
+  "schema": "readiness-record-1",
+  "candidate_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+  "deploy_class": "production",
+  "deploy_ref": "vercel:main@9be75d1 (FINAL SHA; public /health version 9be75d1b03d5 at 2026-09-23T14:04:46Z)",
+  "observed_at_utc": "2026-09-23T14:04:00Z",
+  "http_status": 200,
+  "ready": true,
+  "blocker_count": 0,
+  "blocker_categories": [],
+  "operator": "PC",
+  "attestation": "Owner observed authenticated GET /api/admin/readiness on production after the FINAL SHA 9be75d1 deploy (public health version 9be75d1b03d5 before and after): mode production, ready true, 0 blockers, 0 external; all 14 blocker-level config gates ok (launch config, Stripe live price allowlist, cron secret, Resend email delivery, AI spend ceiling 15 USD, no unsafe bypass, migrations 028-033 present, rules v8.1); ownership enforcement_active, paid_ready true, enforced true, 0 ownership blockers; live signals ok (outbox 0, webhook failures 24h 0, reservation leakage 0, AI spend 0 of 15). Admin health 24h: 0 webhook failures, 0 failed generations. Counts only, no PII or secrets."
+}

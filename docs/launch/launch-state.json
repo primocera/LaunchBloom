@@ -2,15 +2,15 @@
   "schema_version": "launch-state-1",
   "product": "Scalvya",
   "repository": "primocera/LaunchBloom",
-  "generated_at_utc": "2026-09-23T07:30:00Z",
+  "generated_at_utc": "2026-09-23T14:10:00Z",
   "note": "Canonical launch truth. Every other release document is generated from this file or marked superseded by it. Edit this file, then run `npm run launch:render`.",
   "candidate": {
     "branch": "main",
-    "sha": null,
-    "state": "pending_owner_rc",
+    "sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+    "state": "frozen",
     "environment_class": "production",
     "baseline_sha": "a11afdacfee8261db260946dbe37668e68a6037e",
-    "head_at_generation": "502ec4e4e8521fe642b60aa57aab897c4061dab9",
+    "head_at_generation": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
     "bundle": {
       "build_hash": "index-Cq2NTdSE",
       "files": [
@@ -20,7 +20,7 @@
       "note": "Committed static bundle at the candidate SHA; check:app-fresh confirms it matches app-src/."
     },
     "freeze_rule": "v24 SV-24-01 (C): the next candidate is the FINAL SHA — the full 40-char commit of the clean v24 code. It is frozen by a green release-candidate workflow run whose head_sha IS that SHA (jobs candidate-gate + authenticated-e2e green, SHA-named rc-evidence/rc-auth-evidence artifacts) plus an owner git tag on it — NOT by a later commit that edits this manifest. A manifest commit can never name its own SHA, so the RC run records live in the immutable workflow artifacts, a GitHub Release, or a NON-deploying evidence branch (docs/evidence/OWNER_CHECKLIST_v24.md). Production must be deployed from exactly the FINAL SHA and GET /health must report its short form; a later docs-only commit is never claimed as the exact deploy.",
-    "explanation": "PENDING OWNER RC (v24, 2026-09-23). v24 SV-24-01 changed executable code — GET /health now reports a redacted deploy version (backend/server.js + backend/lib/version.js), the launch-state validator reads the certificate and owner checklist and enforces exact-SHA RC provenance (backend/lib/launch-state.js, backend/scripts/launch-state.js), and the unused nested backend/package-lock.json was removed — so no earlier commit can be the release candidate: a new FINAL SHA must pass the release-candidate workflow at its own exact SHA, be deployed exactly, and be observed by owner readiness before any track is GO again. The frontend (app-src/, app/) is unchanged, so the bundle stays index-Cq2NTdSE. The billing, entitlement, webhook and AI runtime is unchanged since the v23 tree (git diff over backend/routes/, backend/lib/ billing/entitlement/webhook/ownership/ai files and backend/migrations/ is EMPTY), so the live-money A–H rehearsal, the migration 038-040 probe and the other owner evidence carry forward per the v24 rule (no billing runtime diff ⇒ no re-rehearsal). Superseded candidate 176a7c6 (v23) is kept in historical_shas with its corrected provenance: no release-candidate run ever had head_sha 176a7c6 — the green runs were on its docs-only descendants (rc_runs) — so it is not an exact-SHA certified candidate."
+    "explanation": "FROZEN v24 FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064 (2026-09-23), recorded on the NON-deploying evidence/v24 branch so production keeps serving exactly this SHA (main = 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064). Exact-SHA chain, all at the same commit: (1) release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) head_sha = FINAL SHA, conclusion success, candidate-gate + authenticated-e2e success (authenticated matrix ran, not skipped), artifacts rc-evidence/rc-auth-evidence named with the FINAL SHA; (2) Vercel production deployed from main = FINAL SHA — public GET /health reports version 9be75d1b03d5 (observed 2026-09-23T14:04:46Z), bundle index-Cq2NTdSE.js / index-KNfjvmSJ.css; (3) owner authenticated readiness observed after that deploy (2026-09-23T14:04Z): ready=true, 0 blockers, ownership enforcement_active, paid_ready=true, all 14 blocker-level config gates ok (docs/evidence/2026-09-23-readiness-v24.json, readiness:validate OK). Billing/webhook/entitlement/migration runtime diff from the superseded candidate 176a7c6 to the FINAL SHA is EMPTY, so the ordered live-money A–H rehearsal carries forward (not repeated). v24 SV-24-01 content: /health redacted version, active-doc validator reads the certificate + owner checklist, exact-SHA RC provenance (rc_runs), nested backend lockfile removed."
   },
   "drift_from_baseline": [
     {
@@ -270,7 +270,8 @@
     "docs/LAUNCH_STATE.md",
     "docs/evidence/CERTIFICATION_v23.md",
     "docs/evidence/OWNER_CHECKLIST_v23.md",
-    "docs/evidence/OWNER_CHECKLIST_v24.md"
+    "docs/evidence/OWNER_CHECKLIST_v24.md",
+    "docs/evidence/V24_COMPLIANCE_CHECKLIST.md"
   ],
   "agent_documents": [
     "README.md",
@@ -307,10 +308,10 @@
       "name": "ESLint",
       "command": "npm run lint",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: eslint backend app-src api -> 0 errors, 0 warnings on the v24 working tree (2026-09-23). Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run lint` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
@@ -318,10 +319,10 @@
       "name": "Unit / contract / safety tests",
       "command": "npm test",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: node --test backend/tests/*.test.js -> 1072/1072 pass, 0 skipped on the v24 working tree (2026-09-23), incl. the new health-version, single-manifest and v24 active-doc/RC-provenance suites. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm test` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23. Locally on the identical tree: 1072/1072 pass, 0 skipped.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
@@ -329,10 +330,10 @@
       "name": "Production build",
       "command": "npm run build:app",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: vite build -> index-Cq2NTdSE.js / index-KNfjvmSJ.css on the v24 working tree (frontend unchanged). Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run build:app` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
@@ -340,21 +341,21 @@
       "name": "Stale-bundle detection",
       "command": "npm run check:app-fresh",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: npm run check:app-fresh -> app/ matches app-src/ on the v24 working tree. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run check:app-fresh` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
       "id": "e2e_public",
       "name": "Public browser journeys",
-      "command": "npx playwright test",
+      "command": "npm run test:e2e",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: Not run locally for v24; runs in the release-candidate candidate-gate job. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run test:e2e` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
@@ -366,21 +367,21 @@
         "public_paid"
       ],
       "scope_rationale": "Scoped to public launch on 2026-07-28. The owner has walked the signed-in product in production — signup, login, Stripe trial, access, cancel, AI generation and lifecycle email — and it works (docs/evidence/2026-07-28-owner-production-walkthrough.md). What the matrix adds over one person clicking the happy path is phone and keyboard operation, cross-account isolation driven in a real browser, and the failure paths (session expiry, provider timeout mid-generation, reload during export). A supervised cohort of invited accounts with the owner watching can absorb those; strangers arriving unannounced cannot. So it stays required for public_paid.",
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: Cannot run locally (needs the non-production E2E Supabase secrets); runs only in the release-candidate authenticated-e2e job. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run test:e2e:auth` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (authenticated-e2e job, matrix ran with RC_GATE=1, not skipped).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
       "id": "export_rendering",
       "name": "DOCX / PDF / ZIP structural validation and bounds",
-      "command": "node --test backend/tests/handoff-export-integrity.test.js",
+      "command": "npm run test:export",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: npm run test:export -> 15/15 pass on the v24 working tree. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run test:export` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23. Locally: 15/15.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
@@ -388,10 +389,10 @@
       "name": "Production configuration gate",
       "command": "npm run release:check",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). OWNER ONLY, NOT RUN. Local pre-commit verification: Owner-only: authenticated GET /api/admin/readiness against the deployed FINAL SHA. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "observed_production",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "Owner authenticated GET /api/admin/readiness on production at the deployed FINAL SHA (public /health version 9be75d1b03d5), 2026-09-23T14:04Z: HTTP 200, mode production, ready=true, 0 blockers, 0 external, all 14 blocker-level config gates ok, ownership.state=enforcement_active, paid_ready=true, live signals ok. PII-free record docs/evidence/2026-09-23-readiness-v24.json (readiness:validate --candidate FINAL SHA → OK).",
+      "note": "OBSERVED IN PRODUCTION at the exact FINAL SHA after its deploy (v24 owner checklist step 5).",
       "previous_observation": "v23 history (superseded): owner-observed authenticated readiness on 2026-09-21T16:54Z against the deployed docs-only descendant b6414f2 — HTTP 200, ready=true, 0 blockers, ownership.state=enforcement_active, paid_ready=true, all 14 config gates ok (docs/evidence/2026-09-21-readiness.json). Executable-tree parity only; /health exposed no version then."
     },
     {
@@ -399,21 +400,21 @@
       "name": "Launch-state document integrity",
       "command": "npm run launch:verify",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: npm run launch:verify -> integrity OK on the v24 working tree. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run launch:verify` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
       "id": "hero_contrast",
       "name": "Hero contrast and responsive layout",
-      "command": "npm test -- landing-contrast",
+      "command": "npm test",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: landing-contrast suite passes inside npm test on the v24 working tree. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm test` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23. landing-contrast.test.js runs inside npm test.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     },
     {
@@ -421,10 +422,10 @@
       "name": "React Router RSC advisory reachability guard",
       "command": "npm run check:router",
       "required": true,
-      "status": "not_run",
-      "observed_at_sha": null,
-      "evidence": null,
-      "note": "NOT RUN at the v24 FINAL SHA (pending owner RC). REQUIRED IN CI: the release-candidate workflow at the exact FINAL SHA. Local pre-commit verification: npm run check:router -> pure client SPA on the v24 working tree. Local runs on an uncommitted tree are not candidate evidence.",
+      "status": "passed_ci",
+      "observed_at_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "evidence": "`npm run check:router` green in release-candidate run 35870080139 (https://github.com/primocera/LaunchBloom/actions/runs/35870080139) at head_sha = FINAL SHA 9be75d1b03d5e2cd59c6757c0b2903ef6f09e064, 2026-09-23.",
+      "note": "PASSED IN CI at the exact FINAL SHA (candidate-gate job).",
       "previous_observation": "v23 history (superseded): recorded as observed at 176a7c6, but GitHub Actions has no run with head_sha 176a7c6; the same command ran green in release-candidate runs 35624269093 (head 3739e10) and 35630538498 (head 502ec4e), docs-only descendants of it."
     }
   ],
@@ -583,14 +584,14 @@
   ],
   "verdicts": {
     "capped_beta": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-09-23T07:30:00Z",
-      "note": "PENDING OWNER RC — computed by `npm run launch:gate`, not declared. This is a release-integrity hold, not a product regression: the v24 code change means no candidate is frozen and no required check is observed at the new FINAL SHA yet. Production still runs the v23 executable tree, whose capped-beta evidence (migrations, owner walkthrough, spend ceiling, readiness) was real and is unchanged. It returns to GO when the release-candidate workflow is green at the exact FINAL SHA and the checks are recorded there (docs/evidence/OWNER_CHECKLIST_v24.md)."
+      "verdict": "GO",
+      "decided_at_utc": "2026-09-23T14:10:00Z",
+      "note": "Computed by `npm run launch:gate` (not declared) at the exact FINAL SHA 9be75d1: green release-candidate run at that SHA, production deployed from it (/health version 9be75d1b03d5), owner readiness after the deploy, every required check passed, no open P0. GO for a capped, supervised beta behind BETA_INVITE_CAP only."
     },
     "public_paid": {
-      "verdict": "NO-GO",
-      "decided_at_utc": "2026-09-23T07:30:00Z",
-      "note": "PENDING OWNER RC — computed by `npm run launch:gate`, not declared. Strict public paid needs exact-SHA evidence: a green release-candidate run at the FINAL SHA, Vercel production deployed from exactly that SHA with GET /health reporting its short form, and authenticated readiness observed after that deploy. None exists yet for v24. v23 could not supply it either: no RC run ever had head_sha 176a7c6 and production health exposed no version. All P0/P1 blockers stay closed and the live-money A–H, migration 038-040 and other owner evidence carry forward unchanged (no billing runtime diff). Owner steps: docs/evidence/OWNER_CHECKLIST_v24.md."
+      "verdict": "GO",
+      "decided_at_utc": "2026-09-23T14:10:00Z",
+      "note": "Computed by `npm run launch:gate` (not declared). Exact-SHA evidence chain at FINAL SHA 9be75d1: RC run 35870080139 green (authenticated matrix ran), production /health version 9be75d1b03d5, authenticated readiness ready=true / 0 blockers / enforcement_active / paid_ready after the deploy; every P0/P1 blocker closed; live-money A–H carried forward on an empty billing runtime diff. Final launch verdict remains Prompt 4 (independent read-only exact-SHA certification)."
     }
   },
   "rollback": {
@@ -727,6 +728,37 @@
       ],
       "note": "The run the 2026-09-22 independent audit cited. candidate-gate ran npm audit, lint, launch:verify, npm test, build:app, check:app-fresh, check:router, test:export, test:e2e and launch:drift (all success); authenticated-e2e ran the matrix (fail-closed REQUIRED step skipped because the E2E environment was available). head_sha is 502ec4e — main at the v24 audit — which is a docs-only descendant of 176a7c6, not 176a7c6 itself.",
       "retrieved_at_utc": "2026-09-23T07:00:00Z"
+    },
+    {
+      "run_id": "35870080139",
+      "url": "https://github.com/primocera/LaunchBloom/actions/runs/35870080139",
+      "workflow": ".github/workflows/release-candidate.yml",
+      "head_branch": "rc/v24-final",
+      "head_sha": "9be75d1b03d5e2cd59c6757c0b2903ef6f09e064",
+      "event": "push",
+      "conclusion": "success",
+      "created_at_utc": "2026-09-23T13:52:05Z",
+      "completed_at_utc": "2026-09-23T13:57:04Z",
+      "jobs": [
+        {
+          "name": "candidate-gate",
+          "conclusion": "success"
+        },
+        {
+          "name": "authenticated-e2e",
+          "conclusion": "success"
+        },
+        {
+          "name": "owner-live-checks",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": [
+        "rc-evidence-9be75d1b03d5e2cd59c6757c0b2903ef6f09e064-35870080139",
+        "rc-auth-evidence-9be75d1b03d5e2cd59c6757c0b2903ef6f09e064-35870080139"
+      ],
+      "note": "v24 FINAL SHA release-candidate run (tag rc/v24-final). candidate-gate: every step success (npm audit fail-closed, lint, launch:verify, npm test, build:app, check:app-fresh, check:router, test:export, public browser suite, launch:drift). authenticated-e2e: \"Authenticated matrix (release-candidate mode)\" success (ran, not skipped); the fail-closed REQUIRED fallback step skipped because the non-production E2E environment was available.",
+      "retrieved_at_utc": "2026-09-23T14:00:00Z"
     }
   ]
 }

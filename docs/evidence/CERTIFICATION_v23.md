@@ -11,19 +11,21 @@
 **Repository:** primocera/LaunchBloom (Scalvya)
 **Record updated (UTC):** 2026-09-23
 **v23 superseded candidate:** `176a7c6859364ee0fd904bc900ec93e159b70197` (bundle `index-Cq2NTdSE.js` / `index-KNfjvmSJ.css`)
-**Next candidate:** none frozen — v24 FINAL SHA pending the owner RC (`docs/evidence/OWNER_CHECKLIST_v24.md`)
+**Current candidate:** v24 FINAL SHA `9be75d1b03d5e2cd59c6757c0b2903ef6f09e064`, frozen 2026-09-23 (`docs/evidence/OWNER_CHECKLIST_v24.md`)
 
-## Current verdict (computed by `npm run launch:gate`)
+## Current verdict (computed by `npm run launch:gate` at the v24 FINAL SHA)
 
-- **Capped beta:** **NO-GO** — pending owner RC. Release-integrity hold, not a
-  product regression: no candidate is frozen at an exact SHA and no required
-  check is observed at the v24 FINAL SHA yet.
-- **Public paid:** **NO-GO** — pending owner RC, exact-SHA deploy parity
-  (`GET /health` version) and post-deploy readiness at the v24 FINAL SHA.
-- Supervised paid MVP: **PENDING** — same exact-SHA RC and deploy evidence; no
-  billing evidence is missing (see below).
+- **Capped beta:** **GO** — capped, supervised beta behind `BETA_INVITE_CAP` only.
+- **Public paid:** **GO** — the exact-SHA chain is complete at `9be75d1`: release-candidate
+  [run 35870080139](https://github.com/primocera/LaunchBloom/actions/runs/35870080139)
+  green, with the authenticated matrix run and not skipped; production `/health`
+  version `9be75d1b03d5`; post-deploy readiness `ready=true`, 0 blockers
+  (`docs/evidence/2026-09-23-readiness-v24.json`).
+- Supervised paid MVP: **GO** — same evidence.
 - Scale expansion: **NOT CERTIFIED** — no mature cohort evidence; never merged
   into an MVP verdict.
+- The final launch verdict is still Prompt 4, the independent read-only exact-SHA
+  certification.
 
 ## What v23 genuinely established (production evidence that carries forward)
 

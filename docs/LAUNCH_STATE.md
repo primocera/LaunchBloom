@@ -10,14 +10,14 @@
 > re-scaffold it. The live-money rehearsal and the router advisory remain
 > owner-gated and cannot be closed by a pack — do not write one around them.
 
-Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-23T07:30:00Z
+Repository `primocera/LaunchBloom` · branch `main` · generated 2026-09-23T14:10:00Z
 
 ## Verdict
 
 | Track | Verdict | Why |
 |---|---|---|
-| Capped beta | **NO-GO** | no release candidate is pinned (candidate.sha is null; state pending_owner_rc); required check lint is not_run; required check unit is not_run; required check build is not_run; required check bundle_fresh is not_run; required check e2e_public is not_run; required check export_rendering is not_run; required check release_config is not_run; required check launch_integrity is not_run; required check hero_contrast is not_run; required check router_reachability is not_run |
-| Public paid launch | **NO-GO** | no release candidate is pinned (candidate.sha is null; state pending_owner_rc); required check lint is not_run; required check unit is not_run; required check build is not_run; required check bundle_fresh is not_run; required check e2e_public is not_run; required check e2e_authenticated is not_run; required check export_rendering is not_run; required check release_config is not_run; required check launch_integrity is not_run; required check hero_contrast is not_run; required check router_reachability is not_run |
+| Capped beta | **GO** | all conditions met |
+| Public paid launch | **GO** | all conditions met |
 
 A capped, supported beta and an unrestricted public paid launch are
 different risk decisions and are decided separately. **GO** means every
@@ -28,10 +28,8 @@ means at least one required condition is unmet without a valid acceptance.
 
 ## Release candidate
 
-**No candidate is pinned (state: pending_owner_rc).** PENDING OWNER RC (v24, 2026-09-23). v24 SV-24-01 changed executable code — GET /health now reports a redacted deploy version (backend/server.js + backend/lib/version.js), the launch-state validator reads the certificate and owner checklist and enforces exact-SHA RC provenance (backend/lib/launch-state.js, backend/scripts/launch-state.js), and the unused nested backend/package-lock.json was removed — so no earlier commit can be the release candidate: a new FINAL SHA must pass the release-candidate workflow at its own exact SHA, be deployed exactly, and be observed by owner readiness before any track is GO again. The frontend (app-src/, app/) is unchanged, so the bundle stays index-Cq2NTdSE. The billing, entitlement, webhook and AI runtime is unchanged since the v23 tree (git diff over backend/routes/, backend/lib/ billing/entitlement/webhook/ownership/ai files and backend/migrations/ is EMPTY), so the live-money A–H rehearsal, the migration 038-040 probe and the other owner evidence carry forward per the v24 rule (no billing runtime diff ⇒ no re-rehearsal). Superseded candidate 176a7c6 (v23) is kept in historical_shas with its corrected provenance: no release-candidate run ever had head_sha 176a7c6 — the green runs were on its docs-only descendants (rc_runs) — so it is not an exact-SHA certified candidate.
-
-- Reviewed baseline: `a11afdacfee8261db260946dbe37668e68a6037e`
-- HEAD when this record was written: `502ec4e4e8521fe642b60aa57aab897c4061dab9`
+- Candidate SHA: `9be75d1b03d5e2cd59c6757c0b2903ef6f09e064` (frozen)
+- HEAD now: `9be75d1b03d5e2cd59c6757c0b2903ef6f09e064`
 - Bundle: index-Cq2NTdSE.js, index-KNfjvmSJ.css
 - Environment class: production
 - Freeze rule: v24 SV-24-01 (C): the next candidate is the FINAL SHA — the full 40-char commit of the clean v24 code. It is frozen by a green release-candidate workflow run whose head_sha IS that SHA (jobs candidate-gate + authenticated-e2e green, SHA-named rc-evidence/rc-auth-evidence artifacts) plus an owner git tag on it — NOT by a later commit that edits this manifest. A manifest commit can never name its own SHA, so the RC run records live in the immutable workflow artifacts, a GitHub Release, or a NON-deploying evidence branch (docs/evidence/OWNER_CHECKLIST_v24.md). Production must be deployed from exactly the FINAL SHA and GET /health must report its short form; a later docs-only commit is never claimed as the exact deploy.
@@ -45,6 +43,7 @@ A run proves only the commit in its head_sha.
 | [35558190476](https://github.com/primocera/LaunchBloom/actions/runs/35558190476) | `rc/v23` | `26c95b261a9e` | failure | 2026-09-21T03:38:11Z → 2026-09-21T03:42:01Z | candidate-gate: failure, authenticated-e2e: success, owner-live-checks: success |
 | [35624269093](https://github.com/primocera/LaunchBloom/actions/runs/35624269093) | `rc/v23` | `3739e102366b` | success | 2026-09-21T16:13:56Z → 2026-09-21T16:18:59Z | candidate-gate: success, authenticated-e2e: success, owner-live-checks: success |
 | [35630538498](https://github.com/primocera/LaunchBloom/actions/runs/35630538498) | `rc/v23` | `502ec4e4e852` | success | 2026-09-21T17:12:39Z → 2026-09-21T17:18:00Z | candidate-gate: success, authenticated-e2e: success, owner-live-checks: success |
+| [35870080139](https://github.com/primocera/LaunchBloom/actions/runs/35870080139) | `rc/v24-final` | `9be75d1b03d5` | success | 2026-09-23T13:52:05Z → 2026-09-23T13:57:04Z | candidate-gate: success, authenticated-e2e: success, owner-live-checks: success |
 
 ### Drift from the reviewed baseline
 
@@ -91,17 +90,17 @@ settle this question.
 
 | Check | Command | Status | At SHA | Counts as passed |
 |---|---|---|---|---|
-| ESLint | `npm run lint` | not run | — | no |
-| Unit / contract / safety tests | `npm test` | not run | — | no |
-| Production build | `npm run build:app` | not run | — | no |
-| Stale-bundle detection | `npm run check:app-fresh` | not run | — | no |
-| Public browser journeys | `npx playwright test` | not run | — | no |
-| Authenticated seeded browser matrix | `npm run test:e2e:auth` | not run | — | no |
-| DOCX / PDF / ZIP structural validation and bounds | `node --test backend/tests/handoff-export-integrity.test.js` | not run | — | no |
-| Production configuration gate | `npm run release:check` | not run | — | no |
-| Launch-state document integrity | `npm run launch:verify` | not run | — | no |
-| Hero contrast and responsive layout | `npm test -- landing-contrast` | not run | — | no |
-| React Router RSC advisory reachability guard | `npm run check:router` | not run | — | no |
+| ESLint | `npm run lint` | passed in CI | `9be75d1` | yes |
+| Unit / contract / safety tests | `npm test` | passed in CI | `9be75d1` | yes |
+| Production build | `npm run build:app` | passed in CI | `9be75d1` | yes |
+| Stale-bundle detection | `npm run check:app-fresh` | passed in CI | `9be75d1` | yes |
+| Public browser journeys | `npm run test:e2e` | passed in CI | `9be75d1` | yes |
+| Authenticated seeded browser matrix | `npm run test:e2e:auth` | passed in CI | `9be75d1` | yes |
+| DOCX / PDF / ZIP structural validation and bounds | `npm run test:export` | passed in CI | `9be75d1` | yes |
+| Production configuration gate | `npm run release:check` | observed in production | `9be75d1` | yes |
+| Launch-state document integrity | `npm run launch:verify` | passed in CI | `9be75d1` | yes |
+| Hero contrast and responsive layout | `npm test` | passed in CI | `9be75d1` | yes |
+| React Router RSC advisory reachability guard | `npm run check:router` | passed in CI | `9be75d1` | yes |
 
 ## Owner evidence
 
