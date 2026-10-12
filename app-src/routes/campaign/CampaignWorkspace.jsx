@@ -38,7 +38,7 @@ export default function CampaignWorkspace() {
   //
   // v13 SC-P1-07: the workspace switches campaigns without remounting (the
   // route param changes), so a slow response for the previous campaign must
-  // never land on the new one — hence the stale guard.
+  // never land on the new one - hence the stale guard.
   const begin = useRequestGuard();
   const load = useCallback(() => {
     const isCurrent = begin();
@@ -139,7 +139,7 @@ function Overview({ campaign, navigate }) {
     api.campaignReview(campaign.id).then((r) => setReview(r.review)).catch(() => setReview(null));
   }, [campaign.id]);
 
-  // Derive everything from canonical rows via the shared pure service — the
+  // Derive everything from canonical rows via the shared pure service - the
   // same summary the Dashboard uses, so both surfaces agree on the next action.
   const summary = campaignSummary(campaign, review);
   const na = campaignNextAction(summary);
@@ -171,7 +171,7 @@ function Overview({ campaign, navigate }) {
           .filter(Boolean).join(' · ') || 'No details yet.'}
       </p>
       {hasNoDates(campaign) && (
-        <p className="muted">No fixed dates — urgency or deadline language will not be generated.</p>
+        <p className="muted">No fixed dates - urgency or deadline language will not be generated.</p>
       )}
 
       {/* One primary next action, announced accessibly. */}
@@ -183,7 +183,7 @@ function Overview({ campaign, navigate }) {
           : <a className="btn-primary" href={destination}>{na.label}</a>}
       </div>
 
-      {/* Transparent readiness — four groups with reasons, no synthetic score. */}
+      {/* Transparent readiness - four groups with reasons, no synthetic score. */}
       <div className="campaign-summary-grid">
         {groups.map((g) => (
           <div className={`account-section campaign-readiness is-${g.state}`} key={g.key}>
@@ -240,7 +240,7 @@ function BriefSection({ campaign, onChange }) {
       {!campaign.brief_approved && (
         <p className="muted">
           Approving locks in what new generations inherit: your offer, audience, key message, terms and restrictions.
-          Existing assets are unaffected. Approval is a human decision — it does not mean legally approved or fact-checked.
+          Existing assets are unaffected. Approval is a human decision - it does not mean legally approved or fact-checked.
         </p>
       )}
       {error && <p className="login-err">{error}</p>}
@@ -265,7 +265,7 @@ function BriefSection({ campaign, onChange }) {
 // ── Assets: a complete working surface inside the campaign ──
 // v10 SC-02: this used to be a dead-end list whose only real action was "open
 // the global Library". It now carries the state a reviewer needs per row and
-// opens the SAME shared drawer the Library uses — edit, rewrite, versions,
+// opens the SAME shared drawer the Library uses - edit, rewrite, versions,
 // diff, restore and export all happen here, in campaign context.
 //
 // Blockers are surfaced, never enforced as status: canonical statuses stay

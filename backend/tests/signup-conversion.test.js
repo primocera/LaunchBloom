@@ -84,7 +84,9 @@ test('a second submit cannot create a second account attempt', () => {
 
 test('consent is never pre-checked and the legal links stay in the label', () => {
   assert.match(signup, /useState\(false\);\s*\/\/|const \[accept, setAccept\] = useState\(false\)/);
-  assert.match(signup, /I agree to the <Link to="\/legal\/terms">Terms<\/Link>/);
+  assert.match(signup, /I&apos;m 18 or older, I&apos;m using this for my work or business, and I agree to the/,
+    'the consent label must confirm age and business use');
+  assert.match(signup, /<Link to="\/legal\/terms">Terms<\/Link>/);
   assert.match(signup, /<Link to="\/legal\/privacy">Privacy Policy<\/Link>/);
   assert.match(signup, /\(optional\)/, 'the marketing opt-in must be visibly optional and separate');
 });

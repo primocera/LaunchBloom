@@ -9,7 +9,7 @@ import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate } from './common';
 // section, plus the quality checklist card from the spec.
 // ---------------------------------------------------------------------------
 
-// [field, label, kind] — kind: text | list | faq
+// [field, label, kind] - kind: text | list | faq
 const SECTIONS = [
   ['headline', 'Hero headline', 'text'],
   ['subheadline', 'Hero subheadline', 'text'],
@@ -116,7 +116,7 @@ export default function LandingStudio() {
   return (
     <StudioShell
       title="Landing Page Studio"
-      blurb="Your landing page copy, section by section — edit, copy, or regenerate."
+      blurb="Your landing page copy, section by section - edit, copy, or regenerate."
       kits={kits}
       kitId={kitId}
       onSelectKit={setKitId}
@@ -171,7 +171,7 @@ export default function LandingStudio() {
                   <p key={f.question}><strong>{f.question}</strong><br />{f.answer}</p>
                 ))
               ) : (
-                <p>{lp[field] || <span className="flow-muted">Empty — regenerate or edit.</span>}</p>
+                <p>{lp[field] || <span className="flow-muted">Empty - regenerate or edit.</span>}</p>
               )}
             </div>
           ))}

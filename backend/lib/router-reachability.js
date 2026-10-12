@@ -1,17 +1,17 @@
 // ---------------------------------------------------------------------------
-// v15 SC-05 — mechanical proof that the React Router RSC advisory stays
+// v15 SC-05 - mechanical proof that the React Router RSC advisory stays
 // UNREACHABLE.
 //
 // GHSA-qwww-vcr4-c8h2 affects ONLY applications using React Router's unstable
 // RSC / server APIs. This app is a pure client SPA (declarative <BrowserRouter>,
-// all imports from 'react-router-dom'), so the vulnerable path does not exist —
+// all imports from 'react-router-dom'), so the vulnerable path does not exist -
 // an ACCEPTED, not closed, risk. The prose said so; this makes it enforceable:
 // a deterministic guard that fails the moment any RSC/SSR/server-router
 // indicator appears in source or configuration, so the "no-RSC" claim can never
 // silently stop being true.
 //
 // Pure: the caller supplies file contents; this decides what they mean. Comments
-// are stripped first, so the guard reacts to real code and config — never to a
+// are stripped first, so the guard reacts to real code and config - never to a
 // doc or a comment that merely NAMES an indicator (this very file included).
 // ---------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ function stripComments(text) {
 
 /**
  * Scan the supplied files for RSC/SSR/server-router indicators.
- * files: [{ path, text }]. Returns [{ path, id, why }] — [] when the app is a
+ * files: [{ path, text }]. Returns [{ path, id, why }] - [] when the app is a
  * pure client SPA. A forbidden filename is reported even with empty contents.
  */
 function rscIndicators(files = []) {

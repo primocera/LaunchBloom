@@ -1,12 +1,12 @@
-// v13 SC-P1-07 — stale-response guard.
+// v13 SC-P1-07 - stale-response guard.
 //
 // The studios and campaign panels all reload when an authoritative id changes
 // (launch-kit id, campaign id, the AssetLibrary query string) *without*
 // remounting. Two failure modes follow from that:
 //
-//   1. race — a slow response for campaign A resolves after the user already
+//   1. race - a slow response for campaign A resolves after the user already
 //      switched to campaign B, overwriting B's data with A's;
-//   2. post-unmount setState — the last in-flight response resolves after the
+//   2. post-unmount setState - the last in-flight response resolves after the
 //      route unmounted.
 //
 // This module is the pure core so it can be tested without a DOM: a guard hands
@@ -26,7 +26,7 @@ export function createRequestGuard() {
       const token = ++seq;
       return () => alive && token === seq;
     },
-    /** Marks the owner unmounted — every outstanding response becomes stale. */
+    /** Marks the owner unmounted - every outstanding response becomes stale. */
     dispose() {
       alive = false;
     },

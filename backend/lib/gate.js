@@ -28,7 +28,7 @@ async function planActiveCached(identity) {
     planCache.set(cacheKey, { active, ts: Date.now() });
     return active;
   } catch (e) {
-    // v13 SC-P0-01: "could not verify" is NOT "not paid" — let it propagate so
+    // v13 SC-P0-01: "could not verify" is NOT "not paid" - let it propagate so
     // the route answers 503 instead of silently metering a paying user.
     if (isEntitlementUnavailable(e)) throw e;
     return false;

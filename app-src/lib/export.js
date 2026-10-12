@@ -13,7 +13,7 @@ const PLACEHOLDER_RE = /\[[^\]\n]{2,80}\]/g;
 export function findPlaceholders(value) {
   const text = typeof value === 'string' ? value : JSON.stringify(value ?? '');
   const found = text.match(PLACEHOLDER_RE) || [];
-  // Ignore markdown links like [label](url) — those aren't fill-ins.
+  // Ignore markdown links like [label](url) - those aren't fill-ins.
   const real = found.filter((m) => !text.includes(`${m}(`));
   return [...new Set(real)];
 }
@@ -88,7 +88,7 @@ export function websitePageMarkdown(item = {}) {
     `## ${p.h1 || ''}`,
     `**Hero:** ${p.hero_headline || ''}`,
     p.hero_subheadline || '',
-    heroDirs.length ? `### Hero directions\n${heroDirs.map((h) => `- **${(h.approach || '').replace(/_/g, ' ')}:** ${h.headline} — ${h.subheadline}`).join('\n')}` : '',
+    heroDirs.length ? `### Hero directions\n${heroDirs.map((h) => `- **${(h.approach || '').replace(/_/g, ' ')}:** ${h.headline} - ${h.subheadline}`).join('\n')}` : '',
     `**Primary CTA:** ${item.cta || p.primary_cta || ''}`,
     p.secondary_cta ? `**Secondary CTA:** ${p.secondary_cta}` : '',
     ...sections.map((s) => [
@@ -111,7 +111,7 @@ export function websitePagesMarkdown(items = []) {
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /**
- * Word-openable HTML document (.doc). Dependency-free and CSP-safe — no OOXML
+ * Word-openable HTML document (.doc). Dependency-free and CSP-safe - no OOXML
  * zip library, but Word opens this cleanly with real headings and lists.
  */
 export function websitePagesDoc(items = []) {

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // v8 LB-S06: first-party channel playbooks. Versioned in code with stable IDs
-// — proven workflow STRUCTURE (objective, deliverable plan, brief questions,
+// - proven workflow STRUCTURE (objective, deliverable plan, brief questions,
 // output structures), never generated claims, benchmarks, countdowns or
 // outcome promises. Applying one creates a new DRAFT campaign; required facts
 // stay empty for the user to verify, and nothing is auto-approved.
@@ -23,7 +23,7 @@ const PLAYBOOKS = [
     },
     brief_questions: [
       'What exactly is launching, and what makes it different from what you already sell?',
-      'Who is the launch for — your existing audience, a new segment, or both?',
+      'Who is the launch for - your existing audience, a new segment, or both?',
       'What is the launch offer (price, bundle, bonus) and when does it start and end?',
       'What real proof (reviews, results, press) can you use? Leave blank if none yet.',
     ],
@@ -32,7 +32,7 @@ const PLAYBOOKS = [
     id: 'limited_promo',
     version: 1,
     label: 'Limited-time promotion',
-    description: 'A promotion with real dates and terms — urgency comes from your calendar, never invented.',
+    description: 'A promotion with real dates and terms - urgency comes from your calendar, never invented.',
     suggested_objective: 'Run a limited-time promotion',
     channels: ['email', 'social', 'ads'],
     deliverables: {
@@ -52,7 +52,7 @@ const PLAYBOOKS = [
     id: 'waitlist_prelaunch',
     version: 1,
     label: 'Waitlist / prelaunch',
-    description: 'Build a list before something exists to buy — value promise without inventing outcomes.',
+    description: 'Build a list before something exists to buy - value promise without inventing outcomes.',
     suggested_objective: 'Grow a waitlist before launch',
     channels: ['landing', 'social', 'email'],
     deliverables: {
@@ -72,7 +72,7 @@ const PLAYBOOKS = [
     id: 'evergreen_refresh',
     version: 1,
     label: 'Evergreen offer refresh',
-    description: 'Refresh how your core offer is presented — consistency pass across existing channels.',
+    description: 'Refresh how your core offer is presented - consistency pass across existing channels.',
     suggested_objective: 'Refresh the core offer presentation across channels',
     channels: ['landing', 'email', 'social'],
     deliverables: {
@@ -96,7 +96,7 @@ function playbookById(id) {
 
 // ── workspace templates: sanitization ───────────────────────────────────────
 
-// Brief fields a user template may carry — facts the OWNER chose to reuse.
+// Brief fields a user template may carry - facts the OWNER chose to reuse.
 // Approval state, statuses, strategy, evidence and dates never transfer.
 const TEMPLATE_BRIEF_FIELDS = ['objective', 'audience', 'offer_summary', 'products', 'promo_terms',
   'key_message', 'proof', 'restrictions', 'markets', 'language', 'channels'];

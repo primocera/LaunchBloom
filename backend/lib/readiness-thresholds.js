@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v12 SC-V12-07 — turn raw operational counts into warning/stop signals.
+// v12 SC-V12-07 - turn raw operational counts into warning/stop signals.
 //
 // The readiness endpoint already reports counts (webhook failures, outbox
 // backlog, AI spend, reservation leakage). Counts alone need an operator to
@@ -11,7 +11,7 @@
 'use strict';
 
 // warn = look now; stop = intervene (pause the affected subsystem). Chosen for
-// a small paid cohort — deliberately conservative, and easy to re-tune here.
+// a small paid cohort - deliberately conservative, and easy to re-tune here.
 const THRESHOLDS = Object.freeze({
   webhook_failures_24h: { warn: 1, stop: 5 },
   outbox_backlog: { warn: 25, stop: 100 },
@@ -40,7 +40,7 @@ function classifyReadiness(live = {}) {
 
   // AI spend is measured against its own configured ceiling: warn at 80%, stop
   // at or above the ceiling. Distinct from the hard per-day call BRAKE
-  // (MAX_AI_CALLS_PER_DAY in spend-guard) — this is the money alarm.
+  // (MAX_AI_CALLS_PER_DAY in spend-guard) - this is the money alarm.
   const ceiling = Number(live.ai_spend_ceiling_usd);
   const spend = Number(live.ai_spend_24h_usd);
   if (ceiling > 0 && Number.isFinite(spend)) {
@@ -51,7 +51,7 @@ function classifyReadiness(live = {}) {
   }
 
   // LB-V19 (LB-05): absence of data must NEVER read as healthy. A signal that is
-  // `unknown` means we could not measure it (e.g. a failed count) — so when no
+  // `unknown` means we could not measure it (e.g. a failed count) - so when no
   // actionable warn/stop is present but some signal is unmeasured, the roll-up is
   // `degraded`, not `ok`. Order: stop > warn > degraded (unavailable) > ok.
   const values = Object.values(signals);

@@ -10,7 +10,7 @@
 // serverless requests serialize on the day row, so increments can't be lost.
 //
 // If the migration hasn't been applied yet (RPC missing), we fall back to the
-// legacy best-effort Storage-JSON counter so generation keeps working — with
+// legacy best-effort Storage-JSON counter so generation keeps working - with
 // a loud warning, because the fallback is racy.
 // ---------------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ async function writeUsage(value) {
 async function legacyReserve(day) {
   if (!warnedFallback) {
     warnedFallback = true;
-    console.warn('[spend-guard] ai_spend_ledger RPC missing — using legacy racy Storage counter. Apply migration 024.');
+    console.warn('[spend-guard] ai_spend_ledger RPC missing - using legacy racy Storage counter. Apply migration 024.');
   }
   const all = await readUsage();
   const used = all[day] || 0;
@@ -111,9 +111,9 @@ async function legacyReserve(day) {
 
 /**
  * Reserve one AI call against today's global budget. Throws 503 DAILY_CAP when
- * the cap is reached (atomically — the SQL function returns no row) and 503
+ * the cap is reached (atomically - the SQL function returns no row) and 503
  * GENERATION_PAUSED when the emergency switch is on.
- * Returns { used, limit, day, ledger } — pass `day` to finalize/release.
+ * Returns { used, limit, day, ledger } - pass `day` to finalize/release.
  */
 async function reserveAiCall() {
   if (generationPaused()) throw pausedError();

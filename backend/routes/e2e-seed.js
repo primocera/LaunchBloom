@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v11 SC-03 — deterministic seed/reset for the authenticated browser matrix.
+// v11 SC-03 - deterministic seed/reset for the authenticated browser matrix.
 //
 // The signed-in product could not be tested in a browser because the Playwright
 // harness is credential-free: every authenticated route redirected to login, so
@@ -15,14 +15,14 @@
 //   3. Every request must carry the E2E_SEED_SECRET, which must be long enough
 //      to not be guessable.
 //   4. The target database must contain public.e2e_seed_marker. Guards 1-3
-//      describe the process, not the database — a local run pointed at the
-//      production project passes all three — so the database itself has to
+//      describe the process, not the database - a local run pointed at the
+//      production project passes all three - so the database itself has to
 //      opt in. See backend/migrations/E2E_MARKER.sql.
 //
 // It does NOT bypass authorization anywhere else: it creates rows and a real
 // Supabase Auth user, and the tests then sign in through the ordinary login
 // flow and are subject to every normal ownership and entitlement check.
-// Entitlement is never granted here — plan state comes from the billing tables
+// Entitlement is never granted here - plan state comes from the billing tables
 // exactly as it does in production.
 // ---------------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ const SEED_DOMAIN = 'e2e.invalid'; // reserved TLD: these addresses can never re
 
 // The secret is supplied through env/CI secrets and routinely carries a trailing
 // newline or stray whitespace from the shell or the secret UI. That is not part
-// of the credential — trim it here and in secretMatches so the length gate and
+// of the credential - trim it here and in secretMatches so the length gate and
 // the timing-safe compare both operate on the canonical value. The client
 // (e2e/authenticated/fixtures.js) trims the header identically, so both sides
 // agree; without this a newline-suffixed secret is 25 chars (passes the gate)
@@ -62,8 +62,8 @@ function seedingAllowed() {
 // The three checks above all describe the PROCESS. None of them describes the
 // DATABASE, and that gap was real: a local run with SUPABASE_URL pointed at the
 // production project passes every one of them, because NODE_ENV is not
-// production and the Stripe key is blank. It would then create rows — and real
-// auth users — in production.
+// production and the Stripe key is blank. It would then create rows - and real
+// auth users - in production.
 //
 // So the target database must opt in to being seeded, from inside itself:
 // public.e2e_seed_marker exists only where backend/migrations/E2E_MARKER.sql was
@@ -76,7 +76,7 @@ async function seedTargetAllowed() {
   try {
     const { error } = await supabase.from('e2e_seed_marker').select('id').limit(1).single();
     markerCache = error
-      ? 'target database has no e2e_seed_marker row — run backend/migrations/E2E_MARKER.sql against the NON-PRODUCTION project only'
+      ? 'target database has no e2e_seed_marker row - run backend/migrations/E2E_MARKER.sql against the NON-PRODUCTION project only'
       : null;
   } catch {
     markerCache = 'could not verify the target database is a seeding target';
@@ -140,7 +140,7 @@ const CAMPAIGN_FIXTURE = {
 
 /**
  * Create the Supabase Auth user for a run. Confirmed on creation so the test
- * can sign in immediately — this mirrors a user who verified their email, it
+ * can sign in immediately - this mirrors a user who verified their email, it
  * does not skip verification for anyone else.
  */
 async function createUser(email, password) {
@@ -237,7 +237,7 @@ router.cleanup = async function cleanup(runId) {
         await deleteUser(u.id);
       }
     }
-  } catch { /* auth admin unavailable — workspace rows are already gone */ }
+  } catch { /* auth admin unavailable - workspace rows are already gone */ }
 
   return (workspaces || []).length;
 };

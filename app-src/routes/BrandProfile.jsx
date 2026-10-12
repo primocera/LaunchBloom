@@ -203,7 +203,7 @@ function Onboarding({ profile, onDone, save }) {
     <div className="brand-page">
       <h1>Give every campaign the same ground truth.</h1>
       <p className="muted">
-        Add the facts Scalvya should reuse — and the claims it must never invent. You can refine
+        Add the facts Scalvya should reuse - and the claims it must never invent. You can refine
         this profile as your business changes.
       </p>
       <div className="flow-card">
@@ -223,7 +223,7 @@ function Onboarding({ profile, onDone, save }) {
           <button className="flow-btn" onClick={next}>
             {step === ONBOARDING_STEPS.length - 1 ? 'Save Brand Profile' : 'Next'}
           </button>
-          <button className="account-link" onClick={onDone}>Skip — I’ll add this before generating</button>
+          <button className="account-link" onClick={onDone}>Skip - I’ll add this before generating</button>
         </div>
         <p className="muted" style={{ marginTop: 10 }}>
           Step {step + 1} of {ONBOARDING_STEPS.length} · About 2 minutes left
@@ -261,7 +261,7 @@ export default function BrandProfile() {
         await api.saveBrandProfile(next);
         if (seq === saveSeq.current) setStatus('Brand Profile saved. New generations will use these facts.');
       } catch {
-        if (seq === saveSeq.current) setStatus('Could not save — retrying. Your changes are still on this device.');
+        if (seq === saveSeq.current) setStatus('Could not save - retrying. Your changes are still on this device.');
         setTimeout(() => { if (seq === saveSeq.current) persist(next); }, 4000);
       }
     }, 700);
@@ -293,26 +293,26 @@ export default function BrandProfile() {
         <span className="brand-status" role="status" aria-live="polite">{status}</span>
       </div>
       <p className="muted">
-        Add the facts Scalvya should reuse — and the claims it must never invent. Changes apply
+        Add the facts Scalvya should reuse - and the claims it must never invent. Changes apply
         to future generations; assets you&rsquo;ve already saved keep the context they were generated
         from.
       </p>
       {/* v9 SC-08: tailored setup guidance from the chosen use-case path. It only
-          changes wording — the same Brand Profile → Campaign Brief contract runs
+          changes wording - the same Brand Profile → Campaign Brief contract runs
           for both. No company or client names are read or stored. */}
       {(() => {
         let path = null;
         try { path = localStorage.getItem('of-use-case'); } catch { /* private mode */ }
         if (path === 'client') {
-          return <p className="muted" role="note">Building for clients? Use one workspace per client and fill this with that client&rsquo;s facts — each campaign brief then inherits them for a clean, consistent handoff.</p>;
+          return <p className="muted" role="note">Building for clients? Use one workspace per client and fill this with that client&rsquo;s facts - each campaign brief then inherits them for a clean, consistent handoff.</p>;
         }
         if (path === 'own') {
-          return <p className="muted" role="note">Launching your own campaign? Add your real products, audience and proof once here — every campaign you brief will reuse them.</p>;
+          return <p className="muted" role="note">Launching your own campaign? Add your real products, audience and proof once here - every campaign you brief will reuse them.</p>;
         }
         return null;
       })()}
 
-      {/* v7 LB-03: the smallest credible baseline, stated — not a score. */}
+      {/* v7 LB-03: the smallest credible baseline, stated - not a score. */}
       {(() => {
         const missing = minimumViableProfile(profile);
         return missing.length ? (
@@ -322,7 +322,7 @@ export default function BrandProfile() {
           </p>
         ) : (
           <p className="muted bp-baseline" role="status">
-            Your baseline is complete — generators have what they need. Deeper proof and restriction
+            Your baseline is complete - generators have what they need. Deeper proof and restriction
             details improve review quality.
           </p>
         );

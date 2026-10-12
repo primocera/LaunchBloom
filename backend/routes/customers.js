@@ -51,11 +51,11 @@ function pricePlans() {
  *     column `app_user_id` is the owner key. Email is mutable display data and is
  *     never the identity, so an email change can neither orphan nor switch billing
  *     identity. Multiple rows for one app_user_id FAIL CLOSED (reconciliation
- *     required) — never an arbitrary winner.
+ *     required) - never an arbitrary winner.
  *   - Enforcement OFF (capped beta / pre-038 schema): the historical email key is
  *     used, so behaviour and the applied schema are unchanged.
  *
- * A real read error throws EntitlementUnavailableError (fail closed — never read
+ * A real read error throws EntitlementUnavailableError (fail closed - never read
  * as "no customer"); a verified no-row returns null.
  */
 async function findCustomerRow(identity, columns = 'id, stripe_customer_id') {
@@ -91,7 +91,7 @@ async function findCustomerRow(identity, columns = 'id, stripe_customer_id') {
   return data || null;
 }
 
-// v13 SC-P0-05 — REMOVED: POST /api/customers.
+// v13 SC-P0-05 - REMOVED: POST /api/customers.
 // It took the billing email from the request body, so any signed-in user could
 // mint a Stripe customer for someone else's address and forward arbitrary
 // metadata to Stripe. It had no caller (frontend, api/, scripts, tests or
@@ -99,14 +99,14 @@ async function findCustomerRow(identity, columns = 'id, stripe_customer_id') {
 // checkout, which derives the email from the session. Do not reintroduce a
 // route that accepts a client-supplied billing identity.
 //
-// v13 SC-P0-05 — REMOVED: GET /api/customers/:id/portal?returnUrl=.
+// v13 SC-P0-05 - REMOVED: GET /api/customers/:id/portal?returnUrl=.
 // It opened a Stripe Billing Portal session with a client-controlled
 // return_url (an open redirect off a trusted billing domain) and was
 // superseded by the canonical POST /api/account/billing-portal, which derives
 // both the customer and the return URL server-side.
 
 // PostgREST returns this code from .single() when the filter matched no row.
-// That is a VERIFIED "no such record", not a failure — everything else is.
+// That is a VERIFIED "no such record", not a failure - everything else is.
 const NO_ROWS = 'PGRST116';
 
 function readFailed(error) {
@@ -120,7 +120,7 @@ function redactEmail(email) {
 }
 
 /**
- * v13 SC-P0-02 — one redacted, structured billing anomaly line per impossible
+ * v13 SC-P0-02 - one redacted, structured billing anomaly line per impossible
  * state. Access is NOT changed by this; it is an operations signal only. The
  * email is masked (correlatable, not identifying) and every other field is an
  * opaque Stripe id, so this is safe to ship to a log drain.
@@ -138,7 +138,7 @@ function reportBillingAnomaly(email, anomaly) {
 /**
  * Normalize the accepted identity shapes into { userId, email }. SV-22-01: the
  * entitlement path keys on the STABLE app_user_id under enforcement, so it must
- * receive the user id — but the historical bare-email string is still accepted
+ * receive the user id - but the historical bare-email string is still accepted
  * (and used before enforcement) so no caller or test breaks.
  */
 function normalizeIdentity(identity) {
@@ -165,7 +165,7 @@ function normalizeIdentity(identity) {
  *
  * SV-22-01 (v22): accepts a stable identity `{ userId, email }` (a bare email
  * string is still accepted for back-compat / pre-enforcement) and resolves the
- * local customer row through the ONE canonical helper findCustomerRow —
+ * local customer row through the ONE canonical helper findCustomerRow -
  * app_user_id under STRIPE_OWNERSHIP_ENFORCED, email before it. This is what
  * makes the account plan display and the duplicate-subscription guard resolve
  * entitlement by the SAME owner key as checkout, so a changed authentication
@@ -177,11 +177,11 @@ async function resolveEntitlement(identity) {
   try {
     // Canonical, fail-closed customer resolution: throws EntitlementUnavailableError
     // on a real read error and CUSTOMER_RECONCILIATION_REQUIRED on multiple
-    // canonical rows (both handled below) — a failure is NEVER read as "no customer".
+    // canonical rows (both handled below) - a failure is NEVER read as "no customer".
     const customer = await findCustomerRow({ userId, email }, 'id');
     if (!customer) return { state: 'free', plan: null };
 
-    // A customer can hold more than one entitling row — an old subscription on a
+    // A customer can hold more than one entitling row - an old subscription on a
     // now-retired price sitting beside the current one, a trialing row beside a
     // paid one, or overlapping test subs. The canonical policy (v13 SC-P0-02,
     // docs/decisions/2026-08-02-canonical-entitlement.md) is HIGHEST VALID
@@ -221,7 +221,7 @@ async function resolveEntitlement(identity) {
   } catch (e) {
     if (isEntitlementUnavailable(e)) return { state: 'unavailable', plan: null };
     // SV-22-01: multiple canonical customer rows for one identity is an ambiguous
-    // ownership state. FAIL CLOSED — never grant, never collapse to "free" — and
+    // ownership state. FAIL CLOSED - never grant, never collapse to "free" - and
     // surface it for reconciliation exactly like the checkout path does.
     if (e && e.code === 'CUSTOMER_RECONCILIATION_REQUIRED') {
       reportBillingAnomaly(email, {
@@ -232,7 +232,7 @@ async function resolveEntitlement(identity) {
       return { state: 'unavailable', plan: null };
     }
     // Any other throw (network reset, proxy blow-up) is equally "we do not
-    // know" — it is never evidence that the customer is on the free plan.
+    // know" - it is never evidence that the customer is on the free plan.
     console.error(JSON.stringify({
       code: 'PLAN_LOOKUP_FAILED',
       level: 'error',
@@ -245,7 +245,7 @@ async function resolveEntitlement(identity) {
 }
 
 /**
- * 'trial' | 'starter' | 'pro' | 'studio' | null — the single source of plan
+ * 'trial' | 'starter' | 'pro' | 'studio' | null - the single source of plan
  * truth. THROWS EntitlementUnavailableError when the lookup could not be
  * verified, so no caller can mistake a failure for "verified free".
  *
@@ -259,11 +259,11 @@ async function planFor(identity) {
 }
 
 async function verifyPlanHandler(req, res) {
-  // Only ever answers for the signed-in account — no probing other emails.
+  // Only ever answers for the signed-in account - no probing other emails.
   // SV-22-01: resolve by canonical identity (stable app_user_id under enforcement).
   const { state, plan } = await resolveEntitlement({ userId: req.userId, email: req.userEmail });
   if (state === 'unavailable') {
-    // Do NOT report active:false — the UI must keep the access it already shows.
+    // Do NOT report active:false - the UI must keep the access it already shows.
     return res.status(503).json({ ...planUnavailableBody(), plan: null, active: null });
   }
   res.json({ active: !!plan, plan });

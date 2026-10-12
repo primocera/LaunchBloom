@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // v8 LB-S01: server-confirmed deliverable progress events. Fired only after a
 // successful save/status change (never from the client), with categorical
-// properties only — no content. Failures never break the request (track()
+// properties only - no content. Failures never break the request (track()
 // already swallows errors; the lookup here is also best-effort).
 // ---------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ async function trackDeliverableProgress({ workspaceId, userId, campaignId, table
 /**
  * v10 SC-07: server-confirmed "this campaign uses three channel types".
  *
- * This is the paid job — a campaign, not one generator used repeatedly — so
+ * This is the paid job - a campaign, not one generator used repeatedly - so
  * the cohort funnel needs it as a durable milestone rather than a client
  * claim. Counted from real asset rows after a successful save, deduped per
  * campaign so it fires exactly once however many assets follow.

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v10 SC-06 — email categories, unsubscribe tokens and the suppression list.
+// v10 SC-06 - email categories, unsubscribe tokens and the suppression list.
 //
 // Two categories, and the difference is not cosmetic:
 //
@@ -26,7 +26,7 @@ const { BRAND } = require('./brand');
  * new template can never quietly bypass consent.
  */
 const CATEGORY = {
-  // Transactional — money, access and account records.
+  // Transactional - money, access and account records.
   trial_started: 'transactional',
   trial_ending: 'transactional',
   payment_succeeded: 'transactional',
@@ -36,7 +36,7 @@ const CATEGORY = {
   cancellation_completed: 'transactional',
   plan_changed: 'transactional',
   deletion_completed: 'transactional',
-  // Marketing / optional — helpful, but nobody is owed them.
+  // Marketing / optional - helpful, but nobody is owed them.
   welcome: 'marketing',
   activation_nudge: 'marketing',
 };
@@ -44,7 +44,7 @@ const CATEGORY = {
 function categoryOf(type) {
   const known = CATEGORY[type];
   if (known) return known;
-  console.warn(`[email-consent] "${type}" is not classified — defaulting to marketing (suppressible).`);
+  console.warn(`[email-consent] "${type}" is not classified - defaulting to marketing (suppressible).`);
   return 'marketing';
 }
 
@@ -62,7 +62,7 @@ function secret() {
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
-/** token = base64url(email).signature — signature covers the email itself. */
+/** token = base64url(email).signature - signature covers the email itself. */
 function unsubscribeToken(email) {
   const addr = String(email || '').trim().toLowerCase();
   if (!addr) return null;

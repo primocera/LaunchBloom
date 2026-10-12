@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v12 SC-V12-04 — the canonical subscription state machine and the single
+// v12 SC-V12-04 - the canonical subscription state machine and the single
 // definition of what a mirrored subscription row entitles.
 //
 // Entitlement is reconciled to Stripe's CURRENT state, never to the arrival
@@ -22,7 +22,7 @@
 //   paused              collection paused             → NOT entitled
 //
 // Only `active` and `trialing` grant access. Everything else is a deliberate
-// "no" — a refund or dispute does not itself change the subscription status, so
+// "no" - a refund or dispute does not itself change the subscription status, so
 // it never changes entitlement here; the status transition Stripe sends (e.g.
 // canceled) is what does.
 // ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ function entitlementFor(row, pricePlans = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// v13 SC-P0-02 — canonical entitlement when entitling rows OVERLAP.
+// v13 SC-P0-02 - canonical entitlement when entitling rows OVERLAP.
 //
 // Policy (see docs/decisions/2026-08-02-canonical-entitlement.md): HIGHEST VALID
 // ENTITLEMENT WINS. Taking the newest mapped row can silently downgrade a paying
@@ -107,11 +107,11 @@ function compareCandidates(a, b) {
  *   resolveCanonicalEntitlement(rows, pricePlans) -> {
  *     plan,        // 'trial'|'starter'|'pro'|'studio'|null
  *     canonical,   // the winning row, or null
- *     anomalies,   // [{ code, ... }] — reported, never access-changing
+ *     anomalies,   // [{ code, ... }] - reported, never access-changing
  *   }
  *
  * Pure: no env reads, no I/O, no mutation of `rows`. `rows` may contain
- * non-entitling rows; they are ignored. An unmapped price NEVER grants access —
+ * non-entitling rows; they are ignored. An unmapped price NEVER grants access -
  * that is also the shared-Stripe product isolation, since a foreign product's
  * price id can never appear in our STRIPE_PRICE_* map.
  */
@@ -134,7 +134,7 @@ function resolveCanonicalEntitlement(rows, pricePlans = {}) {
       statuses: unmappedRows.map((r) => r.status),
       price_ids: unmappedRows.map((r) => r.stripe_price_id || null),
       subscription_ids: unmappedRows.map((r) => r.stripe_subscription_id || null),
-      hint: 'retired/foreign price — check STRIPE_PRICE_* env vars',
+      hint: 'retired/foreign price - check STRIPE_PRICE_* env vars',
     });
   }
 
@@ -151,7 +151,7 @@ function resolveCanonicalEntitlement(rows, pricePlans = {}) {
       granted_plan: winner.plan,
       plans: sorted.map((c) => c.plan),
       subscription_ids: sorted.map((c) => c.row.stripe_subscription_id || null),
-      hint: 'more than one entitling subscription — reconcile in Stripe',
+      hint: 'more than one entitling subscription - reconcile in Stripe',
     });
   }
 
@@ -175,7 +175,7 @@ function isStale(storedEventAtIso, incomingEventAtIso) {
 }
 
 // ---------------------------------------------------------------------------
-// v13 SC-P0-01 — "we could not verify" is its own state, never "verified free".
+// v13 SC-P0-01 - "we could not verify" is its own state, never "verified free".
 //
 // A transient Supabase/provider failure used to be swallowed and returned as
 // null, i.e. indistinguishable from "this account has no subscription". That

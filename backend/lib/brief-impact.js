@@ -3,7 +3,7 @@
 //
 // Turns brief snapshots into change control: a field-level diff of the CURRENT
 // brief against each asset's generation-time snapshot, restricted to the
-// fields that are material for that asset's studio. Pure functions — the
+// fields that are material for that asset's studio. Pure functions - the
 // campaigns route feeds rows and persists explicit "keep snapshot" decisions
 // keyed by the diff fingerprint, so a further brief change reopens the review
 // automatically. Diffing and reviewing never spend an AI action, and an
@@ -54,7 +54,7 @@ function briefDiffForAsset(campaign, table, asset) {
     }));
 }
 
-/** Stable fingerprint of one asset's diff — a kept snapshot stays kept only
+/** Stable fingerprint of one asset's diff - a kept snapshot stays kept only
  *  while the diff is exactly this; any further brief change reopens review. */
 function diffFingerprint(table, assetId, changed) {
   return fingerprint([

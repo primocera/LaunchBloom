@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// OfferFlow AI generation routes — the product's brain.
+// OfferFlow AI generation routes - the product's brain.
 //
 // POST /api/ai/generate-positioning   { }            plan-limited
 // POST /api/ai/generate-offers        { }            plan-limited
@@ -71,7 +71,7 @@ function onboardingContext(o) {
 
 function positioningContext(p) {
   return [
-    `Recommended niche: ${p.recommended_niche?.niche} — ${p.recommended_niche?.reason}`,
+    `Recommended niche: ${p.recommended_niche?.niche} - ${p.recommended_niche?.reason}`,
     `Ideal customer: ${p.ideal_customer?.description}`,
     `Their main pain: ${p.ideal_customer?.main_pain}`,
     `Desired outcome: ${p.ideal_customer?.desired_outcome}`,
@@ -186,7 +186,7 @@ const SECTION_SYSTEMS = {
     'Hooks stop the scroll without clickbait. Primary text follows hook → empathy → mechanism → CTA. ' +
     'Visual directions must be shootable by one person with a phone.',
   seo_kit:
-    'Create practical SEO content IDEAS for this offer — topic clusters, likely search intent, target page ' +
+    'Create practical SEO content IDEAS for this offer - topic clusters, likely search intent, target page ' +
     'type, a primary keyword idea, secondary keyword ideas, page-ready titles and meta descriptions (under ' +
     '160 chars) and a content angle. These are ideas to research, NOT verified keyword data: never state or ' +
     'imply search volume, keyword difficulty, CPC, SERP features or that a page "will rank". Do not invent ' +
@@ -271,7 +271,7 @@ router.post('/generate-launch-kit', idempotent('generate-launch-kit'), planGate(
       (positioning ? `Positioning:\n${positioningContext(positioning)}\n\n` : '') +
       (onboarding ? `About the person:\n${onboardingContext(onboarding)}` : '');
 
-    // All six sections in parallel — each is an independent structured call.
+    // All six sections in parallel - each is an independent structured call.
     const contentDays = req.planLimits.content_plan_days;
     const sections = Object.keys(SECTION_SYSTEMS);
     const [results, summary] = await Promise.all([
@@ -354,7 +354,7 @@ router.post('/regenerate-section', idempotent('regenerate-section'), planGate('r
       (offer ? `Offer:\n${offerContext(offer)}\n\n` : '') +
       (positioning ? `Positioning:\n${positioningContext(positioning)}\n\n` : '') +
       (feedback ? `The user asked for this change: ${String(feedback).slice(0, 1000)}\n\n` : '') +
-      `Regenerate the ${section.replace(/_/g, ' ')} from scratch — a fresh take, not a copy of the previous version.`;
+      `Regenerate the ${section.replace(/_/g, ' ')} from scratch - a fresh take, not a copy of the previous version.`;
 
     const data = await generateSection(section, ctx, req.planLimits.content_plan_days);
 

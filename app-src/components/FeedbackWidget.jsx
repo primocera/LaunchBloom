@@ -20,7 +20,7 @@ export default function FeedbackWidget() {
       {open ? (
         <div className="card" style={{ width: 280, padding: 12, boxShadow: '0 4px 16px rgba(0,0,0,.12)' }}>
           {sent ? (
-            <p style={{ margin: 0 }}>Thanks — got it! 🌱</p>
+            <p style={{ margin: 0 }}>Thanks - got it! 🌱</p>
           ) : (
             <>
               <label htmlFor="beta-feedback" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>

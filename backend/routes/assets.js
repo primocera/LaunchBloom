@@ -77,7 +77,7 @@ function onboardingContext(o) {
 function positioningContext(p) {
   if (!p) return '';
   return [
-    `Recommended niche: ${p.recommended_niche?.niche} — ${p.recommended_niche?.reason}`,
+    `Recommended niche: ${p.recommended_niche?.niche} - ${p.recommended_niche?.reason}`,
     `Ideal customer: ${p.ideal_customer?.description}`,
     `Their main pain: ${p.ideal_customer?.main_pain}`,
     `Desired outcome: ${p.ideal_customer?.desired_outcome}`,
@@ -164,17 +164,17 @@ const WEBSITE_SYSTEM =
   '- Thank-you page: next step, expectation setting, email reminder, social follow CTA.\n' +
   '- Collection/category page: category promise, what is inside, buying guidance, filters/sorting hints, SEO intro.\n' +
   '- Contact page: how to reach the brand, what to expect, response time, form field suggestions.\n' +
-  'For every page, first produce three distinct hero directions — direct_response (offer/benefit-led), ' +
-  'brand_led (story/identity-led) and problem_aware (starts from the reader\'s pain) — then write the ' +
+  'For every page, first produce three distinct hero directions - direct_response (offer/benefit-led), ' +
+  'brand_led (story/identity-led) and problem_aware (starts from the reader\'s pain) - then write the ' +
   'full page using the strongest one for hero_headline/hero_subheadline. Write natively in the target ' +
-  'language and keep product and brand names exactly as given — never translate or alter them. Only give ' +
+  'language and keep product and brand names exactly as given - never translate or alter them. Only give ' +
   'a secondary CTA when a second action genuinely helps; otherwise return an empty string.\n' +
   'If information is missing, use a clear placeholder in brackets instead of inventing facts.';
 
 // Prompts 12-14: page-type-specific section guidance. Each requested page type
 // that needs deeper copy gets an explicit checklist of sections to produce
 // inside that page's `sections` array. Everything is expressed within
-// websiteKitSchema — no separate endpoints — and missing facts become
+// websiteKitSchema - no separate endpoints - and missing facts become
 // bracketed placeholders rather than invented details.
 const PAGE_GUIDANCE = {
   product:
@@ -187,12 +187,12 @@ const PAGE_GUIDANCE = {
     'For the cart page, produce sections covering: cart headline, empty cart message, free shipping ' +
     'bar copy, discount code microcopy, trust/reassurance copy, returns/shipping reassurance, ' +
     'checkout CTA options, cross-sell block headlines, honest (non-fake) urgency copy, support/help ' +
-    'microcopy, and a note on the abandoned-cart email connection. Reduce friction — never use fake ' +
+    'microcopy, and a note on the abandoned-cart email connection. Reduce friction - never use fake ' +
     'scarcity or false timers.',
   about:
     'For the about page, produce sections covering: brand story headline, founder/brand story body, ' +
     'mission, values, why we started, who we serve, trust, final CTA, and image suggestions. Do not ' +
-    'invent founder facts — use only provided details and use fill-in placeholders where missing. ' +
+    'invent founder facts - use only provided details and use fill-in placeholders where missing. ' +
     'Keep it warm and human, and remind the user to add real photos and founder details before publishing.',
   collection:
     'For the collection/category page, produce sections covering: category headline, short intro that ' +
@@ -228,7 +228,7 @@ router.post('/generate-website-kit', idempotent('generate-website-kit'), planGat
 
     // Page-type-specific guidance for any requested pages that need it.
     const guidance = page_types
-      .map((t) => (PAGE_GUIDANCE[t] ? `${t} page — ${PAGE_GUIDANCE[t]}` : null))
+      .map((t) => (PAGE_GUIDANCE[t] ? `${t} page - ${PAGE_GUIDANCE[t]}` : null))
       .filter(Boolean)
       .join('\n\n');
 
@@ -245,7 +245,7 @@ router.post('/generate-website-kit', idempotent('generate-website-kit'), planGat
           .map((k) => ((req.body || {})[k] ? line(k.replace(/_/g, ' '), (req.body || {})[k]) : null))
           .filter(Boolean);
         return ecom.length
-          ? `Ecommerce product facts (use verbatim; never invent variants, shipping terms, discounts or proof — bracket what is missing):\n${ecom.join('\n')}`
+          ? `Ecommerce product facts (use verbatim; never invent variants, shipping terms, discounts or proof - bracket what is missing):\n${ecom.join('\n')}`
           : null;
       })(),
       guidance ? `Page-specific requirements:\n${guidance}` : null,
@@ -283,7 +283,7 @@ router.post('/generate-website-kit', idempotent('generate-website-kit'), planGat
     await trackChannelBreadth({ workspaceId: ws.id, userId: req.userId, campaignId: camp.campaign && camp.campaign.id });
 
     // v6 Prompt 21: claims are checked against the proof the user actually
-    // supplied — anything risky outside it gets a per-claim warning.
+    // supplied - anything risky outside it gets a per-claim warning.
     const suppliedProof = [req.body.proof, req.body.product_facts, products ? JSON.stringify(products) : '']
       .filter(Boolean).join('\n');
     res.json({
@@ -304,14 +304,14 @@ router.post('/generate-website-kit', idempotent('generate-website-kit'), planGat
 const EMAIL_FLOW_SYSTEM =
   'You are a senior email marketing copywriter for small ecommerce brands, creators, freelancers and ' +
   'digital product sellers. You are given an EXACT email blueprint (how many emails, and each email\'s ' +
-  'objective, timing and segment). Fill copy into that structure — do NOT add, remove or reorder emails.\n\n' +
+  'objective, timing and segment). Fill copy into that structure - do NOT add, remove or reorder emails.\n\n' +
   'Per-email rules:\n' +
   '- subject_line: under 50 characters where the language allows; specific, not clickbait.\n' +
   '- subject_options: 2-3 distinct, honest subject lines (include subject_line); never deceptive (no fake "Re:", no false "you won").\n' +
   '- preheader: under 90 characters; completes the subject line, never repeats it.\n' +
   '- body_copy: complete draft body copy in full sentences (never an outline or bullet skeleton), written for the user to review before sending.\n' +
   '- objective: restate the email\'s single purpose from the blueprint.\n' +
-  '- body_copy: scannable — short paragraphs or bullets, one idea per block.\n' +
+  '- body_copy: scannable - short paragraphs or bullets, one idea per block.\n' +
   '- cta: one specific primary CTA (not always "Shop now"); secondary_cta only if useful, else "".\n' +
   '- personalization_tokens: list any tokens used (e.g. {{first_name}}); [] if none.\n' +
   '- exclusions: who to exclude (e.g. already purchased); "" if none.\n' +
@@ -432,7 +432,7 @@ const subjectSchema = {
   additionalProperties: false,
 };
 
-// POST /api/ai/email/:id/subject — regenerate subject + preheader only.
+// POST /api/ai/email/:id/subject - regenerate subject + preheader only.
 router.post('/email/:id/subject', planGate('regenerate_section'), async (req, res, next) => {
   try {
     const email = await ownedEmail(req.workspace, req.params.id, res);
@@ -461,7 +461,7 @@ const bodySchema = {
   additionalProperties: false,
 };
 
-// POST /api/ai/email/:id/body — rewrite the body (optional instruction).
+// POST /api/ai/email/:id/body - rewrite the body (optional instruction).
 router.post('/email/:id/body', planGate('regenerate_section'), async (req, res, next) => {
   try {
     const email = await ownedEmail(req.workspace, req.params.id, res);
@@ -501,7 +501,7 @@ const variantsSchema = {
   additionalProperties: false,
 };
 
-// POST /api/ai/email/:id/variants — 3 alternative versions (not saved).
+// POST /api/ai/email/:id/variants - 3 alternative versions (not saved).
 router.post('/email/:id/variants', planGate('regenerate_section'), async (req, res, next) => {
   try {
     const email = await ownedEmail(req.workspace, req.params.id, res);
@@ -509,7 +509,7 @@ router.post('/email/:id/variants', planGate('regenerate_section'), async (req, r
     const brand = await brandContextFor(req.workspace.id);
     const result = await generateJson({
       system: EMAIL_FLOW_SYSTEM,
-      prompt: brand.text + `Produce 3 distinct variants (different angle each) of this email — subject, preheader and body.\nObjective: ${email.objective || ''}\nCurrent subject: ${email.subject_line || ''}\nCurrent body:\n${(email.body_copy || '').slice(0, 1500)}`,
+      prompt: brand.text + `Produce 3 distinct variants (different angle each) of this email - subject, preheader and body.\nObjective: ${email.objective || ''}\nCurrent subject: ${email.subject_line || ''}\nCurrent body:\n${(email.body_copy || '').slice(0, 1500)}`,
       schema: variantsSchema,
       maxTokens: 4000,
     });
@@ -536,7 +536,7 @@ const CAMPAIGN_SYSTEM =
   '- Include one proof/trust angle, but do not invent testimonials.\n' +
   '- Include one objection/FAQ email.\n' +
   '- Include one reminder or last-chance email ONLY if the campaign has a real end date from the brief.\n' +
-  '- Every date/deadline you reference must come from the provided promotion window — never invent urgency.\n' +
+  '- Every date/deadline you reference must come from the provided promotion window - never invent urgency.\n' +
   '- Use the real discount, code, minimum spend and exclusions exactly as given; bracket anything missing.\n' +
   '- Keep copy clear and mobile-first. Avoid fake scarcity and deceptive subject lines.';
 
@@ -652,8 +652,8 @@ const SOCIAL_SYSTEM =
   'brands. Create captions and content ideas that connect to the user\'s offer and help move followers ' +
   'toward trust, leads or sales. Avoid generic captions. Every caption must have a specific hook, body ' +
   'angle, CTA and visual direction.\n\n' +
-  'Produce a balanced mix across five content pillars — education, proof, objection-handling, community ' +
-  'and sales — weighted toward the stated goal.\n\n' +
+  'Produce a balanced mix across five content pillars - education, proof, objection-handling, community ' +
+  'and sales - weighted toward the stated goal.\n\n' +
   'Channel-aware format rules (use only the fields each format needs):\n' +
   '- carousel: fill the slides array slide-by-slide (heading + body + visual per slide); keep video_script empty.\n' +
   '- reel / short_video / TikTok video: fill video_script (hook, spoken_script, on_screen_text, shot_list, ' +
@@ -663,7 +663,7 @@ const SOCIAL_SYSTEM =
   'Special rules:\n' +
   '- Write like a real human, not corporate marketing. Keep hooks short and scroll-stopping.\n' +
   '- CTA should match the goal: comment, save, DM, click, join waitlist, shop, book call.\n' +
-  '- Respect the awareness stage, creator/product availability, filming location and production level given — ' +
+  '- Respect the awareness stage, creator/product availability, filming location and production level given - ' +
   'never propose shoots the user cannot realistically produce.\n' +
   '- Write natively in the target language.\n' +
   '- Hashtags are optional and platform-appropriate; never imply they guarantee growth. An empty list is fine.\n' +
@@ -759,7 +759,7 @@ const CREATIVE_SYSTEM =
   'You are a senior paid social creative strategist. Generate ad ideas for Meta, TikTok, Google and ' +
   'Pinterest that a solo founder or small brand can realistically create. Focus on hooks, image ideas, ' +
   'video ideas, UGC briefs, text overlays, primary text, headlines and testing angles.\n\n' +
-  'Generate genuinely DISTINCT concepts — each must differ by angle AND mechanism, never a minor headline ' +
+  'Generate genuinely DISTINCT concepts - each must differ by angle AND mechanism, never a minor headline ' +
   'variant. Set the angle field to that distinct mechanism.\n\n' +
   'Fill only the fields each format needs:\n' +
   '- static: angle, hook, headline, primary_text, visual_direction, designer_notes, text_overlays, cta.\n' +
@@ -768,7 +768,7 @@ const CREATIVE_SYSTEM =
   '- carousel: fill slides (a cover slide, story slides, and a final CTA slide via the role field).\n' +
   '- search_ad: fill search_ad with headlines (each ≤30 characters), descriptions (each ≤90 characters) ' +
   'and keyword_groups grouped by search intent.\n' +
-  'Every creative includes a test object: one major variable, hypothesis, control and success_metric — ' +
+  'Every creative includes a test object: one major variable, hypothesis, control and success_metric - ' +
   'change ONE major variable per test.\n' +
   'Populate compliance_flags with any high-risk claims (guarantees, proof, urgency) that the user must ' +
   'verify; empty array if none.\n\n' +
@@ -806,7 +806,7 @@ router.post('/generate-creative-assets', idempotent('generate-creative-assets'),
       line('Placement', placement),
       line('Formats', formats),
       line('Offer', offer),
-      line('Proof available (use only this — never invent)', proof),
+      line('Proof available (use only this - never invent)', proof),
       line('Mandatory elements', mandatory_elements),
       line('Prohibited claims', prohibited_claims),
       line('Production constraints', production_constraints),
@@ -871,10 +871,10 @@ router.post('/generate-creative-assets', idempotent('generate-creative-assets'),
 
 // ── SEO Ideas (v6 Prompt 14): campaign-aware generator parity ────────────────
 // Honest by design: content ideas + research checklist only. No volume, KD,
-// CPC or ranking claims — fabricated metrics are rejected before saving.
+// CPC or ranking claims - fabricated metrics are rejected before saving.
 
 const SEO_SYSTEM =
-  'You generate SEO CONTENT IDEAS to research — never keyword data. You have no access to search volume, keyword difficulty, CPC or ranking information and must never state or imply any. Each idea targets ONE primary keyword with a clear search intent, a page type suited to that intent, an exact seo_title (under 60 characters), meta_description (under 155 characters), h1, an h2 outline, FAQ pairs answering real buyer questions, and internal link ideas to other pages this business would have. Never promise rankings or traffic. Every idea must be distinct — no two ideas may target the same primary keyword.';
+  'You generate SEO CONTENT IDEAS to research - never keyword data. You have no access to search volume, keyword difficulty, CPC or ranking information and must never state or imply any. Each idea targets ONE primary keyword with a clear search intent, a page type suited to that intent, an exact seo_title (under 60 characters), meta_description (under 155 characters), h1, an h2 outline, FAQ pairs answering real buyer questions, and internal link ideas to other pages this business would have. Never promise rankings or traffic. Every idea must be distinct - no two ideas may target the same primary keyword.';
 
 router.post('/generate-seo-ideas', idempotent('generate-seo-ideas'), planGate('asset_generations'), async (req, res, next) => {
   try {
@@ -941,7 +941,7 @@ router.post('/generate-seo-ideas', idempotent('generate-seo-ideas'), planGate('a
     const collisions = findKeywordCannibalization(existing || []);
     const warnings = qualityWarnings('seo', { items: (result.items || []).map((i) => ({ ...i, title: i.seo_title })) });
     for (const c of collisions) {
-      warnings.push(`"${c.keyword}" is targeted by ${c.count} ideas in this workspace — merge or split the intent to avoid cannibalization.`);
+      warnings.push(`"${c.keyword}" is targeted by ${c.count} ideas in this workspace - merge or split the intent to avoid cannibalization.`);
     }
 
     res.json({

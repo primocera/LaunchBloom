@@ -24,7 +24,7 @@ const { opsSignal } = require('../lib/ops-signal');
 
 /**
  * XAPP-95-01: the shared customers.stripe_customer_id link is not ownership
- * proof by itself — the same column that checkout must verify (SC-95-01) is also
+ * proof by itself - the same column that checkout must verify (SC-95-01) is also
  * consumed by the billing portal and account deletion. Retrieve the customer and
  * confirm exact Scalvya ownership (source + this user's app_user_id) before any
  * Stripe call. Returns 'owned' | 'foreign' | 'missing' | 'unreadable' so each
@@ -63,7 +63,7 @@ function intervalForPrice(priceId) {
   return null;
 }
 
-// GET /api/account/billing — current plan, trial/renewal dates, status, usage.
+// GET /api/account/billing - current plan, trial/renewal dates, status, usage.
 router.get('/api/account/billing', requireAuth, async (req, res, next) => {
   try {
     const email = req.userEmail;
@@ -128,12 +128,12 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/account/billing-portal — Stripe Billing Portal session (invoices,
+// POST /api/account/billing-portal - Stripe Billing Portal session (invoices,
 // card, cancel/reactivate, plan changes) for the signed-in customer.
 //
 // v13 SC-P0-05: this is the ONE canonical portal endpoint. Identity is
 // req.userEmail (never a client-supplied email or customer id) and the return
-// URL comes from validated server configuration only — any returnUrl in the
+// URL comes from validated server configuration only - any returnUrl in the
 // query or body is ignored, so there is no open redirect to reach.
 router.post('/api/account/billing-portal', requireAuth, async (req, res, next) => {
   try {
@@ -194,7 +194,7 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
   }
 });
 
-// GET /api/account/export — every owned workspace, not just the active one
+// GET /api/account/export - every owned workspace, not just the active one
 // (playbook v6, Prompt 8). Versioned archive shape so future importers can
 // tell what they're reading.
 router.get('/api/account/export', requireAuth, async (req, res, next) => {
@@ -228,7 +228,7 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/account/delete — step-tracked deletion with a receipt (playbook
+// POST /api/account/delete - step-tracked deletion with a receipt (playbook
 // v6, Prompt 8). Each external side effect records ok/failed instead of being
 // swallowed; the response is an honest receipt the user (and support) can act
 // on. Idempotent: re-running skips already-deleted resources.
@@ -245,14 +245,14 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       const customer = await findCustomerRow({ userId, email }, 'id, stripe_customer_id');
       if (customer && customer.stripe_customer_id) {
         // XAPP-95-01: never LIST or CANCEL subscriptions on a customer we cannot
-        // prove is ours — cancelling a foreign product's live subscriptions would
+        // prove is ours - cancelling a foreign product's live subscriptions would
         // be a cross-tenant billing mutation. Verify ownership first; on anything
         // but 'owned', skip the Stripe step and continue deleting local data.
         const ownership = await ownedStripeCustomerStatus(customer.stripe_customer_id, userId);
         if (ownership !== 'owned') {
           if (ownership === 'foreign') opsSignal('ownership_mismatch', { reason: 'account_delete_foreign_customer', severity: 'high' });
           step('stripe_cancellation', ownership === 'missing' ? 'ok' : 'skipped',
-            ownership === 'missing' ? 'no live billing account' : 'billing account not verified as owned — not cancelled here');
+            ownership === 'missing' ? 'no live billing account' : 'billing account not verified as owned - not cancelled here');
         } else {
           const subs = await stripe.subscriptions.list({ customer: customer.stripe_customer_id, status: 'all', limit: 100 });
           let canceled = 0;
@@ -267,14 +267,14 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
               }
             }
           }
-          if (failures > 0) step('stripe_cancellation', 'failed', `${failures} subscription(s) could not be canceled — contact support`);
+          if (failures > 0) step('stripe_cancellation', 'failed', `${failures} subscription(s) could not be canceled - contact support`);
           else step('stripe_cancellation', 'ok', canceled ? `${canceled} subscription(s) canceled` : 'no active subscriptions');
         }
       } else {
         step('stripe_cancellation', 'ok', 'no billing account');
       }
     } catch {
-      step('stripe_cancellation', 'failed', 'billing lookup failed — cancellation not confirmed');
+      step('stripe_cancellation', 'failed', 'billing lookup failed - cancellation not confirmed');
     }
 
     // 2. Delete every workspace the user owns and all of its data.
@@ -306,7 +306,7 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       step('auth_user', 'ok');
     } catch (e) {
       const already = /not.*found/i.test(String(e && e.message));
-      step('auth_user', already ? 'ok' : 'failed', already ? 'already deleted' : 'sign-in account could not be deleted — contact support');
+      step('auth_user', already ? 'ok' : 'failed', already ? 'already deleted' : 'sign-in account could not be deleted - contact support');
     }
 
     // 4. Retained records, stated explicitly (playbook: no silent retention).

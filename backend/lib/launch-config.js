@@ -2,29 +2,29 @@
 // Fail-closed launch configuration (playbook v6 Prompt 1; hardened v13 SC-P0-04).
 //
 // Modes:
-//   test        — local/dev, or test-mode Stripe keys: permissive; problems
+//   test        - local/dev, or test-mode Stripe keys: permissive; problems
 //                 are warnings so the app stays fully clickable.
-//   preview     — NODE_ENV=production but Stripe is test-mode/missing (our
+//   preview     - NODE_ENV=production but Stripe is test-mode/missing (our
 //                 current Vercel reality): permissive, banner flag exposed.
-//   production  — NODE_ENV=production AND a LIVE Stripe key: any missing
+//   production  - NODE_ENV=production AND a LIVE Stripe key: any missing
 //                 required configuration HARD-DISABLES checkout and AI
 //                 generation. A warning is not a commercial control; real
 //                 money must never move on a placeholder config.
 //
-// v13 SC-P0-04 — the safe default must not depend on remembering a flag:
+// v13 SC-P0-04 - the safe default must not depend on remembering a flag:
 //   * Enforcement is AUTOMATIC in production mode. ENFORCE_LAUNCH_CONFIG=1 can
 //     only ADD enforcement outside production (to rehearse it); it can never
 //     be the thing that turns production safety on.
 //   * The only escape hatch is UNSAFE_SKIP_LAUNCH_CONFIG_CHECK, deliberately
 //     named unsafe. It works in dev/test only and is REJECTED (start refused,
 //     requests blocked) when NODE_ENV=production.
-//   * Errors name the offending variable and a remediation category only —
+//   * Errors name the offending variable and a remediation category only -
 //     never a value, so no secret can leak through a config error.
 // ---------------------------------------------------------------------------
 
 const { BRAND, legalPlaceholders, legalUrls } = require('./brand');
 
-/** Explicitly-unsafe bypass. Dev/test only — rejected in production. */
+/** Explicitly-unsafe bypass. Dev/test only - rejected in production. */
 const UNSAFE_BYPASS = 'UNSAFE_SKIP_LAUNCH_CONFIG_CHECK';
 
 function launchMode() {
@@ -71,7 +71,7 @@ function urlProblem(name, raw, { label = name } = {}) {
 }
 
 /**
- * v13 SC-P0-05 — the ONLY way to build a URL we hand to a redirecting third
+ * v13 SC-P0-05 - the ONLY way to build a URL we hand to a redirecting third
  * party (Stripe Checkout / Billing Portal return_url).
  *
  * Request input NEVER reaches this function: the base comes from server
@@ -85,7 +85,7 @@ function urlProblem(name, raw, { label = name } = {}) {
  * (open-redirect carrier), localhost/placeholder hosts in production mode, and
  * any path that is not a plain internal absolute path.
  *
- * Throws a 500-tagged Error naming the variable only — never its value.
+ * Throws a 500-tagged Error naming the variable only - never its value.
  */
 const INTERNAL_PATH = /^\/(?:[A-Za-z0-9\-._~/]*)$/;
 
@@ -206,7 +206,7 @@ function startupLaunchConfigCheck({ exit = true } = {}) {
   const problems = launchConfigProblems();
 
   if (process.env.NODE_ENV === 'production' && bypassRequested()) {
-    console.error(`[launch-config] ${UNSAFE_BYPASS} is set in production — refusing to start. Remove the variable.`);
+    console.error(`[launch-config] ${UNSAFE_BYPASS} is set in production - refusing to start. Remove the variable.`);
     if (exit) process.exit(1);
     return { ok: false, fatal: true, mode, problems };
   }
@@ -215,9 +215,9 @@ function startupLaunchConfigCheck({ exit = true } = {}) {
 
   const msg = `[launch-config] ${mode} mode: ${problems.length} launch-config problem(s): ${problems.join('; ')}`;
   if (launchConfigEnforced()) {
-    console.error(`${msg} — checkout and AI generation are BLOCKED until these are fixed.`);
+    console.error(`${msg} - checkout and AI generation are BLOCKED until these are fixed.`);
   } else {
-    console.warn(`${msg} — allowed outside enforced mode; fix before charging real customers.`);
+    console.warn(`${msg} - allowed outside enforced mode; fix before charging real customers.`);
   }
   return { ok: false, fatal: false, mode, problems };
 }
@@ -245,7 +245,7 @@ function requireLaunchReady(kind) {
     }
     if (!warned) {
       warned = true;
-      console.warn(`[launch-config] ${mode} mode with incomplete launch config (${problems.length} issue(s)) — allowed outside production:`, problems.join('; '));
+      console.warn(`[launch-config] ${mode} mode with incomplete launch config (${problems.length} issue(s)) - allowed outside production:`, problems.join('; '));
     }
     next();
   };

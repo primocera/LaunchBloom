@@ -113,7 +113,7 @@ export default function AssetLibrary() {
   return (
     <div className="library-page">
       <h1>Library</h1>
-      <p className="muted">Find, open, compare and prepare every campaign asset — with its campaign, brief version, source, status and edit history.</p>
+      <p className="muted">Find, open, compare and prepare every campaign asset - with its campaign, brief version, source, status and edit history.</p>
 
       <div className="library-filters">
         <select aria-label="Type" value={filters.type} onChange={(e) => setFilter('type', e.target.value)}>
@@ -149,7 +149,7 @@ export default function AssetLibrary() {
           <p style={{ margin: 0 }}>No assets match {activeFilters.length ? 'these filters' : 'your library yet'}.</p>
           {activeFilters.length > 0 && (
             <p className="muted" style={{ marginBottom: 8 }}>
-              Active filters — {activeFilters.join(' · ')}.{' '}
+              Active filters - {activeFilters.join(' · ')}.{' '}
               <button className="account-link" onClick={resetFilters}>Reset all filters</button>
             </p>
           )}

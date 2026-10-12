@@ -25,7 +25,7 @@ function log(level, msg, meta = {}) {
 }
 
 // v18 X02: a distributed TRACE id correlates one logical operation across the
-// edge, this API and background jobs — unlike `req.id`, which identifies a
+// edge, this API and background jobs - unlike `req.id`, which identifies a
 // single request (a span). We honour an inbound trace id so an upstream proxy
 // or a client that already started a trace keeps the same id end-to-end:
 //   • W3C `traceparent`: 00-<32-hex trace-id>-<16-hex span>-<flags>
@@ -38,7 +38,7 @@ function traceIdFrom(headers = {}) {
   const traceparent = headers['traceparent'];
   if (typeof traceparent === 'string') {
     const m = traceparent.trim().match(TRACEPARENT_RE);
-    // All-zero trace-id is the W3C "invalid" sentinel — reject it.
+    // All-zero trace-id is the W3C "invalid" sentinel - reject it.
     if (m && !/^0{32}$/.test(m[1])) return m[1].toLowerCase();
   }
   const opaque = headers['x-trace-id'];

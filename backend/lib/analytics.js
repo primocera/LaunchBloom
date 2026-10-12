@@ -33,33 +33,33 @@ const CANONICAL_EVENTS = {
   subscription_activated: 'A subscription became active (paid).',
   subscription_canceled: 'A subscription was canceled or scheduled to cancel.',
   feedback_submitted: 'The user submitted beta feedback.',
-  // v8 LB-S01 — deliverable plan value loop (server-confirmed, no content):
+  // v8 LB-S01 - deliverable plan value loop (server-confirmed, no content):
   deliverable_plan_saved: 'The user saved an explicit campaign deliverable plan.',
   required_deliverable_started: 'A first asset was saved for a required deliverable.',
   required_deliverable_ready: 'An asset of a required deliverable was marked ready by the user.',
-  // v8 LB-S02/LB-S03 — consistency + change control (codes/counts only, no content):
+  // v8 LB-S02/LB-S03 - consistency + change control (codes/counts only, no content):
   consistency_check_viewed: 'A campaign consistency check was computed and shown.',
   finding_resolved: 'A previously detected consistency finding stopped appearing.',
   brief_change_detected: 'A material Campaign Brief field was edited (field codes only).',
   stale_asset_opened: 'The brief-change impact review was opened with affected assets.',
   stale_asset_resolved: 'One affected asset was resolved (keep snapshot / regenerate).',
-  // v8 LB-S04 — review queue + evidence locker (categorical only):
+  // v8 LB-S04 - review queue + evidence locker (categorical only):
   evidence_added: 'A user-checked evidence record was saved.',
   review_item_resolved: 'One review-queue item was resolved by an explicit user action.',
   export_blocked: 'A review-manifest export happened with unresolved blocking findings.',
   review_manifest_exported: 'A campaign review manifest (handoff record) was exported.',
-  // v8 LB-S05 — first-value activation (derived, categorical only):
+  // v8 LB-S05 - first-value activation (derived, categorical only):
   activation_step_completed: 'One derived activation step flipped to done (step key only).',
   package_preview_viewed: 'The deterministic campaign package preview was shown.',
   first_warning_resolved: 'The user resolved their first quality warning on an asset.',
   first_asset_exported: 'The account exported its first asset.',
-  // v8 LB-S06 — playbooks + templates (IDs/versions only):
+  // v8 LB-S06 - playbooks + templates (IDs/versions only):
   playbook_previewed: 'A first-party playbook preview was opened.',
   playbook_applied: 'A playbook created a new draft campaign + deliverable plan.',
   user_template_reused: 'A workspace template created a new draft campaign.',
-  // v8 LB-S07 — export-only handoff (ADR-001):
+  // v8 LB-S07 - export-only handoff (ADR-001):
   review_packet_exported: 'A campaign review packet (md/html handoff record) was exported.',
-  // v8 LB-S09 — decision-grade value funnel (server-confirmed, deduped, no content):
+  // v8 LB-S09 - decision-grade value funnel (server-confirmed, deduped, no content):
   workspace_created: 'A workspace was created (first entry into the product).',
   minimum_profile_reached: 'The Brand Profile crossed the minimum-viable baseline.',
   brief_approved: 'A campaign brief was approved by the user.',
@@ -84,22 +84,22 @@ const CANONICAL_EVENTS = {
   onboarding_path_selected: 'A landing use-case path was chosen (path only: own|client).',
   handoff_previewed: 'The Handoff screen preview was shown (asset_count_band + blocker_count_band).',
   handoff_exported: 'A handoff packet was exported (format + bands, recomputed server-side).',
-  // ── v10 SC-01 — the one recommended path. Answers "does a new user reach an
+  // ── v10 SC-01 - the one recommended path. Answers "does a new user reach an
   // approved brief and a first connected asset without getting lost?" Carries
-  // the stage code and entitlement band only — never a campaign name or any
+  // the stage code and entitlement band only - never a campaign name or any
   // brief/asset content. ──
-  // ── v10 SC-07 — the two cohort milestones that had no instrumentation.
+  // ── v10 SC-07 - the two cohort milestones that had no instrumentation.
   // Both are server-confirmed and deduped; neither carries content. ──
-  three_channel_types_reached: 'A campaign reached three distinct channel types (count + campaign id only) — the paid job, as opposed to one generator used repeatedly.',
-  subscription_renewed: 'A recurring invoice was paid after the first one — the customer paid a second time.',
+  three_channel_types_reached: 'A campaign reached three distinct channel types (count + campaign id only) - the paid job, as opposed to one generator used repeatedly.',
+  subscription_renewed: 'A recurring invoice was paid after the first one - the customer paid a second time.',
   primary_path_started: 'The user entered the recommended path (stage code + entitlement).',
-  primary_path_completed: 'The user reached the end of the recommended path — a first asset created against an approved brief (stage code + entitlement).',
-  // ── v18 S06 — the single named first-value milestone. The workspace exported
+  primary_path_completed: 'The user reached the end of the recommended path - a first asset created against an approved brief (stage code + entitlement).',
+  // ── v18 S06 - the single named first-value milestone. The workspace exported
   // its FIRST real handoff packet: a server-verified, durable product fact (a
   // downloaded deliverable), never a page view. Deduped once per workspace
   // (firstvalue:{workspaceId}) so re-exports never re-fire it. Gated behind the
   // removable `first_value_event` flag so the emission can be rolled back. ──
-  first_value_reached: 'A workspace exported its first real handoff packet — the first-value moment (format band only, deduped once per workspace).',
+  first_value_reached: 'A workspace exported its first real handoff packet - the first-value moment (format band only, deduped once per workspace).',
 };
 
 // ── The one canonical value funnel (LB-S09). Ordered milestones; each is a
@@ -194,7 +194,7 @@ function sanitizeProperties(props) {
 }
 
 /**
- * Record an event. Never throws — analytics failure must not break the product.
+ * Record an event. Never throws - analytics failure must not break the product.
  *
  * Pass `dedupeKey` for once-per-scope funnel milestones (LB-S09): the row carries
  * a unique key so a retried webhook / re-posted client event / re-run job inserts

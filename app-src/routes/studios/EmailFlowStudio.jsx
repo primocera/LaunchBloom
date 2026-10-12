@@ -18,7 +18,7 @@ const LENGTH_FIELD = {
 };
 
 // ---------------------------------------------------------------------------
-// Upgrade Prompt 17: Email Studio — three tabs (Lifecycle Flows, Campaign
+// Upgrade Prompt 17: Email Studio - three tabs (Lifecycle Flows, Campaign
 // Emails, Saved Emails) over the shared email_assets table. Per-field copy
 // (subject / preheader / body / CTA) plus a "Copy full email" button.
 // ---------------------------------------------------------------------------
@@ -27,14 +27,14 @@ const LIFECYCLE_FIELDS = [
   {
     name: 'flow_types', label: 'Flow types', type: 'checkboxes', required: true,
     options: [
-      { value: 'welcome', label: 'Welcome (3–5)', title: 'New subscribers, triggered by signup — introduce the brand and first offer' },
-      { value: 'abandon_cart', label: 'Abandoned cart (3)', title: 'Shoppers who left items in the cart — recover the purchase without invented urgency' },
+      { value: 'welcome', label: 'Welcome (3–5)', title: 'New subscribers, triggered by signup - introduce the brand and first offer' },
+      { value: 'abandon_cart', label: 'Abandoned cart (3)', title: 'Shoppers who left items in the cart - recover the purchase without invented urgency' },
       { value: 'browse_abandon', label: 'Browse abandonment (2)', title: 'Visitors who viewed products but didn’t add to cart' },
-      { value: 'post_purchase', label: 'Post-purchase (3)', title: 'Recent buyers — delivery expectations, usage help, next purchase' },
+      { value: 'post_purchase', label: 'Post-purchase (3)', title: 'Recent buyers - delivery expectations, usage help, next purchase' },
       { value: 'winback', label: 'Win-back (3)', title: 'Customers who haven’t bought in a while' },
-      { value: 'review_request', label: 'Review request (2)', title: 'Buyers after delivery — ask for an honest review' },
+      { value: 'review_request', label: 'Review request (2)', title: 'Buyers after delivery - ask for an honest review' },
       { value: 'back_in_stock', label: 'Back-in-stock (2)', title: 'Subscribers waiting on a restocked product' },
-      { value: 'sunset', label: 'Sunset / re-engagement (2)', title: 'Inactive subscribers — re-engage or let them go cleanly' },
+      { value: 'sunset', label: 'Sunset / re-engagement (2)', title: 'Inactive subscribers - re-engage or let them go cleanly' },
     ],
   },
   {
@@ -73,7 +73,7 @@ const CAMPAIGN_FIELDS = [
   },
   TONE_FIELD,
   LENGTH_FIELD,
-  // Real promotion details — used verbatim, never invented. Leave blank to skip.
+  // Real promotion details - used verbatim, never invented. Leave blank to skip.
   { name: 'discount_or_offer', label: 'Discount / offer', type: 'text', placeholder: 'e.g. 20% off sitewide' },
   { name: 'discount_code', label: 'Discount code', type: 'text', placeholder: 'e.g. SUMMER20' },
   { name: 'minimum_spend', label: 'Minimum spend', type: 'text', placeholder: 'e.g. $50' },
@@ -243,7 +243,7 @@ export default function EmailFlowStudio() {
             <h2>Email</h2>
             <p className="flow-muted">
               Build lifecycle flows or campaign sequences with audience, timing, exclusions and
-              complete body copy — subject options, preheader, CTAs and a plain-text version to
+              complete body copy - subject options, preheader, CTAs and a plain-text version to
               review. Scalvya does not send emails: export the drafts into your email tool and
               review timing, links and compliance there.
             </p>

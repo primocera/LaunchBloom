@@ -15,13 +15,13 @@
 //
 // The result is a typed state, never a loose boolean that collapses "we don't
 // know" into "not ours":
-//   owned         exact Scalvya stamp — self-identifying, no email/price needed
-//   foreign       a peer product's stamp is present — definitely NOT ours
+//   owned         exact Scalvya stamp - self-identifying, no email/price needed
+//   foreign       a peer product's stamp is present - definitely NOT ours
 //   legacy_mapped an explicit, owner-verified legacy mapping claims this object
 //   legacy_price  narrow pre-stamp fallback: a configured Scalvya price, no
 //                 foreign stamp (measured, to be sunset once legacy objects age
-//                 out or are backfilled — see scripts/backfill-stripe-ownership.js)
-//   ambiguous     conflicting signals — fail closed, never adopt, never mutate
+//                 out or are backfilled - see scripts/backfill-stripe-ownership.js)
+//   ambiguous     conflicting signals - fail closed, never adopt, never mutate
 //   unavailable   a required ownership read could not be performed (caller retries)
 // ---------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ const OWNERSHIP = Object.freeze({
 });
 
 // States that entitle Scalvya to read/mirror/act on the object. `unavailable`
-// and `ambiguous` are intentionally excluded — the caller must fail closed.
+// and `ambiguous` are intentionally excluded - the caller must fail closed.
 const OWNING_STATES = Object.freeze([
   OWNERSHIP.OWNED,
   OWNERSHIP.LEGACY_MAPPED,
@@ -52,7 +52,7 @@ const OWNING_STATES = Object.freeze([
 // docs/RUNBOOK_STRIPE_OWNERSHIP.md): once migration 038 is applied, legacy Stripe
 // objects are backfilled and every ambiguous row is reconciled, the owner sets
 // STRIPE_OWNERSHIP_ENFORCED=1. From then on an unstamped object on a configured
-// Scalvya price is NO LONGER adopted — only an exact stamp or an explicit,
+// Scalvya price is NO LONGER adopted - only an exact stamp or an explicit,
 // owner-verified legacy mapping proves ownership. Default OFF preserves the
 // capped-beta behaviour byte-for-byte, so this flip cannot silently change a
 // running beta and is fully reversible (unset the env var).
@@ -80,7 +80,7 @@ function hasForeignStamp(meta) {
   return false;
 }
 
-/** True when both an exact AND a foreign stamp are present — never adoptable. */
+/** True when both an exact AND a foreign stamp are present - never adoptable. */
 function hasConflictingStamp(meta) {
   return hasExactStamp(meta) && hasForeignStamp(meta);
 }
@@ -89,7 +89,7 @@ function hasConflictingStamp(meta) {
  * Convenience: does a typed result grant ownership?
  *
  * SV-21-01: when enforcement is active the narrow `legacy_price` fallback no
- * longer grants ownership — an unstamped object on a configured price is NOT
+ * longer grants ownership - an unstamped object on a configured price is NOT
  * ours once the fallback is sunset. `enforced` defaults to the live env switch,
  * so every caller sunsets the fallback together the moment the owner flips it;
  * pass an explicit boolean in tests to assert both regimes. Callers that need
@@ -118,7 +118,7 @@ function isLegacyPriceFallback(result) {
 function classifySubscription(subscription, options = {}) {
   const meta = (subscription && subscription.metadata) || {};
 
-  // Conflicting stamps are never adoptable — do not let an exact stamp launder a
+  // Conflicting stamps are never adoptable - do not let an exact stamp launder a
   // foreign one, and do not silently drop; surface ambiguity for reconciliation.
   if (hasConflictingStamp(meta)) return OWNERSHIP.AMBIGUOUS;
 
@@ -143,7 +143,7 @@ function classifySubscription(subscription, options = {}) {
 
 /**
  * Classify a Stripe Customer against a specific stable app user id. A customer
- * is ours only with the exact source stamp AND the exact app_user_id — object
+ * is ours only with the exact source stamp AND the exact app_user_id - object
  * presence, a local DB row or email equality is never proof. Pure.
  */
 function classifyCustomer(customer, userId) {
@@ -160,7 +160,7 @@ function classifyCustomer(customer, userId) {
 /**
  * Classify a charge/dispute by metadata only (the synchronous half). When this
  * returns null the object carries no stamp either way and the caller must fall
- * back to a TRUSTED PARENT lookup (a Stripe customer WE own) — see
+ * back to a TRUSTED PARENT lookup (a Stripe customer WE own) - see
  * routes/webhooks.isOurCharge. Pure.
  */
 function classifyChargeMeta(object) {
@@ -168,7 +168,7 @@ function classifyChargeMeta(object) {
   if (hasConflictingStamp(meta)) return OWNERSHIP.AMBIGUOUS;
   if (hasExactStamp(meta)) return OWNERSHIP.OWNED;
   if (hasForeignStamp(meta)) return OWNERSHIP.FOREIGN;
-  return null; // undecided by metadata — needs a parent-customer lookup
+  return null; // undecided by metadata - needs a parent-customer lookup
 }
 
 /** Lazy default so the catalog is resolved through the one price table. */

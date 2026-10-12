@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v10 SC-06 — one-click unsubscribe.
+// v10 SC-06 - one-click unsubscribe.
 //
 // Deliberately PUBLIC and unauthenticated: an unsubscribe link is clicked from
 // a mail client, often on a device that has never been signed in. Requiring a
@@ -8,7 +8,7 @@
 //
 // Safety comes from the signed token instead: it names the address it applies
 // to and is HMAC-verified, so it cannot be guessed or pointed at somebody
-// else's address. Nothing here reveals whether an address has an account —
+// else's address. Nothing here reveals whether an address has an account -
 // the response is identical either way.
 // ---------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ function page(title, body) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${title} — ${BRAND.name}</title></head>
+<title>${title} - ${BRAND.name}</title></head>
 <body style="font-family:Arial,Helvetica,sans-serif;background:#F8F7F4;padding:24px">
 <div style="max-width:560px;margin:48px auto;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:28px">
 <h1 style="font-size:20px;color:#111827;margin:0 0 12px">${title}</h1>
@@ -29,7 +29,7 @@ function page(title, body) {
 </div></body></html>`;
 }
 
-// GET /api/email/unsubscribe?token=… — one click, no login, no confirmation
+// GET /api/email/unsubscribe?token=… - one click, no login, no confirmation
 // step. Mail clients pre-fetch links, but the worst case of an accidental
 // unsubscribe is a missed optional nudge, and re-subscribing is one click back.
 router.get('/api/email/unsubscribe', async (req, res) => {
@@ -47,23 +47,23 @@ router.get('/api/email/unsubscribe', async (req, res) => {
       <p>Please try the link again, or reply to any ${BRAND.name} email and we'll do it manually.</p>`));
   }
 
-  // The address is echoed back because the person already knows it — it is the
-  // inbox they are reading this in — and seeing it confirms the right one was
+  // The address is echoed back because the person already knows it - it is the
+  // inbox they are reading this in - and seeing it confirms the right one was
   // unsubscribed when several addresses forward to one mailbox.
   return res.type('html').send(page('You have been unsubscribed', `
     <p><strong>${email}</strong> will no longer receive optional email from ${BRAND.name}.</p>
-    <p>You will still receive billing and account messages about your subscription — receipts,
+    <p>You will still receive billing and account messages about your subscription - receipts,
     charge notices and cancellation records. Those are not optional and cannot be turned off
     while you have an active account.</p>
     <p><a href="${BRAND.siteUrl}/api/email/resubscribe?token=${encodeURIComponent(req.query.token)}">Changed your mind? Re-subscribe</a></p>`));
 });
 
-// POST /api/email/unsubscribe?token=… — RFC 8058 one-click.
+// POST /api/email/unsubscribe?token=… - RFC 8058 one-click.
 //
 // This is what Gmail's and Apple Mail's native "Unsubscribe" button calls, and
 // it calls it with no user interaction and expects a 2xx. A GET-only route
 // makes that button fail, which leaves the buried footer link as the only way
-// out — the reason unsubscribing appeared not to work at all.
+// out - the reason unsubscribing appeared not to work at all.
 router.post('/api/email/unsubscribe', async (req, res) => {
   const email = verifyUnsubscribeToken(req.query.token);
   if (!email) return res.status(400).json({ error: 'invalid_token' });
@@ -71,7 +71,7 @@ router.post('/api/email/unsubscribe', async (req, res) => {
   return res.status(ok ? 200 : 500).json(ok ? { unsubscribed: true } : { error: 'failed' });
 });
 
-// GET /api/email/resubscribe?token=… — the same signed token, reversed.
+// GET /api/email/resubscribe?token=… - the same signed token, reversed.
 router.get('/api/email/resubscribe', async (req, res) => {
   const email = verifyUnsubscribeToken(req.query.token);
   if (!email) {

@@ -5,16 +5,16 @@
 //
 //   - first request:      claims the key (unique row), runs the route,
 //                          stores the JSON response for replays
-//   - repeat, succeeded:  returns the stored response — no provider call,
+//   - repeat, succeeded:  returns the stored response - no provider call,
 //                          no quota reservation (mounted BEFORE planGate)
-//   - repeat, in flight:  409 IN_PROGRESS — the client polls/retries
+//   - repeat, in flight:  409 IN_PROGRESS - the client polls/retries
 //   - repeat, failed:     takes the claim over and re-runs (failures are
 //                          retryable; quota was already released)
 //   - orphaned in flight: rows older than ORPHAN_MS are treated as failed
 //                          (serverless timeout died mid-run) and re-runnable
 //
 // No header → passthrough (backwards compatible). If the migration hasn't
-// been applied, claims fail open with a warning — behavior degrades to the
+// been applied, claims fail open with a warning - behavior degrades to the
 // pre-idempotency world rather than blocking generation.
 // ---------------------------------------------------------------------------
 
@@ -42,10 +42,10 @@ function idempotent(route) {
 
         if (insErr) {
           if (isMissingTable(insErr)) {
-            console.warn('[idempotency] generation_jobs missing — apply migration 026; passing through');
+            console.warn('[idempotency] generation_jobs missing - apply migration 026; passing through');
             return next();
           }
-          // Key exists — decide from the stored row.
+          // Key exists - decide from the stored row.
           const { data: job } = await supabase
             .from('generation_jobs')
             .select('*')

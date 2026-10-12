@@ -34,7 +34,7 @@ const REQUIRED_TABLES = (plan) => new Set(
  * Build canonical, review-agnostic inputs from the campaign list payload
  * (campaign + asset_counts + deliverable_plan) and, when available, the review
  * queue. When `review` is omitted the review-derived signals are marked
- * `evaluated: false` — the selector then routes to Review rather than asserting
+ * `evaluated: false` - the selector then routes to Review rather than asserting
  * an unseen blocker or a false "ready to export".
  */
 export function campaignSummary(campaign, review) {
@@ -100,7 +100,7 @@ export function campaignNextAction(summary) {
     return {
       ...base, action_code: 'brief_approval', severity: 'blocker',
       label: 'Approve the brief and start creating', destination: at(s, 'brief'),
-      reason: 'The brief is complete but not approved — new assets inherit it once approved',
+      reason: 'The brief is complete but not approved - new assets inherit it once approved',
     };
   }
   // 3 · no saved plan → guide the user to choose requirements
@@ -108,7 +108,7 @@ export function campaignNextAction(summary) {
     return {
       ...base, action_code: 'plan_deliverables', severity: 'blocker',
       label: 'Choose what this campaign needs', destination: at(s, 'deliverables'),
-      reason: 'No deliverable plan yet — mark what is required, optional or not needed',
+      reason: 'No deliverable plan yet - mark what is required, optional or not needed',
     };
   }
   // 4 · required deliverable missing (hard blocker)
@@ -126,7 +126,7 @@ export function campaignNextAction(summary) {
     return {
       ...base, action_code: 'review_campaign', severity: 'review',
       label: 'Review the campaign', destination: at(s, 'review'),
-      reason: 'Required deliverables are in place — run the review checks before handoff',
+      reason: 'Required deliverables are in place - run the review checks before handoff',
     };
   }
   // 5 · stale required asset
@@ -134,7 +134,7 @@ export function campaignNextAction(summary) {
     return {
       ...base, action_code: 'stale_required', severity: 'review',
       label: `Review ${s.review.staleRequired} brief change${s.review.staleRequired === 1 ? '' : 's'}`, destination: at(s, 'review'),
-      reason: 'A required asset was generated before a brief change — keep or update its snapshot',
+      reason: 'A required asset was generated before a brief change - keep or update its snapshot',
     };
   }
   // 6 · unresolved high finding (export-blocking)
@@ -158,19 +158,19 @@ export function campaignNextAction(summary) {
     return {
       ...base, action_code: 'evidence_reminder', severity: 'reminder',
       label: `Recheck ${s.review.evidenceReminders} evidence source${s.review.evidenceReminders === 1 ? '' : 's'}`, destination: at(s, 'review'),
-      reason: 'Evidence past its review-by date — recheck before relying on it',
+      reason: 'Evidence past its review-by date - recheck before relying on it',
     };
   }
   // 9 · handoff / export. Only reached when review is evaluated and clean.
   return {
     ...base, action_code: 'export_handoff', severity: 'ready',
     label: 'Export the handoff packet', destination: at(s, 'handoff'),
-    reason: 'Required deliverables are in place and these checks found no blocking issue — review remains yours',
+    reason: 'Required deliverables are in place and these checks found no blocking issue - review remains yours',
   };
 }
 
 /**
- * Transparent readiness — four groups, each with a state and human-readable
+ * Transparent readiness - four groups, each with a state and human-readable
  * reasons. No synthetic score. States: 'incomplete' | 'attention' | 'blocked'
  * | 'unknown' | 'ready'.
  */
@@ -180,12 +180,12 @@ export function readinessGroups(summary) {
   const brief = s.brief.missing.length
     ? { state: 'incomplete', reasons: [`Still needed: ${s.brief.missing.join(', ')}`] }
     : !s.brief.approved
-      ? { state: 'attention', reasons: ['Complete — approve it so new assets inherit it'] }
+      ? { state: 'attention', reasons: ['Complete - approve it so new assets inherit it'] }
       : { state: 'ready', reasons: ['Approved'] };
 
   let deliverables;
   if (!s.deliverables.hasPlan) {
-    deliverables = { state: 'incomplete', reasons: ['No plan yet — choose what this campaign needs'] };
+    deliverables = { state: 'incomplete', reasons: ['No plan yet - choose what this campaign needs'] };
   } else if (s.deliverables.requiredMissing.length) {
     deliverables = {
       state: 'attention',
@@ -214,7 +214,7 @@ export function readinessGroups(summary) {
   const handoff = !s.review.evaluated
     ? { state: 'unknown', reasons: ['Run the review checks to confirm handoff readiness'] }
     : (briefReady && delivReady && review.state === 'ready')
-      ? { state: 'ready', reasons: ['Nothing is blocking a handoff export — publishing stays your decision'] }
+      ? { state: 'ready', reasons: ['Nothing is blocking a handoff export - publishing stays your decision'] }
       : { state: 'attention', reasons: ['Resolve the items above before exporting the handoff'] };
 
   return [

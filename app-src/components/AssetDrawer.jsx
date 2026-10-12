@@ -5,14 +5,14 @@ import { STATUS_LABEL } from '../lib/status-labels';
 import { diffFields, diffSummary } from '../lib/version-diff';
 
 // ---------------------------------------------------------------------------
-// v9 SC-06 / v10 SC-02: the asset detail drawer — preview, provenance, manual
+// v9 SC-06 / v10 SC-02: the asset detail drawer - preview, provenance, manual
 // edit, AI rewrite, version history, visual comparison and restore-after-
 // confirm, plus export.
 //
 // Extracted from AssetLibrary so the campaign Assets tab is a real working
 // surface instead of a dead-end list that sends the user to a separate global
 // Library to do the actual work. There is exactly ONE drawer, one diff
-// implementation and one status vocabulary — a second copy would drift.
+// implementation and one status vocabulary - a second copy would drift.
 // ---------------------------------------------------------------------------
 
 const REWRITES = [
@@ -22,7 +22,7 @@ const REWRITES = [
   ['native', 'More native'],
 ];
 
-/** Unresolved claims block "Ready to export" — surface that instead. */
+/** Unresolved claims block "Ready to export" - surface that instead. */
 export function statusLabel(item) {
   const warnings = item.quality_warnings || item.warnings || [];
   if ((item.status === 'ready' || item.status === 'published') && warnings.length) return STATUS_LABEL.blocked;
@@ -91,7 +91,7 @@ export default function AssetDrawer({ table, id, onClose, onChanged, onError }) 
       setNote('Saved. Previous version kept in history.');
       loadVersions(); onChanged();
     } catch (e) {
-      if (e.code === 'STALE') { setNote('This asset changed elsewhere — reloaded the latest. Re-apply your edit.'); await loadDetail(); }
+      if (e.code === 'STALE') { setNote('This asset changed elsewhere - reloaded the latest. Re-apply your edit.'); await loadDetail(); }
       else onError(e.message);
     } finally { setBusy(false); }
   }
@@ -154,7 +154,7 @@ export default function AssetDrawer({ table, id, onClose, onChanged, onError }) 
         </p>
         {note && <p className="flow-muted" role="status">{note}</p>}
 
-        {/* Manual edit — free, saves a version, conflict-safe. */}
+        {/* Manual edit - free, saves a version, conflict-safe. */}
         <label className="flow-field"><span>Title</span>
           <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
         </label>

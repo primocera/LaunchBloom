@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v18 S13 — the ONE typed paywall reason contract.
+// v18 S13 - the ONE typed paywall reason contract.
 //
 // Every monetisation boundary in the app (first gated generation, an exhausted
 // quota, an export outside the plan, a failed payment, a cancelled or
@@ -10,7 +10,7 @@
 // derive from the same source.
 //
 // This module is pure and DOM-free so it is unit-testable without a browser.
-// It carries copy fragments only — the component still owns exact price, trial
+// It carries copy fragments only - the component still owns exact price, trial
 // allowance and charge-date rendering, which depend on live catalog state.
 // ---------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ export const PAYWALL_REASONS = Object.freeze({
     title: 'Start your 3-day free trial to generate',
     lead: 'Your work is saved. Start your trial to run this generation.',
   },
-  // The trial was already used — a plan starts (and is charged) today.
+  // The trial was already used - a plan starts (and is charged) today.
   trial_expired: {
     kind: 'subscribe',
     cta: 'subscribe_today',
@@ -44,26 +44,26 @@ export const PAYWALL_REASONS = Object.freeze({
     title: 'This export is on a higher plan',
     lead: 'Your work is saved. Upgrade to unlock this export, or use a format your plan includes.',
   },
-  // A recurring payment failed — access continues per policy while it is fixed.
+  // A recurring payment failed - access continues per policy while it is fixed.
   payment_past_due: {
     kind: 'fix_payment',
     cta: 'update_payment',
     title: 'Update your payment method',
-    lead: 'Your work is saved. Your last payment did not go through — update your card to avoid interruption.',
+    lead: 'Your work is saved. Your last payment did not go through - update your card to avoid interruption.',
   },
   // The subscription is cancelled; resubscribing restores access.
   cancelled: {
     kind: 'subscribe',
     cta: 'subscribe_today',
     title: 'Choose a plan to continue',
-    lead: 'Your work is saved. Your subscription has ended — choose a plan to keep generating.',
+    lead: 'Your work is saved. Your subscription has ended - choose a plan to keep generating.',
   },
   // The action needs a permission the current account/workspace lacks.
   permission_denied: {
     kind: 'blocked',
     cta: 'close',
     title: "You don't have access to this action",
-    lead: 'Your work is saved. This action is not available on your account — nothing has changed.',
+    lead: 'Your work is saved. This action is not available on your account - nothing has changed.',
   },
 });
 

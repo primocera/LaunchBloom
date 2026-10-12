@@ -69,7 +69,7 @@ test('export failure: reviewed assets preserved, retry + copy fallback', async (
   const st = exportFailureState({});
   assert.equal(st.category, 'export_failed');
   assert.equal(st.action.kind, 'retry');
-  assert.match(st.reassurance, /still saved — nothing was lost/i);
+  assert.match(st.reassurance, /still saved - nothing was lost/i);
   assert.match(st.message, /copy assets individually/i);
 });
 

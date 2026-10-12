@@ -1,6 +1,6 @@
 // v5 Prompt 7: pure helpers for the shared generator shell. Kept free of React
 // so they can be unit-tested (backend/tests/generator-shell.test.js) the same
-// way next-actions.js is. No DOM, no fetch — inputs in, plain data out.
+// way next-actions.js is. No DOM, no fetch - inputs in, plain data out.
 
 /** The record flagged primary, else the first, else null. */
 export function primaryOf(list) {
@@ -15,7 +15,7 @@ function recordLabel(r) {
 
 /**
  * Context chips shown before generation. Smart defaults come from the Brand
- * Profile and campaign — never the silent "first product" (we surface the
+ * Profile and campaign - never the silent "first product" (we surface the
  * primary one and mark it so the user can change it). Returns an ordered list
  * of { key, label, value, editable, missing }.
  */
@@ -39,7 +39,7 @@ export function deriveContext({ profile = {}, campaign = null, values = {} } = {
 /**
  * Per-field validation warnings. Reads optional field constraints from the
  * form spec: required, minLength, maxLength (used for meta-title/description
- * length checks). Returns { [fieldName]: message } — actionable, field-local.
+ * length checks). Returns { [fieldName]: message } - actionable, field-local.
  */
 export function validateFields(fields = [], values = {}) {
   const out = {};
@@ -53,9 +53,9 @@ export function validateFields(fields = [], values = {}) {
     if (empty) continue;
     const len = typeof v === 'string' ? v.length : null;
     if (len != null && f.maxLength && len > f.maxLength) {
-      out[f.name] = `${f.label} is ${len} characters — keep it under ${f.maxLength}.`;
+      out[f.name] = `${f.label} is ${len} characters - keep it under ${f.maxLength}.`;
     } else if (len != null && f.minLength && len < f.minLength) {
-      out[f.name] = `${f.label} is only ${len} characters — aim for at least ${f.minLength}.`;
+      out[f.name] = `${f.label} is only ${len} characters - aim for at least ${f.minLength}.`;
     }
   }
   return out;
@@ -75,7 +75,7 @@ export function outputEstimate({ resultKey = 'items', count } = {}) {
   const noun = String(resultKey).replace(/_/g, ' ');
   const n = Number.isFinite(count) && count > 0 ? count : null;
   const what = n ? `about ${n} ${noun}` : `a set of ${noun}`;
-  return `Generates ${what}. This uses 1 AI action — editing, copying and exporting are free.`;
+  return `Generates ${what}. This uses 1 AI action - editing, copying and exporting are free.`;
 }
 
 // v9 SC-05: the exact required labels still missing before Generate can run, so
@@ -90,30 +90,30 @@ export function missingRequiredFields(fields = [], values = {}) {
     .map((f) => f.label);
 }
 
-// v9 SC-05: the per-channel output contract shown BEFORE generation — what the
+// v9 SC-05: the per-channel output contract shown BEFORE generation - what the
 // studio actually produces (structure) and the boundary it never crosses. The
 // wording is deliberately outcome-safe and matches the product contract: Social
 // never posts/schedules, Creative is briefs not media, SEO invents no metrics.
 export const OUTPUT_CONTRACT = {
   website_pages: {
     structure: ['Page goal', 'Headline and sections', 'SEO title and meta', 'FAQ', 'One primary CTA'],
-    note: 'Structured page copy to review and adapt — not a published page.',
+    note: 'Structured page copy to review and adapt - not a published page.',
   },
   email_assets: {
     structure: ['Sequence purpose', 'Subject and preheader', 'Plain-text-safe body', 'One CTA per email'],
-    note: 'Draft emails to review and adapt — Scalvya does not send them.',
+    note: 'Draft emails to review and adapt - Scalvya does not send them.',
   },
   social_assets: {
     structure: ['Platform and format', 'Hook', 'Caption and hashtags', 'Calendar planning only'],
-    note: 'Planned captions to review — never posted or scheduled to any platform.',
+    note: 'Planned captions to review - never posted or scheduled to any platform.',
   },
   creative_assets: {
     structure: ['Concept and format', 'Script or primary text', 'Claim with an evidence hook', 'Testing note'],
-    note: 'Ad creative briefs to review — not rendered media or launched ads.',
+    note: 'Ad creative briefs to review - not rendered media or launched ads.',
   },
   seo_assets: {
     structure: ['Research question and intent', 'Outline (H-structure)', 'Title and meta', 'Verification checklist'],
-    note: 'Research ideas to verify — no invented search volume, difficulty or rank.',
+    note: 'Research ideas to verify - no invented search volume, difficulty or rank.',
   },
 };
 

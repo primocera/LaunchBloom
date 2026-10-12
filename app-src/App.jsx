@@ -52,7 +52,7 @@ export default function App() {
 }
 
 /**
- * Signed-in area: collapsible left-sidebar app shell — sidebar
+ * Signed-in area: collapsible left-sidebar app shell - sidebar
  * (Dashboard, Launch Flow, Studios, account) + scrollable main pane.
  */
 /**
@@ -87,7 +87,7 @@ function ShellNotices() {
     : null;
 
   if (checkout === 'success') {
-    // v7 LB-12: only claim a trial when the subscription really is trialing —
+    // v7 LB-12: only claim a trial when the subscription really is trialing -
     // prior-trial users subscribe pay-today with no second trial.
     return (
       <div className="shell-notice" role="status">
@@ -96,7 +96,7 @@ function ShellNotices() {
         ) : sub ? (
           <>Your subscription is active. {chargeDate ? `Next charge on ${chargeDate}. ` : ''}</>
         ) : (
-          <>Checkout complete. Your plan may take a moment to activate — refresh if it doesn't appear. </>
+          <>Checkout complete. Your plan may take a moment to activate - refresh if it doesn't appear. </>
         )}
         <Link to="/app/account">Manage billing</Link>{' '}
         <button className="account-link" onClick={dismiss}>Dismiss</button>
@@ -106,7 +106,7 @@ function ShellNotices() {
   if (checkout === 'error') {
     return (
       <div className="shell-notice is-warn" role="status">
-        We couldn't start checkout — nothing was charged. Try again from{' '}
+        We couldn't start checkout - nothing was charged. Try again from{' '}
         <Link to="/app/account">Account &amp; billing</Link>.{' '}
         <button className="account-link" onClick={dismiss}>Dismiss</button>
       </div>
@@ -115,7 +115,7 @@ function ShellNotices() {
   if (checkout === 'cancelled') {
     return (
       <div className="shell-notice" role="status">
-        Checkout cancelled — nothing was charged and your work is saved.{' '}
+        Checkout cancelled - nothing was charged and your work is saved.{' '}
         <button className="account-link" onClick={dismiss}>Dismiss</button>
       </div>
     );
@@ -123,7 +123,7 @@ function ShellNotices() {
   if (trialEndsSoon) {
     return (
       <div className="shell-notice is-warn" role="status">
-        Your trial ends soon{chargeDate ? ` — you'll be charged on ${chargeDate} unless you cancel before then` : ''}.{' '}
+        Your trial ends soon{chargeDate ? ` - you'll be charged on ${chargeDate} unless you cancel before then` : ''}.{' '}
         <Link to="/app/account">Account &amp; billing</Link>
       </div>
     );
@@ -139,7 +139,7 @@ function AppShell() {
   // phone had no navigation and no way to end a session at all.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Escape closes the drawer — a nav overlay must be dismissable from the
+  // Escape closes the drawer - a nav overlay must be dismissable from the
   // keyboard, and on mobile browsers a stuck overlay traps the whole page.
   useEffect(() => {
     if (!mobileNavOpen) return undefined;
@@ -222,9 +222,9 @@ function AppShell() {
           <Route path="/create" element={<Create />} />
           <Route path="/assets" element={<AssetLibrary />} />
           <Route path="/account" element={<Account />} />
-          {/* Admin support scorecard — endpoint 403s for non-allowlisted accounts */}
+          {/* Admin support scorecard - endpoint 403s for non-allowlisted accounts */}
           <Route path="/admin" element={<Admin />} />
-          {/* Full launch workflow — a campaign template inside Campaigns (v5 P3) */}
+          {/* Full launch workflow - a campaign template inside Campaigns (v5 P3) */}
           <Route path="/flow" element={<Flow />} />
           <Route path="/kits/:id" element={<KitDetail />} />
           <Route path="/weekly-plan" element={<WeeklyPlan />} />

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// LB-V17-05 — the sanitized production-readiness EVIDENCE record + validator.
+// LB-V17-05 - the sanitized production-readiness EVIDENCE record + validator.
 //
 // The production-readiness gate is an owner OBSERVATION: an authenticated
 // GET /api/admin/readiness against the DEPLOYED candidate, observed ready=true
@@ -29,7 +29,7 @@ const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 const CARD_RE = /\b(?:\d[ -]?){13,19}\b/;
 const SECRET_RE = /\b(sk_(live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|rk_(live|test)_[A-Za-z0-9]+)\b/;
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._-]+/i;
-// Full response bodies are not evidence — a record must carry counts, not the
+// Full response bodies are not evidence - a record must carry counts, not the
 // endpoint payload. Reject anything that smells like a pasted JSON body.
 const BODY_RE = /"(checks|signals|outbox|reservations)"\s*:/i;
 
@@ -37,7 +37,7 @@ const STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000; // a readiness observation olde
 
 function isPlainObject(v) { return Boolean(v) && typeof v === 'object' && !Array.isArray(v); }
 
-/** A fresh not_run readiness record skeleton for a candidate — owner fills it. */
+/** A fresh not_run readiness record skeleton for a candidate - owner fills it. */
 function emptyRecord(candidateSha) {
   return {
     schema: SCHEMA,
@@ -100,7 +100,7 @@ function validateReadinessRecord(record, { candidateSha, requireProduction = tru
   if (!Array.isArray(record.blocker_categories)) {
     problems.push('blocker_categories must be an array of slugs');
   } else if (record.blocker_categories.length > 0) {
-    problems.push('blocker_categories is non-empty — outstanding blockers cannot be a clean pass');
+    problems.push('blocker_categories is non-empty - outstanding blockers cannot be a clean pass');
   }
 
   if (!record.operator || typeof record.operator !== 'string') problems.push('operator attestation handle is missing');
@@ -109,11 +109,11 @@ function validateReadinessRecord(record, { candidateSha, requireProduction = tru
   // Redaction: no emails, card data, secrets, bearer tokens or full bodies.
   for (const [field, v] of Object.entries(record)) {
     if (typeof v !== 'string') continue;
-    if (EMAIL_RE.test(v)) problems.push(`${field} contains an email — evidence must be opaque`);
+    if (EMAIL_RE.test(v)) problems.push(`${field} contains an email - evidence must be opaque`);
     if (CARD_RE.test(v)) problems.push(`${field} contains card-like digits`);
     if (SECRET_RE.test(v)) problems.push(`${field} contains a provider secret`);
     if (BEARER_RE.test(v)) problems.push(`${field} contains a bearer token`);
-    if (BODY_RE.test(v)) problems.push(`${field} looks like a pasted response body — record counts, not payloads`);
+    if (BODY_RE.test(v)) problems.push(`${field} looks like a pasted response body - record counts, not payloads`);
   }
 
   return problems;

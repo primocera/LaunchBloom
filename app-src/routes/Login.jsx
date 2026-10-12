@@ -19,7 +19,7 @@ export async function resumePendingCheckout() {
   const pendingInterval = localStorage.getItem('of-pending-interval') || 'monthly';
   const data = await api.checkout(pendingPlan, pendingInterval);
   if (!data.url) throw new Error('Could not start checkout.');
-  // Clear only once checkout actually started — a failed attempt keeps the
+  // Clear only once checkout actually started - a failed attempt keeps the
   // selection so the paywall/retry doesn't silently lose the chosen plan.
   localStorage.removeItem('of-pending-plan');
   localStorage.removeItem('of-pending-interval');
@@ -71,7 +71,7 @@ export default function Login() {
     } catch (err) {
       if (err.code === 'EMAIL_NOT_CONFIRMED') {
         setUnverified(true);
-        setError('Please verify your email first — check your inbox for the link.');
+        setError('Please verify your email first - check your inbox for the link.');
       } else {
         setError(err.message);
       }

@@ -10,7 +10,7 @@ const supabase = require('./supabase');
 // breaking the whole operation.
 // v10 SC-08: this list had drifted badly. Ten workspace-scoped tables added by
 // migrations 008–035 were never added here, so account export omitted them and
-// account deletion LEFT THEM IN THE DATABASE — including campaigns and
+// account deletion LEFT THEM IN THE DATABASE - including campaigns and
 // brand_profiles, which hold the user's own words. A deletion receipt that
 // reports success while a user's campaigns survive is a false success, which
 // is exactly what the v10 gate forbids.
@@ -45,7 +45,7 @@ const WORKSPACE_TABLES = [
   'onboarding_answers',
   'brand_profiles',
   // v11 SC-07: beta feedback holds an optional free-text note the user wrote,
-  // so it is unambiguously their data — it must leave with an export and go
+  // so it is unambiguously their data - it must leave with an export and go
   // with an erasure.
   'beta_feedback',
   // ── operational rows scoped to the workspace ──

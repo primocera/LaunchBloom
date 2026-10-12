@@ -49,7 +49,7 @@ async function request(path, { method = 'GET', body, signal, idempotencyKey } = 
 }
 
 export const api = {
-  // Analytics (Prompt 15) — best-effort, never throws into the caller.
+  // Analytics (Prompt 15) - best-effort, never throws into the caller.
   trackEvent: (event, properties) =>
     request('/api/events', { method: 'POST', body: { event, properties } }).catch(() => {}),
 
@@ -89,7 +89,7 @@ export const api = {
   archiveWorkspace: (id, archived) => request(`/api/workspaces/${id}`, { method: 'PATCH', body: { archived } }),
   deleteWorkspace: (id) => request(`/api/workspaces/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/api/workspace/dashboard'),
-  // Admin support view (Prompt 10 + 16) — 403 for non-allowlisted accounts.
+  // Admin support view (Prompt 10 + 16) - 403 for non-allowlisted accounts.
   // SC-95-03: the canonical capped-beta value scorecard (one denominator,
   // server-confirmed milestones incl. repeat campaigns, outage-aware).
   betaScorecard: (days = 7) => request(`/api/admin/beta-scorecard?days=${days}`),
@@ -140,7 +140,7 @@ export const api = {
   campaignReviewManifest: (id) => request(`/api/campaigns/${id}/review-manifest`),
   campaignHandoff: (id) => request(`/api/campaigns/${id}/handoff`),
 
-  // v11 SC-07 — capped-beta feedback. Categories are analytics; the optional
+  // v11 SC-07 - capped-beta feedback. Categories are analytics; the optional
   // note is read by a person and never enters an event.
   feedbackStatus: () => request('/api/feedback/status'),
   feedbackQuestions: () => request('/api/feedback/questions'),
@@ -195,8 +195,8 @@ export const api = {
     }),
 
   // Marketing-asset studios (Upgrade prompts 7-11 / 16-18). Each call carries
-  // an Idempotency-Key (v6 Prompt 11): pass opts.idempotencyKey — a UUID per
-  // generation intent, reused on retry — so double clicks and timeouts can't
+  // an Idempotency-Key (v6 Prompt 11): pass opts.idempotencyKey - a UUID per
+  // generation intent, reused on retry - so double clicks and timeouts can't
   // duplicate assets or charges.
   generateWebsiteKit: (body, opts) => request('/api/ai/generate-website-kit', { method: 'POST', body, ...opts }),
   generateEmailFlow: (body, opts) => request('/api/ai/generate-email-flow', { method: 'POST', body, ...opts }),

@@ -7,7 +7,7 @@
 // defaults use the Scalvya brand with clearly-marked placeholder legal
 // values for counsel review.
 //
-// Do NOT hardcode a domain anywhere else — read it from here.
+// Do NOT hardcode a domain anywhere else - read it from here.
 // ---------------------------------------------------------------------------
 
 const BRAND = {
@@ -23,7 +23,7 @@ const BRAND = {
   senderName: process.env.BRAND_SENDER_NAME || 'Scalvya',
   senderEmail: process.env.BRAND_SENDER_EMAIL || 'hello@scalvya.com',
 
-  // Legal configuration (v5 Prompt 15) — env-backed; defaults are explicit
+  // Legal configuration (v5 Prompt 15) - env-backed; defaults are explicit
   // placeholders that BLOCK paid checkout in production until real values are
   // supplied (see legalPlaceholders()).
   legalName: process.env.BRAND_LEGAL_NAME || 'Scalvya (legal entity TBD)',
@@ -33,7 +33,7 @@ const BRAND = {
 };
 
 /**
- * Legal values still missing or placeholder — production must not sell until
+ * Legal values still missing or placeholder - production must not sell until
  * this is empty (v5 Prompt 15).
  */
 function legalPlaceholders() {
@@ -59,7 +59,7 @@ function legalUrls() {
 
 // Bump when Terms/Privacy change materially; signup records the accepted
 // version so consent is auditable (Prompt 14).
-const LEGAL_VERSION = process.env.LEGAL_VERSION || '2026-07-15';
+const LEGAL_VERSION = process.env.LEGAL_VERSION || '2026-10-12';
 
 /** "Scalvya <hello@scalvya.com>" for email `from` headers. */
 function emailFrom() {

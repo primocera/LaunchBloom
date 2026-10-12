@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v11 SC-07 — the capped-beta feedback moment.
+// v11 SC-07 - the capped-beta feedback moment.
 //
 // Asked twice in a beta account's life: once after the first handoff export,
 // once after a cancel or refund. Three bounded questions and an optional note.
@@ -118,7 +118,7 @@ router.post('/api/feedback', requireAuth, json, async (req, res, next) => {
       }, { onConflict: 'workspace_id,moment' });
     if (error) throw error;
 
-    // Categories only. `notes` is deliberately absent from this payload — and
+    // Categories only. `notes` is deliberately absent from this payload - and
     // sanitizeProperties would drop it anyway, which is the belt to this brace.
     track('feedback_submitted', {
       userId: req.userId,
@@ -134,7 +134,7 @@ router.post('/api/feedback', requireAuth, json, async (req, res, next) => {
 });
 
 // Has this workspace already been asked? The client uses it to ask once and
-// then stay quiet — a prompt that reappears after every export is nagging.
+// then stay quiet - a prompt that reappears after every export is nagging.
 router.get('/api/feedback/status', requireAuth, async (req, res, next) => {
   try {
     const workspace = await resolveWorkspace(req);

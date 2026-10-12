@@ -1,9 +1,9 @@
-// v5 Prompt 9 — pure helpers for the Email Studio: promotion-window formatting
+// v5 Prompt 9 - pure helpers for the Email Studio: promotion-window formatting
 // (dates always sourced from the brief, timezone-aware), plain-text preview and
 // Markdown export. No DOM/fetch so they are node:test-friendly.
 
 /**
- * Human promo window from brief facts. Returns '' when no dates are given —
+ * Human promo window from brief facts. Returns '' when no dates are given -
  * the caller must never invent a deadline. Timezone is appended when present.
  */
 export function promoWindow({ start_date, end_date, timezone } = {}) {
@@ -36,7 +36,7 @@ export function emailMarkdown(e = {}) {
   const subjects = Array.isArray(e.subject_options) && e.subject_options.length
     ? e.subject_options : (e.subject_line ? [e.subject_line] : []);
   return [
-    `### ${e.flow_type || 'email'} — ${e.objective || ''}`.trim(),
+    `### ${e.flow_type || 'email'} - ${e.objective || ''}`.trim(),
     e.send_timing ? `_Timing: ${e.send_timing}${e.segment ? ` · Segment: ${e.segment}` : ''}_` : '',
     subjects.length ? `**Subject options:**\n${subjects.map((s) => `- ${s}`).join('\n')}` : '',
     `**Preheader:** ${e.preheader || ''}`,

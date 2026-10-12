@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // v10 SC-02: what a campaign asset row shows without opening the asset.
 //
-// Pure, so it can be unit-tested without a browser — signed-in Playwright
+// Pure, so it can be unit-tested without a browser - signed-in Playwright
 // journeys need live Supabase Auth, which the credential-free E2E harness
 // deliberately does not have. Keeping the decisions here (rather than inline
 // in CampaignWorkspace) is how the rest of this codebase gets coverage on
@@ -55,7 +55,7 @@ export function blockersByAsset(review) {
 
 /**
  * True when an asset was generated from an older brief than the campaign now
- * carries. Unknown versions are never guessed at — an absent version is not
+ * carries. Unknown versions are never guessed at - an absent version is not
  * evidence of staleness.
  */
 export function isStale(item, campaign) {

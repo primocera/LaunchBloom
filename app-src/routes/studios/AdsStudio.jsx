@@ -18,9 +18,9 @@ const SECTIONS = [
 
 // Prompt 21's testing plan card, generic guidance per the spec.
 const TESTING_PLAN = [
-  ['What to test first', 'Run your 2-3 strongest hooks against the same audience before testing visuals — the hook decides whether anything else gets seen.'],
+  ['What to test first', 'Run your 2-3 strongest hooks against the same audience before testing visuals - the hook decides whether anything else gets seen.'],
   ['Suggested budget range', 'A small daily budget (roughly the price of a coffee or two per ad) is enough to compare hooks. This is generic guidance, not financial advice.'],
-  ['When to stop a weak ad', 'If an ad has clearly worse click-through than its siblings after a few hundred impressions, pause it — do not wait for it to turn around.'],
+  ['When to stop a weak ad', 'If an ad has clearly worse click-through than its siblings after a few hundred impressions, pause it - do not wait for it to turn around.'],
   ['What signal to watch', 'Click-through rate first (did the hook work?), then landing page actions (did the promise hold?). Ignore likes.'],
 ];
 
@@ -91,7 +91,7 @@ export default function AdsStudio() {
   return (
     <StudioShell
       title="Ads Starter Kit"
-      blurb="Meta ad hooks, static and video concepts, and a UGC brief — pick what to test first."
+      blurb="Meta ad hooks, static and video concepts, and a UGC brief - pick what to test first."
       kits={kits}
       kitId={kitId}
       onSelectKit={setKitId}

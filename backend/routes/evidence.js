@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v8 LB-S04: evidence locker. Reusable, user-recorded proof references —
+// v8 LB-S04: evidence locker. Reusable, user-recorded proof references -
 // Scalvya never scrapes a source or asserts that it is true; the record
 // keeps WHO checked WHAT and WHEN so review work is not repeated per asset.
 // One evidence record can be linked to many assets without copying its text.
@@ -53,7 +53,7 @@ function evidencePatch(body) {
   return { patch };
 }
 
-// GET /api/evidence — workspace evidence with link counts.
+// GET /api/evidence - workspace evidence with link counts.
 router.get('/api/evidence', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -73,7 +73,7 @@ router.get('/api/evidence', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/evidence — record a piece of evidence (user-checked, dated).
+// POST /api/evidence - record a piece of evidence (user-checked, dated).
 router.post('/api/evidence', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -98,7 +98,7 @@ async function ownedEvidence(ws, id) {
   return data || null;
 }
 
-// PATCH /api/evidence/:id — edit or archive (soft delete).
+// PATCH /api/evidence/:id - edit or archive (soft delete).
 router.patch('/api/evidence/:id', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -117,7 +117,7 @@ router.patch('/api/evidence/:id', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/evidence/:id/link — link this evidence to one asset (reusable
+// POST /api/evidence/:id/link - link this evidence to one asset (reusable
 // across many assets; evidence text is never copied into asset rows).
 router.post('/api/evidence/:id/link', requireAuth, async (req, res, next) => {
   try {
@@ -146,7 +146,7 @@ router.post('/api/evidence/:id/link', requireAuth, async (req, res, next) => {
   }
 });
 
-// DELETE /api/evidence/:id/link — unlink from one asset.
+// DELETE /api/evidence/:id/link - unlink from one asset.
 router.delete('/api/evidence/:id/link', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);

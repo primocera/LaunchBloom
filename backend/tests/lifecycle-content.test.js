@@ -16,7 +16,7 @@ const chargeAt = '2026-08-01T09:00:00.000Z';
 
 test('trial_started states the first charge date, price and campaign allowance', () => {
   const m = TEMPLATES.trial_started({ chargeAt, planLabel: 'Pro', price: '$24.99', interval: 'month' });
-  assert.match(m.subject, /Your trial started — first charge on/);
+  assert.match(m.subject, /Your trial started - first charge on/);
   assert.match(m.html, /\$24\.99\/month/);
   assert.match(m.html, /1 full launch campaign/);
   assert.match(m.text, /First charge on/);
@@ -32,7 +32,7 @@ test('trial_ending shows the exact timestamp with timezone', () => {
 
 test('payment_succeeded names the plan and amount and mentions usage reset', () => {
   const m = TEMPLATES.payment_succeeded({ periodEnd: chargeAt, planLabel: 'Pro', amount: '$24.99' });
-  assert.match(m.subject, /Payment received — Pro is active/);
+  assert.match(m.subject, /Payment received - Pro is active/);
   assert.match(m.html, /\$24\.99/);
   assert.match(m.html, /reset/i);
 });

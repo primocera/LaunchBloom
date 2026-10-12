@@ -1,5 +1,5 @@
 // v9 SC-06: pure, testable field-level version comparison for the Library asset
-// drawer. No React, no DOM — inputs in, plain data out (unit-tested from
+// drawer. No React, no DOM - inputs in, plain data out (unit-tested from
 // backend/tests/version-diff.test.js). It classifies each editable field as
 // Added / Removed / Changed / Unchanged between a version snapshot ("before")
 // and the current asset ("after"), so restore/compare can be shown clearly and

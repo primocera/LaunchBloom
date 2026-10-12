@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // v5 Prompt 4: deterministic Home recommendations. Pure functions, no imports
-// — unit-tested from backend/tests/next-actions.test.js via dynamic import.
+// - unit-tested from backend/tests/next-actions.test.js via dynamic import.
 //
 // homePlan() returns:
 //   { primary: {to,label},  actions: [{to,label,reason}] (max 3),
@@ -18,7 +18,7 @@ export function profileMissing(profile) {
 }
 
 // Playbook v6 Prompt 17: the minimum viable profile required before the first
-// generation — business, a primary product/offer, a primary audience and a
+// generation - business, a primary product/offer, a primary audience and a
 // language. Returns the list of missing requirement labels (empty = ready).
 // Structured records (products_list / audiences) satisfy the product/audience
 // requirements; legacy flat fields are accepted as a fallback so no existing
@@ -46,7 +46,7 @@ export function minimumViableProfile(profile) {
 }
 
 // v8 LB-S01: deliverable codes → the asset table their studio saves into
-// (mirrors backend/lib/deliverables.js — used to spot required deliverables
+// (mirrors backend/lib/deliverables.js - used to spot required deliverables
 // with no asset yet from the campaign list payload).
 export const DELIVERABLE_TABLE = {
   landing_page: ['website_pages', 'Landing page'],
@@ -96,7 +96,7 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
     primary = missing.length >= ESSENTIAL_PROFILE_FIELDS.length - 1
       ? { to: '/app/brand', label: 'Complete Brand Profile' }
       // v10 SC-01: generation needs a campaign, so send a free user to the
-      // campaign they have — or to creating one — rather than to a Create
+      // campaign they have - or to creating one - rather than to a Create
       // screen that would immediately ask which campaign they meant.
       : activeCampaigns.length
         ? { to: `/app/create?campaign=${activeCampaigns[0].id}`, label: 'Start your 3-day trial and generate' }
@@ -124,7 +124,7 @@ export function homePlan({ profile, campaigns, assets, kit, account, plan }) {
     actions.push({ to: '/app/campaigns', label: 'Create your first campaign', reason: 'Campaigns keep every asset on one brief' });
   }
   // v8 LB-S01: an explicit deliverable plan outranks the generic zero-asset
-  // nudge — the highest-priority unresolved required deliverable comes first.
+  // nudge - the highest-priority unresolved required deliverable comes first.
   for (const c of activeCampaigns) {
     if (actions.length >= 3) break;
     const missingRequired = missingRequiredDeliverables(c);

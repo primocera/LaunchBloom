@@ -8,7 +8,7 @@ import { resolvePaywallReason, paywallCopy } from '../lib/paywall-reasons';
 // ---------------------------------------------------------------------------
 // v5 Prompt 2: contextual trial paywall. Shown when a free account attempts
 // its first generation. Discloses the selected plan, the exact post-trial
-// price and charge date, the trial allowance and how to cancel — then starts
+// price and charge date, the trial allowance and how to cancel - then starts
 // Stripe Checkout. The user's prepared form input stays in a local draft, so
 // nothing is lost across the redirect.
 // ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
   // v7 LB-12 / LB-V17-01: trial eligibility is an explicit finite state, never a
   // nullable boolean that decays to "eligible" on failure. Only a server-
   // confirmed `eligible` may render the 3-day-trial promise; a failed/unknown
-  // read is `unavailable` — no trial copy, no charged-today claim, just Retry.
+  // read is `unavailable` - no trial copy, no charged-today claim, just Retry.
   //   'loading' | 'eligible' | 'ineligible' | 'unavailable'
   const [eligState, setEligState] = useState('loading');
 
@@ -108,7 +108,7 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
       window.location.href = data.url; // leave busy=true until we navigate away
     } catch (e) {
       if (e.code === 'PLAN_UNAVAILABLE') {
-        // v13 SC-P0-01: checkout failed closed — no session, no charge, and no
+        // v13 SC-P0-01: checkout failed closed - no session, no charge, and no
         // access change. Say so plainly and let the user retry.
         const st = planVerificationState(e);
         setError(`${st.message} ${st.reassurance}`.trim());
@@ -150,8 +150,8 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
           <>
             <h2 id="paywall-title">Choose a plan to keep generating</h2>
             <p className="paywall-sub">
-              Your work is saved. You've already used your 3-day trial, so your plan starts — and is
-              charged — today.
+              Your work is saved. You've already used your 3-day trial, so your plan starts - and is
+              charged - today.
             </p>
           </>
         ) : eligState === 'eligible' ? (
@@ -169,7 +169,7 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
           <>
             <h2 id="paywall-title">Choose a plan to keep generating</h2>
             <p className="paywall-sub" role="alert">
-              Your work is saved. We couldn’t confirm whether your free trial is available right now —
+              Your work is saved. We couldn’t confirm whether your free trial is available right now -
               and you have not been charged. Try again to see your exact terms before you continue.
             </p>
           </>
@@ -218,7 +218,7 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
           >
             {busy ? 'Opening secure checkout…'
               : eligState === 'loading' ? 'Checking your plan…'
-              : eligState === 'ineligible' ? 'Subscribe — charged today'
+              : eligState === 'ineligible' ? 'Subscribe - charged today'
               : 'Start my 3-day trial'}
           </button>
         )}
@@ -229,7 +229,7 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
           {eligState === 'ineligible' ? (
             <>
               {price ? <>You'll be charged {price}{per} today. </> : null}
-              No second trial — your earlier trial has been used. Cancel anytime from Account &amp; billing.
+              No second trial - your earlier trial has been used. Cancel anytime from Account &amp; billing.
             </>
           ) : eligState === 'eligible' ? (
             <>

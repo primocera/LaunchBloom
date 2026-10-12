@@ -8,11 +8,11 @@ import { EMPTY_BRIEF as EMPTY, TEMPLATES, missingDecisions, totalAssets, section
 // ---------------------------------------------------------------------------
 // v9 SC-01: Campaigns is now the campaign list + create surface only. Each
 // campaign opens into its own workspace (/app/campaigns/:id) with focused
-// Overview / Brief / Deliverables / Assets / Review / Handoff sections — the
+// Overview / Brief / Deliverables / Assets / Review / Handoff sections - the
 // v8 control tools that used to be stacked on every card live there now.
 // ---------------------------------------------------------------------------
 
-// v8 LB-S06: first-party playbooks — versioned workflow structure, previewed
+// v8 LB-S06: first-party playbooks - versioned workflow structure, previewed
 // before applying. Applying always creates a NEW draft campaign.
 function Playbooks({ onCreated }) {
   const [playbooks, setPlaybooks] = useState(null);
@@ -45,7 +45,7 @@ function Playbooks({ onCreated }) {
     <div className="account-section">
       <h2>Playbooks</h2>
       <p className="muted" style={{ marginTop: 4 }}>
-        Proven campaign structure — objective, deliverable plan and the brief questions to answer.
+        Proven campaign structure - objective, deliverable plan and the brief questions to answer.
         No benchmarks or invented outcomes; your facts stay yours to verify.
       </p>
       <div className="campaign-channels">
@@ -55,7 +55,7 @@ function Playbooks({ onCreated }) {
       </div>
       {sel && (
         <form onSubmit={apply} style={{ marginTop: 8 }}>
-          <p className="muted"><strong>{sel.label}</strong> (v{sel.version}) — {sel.description}</p>
+          <p className="muted"><strong>{sel.label}</strong> (v{sel.version}) - {sel.description}</p>
           <p className="muted">Will set: objective “{sel.suggested_objective}”, channels {sel.channels.join(', ')}, and this deliverable plan:</p>
           <ul className="muted">
             {Object.entries(sel.deliverables).map(([code, st]) => (
@@ -88,7 +88,7 @@ function Templates({ onCreated }) {
   function load() { api.templates().then((r) => setTemplates(r.templates)).catch(() => setTemplates([])); }
   useEffect(load, []);
 
-  // v9 SC-09: inline naming (no window.prompt) — accessible and keyboard-driven.
+  // v9 SC-09: inline naming (no window.prompt) - accessible and keyboard-driven.
   async function apply(e) {
     e.preventDefault();
     try { const { campaign } = await api.applyTemplate(naming.id, naming.name); setNaming(null); onCreated(campaign); }
@@ -129,10 +129,10 @@ function Templates({ onCreated }) {
 }
 
 // v8 LB-S05 / LB-V17-03: the create-campaign form survives auth/paywall/checkout
-// detours — but recovery is now bounded (TTL'd, user-scoped, size-capped) via
+// detours - but recovery is now bounded (TTL'd, user-scoped, size-capped) via
 // the draft registry rather than indefinite raw localStorage. LB-V19 (LB-02):
 // the owner scope is the STABLE user UUID + active workspace, resolved from the
-// authenticated session — never the workspace id used as an identity.
+// authenticated session - never the workspace id used as an identity.
 const DRAFT_KEY = 'campaign_form_draft';
 
 // A quiet overflow menu keeps archive/delete/duplicate off the main work path.
@@ -242,13 +242,13 @@ export default function Campaigns() {
       </p>
 
       {/* v10 SC-01: one primary action above (Create campaign). Playbooks and
-          templates are real but secondary — they are ways to START the same
+          templates are real but secondary - they are ways to START the same
           campaign, not competing paths, so they sit behind one collapsed
           chooser instead of stacking three creation surfaces on the page. */}
       <details className="account-section start-from">
         <summary>Start from a playbook or template</summary>
         <p className="muted" style={{ marginTop: 8 }}>
-          Each of these creates the same kind of draft campaign — only the starting
+          Each of these creates the same kind of draft campaign - only the starting
           structure differs. Nothing is generated and no AI action is used.
         </p>
         <Playbooks onCreated={openWorkspace} />
@@ -277,7 +277,7 @@ export default function Campaigns() {
             </div>
           </div>
           <p className="muted">
-            Name it now — you’ll fill in the objective, offer, audience, key message, dates and channels in the
+            Name it now - you’ll fill in the objective, offer, audience, key message, dates and channels in the
             campaign’s guided Brief, which opens next. Nothing is generated and no AI action is used.
           </p>
           <button className="btn-primary" type="submit" disabled={!form.name.trim()}>Create and open brief</button>

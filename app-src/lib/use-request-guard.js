@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { createRequestGuard } from './request';
 
-// v13 SC-P1-07 — React binding for createRequestGuard.
+// v13 SC-P1-07 - React binding for createRequestGuard.
 //
 // Usage:
 //   const begin = useRequestGuard();

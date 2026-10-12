@@ -1,16 +1,16 @@
 // ---------------------------------------------------------------------------
 // v5 Prompt 14: transactional lifecycle emails (Resend), idempotent by design.
 //
-// Every send claims a unique dedupe_key row in email_events FIRST — webhook
+// Every send claims a unique dedupe_key row in email_events FIRST - webhook
 // redeliveries can never double-send. Send failures mark the row 'failed'
 // (a retryable delivery queue) but NEVER fail the caller: billing processing
 // stays durable whether or not the email went out. Without RESEND_API_KEY the
-// row is recorded as 'skipped' (free-tier/dev safety — nothing is sent).
+// row is recorded as 'skipped' (free-tier/dev safety - nothing is sent).
 // ---------------------------------------------------------------------------
 
 const supabase = require('./supabase');
 const { BRAND, emailFrom } = require('./brand');
-// v10 SC-06: consent gate — categories, suppression and unsubscribe links.
+// v10 SC-06: consent gate - categories, suppression and unsubscribe links.
 const { categoryOf, isSuppressed, unsubscribeUrl } = require('./email-consent');
 
 let resend = null;
@@ -55,7 +55,7 @@ function fmtDateTime(iso) {
   }
 }
 
-// Exact price/interval clause, e.g. "$24.99/month" — only shown when known.
+// Exact price/interval clause, e.g. "$24.99/month" - only shown when known.
 function priceClause({ price, interval } = {}) {
   if (!price) return '';
   const per = interval === 'year' || interval === 'yearly' ? 'year' : 'month';
@@ -68,15 +68,15 @@ const billingLink = () => `${(process.env.PUBLIC_URL || BRAND.siteUrl || '').rep
 const TEMPLATES = {
   welcome: () => ({
     subject: `Your ${BRAND.name} workspace is ready`,
-    html: template(`Your ${BRAND.name} workspace is ready`, `<p>Your account is verified. Setup is free — return to your Brand Profile and add the facts that drive every generation.</p><p><a href="${billingLink().replace('/account', '/brand')}">Set up your Brand Profile</a></p>`),
-    text: `Your ${BRAND.name} workspace is ready. Setup is free — the facts in your Brand Profile drive every generation. Start at ${billingLink().replace('/account', '/brand')}`,
+    html: template(`Your ${BRAND.name} workspace is ready`, `<p>Your account is verified. Setup is free - return to your Brand Profile and add the facts that drive every generation.</p><p><a href="${billingLink().replace('/account', '/brand')}">Set up your Brand Profile</a></p>`),
+    text: `Your ${BRAND.name} workspace is ready. Setup is free - the facts in your Brand Profile drive every generation. Start at ${billingLink().replace('/account', '/brand')}`,
   }),
   trial_started: ({ chargeAt, planLabel, price, interval } = {}) => {
     const pc = priceClause({ price, interval });
     const planStr = planLabel ? `the <strong>${planLabel}</strong> plan${pc ? ` at ${pc}` : ''}` : 'your subscription';
     return {
-      subject: `Your trial started — first charge on ${fmtDate(chargeAt)}`,
-      html: template('Your trial started', `<p>You have 20 AI actions and 1 full launch campaign to try the whole workspace.</p><p>Your trial converts to ${planStr} — first charge on <strong>${fmtDateTime(chargeAt)}</strong> unless you cancel before then. Cancel anytime: <a href="${billingLink()}">Account &amp; billing</a>.</p>`),
+      subject: `Your trial started - first charge on ${fmtDate(chargeAt)}`,
+      html: template('Your trial started', `<p>You have 20 AI actions and 1 full launch campaign to try the whole workspace.</p><p>Your trial converts to ${planStr} - first charge on <strong>${fmtDateTime(chargeAt)}</strong> unless you cancel before then. Cancel anytime: <a href="${billingLink()}">Account &amp; billing</a>.</p>`),
       text: `Your trial started. 20 AI actions and 1 full launch campaign included. First charge on ${fmtDateTime(chargeAt)}${planLabel ? ` for the ${planLabel} plan${pc ? ` at ${pc}` : ''}` : ''} unless you cancel before then. Cancel: ${billingLink()}`,
     };
   },
@@ -85,11 +85,11 @@ const TEMPLATES = {
     return {
       subject: `Your ${BRAND.name} trial ends tomorrow`,
       html: template(`Your ${BRAND.name} trial ends tomorrow`, `<p>Your trial ends and ${planLabel ? `the <strong>${planLabel}</strong> plan` : 'your subscription'} starts on <strong>${fmtDateTime(chargeAt)}</strong>${pc ? `, at <strong>${pc}</strong>` : ''}.</p><p>Want to keep going? Do nothing. Want to cancel? <a href="${billingLink()}">Cancel in Account &amp; billing</a> before that time and you won't be charged.</p>`),
-      text: `Your ${BRAND.name} trial ends on ${fmtDateTime(chargeAt)}${planLabel ? ` — ${planLabel} plan` : ''}${pc ? ` at ${pc}` : ''}. Cancel before then at ${billingLink()} and you won't be charged.`,
+      text: `Your ${BRAND.name} trial ends on ${fmtDateTime(chargeAt)}${planLabel ? ` - ${planLabel} plan` : ''}${pc ? ` at ${pc}` : ''}. Cancel before then at ${billingLink()} and you won't be charged.`,
     };
   },
   payment_succeeded: ({ periodEnd, planLabel, amount } = {}) => ({
-    subject: `Payment received — ${planLabel || BRAND.name} is active`,
+    subject: `Payment received - ${planLabel || BRAND.name} is active`,
     html: template('Payment received', `<p>${amount ? `We received your payment of <strong>${amount}</strong>. ` : ''}${planLabel ? `Your <strong>${planLabel}</strong> plan` : 'Your plan'} is active for this billing period, through <strong>${fmtDate(periodEnd)}</strong>. Your AI actions reset for the new period.</p><p><a href="${billingLink()}">View invoice &amp; billing</a></p>`),
     text: `Payment received${amount ? ` (${amount})` : ''}. ${planLabel || 'Your plan'} is active through ${fmtDate(periodEnd)}. Your AI actions reset for the new period. Billing: ${billingLink()}`,
   }),
@@ -100,14 +100,14 @@ const TEMPLATES = {
   }),
   // v10 SC-06: recovery closes the loop that payment_failed opens. Without it
   // the last thing a customer heard was "action needed", even after the charge
-  // succeeded — which reads as an unresolved problem with their money.
+  // succeeded - which reads as an unresolved problem with their money.
   payment_recovered: ({ periodEnd, amount } = {}) => ({
-    subject: 'Payment went through — your access continues',
+    subject: 'Payment went through - your access continues',
     html: template('Payment went through', `<p>${amount ? `Your payment of <strong>${amount}</strong> was received. ` : 'Your payment was received. '}Nothing further is needed and your access continues${periodEnd ? ` through <strong>${fmtDate(periodEnd)}</strong>` : ''}.</p><p>If you updated your card, the new one is now on file. <a href="${billingLink()}">View billing</a></p>`),
     text: `Your payment went through${amount ? ` (${amount})` : ''}. Nothing further is needed and your access continues${periodEnd ? ` through ${fmtDate(periodEnd)}` : ''}. Billing: ${billingLink()}`,
   }),
   // v10 SC-06: the ONLY optional nudge, and it fires solely when a specific
-  // canonical setup step is missing. `step` is a server-derived step key —
+  // canonical setup step is missing. `step` is a server-derived step key -
   // never campaign, brief or asset content.
   activation_nudge: ({ step } = {}) => {
     const STEPS = {
@@ -125,7 +125,7 @@ const TEMPLATES = {
       },
       approve_brief: {
         what: 'approve your campaign brief',
-        why: 'Approving locks in what new generations inherit — it takes a minute and nothing is generated.',
+        why: 'Approving locks in what new generations inherit - it takes a minute and nothing is generated.',
         href: billingLink().replace('/account', '/campaigns'),
         cta: 'Review the brief',
       },
@@ -133,8 +133,8 @@ const TEMPLATES = {
     const s = STEPS[step] || STEPS.brand_profile;
     return {
       subject: `One step left: ${s.what}`,
-      html: template('One step left', `<p>Your workspace is set up — the next step is to ${s.what}.</p><p>${s.why}</p><p><a href="${s.href}">${s.cta}</a></p><p>This step is free and uses no AI actions.</p>`),
-      text: `Your workspace is set up. Next: ${s.what}. ${s.why} ${s.href} — this step is free and uses no AI actions.`,
+      html: template('One step left', `<p>Your workspace is set up - the next step is to ${s.what}.</p><p>${s.why}</p><p><a href="${s.href}">${s.cta}</a></p><p>This step is free and uses no AI actions.</p>`),
+      text: `Your workspace is set up. Next: ${s.what}. ${s.why} ${s.href} - this step is free and uses no AI actions.`,
     };
   },
   cancellation_scheduled: ({ periodEnd } = {}) => ({
@@ -144,7 +144,7 @@ const TEMPLATES = {
   }),
   cancellation_completed: () => ({
     subject: 'Your subscription has ended',
-    html: template('Your subscription has ended', `<p>Your subscription is now canceled — you have not been charged further. Your account and generated work remain accessible read-only.</p><p>Come back anytime: <a href="${billingLink()}">restart from Account &amp; billing</a>.</p>`),
+    html: template('Your subscription has ended', `<p>Your subscription is now canceled - you have not been charged further. Your account and generated work remain accessible read-only.</p><p>Come back anytime: <a href="${billingLink()}">restart from Account &amp; billing</a>.</p>`),
     text: `Your subscription is canceled. Your work stays accessible read-only. Restart: ${billingLink()}`,
   }),
   deletion_completed: ({ completed, failedSteps = [] }) => ({
@@ -166,7 +166,7 @@ const TEMPLATES = {
 /**
  * v10 SC-06: append the footer that matches the message's category.
  * Marketing gets a working one-click unsubscribe. Transactional says WHY the
- * message was sent and that it cannot be unsubscribed from — so a receipt is
+ * message was sent and that it cannot be unsubscribed from - so a receipt is
  * never mistaken for marketing that ignored an opt-out.
  */
 function withConsentFooter(built, type, to) {
@@ -174,7 +174,7 @@ function withConsentFooter(built, type, to) {
   const url = marketing ? unsubscribeUrl(to) : null;
 
   const htmlFooter = marketing && url
-    ? `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">You're receiving this because you created a ${BRAND.name} account. <a href="${url}">Unsubscribe from optional email</a> — you'll still get billing and account messages.</p>`
+    ? `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">You're receiving this because you created a ${BRAND.name} account. <a href="${url}">Unsubscribe from optional email</a> - you'll still get billing and account messages.</p>`
     : `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">This is a billing and account message about your ${BRAND.name} subscription, so it isn't part of optional email.</p>`;
 
   const textFooter = marketing && url
@@ -188,7 +188,7 @@ function withConsentFooter(built, type, to) {
  * RFC 8058 one-click unsubscribe headers for marketing mail.
  *
  * Without these, Gmail and Apple Mail show no native "Unsubscribe" control, so
- * the only opt-out is the footer link buried at the bottom of the message —
+ * the only opt-out is the footer link buried at the bottom of the message -
  * which is what made unsubscribing feel impossible. Transactional mail
  * deliberately gets no headers: it is not unsubscribable.
  */
@@ -215,7 +215,7 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
 
   try {
     // v10 SC-06: consent gate. Marketing is checked against the suppression
-    // list; transactional never is — withholding a receipt or a charge notice
+    // list; transactional never is - withholding a receipt or a charge notice
     // because someone opted out of product news would be the worse failure.
     if (category === 'marketing' && (await isSuppressed(to))) {
       await supabase
@@ -225,14 +225,14 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
       return 'suppressed';
     }
 
-    // Claim first — the unique constraint makes retries no-ops. Template
-    // params (dates, plan labels — never generated content) are stored so the
+    // Claim first - the unique constraint makes retries no-ops. Template
+    // params (dates, plan labels - never generated content) are stored so the
     // outbox worker can rebuild the exact email on retry.
     const { error: insErr } = await supabase
       .from('email_events')
       .insert({ dedupe_key: dedupeKey, email_type: type, recipient: to, status: 'pending', category, payload: params });
     if (insErr) {
-      // Unique violation (or any insert failure): treat as already handled —
+      // Unique violation (or any insert failure): treat as already handled -
       // err toward not sending twice.
       return 'duplicate';
     }
@@ -278,7 +278,7 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
 // the atomic claim_email_outbox() SQL function (FOR UPDATE SKIP LOCKED +
 // lease), retries with exponential backoff and dead-letters after
 // MAX_ATTEMPTS. Safe to run from a cron endpoint and an admin route at the
-// same time — two workers can never claim the same row.
+// same time - two workers can never claim the same row.
 // ---------------------------------------------------------------------------
 
 const MAX_ATTEMPTS = Number(process.env.EMAIL_MAX_ATTEMPTS || 5);
@@ -297,7 +297,7 @@ async function processEmailOutbox({ limit = 20 } = {}) {
     p_lease_seconds: LEASE_SECONDS,
   });
   if (error) {
-    // Migration 025 not applied yet — nothing to process, report honestly.
+    // Migration 025 not applied yet - nothing to process, report honestly.
     console.error('[lifecycle-email] outbox claim failed:', error.message || error);
     return { ...summary, error: 'claim_failed' };
   }

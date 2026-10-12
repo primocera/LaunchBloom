@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v15 SC-04 — the canonical live-money rehearsal matrix and its record schema.
+// v15 SC-04 - the canonical live-money rehearsal matrix and its record schema.
 //
 // The repository used to describe the money-path rehearsal three different ways
 // (a "nine-transition matrix", a "step 1 of 7", a 13-row journey table). SC-01
@@ -21,7 +21,7 @@
 // live_required = this transition moves real money, or proves an entitlement /
 // ordering outcome only a real webhook stream delivers. A test-mode rehearsal
 // can exercise the state machine for every row, but it may NEVER satisfy a
-// live_required row for the public_paid track — that needs owner-observed live
+// live_required row for the public_paid track - that needs owner-observed live
 // evidence with a refund verification when money moved.
 const CANONICAL_MATRIX = Object.freeze([
   {
@@ -126,7 +126,7 @@ const SECRET_RE = /\b(sk_(live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|rk_(live|te
 
 // v23 SV-23-04: an observation time must be an explicit-UTC ISO-8601 timestamp.
 // A bare local time (no zone designator) is ambiguous and cannot be ordered
-// deterministically, so it is rejected — the ordered A–H sequence is only
+// deterministically, so it is rejected - the ordered A–H sequence is only
 // meaningful if every step carries a comparable instant.
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]00:00)$/;
 function isIsoUtc(s) {
@@ -135,7 +135,7 @@ function isIsoUtc(s) {
   return Number.isFinite(t);
 }
 
-/** A fresh not_run record skeleton for a candidate — the shape the owner fills. */
+/** A fresh not_run record skeleton for a candidate - the shape the owner fills. */
 function emptyRecord(candidateSha) {
   return {
     schema: 'rehearsal-record-1',
@@ -202,7 +202,7 @@ function validateRehearsalRecord(record, { candidateSha } = {}) {
       }
       // Test-mode can never satisfy a live-required row for public_paid.
       if (row.status === 'test_mode_rehearsed' && spec.live_required) {
-        problems.push(`row ${row.id}: is live_required but only test_mode_rehearsed — test-mode proof cannot satisfy a live row`);
+        problems.push(`row ${row.id}: is live_required but only test_mode_rehearsed - test-mode proof cannot satisfy a live row`);
       }
     }
 
@@ -210,7 +210,7 @@ function validateRehearsalRecord(record, { candidateSha } = {}) {
     for (const field of ['evidence', 'note']) {
       const v = row[field];
       if (typeof v !== 'string') continue;
-      if (EMAIL_RE.test(v)) problems.push(`row ${row.id}: ${field} contains an email — evidence must be opaque ids only`);
+      if (EMAIL_RE.test(v)) problems.push(`row ${row.id}: ${field} contains an email - evidence must be opaque ids only`);
       if (CARD_RE.test(v)) problems.push(`row ${row.id}: ${field} contains card-like digits`);
       if (SECRET_RE.test(v)) problems.push(`row ${row.id}: ${field} contains a provider secret`);
     }
@@ -218,13 +218,13 @@ function validateRehearsalRecord(record, { candidateSha } = {}) {
 
   // v23 SV-23-04: the ordered recovery sequence must be TIME-MONOTONE in the
   // canonical order A,B,C,D,E,F,G,H. A later step observed strictly BEFORE an
-  // earlier one — most importantly H (refund) before E/F/G — is not a clean
+  // earlier one - most importantly H (refund) before E/F/G - is not a clean
   // ordered A–H run even when every row is individually live_rehearsed: the
   // refund's precondition is "row F active with a real charge", so a refund
   // that predates the recovery describes a different, out-of-order reality.
   // Equal timestamps are allowed (a documented same-instant pair such as A/B);
   // only a strict inversion fails. Rows with a missing or malformed timestamp
-  // are skipped here — those are already reported above — so ordering is judged
+  // are skipped here - those are already reported above - so ordering is judged
   // only over comparable, well-formed instants.
   if (record.matrix === 'ordered_recovery_sequence') {
     const timed = [];
@@ -238,7 +238,7 @@ function validateRehearsalRecord(record, { candidateSha } = {}) {
       const cur = timed[i];
       if (cur.t < prev.t) {
         problems.push(
-          `row ${cur.id}: observed_at_utc is earlier than row ${prev.id} — the ordered A–H recovery sequence must be time-monotone `
+          `row ${cur.id}: observed_at_utc is earlier than row ${prev.id} - the ordered A–H recovery sequence must be time-monotone `
           + `(${cur.id} before ${prev.id} breaks the sequence and cannot count as a completed ordered run)`,
         );
       }

@@ -33,7 +33,7 @@ export default function WorkspaceSwitcher() {
     window.location.assign('/app');
   }
 
-  // v9 SC-09: inline create (no window.prompt) — accessible, keyboard-friendly.
+  // v9 SC-09: inline create (no window.prompt) - accessible, keyboard-friendly.
   async function createWorkspace(e) {
     e.preventDefault();
     setBusy(true);

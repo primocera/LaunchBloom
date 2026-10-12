@@ -15,7 +15,7 @@ export function ideaToPageBrief(item) {
 
 // ---------------------------------------------------------------------------
 // SEO Ideas Studio (v6 Prompt 14): full generator-shell parity with the other
-// four studios — campaign-aware, plan-gated, saved to seo_assets with
+// four studios - campaign-aware, plan-gated, saved to seo_assets with
 // provenance. Radically honest (v6 Prompt 25): output is content ideas to
 // RESEARCH. No search volume, difficulty, CPC or ranking claims exist
 // anywhere; every idea is explicitly labeled "Not researched".
@@ -40,9 +40,9 @@ const FIELDS = [
 
 // The pre-publish research checklist (mirrors backend seo-provider guidance).
 const RESEARCH_CHECKLIST = [
-  'Search the primary keyword in Google and read the top 10 results — match the dominant intent.',
+  'Search the primary keyword in Google and read the top 10 results - match the dominant intent.',
   'Check Google autocomplete and "People also ask" for real related phrases.',
-  'Use a keyword tool for volume and difficulty — record the source and date.',
+  'Use a keyword tool for volume and difficulty - record the source and date.',
   'Confirm you can create genuinely better content than what ranks now.',
   'Check the target page does not compete with an existing page for the same keyword.',
 ];
@@ -55,7 +55,7 @@ function renderIdea(item, { navigate }) {
       <div className="gen-card-title">
         {item.keyword}{' '}
         {researched ? (
-          <span className="seo-badge" title="Metrics recorded by you, with source and date.">Researched — {item.metric_source} ({item.metric_date})</span>
+          <span className="seo-badge" title="Metrics recorded by you, with source and date.">Researched - {item.metric_source} ({item.metric_date})</span>
         ) : (
           <span className="seo-badge" title="This is an AI content idea, not researched keyword data.">Not researched</span>
         )}
@@ -111,7 +111,7 @@ export default function SeoStudio() {
   return (
     <GeneratorStudio
       title="SEO Ideas"
-      blurb="Generate page and article ideas to research. No keyword volume, difficulty or ranking promise is inferred — any real metric must include its source and date."
+      blurb="Generate page and article ideas to research. No keyword volume, difficulty or ranking promise is inferred - any real metric must include its source and date."
       fields={FIELDS}
       initial={{ target_language: 'English' }}
       generate={(v, opts) => api.generateSeoIdeas(v, opts)}

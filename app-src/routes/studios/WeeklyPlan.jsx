@@ -99,7 +99,7 @@ export default function WeeklyPlan() {
   return (
     <StudioShell
       title="Weekly Action Plan"
-      blurb="Strategy turned into this week's tasks — check them off as you go."
+      blurb="Strategy turned into this week's tasks - check them off as you go."
       kits={kits}
       kitId={kitId}
       onSelectKit={setKitId}

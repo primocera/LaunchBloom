@@ -1,4 +1,4 @@
-// v5 Prompt 10 — pure helpers for the Social Studio calendar. No DOM/fetch so
+// v5 Prompt 10 - pure helpers for the Social Studio calendar. No DOM/fetch so
 // they are node:test-friendly (grouping + date validation).
 
 /** YYYY-MM-DD only. Matches the server-side planned_date guard. */

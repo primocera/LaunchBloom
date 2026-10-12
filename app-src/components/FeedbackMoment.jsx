@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 
 // ---------------------------------------------------------------------------
-// v11 SC-07 — the capped-beta feedback moment.
+// v11 SC-07 - the capped-beta feedback moment.
 //
 // Shown once per workspace per moment: after the first handoff export, and
 // after a cancel or refund. Dismissible, never blocking, and it never appears
-// again once answered — a prompt that returns after every export is nagging,
+// again once answered - a prompt that returns after every export is nagging,
 // not research.
 //
 // The questions come from the server so the wording lives in one place, and
@@ -41,7 +41,7 @@ export default function FeedbackMoment({ moment, title }) {
   if (state === 'done') {
     return (
       <div className="feedback-moment is-done" role="status">
-        Thank you — that goes straight to the person building this.
+        Thank you - that goes straight to the person building this.
       </div>
     );
   }

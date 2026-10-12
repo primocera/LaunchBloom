@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // Deterministic email-flow blueprints (audit Prompt 11).
 //
-// The flow TYPE decides the email count and each email's objective/timing —
-// deterministically, before the AI is called — so "welcome" always produces
+// The flow TYPE decides the email count and each email's objective/timing -
+// deterministically, before the AI is called - so "welcome" always produces
 // the right number of emails with the right purpose. The AI only fills copy
 // into a fixed structure; it never decides how many emails to write.
 // ---------------------------------------------------------------------------
@@ -13,8 +13,8 @@ const FLOW_BLUEPRINTS = {
     label: 'Welcome',
     steps: [
       { objective: 'Welcome + deliver the promised value / lead magnet', send_timing: 'Immediately', segment: 'New subscribers' },
-      { objective: 'Brand story — why you exist, what you stand for', send_timing: 'Day 2', segment: 'New subscribers' },
-      { objective: 'Product / service education — how it helps them', send_timing: 'Day 4', segment: 'New subscribers' },
+      { objective: 'Brand story - why you exist, what you stand for', send_timing: 'Day 2', segment: 'New subscribers' },
+      { objective: 'Product / service education - how it helps them', send_timing: 'Day 4', segment: 'New subscribers' },
       { objective: 'Handle the top objection, build trust', send_timing: 'Day 6', segment: 'New subscribers (not yet purchased)' },
       { objective: 'Present the offer with a clear reason to act', send_timing: 'Day 8', segment: 'New subscribers (not yet purchased)' },
     ],
@@ -22,7 +22,7 @@ const FLOW_BLUEPRINTS = {
   abandon_cart: {
     label: 'Abandoned cart',
     steps: [
-      { objective: 'Friendly reminder — the items are still waiting', send_timing: '1 hour after abandonment', segment: 'Cart abandoners' },
+      { objective: 'Friendly reminder - the items are still waiting', send_timing: '1 hour after abandonment', segment: 'Cart abandoners' },
       { objective: 'Address objections + reassurance (shipping, returns, trust)', send_timing: '24 hours after', segment: 'Cart abandoners (not purchased)' },
       { objective: 'Final honest reminder (no fake urgency)', send_timing: '48 hours after', segment: 'Cart abandoners (not purchased)' },
     ],
@@ -54,7 +54,7 @@ const FLOW_BLUEPRINTS = {
   winback: {
     label: 'Winback',
     steps: [
-      { objective: 'We miss you — reconnect, no pressure', send_timing: 'Day 0 of winback', segment: 'Lapsed customers (60-90 days inactive)' },
+      { objective: 'We miss you - reconnect, no pressure', send_timing: 'Day 0 of winback', segment: 'Lapsed customers (60-90 days inactive)' },
       { objective: 'Offer an incentive to return', send_timing: 'Day 5', segment: 'Lapsed customers (still inactive)' },
       { objective: 'Last honest chance before reducing email frequency', send_timing: 'Day 12', segment: 'Lapsed customers (still inactive)' },
     ],
@@ -62,14 +62,14 @@ const FLOW_BLUEPRINTS = {
   back_in_stock: {
     label: 'Back-in-stock',
     steps: [
-      { objective: 'The product they wanted is available again — clear next step', send_timing: 'Immediately on restock', segment: 'Back-in-stock waitlist' },
+      { objective: 'The product they wanted is available again - clear next step', send_timing: 'Immediately on restock', segment: 'Back-in-stock waitlist' },
       { objective: 'Honest reminder while stock lasts (only real scarcity)', send_timing: '24 hours after restock', segment: 'Back-in-stock waitlist (not purchased)' },
     ],
   },
   sunset: {
     label: 'Sunset / re-engagement',
     steps: [
-      { objective: 'Ask if they still want to hear from you — easy opt-in to stay', send_timing: 'Day 0 of sunset', segment: 'Unengaged (90+ days no opens/clicks)' },
+      { objective: 'Ask if they still want to hear from you - easy opt-in to stay', send_timing: 'Day 0 of sunset', segment: 'Unengaged (90+ days no opens/clicks)' },
       { objective: 'Final email before removing them from the active list', send_timing: 'Day 7', segment: 'Unengaged (still no response)' },
     ],
   },
@@ -116,7 +116,7 @@ function buildSequence(flowTypes, { campaignCount = 4 } = {}) {
   const structureText = Object.entries(byFlow)
     .map(([flow, list]) => {
       const label = (FLOW_BLUEPRINTS[flow] && FLOW_BLUEPRINTS[flow].label) || 'Campaign';
-      const lines = list.map((e) => `  ${e.email_order}. ${e.objective} — send: ${e.send_timing} — segment: ${e.segment}`).join('\n');
+      const lines = list.map((e) => `  ${e.email_order}. ${e.objective} - send: ${e.send_timing} - segment: ${e.segment}`).join('\n');
       return `${label} flow (${list.length} emails):\n${lines}`;
     })
     .join('\n\n');

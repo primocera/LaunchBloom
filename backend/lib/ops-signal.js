@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v12 SC-V12-04 — structured operational signals for billing/webhook events.
+// v12 SC-V12-04 - structured operational signals for billing/webhook events.
 //
 // Replaces ad-hoc console.log lines with one machine-parseable shape, so an
 // operator (or a log drain) can count webhook failures, ignored foreign events
@@ -18,7 +18,7 @@
 const PREFIX = 'ops-signal';
 
 // Only these fields may appear in a signal. Anything else is dropped rather
-// than trusted — the whitelist is the guarantee, not the caller's discipline.
+// than trusted - the whitelist is the guarantee, not the caller's discipline.
 const ALLOWED_FIELDS = Object.freeze([
   'event_id',
   'event_type',

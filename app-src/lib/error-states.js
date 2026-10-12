@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v13 SC-P1-10 — the typed error-to-copy contract. Every critical failure or
+// v13 SC-P1-10 - the typed error-to-copy contract. Every critical failure or
 // blank-slate state resolves to ONE structured object that answers the three
 // questions a user actually has:
 //   1. what happened (plain language, never raw provider/Stripe/Supabase text)
@@ -16,7 +16,7 @@
 
 import { microcopy, messageForError } from './microcopy.js';
 
-/** Stable analytics slugs — one per required state. */
+/** Stable analytics slugs - one per required state. */
 export const ERROR_CATEGORIES = {
   PLAN_VERIFICATION: 'plan_verification',
   CHECKOUT_CONFIG: 'checkout_config',
@@ -27,7 +27,7 @@ export const ERROR_CATEGORIES = {
   UNKNOWN: 'unknown',
 };
 
-/** Stable recovery-action slugs (the `kind`) — also used for instrumentation. */
+/** Stable recovery-action slugs (the `kind`) - also used for instrumentation. */
 export const RECOVERY_ACTIONS = {
   RETRY: 'retry',
   UPGRADE: 'upgrade',
@@ -39,7 +39,7 @@ export const RECOVERY_ACTIONS = {
 // line so an alert can always state it plainly, separate from what happened.
 const NO_CHARGE_NO_LOSS = 'You weren’t charged and nothing was lost.';
 const BRIEF_SAVED_NO_CHARGE = 'No AI action was charged and your brief is saved.';
-const ACCESS_UNCHANGED = 'Your access hasn’t changed — this is a temporary check failure.';
+const ACCESS_UNCHANGED = 'Your access hasn’t changed - this is a temporary check failure.';
 
 /**
  * Plan/entitlement verification is temporarily unavailable (SC-P0-01: fails
@@ -79,7 +79,7 @@ export function checkoutConfigState(err = {}) {
 /**
  * LB-V17-01: the trial/billing eligibility read could not be confirmed (network
  * failure, 5xx, malformed payload, aborted fetch). This is NOT eligible and NOT
- * ineligible — it is unknown. We must never render a trial promise or a
+ * ineligible - it is unknown. We must never render a trial promise or a
  * charged-today claim from this state; only offer Retry and confirm no charge.
  */
 export function trialUnavailableState(err = {}) {
@@ -88,7 +88,7 @@ export function trialUnavailableState(err = {}) {
     role: 'alert',
     title: 'We couldn’t confirm your billing status',
     message: 'We couldn’t check whether your free trial is available right now. You have not been charged.',
-    reassurance: 'Nothing was lost and no charge was made — this is a temporary check failure.',
+    reassurance: 'Nothing was lost and no charge was made - this is a temporary check failure.',
     action: { kind: RECOVERY_ACTIONS.RETRY, label: 'Try again' },
     reqId: err.req_id || err.requestId || null,
   };
@@ -141,7 +141,7 @@ export function exportFailureState(err = {}) {
     role: 'alert',
     title: 'We couldn’t export just now',
     message: microcopy('export_failed', varsFrom(err)),
-    reassurance: 'Your reviewed assets are still saved — nothing was lost.',
+    reassurance: 'Your reviewed assets are still saved - nothing was lost.',
     action: { kind: RECOVERY_ACTIONS.RETRY, label: 'Try again' },
     reqId: err.req_id || err.requestId || null,
   };
@@ -150,9 +150,9 @@ export function exportFailureState(err = {}) {
 // Empty/new workspace: guide the one path (Brand Profile → Campaign Brief →
 // first reviewed asset), NOT a wall of five disconnected generators.
 export const WORKSPACE_START_STEPS = [
-  { key: 'brand', label: 'Set up your Brand Profile', to: '/app/brand', hint: 'Your offer, audience and voice — used by every generation.' },
+  { key: 'brand', label: 'Set up your Brand Profile', to: '/app/brand', hint: 'Your offer, audience and voice - used by every generation.' },
   { key: 'brief', label: 'Create a campaign and approve its brief', to: '/app/campaigns', hint: 'One offer, audience, goal and CTA the assets stay consistent with.' },
-  { key: 'asset', label: 'Generate your first reviewed asset', to: '/app/create', hint: 'Assets stay attached to that brief — review facts before you use them.' },
+  { key: 'asset', label: 'Generate your first reviewed asset', to: '/app/create', hint: 'Assets stay attached to that brief - review facts before you use them.' },
 ];
 
 export function emptyWorkspaceState() {
@@ -160,7 +160,7 @@ export function emptyWorkspaceState() {
     category: ERROR_CATEGORIES.EMPTY_WORKSPACE,
     role: 'status',
     title: 'Start here',
-    message: 'Set up your brand once, then build a campaign brief — your assets follow from there.',
+    message: 'Set up your brand once, then build a campaign brief - your assets follow from there.',
     reassurance: 'Setting up uses no AI action.',
     steps: WORKSPACE_START_STEPS,
     action: { kind: RECOVERY_ACTIONS.LINK, label: 'Set up Brand Profile', to: '/app/brand' },
@@ -184,7 +184,7 @@ export function errorStateFor(err = {}, { context } = {}) {
   if (context === 'export') return exportFailureState(err);
   if (context === 'generation') return generationFailedState(err);
 
-  // Fall through to the generic recovery copy — still typed, never raw text.
+  // Fall through to the generic recovery copy - still typed, never raw text.
   return {
     category: ERROR_CATEGORIES.UNKNOWN,
     role: 'alert',
@@ -199,7 +199,7 @@ export function errorStateFor(err = {}, { context } = {}) {
 /**
  * Instrument that an error state was shown and (optionally) which recovery the
  * user took. Sends ONLY the category + recovery-action slug (+ an optional
- * feature label) — never campaign content, briefs, or raw error text.
+ * feature label) - never campaign content, briefs, or raw error text.
  */
 export function trackErrorState(track, state, { feature, recovery } = {}) {
   if (typeof track !== 'function' || !state) return;

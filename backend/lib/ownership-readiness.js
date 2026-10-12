@@ -1,25 +1,25 @@
 // ---------------------------------------------------------------------------
-// SV-21-01 (v21) — Stripe-ownership rollout readiness.
+// SV-21-01 (v21) - Stripe-ownership rollout readiness.
 //
 // A single, PURE classifier for "how far along is the canonical-ownership
 // rollout, and is it safe to charge money?". It distinguishes the five distinct
 // states the runbook cares about instead of collapsing them into one boolean:
 //
 //   migration_missing        migration 038 (customers.app_user_id + legacy map)
-//                            is not applied — nothing else can be trusted yet.
+//                            is not applied - nothing else can be trusted yet.
 //   backfill_incomplete      migration applied, but legacy customer rows still
 //                            carry a NULL app_user_id (not yet backfilled).
 //   ambiguous_present        one or more stripe_object_ownership rows are
-//                            status='ambiguous' — these block paid expansion on
+//                            status='ambiguous' - these block paid expansion on
 //                            purpose and must be reconciled by hand.
 //   fallback_enabled         the narrow price-only legacy fallback is still on
 //                            (STRIPE_OWNERSHIP_ENFORCED is not set).
 //   enforcement_active       migration applied, backfill complete, zero ambiguous
-//                            rows AND the price-only fallback is disabled — the
+//                            rows AND the price-only fallback is disabled - the
 //                            canonical rule is the only rule.
 //
 // Paid readiness FAILS CLOSED: `paid_ready` is true ONLY in enforcement_active.
-// A capped beta deliberately runs with fallback_enabled — that is a WARNING for
+// A capped beta deliberately runs with fallback_enabled - that is a WARNING for
 // paid, never a blocker for the supervised beta. This module makes no I/O and no
 // launch decision; the admin readiness endpoint feeds it observed counts and the
 // launch gate/owner reads the result.
@@ -33,17 +33,17 @@ const STATE = Object.freeze({
   AMBIGUOUS_PRESENT: 'ambiguous_present',
   // SV-22-01 (v22): migration applied, but the deployed uniqueness on
   // customers(app_user_id) is NOT a valid ON CONFLICT arbiter (the 039-only
-  // PARTIAL index, or none) — so the canonical upsert would fail under
+  // PARTIAL index, or none) - so the canonical upsert would fail under
   // enforcement. Migration 040 fixes this; the DB probe measures the invariant.
   UNIQUENESS_MISSING: 'uniqueness_missing',
   FALLBACK_ENABLED: 'fallback_enabled',
   ENFORCEMENT_ACTIVE: 'enforcement_active',
-  UNKNOWN: 'unknown', // a required observation could not be made — fail closed
+  UNKNOWN: 'unknown', // a required observation could not be made - fail closed
 });
 
 /**
  * Classify ownership rollout readiness from observed inputs. Every input is a
- * fact the endpoint measured (or null when it could not measure it — which is
+ * fact the endpoint measured (or null when it could not measure it - which is
  * treated as unknown / not-ready, never as healthy).
  *
  * @param {object} o
@@ -90,7 +90,7 @@ function classifyOwnershipReadiness(o = {}) {
     return { state: STATE.AMBIGUOUS_PRESENT, paid_ready: false, enforced, blockers };
   }
 
-  // SV-22-01: the EXACT uniqueness invariant — verified through a DB probe, never
+  // SV-22-01: the EXACT uniqueness invariant - verified through a DB probe, never
   // mere column presence. Under enforcement the canonical customer upsert relies
   // on `ON CONFLICT (app_user_id)` inferring a NON-partial unique index; if that
   // arbiter is absent the upsert fails, so an unmeasured or missing invariant must
@@ -108,7 +108,7 @@ function classifyOwnershipReadiness(o = {}) {
   // present. The only remaining question is whether the price-only fallback has
   // been switched off.
   if (!enforced) {
-    // Fully prepared but the last switch is not flipped — safe capped-beta state.
+    // Fully prepared but the last switch is not flipped - safe capped-beta state.
     return { state: STATE.FALLBACK_ENABLED, paid_ready: false, enforced, blockers: [] };
   }
   return { state: STATE.ENFORCEMENT_ACTIVE, paid_ready: true, enforced, blockers: [] };

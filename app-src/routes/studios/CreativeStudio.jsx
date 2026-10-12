@@ -23,7 +23,7 @@ const FIELDS = [
     options: [
       { value: 'static', label: 'Static', title: 'Single-image concept: hook, headline, primary text, visual direction' },
       { value: 'video', label: 'Video', title: 'Timed script with scenes, on-screen text, b-roll and end card' },
-      { value: 'ugc', label: 'UGC', title: 'Creator-style script — you must have real creator consent and usage rights' },
+      { value: 'ugc', label: 'UGC', title: 'Creator-style script - you must have real creator consent and usage rights' },
       { value: 'carousel', label: 'Carousel', title: 'Card-by-card structure with roles per slide' },
       { value: 'search_ad', label: 'Search ad', title: 'Concise headlines (≤30 chars) and descriptions (≤90) with keyword intents' },
     ],
@@ -39,7 +39,7 @@ const FIELDS = [
   },
   { name: 'placement', label: 'Placement', type: 'text', placeholder: 'e.g. Reels, Feed, Search' },
   { name: 'offer', label: 'Offer', type: 'text', placeholder: 'What the ad promotes' },
-  { name: 'proof', label: 'Proof available', type: 'textarea', placeholder: 'Only real reviews / numbers / results — never invented' },
+  { name: 'proof', label: 'Proof available', type: 'textarea', placeholder: 'Only real reviews / numbers / results - never invented' },
   { name: 'mandatory_elements', label: 'Mandatory elements', type: 'text', placeholder: 'Logo, disclaimer, brand colours…' },
   { name: 'prohibited_claims', label: 'Prohibited claims', type: 'text', placeholder: 'Claims you must not make' },
   { name: 'production_constraints', label: 'Production constraints', type: 'text', placeholder: 'e.g. phone-only, no actors, one location' },
@@ -100,10 +100,10 @@ function ComplianceBlock({ item, onChange }) {
       <strong>Compliance ({flags.length})</strong>
       <ul>{flags.map((f, i) => <li key={i}>{f}</li>)}</ul>
       {recorded ? (
-        <p className="flow-muted">Proof recorded: {ack.proof_source} — you can mark this ready.</p>
+        <p className="flow-muted">Proof recorded: {ack.proof_source} - you can mark this ready.</p>
       ) : (
         <>
-          <p className="flow-muted">Where does the proof for these claims live? A link or description is required — acknowledging alone can’t approve a claim.</p>
+          <p className="flow-muted">Where does the proof for these claims live? A link or description is required - acknowledging alone can’t approve a claim.</p>
           <input
             className="flow-input"
             placeholder="e.g. link to the review page, case-study doc, sales report"
@@ -172,7 +172,7 @@ export default function CreativeStudio() {
   return (
     <GeneratorStudio
       title="Ads & Creative"
-      blurb="Generate creative briefs a human design or media team can produce from — distinct concepts, scripts and testing hypotheses. These are drafts, not rendered media, approved ads or launched campaigns. High-risk claims stay blocked until real proof is recorded."
+      blurb="Generate creative briefs a human design or media team can produce from - distinct concepts, scripts and testing hypotheses. These are drafts, not rendered media, approved ads or launched campaigns. High-risk claims stay blocked until real proof is recorded."
       fields={FIELDS}
       initial={{ target_language: 'English', platforms: ['meta'], formats: ['static', 'video'] }}
       generate={(v, opts) => api.generateCreativeAssets(v, opts)}

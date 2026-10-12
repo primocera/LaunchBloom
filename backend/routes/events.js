@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Client-fired analytics events (audit Prompt 15). Auth is optional — the
+// Client-fired analytics events (audit Prompt 15). Auth is optional - the
 // landing page and pre-auth onboarding steps fire these signed out. Only a
 // small allowlisted set of event names is accepted; anything else is dropped
 // silently so this endpoint can't become an arbitrary write.

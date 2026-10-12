@@ -54,6 +54,15 @@ test('legal pages contain no bracketed [PLACEHOLDER] text', () => {
   assert.ok(!src.includes('[PLACEHOLDER'), 'Legal.jsx still contains placeholder legal copy');
 });
 
+test('legal pages state eligibility, EU withdrawal and the GDPR Art. 13 essentials', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'app-src', 'routes', 'Legal.jsx'), 'utf8');
+  for (const heading of ['Eligibility', 'Right of withdrawal', 'Who we are', 'Legal basis', 'International transfers', 'Children']) {
+    assert.ok(src.includes(`['${heading}`), `legal pages are missing the "${heading}" section`);
+  }
+  assert.match(src, /at least 18 years old/);
+  assert.match(src, /lodge a complaint with the data protection authority/);
+});
+
 test('all footer legal links resolve to a defined document slug', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'app-src', 'routes', 'Legal.jsx'), 'utf8');
   for (const slug of ['terms', 'privacy', 'cookies', 'ai-disclaimer', 'refund']) {

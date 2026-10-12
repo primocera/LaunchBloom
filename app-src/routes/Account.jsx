@@ -8,7 +8,7 @@ import ErrorState from '../components/ErrorState';
 import { planVerificationState, exportFailureState, trackErrorState } from '../lib/error-states';
 import { clearAllDrafts, draftCount } from '../lib/local-drafts';
 
-// Prompts 8 + 14: account page — profile, billing (plan, trial countdown, next
+// Prompts 8 + 14: account page - profile, billing (plan, trial countdown, next
 // charge, billing portal), usage, data export and account deletion.
 function fmtDate(iso) {
   if (!iso) return null;
@@ -32,19 +32,19 @@ export default function Account() {
   const [workspaces, setWorkspaces] = useState([]);
   const [renaming, setRenaming] = useState(null); // { id, name } while editing
   const [receipt, setReceipt] = useState(null); // Prompt 27: deletion receipt
-  // Plan selection happens here, in the app — sending a signed-in user to the
+  // Plan selection happens here, in the app - sending a signed-in user to the
   // marketing page's #pricing anchor dropped them on the landing page instead.
   const [paywall, setPaywall] = useState(false);
 
   // v13 SC-P0-01: a 503 PLAN_UNAVAILABLE must not render the user as Free and
-  // must not spin forever — show the recoverable notice with an explicit retry.
+  // must not spin forever - show the recoverable notice with an explicit retry.
   function loadBilling(isCancelled = () => false) {
     return api.billing().then(
       (b) => { if (!isCancelled()) { setBilling(b); setPlanUnavailable(null); } },
       (err) => {
         if (isCancelled()) return;
         if (err && err.code === 'PLAN_UNAVAILABLE') {
-          // v13 SC-P1-10: typed state — preserve access, offer retry + support,
+          // v13 SC-P1-10: typed state - preserve access, offer retry + support,
           // and never render the user as Free.
           const st = planVerificationState(err);
           setPlanUnavailable(st);
@@ -70,7 +70,7 @@ export default function Account() {
     return () => { cancelled = true; };
   }, []);
 
-  // v9 SC-09: inline rename (no window.prompt) — accessible, keyboard-friendly.
+  // v9 SC-09: inline rename (no window.prompt) - accessible, keyboard-friendly.
   async function renameWorkspace(id, name) {
     try { await api.renameWorkspace(id, name.trim() || 'Workspace'); setRenaming(null); loadWorkspaces(); }
     catch (err) { setError(err.message); }
@@ -129,7 +129,7 @@ export default function Account() {
   }
 
   const sub = billing?.subscription;
-  // Exact price/interval for billing copy — from the subscription when present.
+  // Exact price/interval for billing copy - from the subscription when present.
   const priceStr = sub && (sub.price_display || (sub.amount != null ? `$${(sub.amount / 100).toFixed(2)}` : null));
   const per = sub && (sub.interval === 'year' || sub.interval === 'yearly') ? 'year' : 'month';
   const planName = billing?.plan_label || account?.plan_label || 'your plan';
@@ -151,7 +151,7 @@ export default function Account() {
             <ul className="kit-outline">
               {steps.map((s) => (
                 <li key={s.step || s.name}>
-                  {(s.step || s.name || '').replace(/_/g, ' ')} — <strong>{s.status}</strong>
+                  {(s.step || s.name || '').replace(/_/g, ' ')} - <strong>{s.status}</strong>
                   {s.detail ? ` (${s.detail})` : ''}
                 </li>
               ))}
@@ -267,14 +267,14 @@ export default function Account() {
         {billing ? (
           <>
             <p>
-              <strong>{billing.usage?.ai_actions ?? 0} of {billing.limits?.ai_actions ?? '—'}</strong>{' '}
+              <strong>{billing.usage?.ai_actions ?? 0} of {billing.limits?.ai_actions ?? '-'}</strong>{' '}
               AI actions used
               {fmtDate(billing.usage?.resets_at || sub?.current_period_end)
                 ? ` · resets ${fmtDate(billing.usage?.resets_at || sub?.current_period_end)}`
                 : ''}
             </p>
             <p>
-              <strong>{billing.usage?.launch_kits ?? 0} of {billing.limits?.launch_kits ?? '—'}</strong>{' '}
+              <strong>{billing.usage?.launch_kits ?? 0} of {billing.limits?.launch_kits ?? '-'}</strong>{' '}
               full launch campaigns used
             </p>
             <p className="muted">Editing and exporting are always free.</p>
@@ -296,7 +296,7 @@ export default function Account() {
         <p className="muted">
           Unsaved studio and campaign forms are kept only in this browser so your work survives a
           reload or sign-in redirect. They expire automatically and are cleared when you sign out.
-          This is device-only recovery — not encrypted secure storage. Clearing them does not delete
+          This is device-only recovery - not encrypted secure storage. Clearing them does not delete
           any campaign or asset already saved to your account.
         </p>
         <button className="btn-secondary" onClick={clearDrafts}>
@@ -332,7 +332,7 @@ export default function Account() {
         <h2>Support</h2>
         <p className="muted">
           We typically reply within 1–2 business days. If you hit an error, include the request ID
-          shown in the message — it lets us diagnose without seeing your content.
+          shown in the message - it lets us diagnose without seeing your content.
         </p>
         <a className="btn-secondary inline" href={`mailto:${BRAND.supportEmail}`}>Contact support</a>
       </section>

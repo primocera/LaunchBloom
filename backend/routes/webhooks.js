@@ -23,7 +23,7 @@ const ownership = require('../lib/stripe-ownership');
 /**
  * Derive { planLabel, price, interval } from a Stripe subscription so lifecycle
  * emails can state the exact plan and post-trial price (Prompt 29). Returns an
- * empty object when the price can't be resolved — templates degrade gracefully.
+ * empty object when the price can't be resolved - templates degrade gracefully.
  */
 function priceInfo(subscription) {
   try {
@@ -49,15 +49,15 @@ function priceInfo(subscription) {
 
 // ── foreign-event filtering (see handoff-scalvya.md Part 1) ─────────────────
 // One Stripe account serves Mellowa, Frost and Scalvya, and Stripe broadcasts
-// every matching event type to every endpoint on the account — so this handler
+// every matching event type to every endpoint on the account - so this handler
 // receives other products' subscription events. Those must be ACKNOWLEDGED and
 // DROPPED, never processed (they clobber customer rows and send our lifecycle
 // mail for other products' trials) and never thrown on (permanently failing
 // deliveries get the endpoint disabled by Stripe).
 
 // Peer-product stamp detector, canonical in lib/stripe-ownership.js. On the
-// shared account, `source` — not a bare app_user_id key any product could also
-// set — is what proves ownership; the full typed rule lives in that service and
+// shared account, `source` - not a bare app_user_id key any product could also
+// set - is what proves ownership; the full typed rule lives in that service and
 // is reached here through ownsSubscription / isOurCharge.
 const { hasForeignStamp } = ownership;
 
@@ -67,12 +67,12 @@ const { hasForeignStamp } = ownership;
  * could also carry.
  *
  *   1. Exact stamp: metadata.source === 'launchbloom' (or the equivalent
- *      metadata.scalvya === '1') — self-identifying, no email needed. Every
+ *      metadata.scalvya === '1') - self-identifying, no email needed. Every
  *      subscription created after LB-V17-02 carries this.
  *   2. A foreign stamp is present → definitely NOT ours (drop, no fallback).
  *   3. Narrow LEGACY fallback: a configured Scalvya price AND no foreign stamp.
  *      This covers pre-LB-V17-02 subscriptions (app_user_id only) and the
- *      event-before-row race. A price match alone — with a foreign stamp — is
+ *      event-before-row race. A price match alone - with a foreign stamp - is
  *      never enough. Returns { legacy: true } so the caller can measure it.
  *
  * Returns a result object; use `isOurSubscription(sub).ours` for a boolean.
@@ -103,13 +103,13 @@ function isOurSubscription(subscription) {
 /**
  * The single canonical projection of a Stripe subscription into the local
  * `subscriptions` mirror row. Extracted so the webhook handler AND the v18 S05
- * pull-based reconciliation job write the SAME shape — Stripe stays the one
+ * pull-based reconciliation job write the SAME shape - Stripe stays the one
  * billing truth; this is only its deterministic mirror, never a second source.
  * Pure and side-effect-free.
  *
  * Stripe moved current_period_start/end OFF the subscription object and ONTO
  * the subscription item in recent API versions (2025+/2026 dahlia). Read the
- * top-level field first for older versions, then fall back to the item — else
+ * top-level field first for older versions, then fall back to the item - else
  * the renewal date is stored as null and the account page shows "renews on .".
  */
 function subscriptionMirrorRow(subscription, customerId, eventAt) {
@@ -151,12 +151,12 @@ function invoiceSubscriptionId(invoice) {
 }
 
 /**
- * SV-21-01 (v21): canonical invoice ownership — replaces the old price-only
+ * SV-21-01 (v21): canonical invoice ownership - replaces the old price-only
  * isOurInvoice, which adopted ANY invoice whose first line used a configured
  * Scalvya price (so a foreign product's invoice on a shared price would be
  * processed). An invoice is now ours ONLY when its SUBSCRIPTION classifies as
  * owned / legacy_mapped (or, until the fallback is sunset, legacy_price via the
- * subscription's own metadata) — the invoice line price is never proof.
+ * subscription's own metadata) - the invoice line price is never proof.
  *
  * Returns { ours, legacy, state, unavailable }:
  *   - a trusted local mirror row is accepted, but a stored-metadata foreign or
@@ -172,7 +172,7 @@ async function classifyInvoiceOwnership(invoice, options = {}) {
   const unavailable = { ours: false, legacy: false, state: ownership.OWNERSHIP.UNAVAILABLE, unavailable: true };
 
   const subId = invoiceSubscriptionId(invoice);
-  if (!subId) return notOurs; // non-subscription invoice — not ours (parity with prior behaviour)
+  if (!subId) return notOurs; // non-subscription invoice - not ours (parity with prior behaviour)
 
   const classifyOpts = {
     isConfiguredPrice: (priceId) => {
@@ -182,7 +182,7 @@ async function classifyInvoiceOwnership(invoice, options = {}) {
     legacyMap: options.legacyMap,
   };
 
-  // 1. Trusted local mirror. A real read failure is NOT "no row" — fail closed
+  // 1. Trusted local mirror. A real read failure is NOT "no row" - fail closed
   //    (retryable) rather than misclassify an unreadable mirror as foreign.
   const { data: mirror, error } = await supabase
     .from('subscriptions')
@@ -193,7 +193,7 @@ async function classifyInvoiceOwnership(invoice, options = {}) {
   if (mirror) {
     // A mirror is only ever written for an owned subscription, so its presence is
     // ownership proof. Still fail closed if its STORED metadata actively PROVES
-    // the object foreign/conflicting (defense in depth) — but absence of a stamp
+    // the object foreign/conflicting (defense in depth) - but absence of a stamp
     // (older rows carry no source metadata) does NOT prove foreign, so an
     // unstamped mirror stays ours and enforcement never revokes a subscription we
     // are actively mirroring.
@@ -211,7 +211,7 @@ async function classifyInvoiceOwnership(invoice, options = {}) {
   //    EVERY sibling product's invoice on the shared account, apply a cheap
   //    NEGATIVE filter: an invoice is only plausibly ours if it carries our exact
   //    stamp, an explicit legacy mapping, or a configured Scalvya price. The
-  //    price is used ONLY to decide whether to look — never to adopt (adoption
+  //    price is used ONLY to decide whether to look - never to adopt (adoption
   //    still requires the retrieved subscription's metadata / legacy map below).
   const invoiceMeta = invoice.subscription_details?.metadata || invoice.metadata || {};
   const priceId = invoice.lines?.data?.[0]?.price?.id;
@@ -220,7 +220,7 @@ async function classifyInvoiceOwnership(invoice, options = {}) {
   if (ownership.hasForeignStamp(invoiceMeta)) return notOurs;
   if (!(ownership.hasExactStamp(invoiceMeta) || mappedLegacy || configuredPrice)) return notOurs;
 
-  // 3. Plausibly ours — classify the referenced Stripe subscription by its exact
+  // 3. Plausibly ours - classify the referenced Stripe subscription by its exact
   //    metadata (or an explicit legacy mapping). The invoice line price is never
   //    used as proof; a transient retrieve failure fails closed (retryable).
   let subscription;
@@ -275,7 +275,7 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
   try {
     claim = await claimEvent(event);
   } catch (err) {
-    // Transient DB failure — 5xx so Stripe retries later.
+    // Transient DB failure - 5xx so Stripe retries later.
     console.error(`Could not claim event ${event.id}:`, err.message);
     return res.status(500).json({ error: 'Temporary error, please retry' });
   }
@@ -289,10 +289,10 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
   } catch (err) {
     console.error(`Error handling event ${event.type} [${event.id}]:`, err);
     await markFailed(event.id, err.message).catch(() => {});
-    // Structured signal for the readiness endpoint / log drain — no PII, only
+    // Structured signal for the readiness endpoint / log drain - no PII, only
     // the opaque event id and type.
     opsSignal('webhook_failed', { event_id: event.id, event_type: event.type, severity: 'error' });
-    // 5xx so Stripe retries — durable processing did NOT complete.
+    // 5xx so Stripe retries - durable processing did NOT complete.
     return res.status(500).json({ error: 'Processing failed, please retry' });
   }
 
@@ -333,7 +333,7 @@ async function claimEvent(event) {
     .from('stripe_events')
     .insert({ event_id: event.id, type: event.type, status: 'processing' });
   if (insErr) {
-    // Likely a concurrent delivery inserted first — re-check its status.
+    // Likely a concurrent delivery inserted first - re-check its status.
     const { data: row } = await supabase
       .from('stripe_events')
       .select('status')
@@ -362,7 +362,7 @@ async function handleEvent(event) {
   const data = event.data.object;
   const eventAt = event.created ? new Date(event.created * 1000).toISOString() : new Date().toISOString();
 
-  // A foreign event is acknowledged and dropped — never processed, never thrown
+  // A foreign event is acknowledged and dropped - never processed, never thrown
   // on, and it emits an INFO signal (not a failure alert), because a Mellowa or
   // Frost event landing here is expected on a shared Stripe account.
   const ignoreForeign = () => {
@@ -388,11 +388,11 @@ async function handleEvent(event) {
   // SV-21-01: the invoice analogue. Ownership is decided by the SUBSCRIPTION
   // (canonical typed rule), never the invoice line price. An UNAVAILABLE
   // ownership read throws so Stripe receives a retryable failure and the event is
-  // NOT marked processed — it is never converted to foreign or to owned.
+  // NOT marked processed - it is never converted to foreign or to owned.
   const ownInvoiceOrDrop = async () => {
     const own = await classifyInvoiceOwnership(data);
     if (own.unavailable) {
-      throw new Error(`invoice ownership unavailable for ${data.id || 'unknown'} — retry`);
+      throw new Error(`invoice ownership unavailable for ${data.id || 'unknown'} - retry`);
     }
     if (!own.ours) { ignoreForeign(); return false; }
     if (own.legacy) {
@@ -407,7 +407,7 @@ async function handleEvent(event) {
     case 'checkout.session.completed':
       // XAPP-95-01: require our EXACT discriminator, not merely a present
       // app_user_id key. payments.js stamps every Scalvya session with
-      // metadata.scalvya === '1', so this drops nothing of ours — but this event
+      // metadata.scalvya === '1', so this drops nothing of ours - but this event
       // is the only one that upserts customers.stripe_customer_id, so accepting a
       // foreign session here is exactly how that column gets tainted with a
       // foreign customer id. Exact proof, not "looks like ours".
@@ -439,7 +439,7 @@ async function handleEvent(event) {
       await onInvoicePaymentFailed(data, eventAt);
       break;
     // A refund or a dispute does NOT itself change the subscription status, so
-    // it must not change entitlement here — the status transition Stripe sends
+    // it must not change entitlement here - the status transition Stripe sends
     // (e.g. customer.subscription.deleted) is what does. We acknowledge it,
     // record a signal for the operator, and make no data mutation. Foreign ones
     // are dropped exactly like any other foreign event.
@@ -472,14 +472,14 @@ async function handleEvent(event) {
 /**
  * LB-V17-02: a charge/dispute is ours ONLY via exact proof:
  *   1. Exact metadata stamp (source === 'launchbloom' or scalvya === '1'), or
- *   2. a TRUSTED PARENT — its Stripe customer is one WE own. Only our own
+ *   2. a TRUSTED PARENT - its Stripe customer is one WE own. Only our own
  *      checkout.session.completed (which requires the exact scalvya stamp) ever
  *      writes customers.stripe_customer_id, so a match is proof without any
  *      extra provider read or email lookup.
  * A foreign stamp, or a bare app_user_id key, is never accepted. Unknown →
  * foreign (fail safe). Refund/dispute events mutate nothing, so a false negative
  * only drops an ops signal; a false positive would leak another product's money
- * events into ours — this errs to the safe side.
+ * events into ours - this errs to the safe side.
  */
 async function isOurCharge(object) {
   // Metadata half via the canonical service: OWNED → ours; FOREIGN/AMBIGUOUS →
@@ -511,7 +511,7 @@ async function isStaleSubscriptionEvent(subscriptionId, eventAt) {
     .eq('stripe_subscription_id', subscriptionId)
     .single();
   // LB-V19 (LB-01): distinguish "no local row yet" from "could not read". PGRST116
-  // is the expected no-row case (not stale — proceed). Any other error means the
+  // is the expected no-row case (not stale - proceed). Any other error means the
   // mirror was unreadable; fail CLOSED (throw → 5xx → Stripe redelivers) rather
   // than treating an unavailable read as "not stale" and letting a possibly-older
   // event overwrite newer data.
@@ -529,7 +529,7 @@ async function onCheckoutSessionCompleted(session) {
   const appUserId = session.metadata?.app_user_id || session.client_reference_id || null;
 
   // SV-21-01 (v21): under enforcement the customer row is keyed and linked by the
-  // stable app_user_id, NEVER relinked by checkout email — and this event, the
+  // stable app_user_id, NEVER relinked by checkout email - and this event, the
   // only one that writes customers.stripe_customer_id, verifies the live Stripe
   // Customer's EXACT source + this-user stamp before persisting. So a foreign or
   // wrong-user customer id can never be adopted even when the email matches.
@@ -544,7 +544,7 @@ async function onCheckoutSessionCompleted(session) {
     try {
       customerObj = await stripe.customers.retrieve(stripeCustomerId);
     } catch (err) {
-      // Transient provider read — throw so Stripe retries; never persist blind.
+      // Transient provider read - throw so Stripe retries; never persist blind.
       throw new Error(`checkout customer unavailable for ${stripeCustomerId}: ${err.message}`, { cause: err });
     }
     if (ownership.classifyCustomer(customerObj, appUserId) !== ownership.OWNERSHIP.OWNED) {
@@ -598,7 +598,7 @@ async function onCheckoutSessionCompleted(session) {
     console.log(`Checkout subscription linked: ${session.subscription} → customer ${customer.id}`);
   }
 
-  // v5 Prompt 14: no "subscription active" email here — entitlement is only
+  // v5 Prompt 14: no "subscription active" email here - entitlement is only
   // durable once the subscription events land (trial_started covers welcome).
 }
 
@@ -644,7 +644,7 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     track('subscription_updated', { userId, properties: { status: subscription.status } });
   }
 
-  // Lifecycle emails — AFTER the durable upsert, idempotent by dedupe key,
+  // Lifecycle emails - AFTER the durable upsert, idempotent by dedupe key,
   // and never allowed to fail billing processing (v5 Prompt 14).
   const email = await emailForStripeCustomer(subscription.customer);
   if (email) {
@@ -717,7 +717,7 @@ async function onInvoicePaid(invoice, eventAt) {
   }
 
   // v10 SC-06: was this payment a RECOVERY? Read the prior state before the
-  // update overwrites it — a customer who was told "action needed" must be
+  // update overwrites it - a customer who was told "action needed" must be
   // told the problem is resolved, not left with an unanswered money warning.
   const { data: priorRow } = await supabase
     .from('subscriptions').select('status')
@@ -754,7 +754,7 @@ async function onInvoicePaid(invoice, eventAt) {
     });
   }
 
-  // Real charges only — the €0/$0 trial-start invoice is not a "payment".
+  // Real charges only - the €0/$0 trial-start invoice is not a "payment".
   if (invoice.total > 0) {
     const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));
     if (email) {
@@ -789,7 +789,7 @@ async function onInvoicePaymentFailed(invoice, eventAt) {
 
   // SC-V10-00 out-of-order guard: a late payment_failed delivered AFTER the
   // recovery invoice.paid must not flip a recovered subscription back to
-  // past_due — that would revoke entitlement the customer has paid for.
+  // past_due - that would revoke entitlement the customer has paid for.
   if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
     // The regression this guards: a late payment_failed delivered after recovery
     // would otherwise revoke paid access. Record the correction for the operator.
@@ -826,7 +826,7 @@ async function onCustomerUpdated(stripeCustomer) {
 
 module.exports = router;
 // v15 XAPP-01: exported for the cross-app isolation matrix tests. On the shared
-// Stripe account these are the ownership boundary — a foreign event must never
+// Stripe account these are the ownership boundary - a foreign event must never
 // be adopted, mutated, emailed or counted.
 module.exports.isOurSubscription = isOurSubscription;
 module.exports.isOurCharge = isOurCharge;

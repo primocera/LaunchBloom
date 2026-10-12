@@ -18,7 +18,7 @@ const METEORS = [
 /**
  * v10 SC-05 (LCP): purely decorative, so it must not compete with the hero for
  * the first paint. Mounting is deferred until the browser is idle, and skipped
- * entirely under prefers-reduced-motion — seven infinite animations are exactly
+ * entirely under prefers-reduced-motion - seven infinite animations are exactly
  * what that setting exists to prevent.
  */
 export default function Meteors() {

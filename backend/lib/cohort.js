@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v10 SC-07 — the cohort funnel the pack specifies:
+// v10 SC-07 - the cohort funnel the pack specifies:
 //
 //   workspace created → minimum Brand Profile → brief approved → first asset →
 //   three channel types → finding resolved → Ready asset → handoff preview →
@@ -20,14 +20,14 @@
 // The auditable staff/test/demo exclusion roster is defined once in
 // beta-scorecard.js and already scrubs the weekly scorecard (SC-95). v18 X01
 // wires the SAME roster into the north-star cohort funnel so both surfaces
-// measure real customers by one rule — no second exclusion registry. Reusing
+// measure real customers by one rule - no second exclusion registry. Reusing
 // classifyAccount keeps the reason codes (staff_email/domain/workspace/user)
 // identical, so an operator can audit exactly which accounts left either base.
 const { classifyAccount } = require('./beta-scorecard');
 
 // Below this many accounts in the denominator, rates are suppressed. 5 is the
 // conventional small-cell threshold; with a 15–25 user beta it will bite often,
-// which is correct — most weeks genuinely will not be conclusive.
+// which is correct - most weeks genuinely will not be conclusive.
 const MIN_COHORT = 5;
 
 /**
@@ -66,7 +66,7 @@ const COHORT_FUNNEL = [
     decision: 'Preview without export means the packet is not good enough to send.' },
   { key: 'campaign_reopened', event: 'approved_brief_reopened', scope: 'campaign',
     label: 'Campaign reopened', question: 'Do they come back and revise?',
-    decision: 'Reopening is repeat value, not failure — zero here means one-and-done use.' },
+    decision: 'Reopening is repeat value, not failure - zero here means one-and-done use.' },
   { key: 'subscription_renewed', event: 'subscription_renewed', scope: 'workspace',
     label: 'Subscription renewed', question: 'Do they pay a second time?',
     decision: 'The only durable proof the job was worth paying for.' },
@@ -102,18 +102,18 @@ function step({ def, reached, cohort, previous, minCohort = MIN_COHORT, instrume
     // Every metric maps to an action (acceptance criterion), and says plainly
     // when no action can be taken from it.
     decision: state === 'unavailable'
-      ? 'Not instrumented yet — this milestone fires no server-confirmed event, so it cannot be measured.'
+      ? 'Not instrumented yet - this milestone fires no server-confirmed event, so it cannot be measured.'
       : state === 'no_data'
-        ? 'No accounts entered this window — nothing to conclude.'
+        ? 'No accounts entered this window - nothing to conclude.'
         : state === 'insufficient_data'
-          ? `Only ${cohort} account${cohort === 1 ? '' : 's'} in this cohort — too few to report a rate.`
+          ? `Only ${cohort} account${cohort === 1 ? '' : 's'} in this cohort - too few to report a rate.`
           : def.decision,
   };
 }
 
 /**
  * Build the funnel from canonical event rows.
- * `rows` are { event, user_id, workspace_id, campaign_id, created_at } — ids
+ * `rows` are { event, user_id, workspace_id, campaign_id, created_at } - ids
  * and timestamps only, never properties or content.
  *
  * The denominator is the FIRST step (accounts that entered), not a rolling
@@ -129,7 +129,7 @@ function computeFunnel(rows = [], { minCohort = MIN_COHORT, window = null, roste
   // Staff/test/demo rows are removed BEFORE any subject is counted, so an
   // internal account can never inflate a numerator (or the entered
   // denominator). Default roster is empty, so callers that pass nothing keep
-  // the un-excluded behaviour — the exclusion only bites when admin.js supplies
+  // the un-excluded behaviour - the exclusion only bites when admin.js supplies
   // rosterFromEnv(). Every dropped subject is tallied for the audit line below.
   const excluded = new Set();
   const isExcludedRow = (r) => {
@@ -178,7 +178,7 @@ function computeFunnel(rows = [], { minCohort = MIN_COHORT, window = null, roste
 }
 
 /**
- * The largest drop between consecutive measured steps — where the product
+ * The largest drop between consecutive measured steps - where the product
  * actually loses people. Null when the cohort is too small to say, rather than
  * pointing at a drop that is one user changing their mind.
  */

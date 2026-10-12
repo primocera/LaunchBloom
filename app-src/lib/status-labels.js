@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // v7 LB-11: ONE customer-facing label per stored asset status. The database
-// keeps its historical values (draft/edited/ready/published); every surface —
-// studio status pills, Library filters and cards — renders these labels so
+// keeps its historical values (draft/edited/ready/published); every surface -
+// studio status pills, Library filters and cards - renders these labels so
 // "edited" never shows up next to "Needs review" for the same state.
 // Published is always a user-declared status: Scalvya never publishes.
 // ---------------------------------------------------------------------------

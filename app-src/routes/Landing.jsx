@@ -12,14 +12,14 @@ import ProductPreview from '../components/ProductPreview';
 import '../landing.css';
 
 // ---------------------------------------------------------------------------
-// Playbook v6 Prompt 15 — rebuild the landing story around ONE campaign.
+// Playbook v6 Prompt 15 - rebuild the landing story around ONE campaign.
 // The copy below is the playbook's page-by-page rewrite verbatim: one stable
 // promise (no rotating hero), a single four-step mechanism (no six-studios /
 // eight-deliverables contradiction), the real-estate example, honest trust
 // lines and FAQ. All commercial values come from GET /api/plans.
 // ---------------------------------------------------------------------------
 
-// The single four-step mechanism used everywhere — never alternate between a
+// The single four-step mechanism used everywhere - never alternate between a
 // four-step flow, six studios and eight deliverables.
 const MECHANISM = [
   { n: '1', title: 'Set the facts', body: 'Add your products, audience, voice, proof and claim restrictions to Brand Profile.' },
@@ -29,30 +29,30 @@ const MECHANISM = [
 ];
 
 // v9 SC-08: two honest use-case paths under ONE product. They change the
-// examples and setup guidance only — never entitlements, navigation or the
+// examples and setup guidance only - never entitlements, navigation or the
 // Brand Profile → Campaign Brief contract. Both reach first value the same way.
 // v10 SC-05: client work leads, because that is where the willingness to pay
-// is strongest — but both paths stay first-class and eligible for exactly the
+// is strongest - but both paths stay first-class and eligible for exactly the
 // same product, entitlements and price. Order signals focus, not privilege.
 const ICP_PATHS = [
   {
     key: 'client',
     title: 'Build campaigns for clients',
     who: 'Freelance marketers and boutique agencies',
-    body: 'Run each client on its own brief, review for consistency, and hand off a clean packet — no client logins to manage.',
+    body: 'Run each client on its own brief, review for consistency, and hand off a clean packet - no client logins to manage.',
     cta: 'Create my workspace',
   },
   {
     key: 'own',
     title: 'Launch my own campaign',
     who: 'Solo founders and small brands',
-    body: 'Keep one launch consistent across website, email, social and ads — without the offer drifting between tools.',
+    body: 'Keep one launch consistent across website, email, social and ads - without the offer drifting between tools.',
     cta: 'Create my workspace',
   },
 ];
 
 // v10 SC-05: the mechanism made concrete above the fold. Every value here is
-// an illustrative label describing what the product produces — not a metric,
+// an illustrative label describing what the product produces - not a metric,
 // benchmark, customer count or result. Nothing on this strip is a claim about
 // outcomes, so nothing here needs proof the product cannot supply.
 const PROOF_STEPS = [
@@ -75,7 +75,7 @@ const COORDINATED = [
   ['Tone', 'One voice from the website to the ad.'],
 ];
 
-// "What one campaign can include" — deliverables as one connected set.
+// "What one campaign can include" - deliverables as one connected set.
 const VALUE_LIST = [
   'Website pages',
   'Lifecycle and campaign emails',
@@ -84,7 +84,7 @@ const VALUE_LIST = [
   'SEO content ideas',
 ];
 
-// v5 Prompt 1 / v6: pricing renders from GET /api/plans — the backend catalog
+// v5 Prompt 1 / v6: pricing renders from GET /api/plans - the backend catalog
 // is the single commercial source of truth. Entitlement label is "full launch
 // campaigns" (migrated together with the data model).
 function planCard(p) {
@@ -100,7 +100,7 @@ function planCard(p) {
       `${p.launch_kits} full launch campaigns / month`,
       `${p.ai_actions} AI actions / month`,
       'Website, email, social, ads and SEO ideas',
-      // v8 LB-S08: the campaign-control workflow ships on every tier — tiers
+      // v8 LB-S08: the campaign-control workflow ships on every tier - tiers
       // differ by capacity, never by review safety.
       'Gap map, consistency checks and brief-change review',
       'Review queue, evidence locker and review packet export',
@@ -113,15 +113,15 @@ function planCard(p) {
 const FAQ = [
   {
     q: 'Who is Scalvya for?',
-    a: 'Freelance marketers and boutique agencies who repeatedly turn one offer into coordinated launch assets for a client. Solo founders and small brands run their own launch the same way — one product, one workflow.',
+    a: 'Freelance marketers and boutique agencies who repeatedly turn one offer into coordinated launch assets for a client. Solo founders and small brands run their own launch the same way - one product, one workflow.',
   },
   {
     q: 'What does “export” actually mean?',
-    a: 'Export packages what you approve as a Word document, PDF or a downloadable bundle you hand off. It moves finished drafts out of Scalvya — it does not send, post or publish them anywhere.',
+    a: 'Export packages what you approve as a Word document, PDF or a downloadable bundle you hand off. It moves finished drafts out of Scalvya - it does not send, post or publish them anywhere.',
   },
   {
     q: 'Will Scalvya publish for me?',
-    a: 'No. It creates, organizes and exports review-ready drafts. “Published” is a status you set yourself to track what you have shipped — it is not a publishing integration. You remain responsible for checking and publishing.',
+    a: 'No. It creates, organizes and exports review-ready drafts. “Published” is a status you set yourself to track what you have shipped - it is not a publishing integration. You remain responsible for checking and publishing.',
   },
   {
     q: 'Does the SEO path provide keyword volume or ranking data?',
@@ -168,7 +168,7 @@ export default function Landing() {
   const [catalog, setCatalog] = useState(null);
   const pricingRef = useRef(null);
 
-  // Load the canonical plan catalog — the backend is the source of truth.
+  // Load the canonical plan catalog - the backend is the source of truth.
   useEffect(() => {
     api.trackEvent('landing_viewed'); // v5 Prompt 18: top of funnel
     let cancelled = false;
@@ -195,7 +195,7 @@ export default function Landing() {
     return () => observer.disconnect();
   }, []);
 
-  // v9 SC-08: record the chosen use-case path (bounded analytics — path only,
+  // v9 SC-08: record the chosen use-case path (bounded analytics - path only,
   // never a company or client name) and remember it so onboarding can tailor
   // guidance. Both paths route into the same signup → Brand Profile flow.
   function pickPath(key) {
@@ -220,7 +220,7 @@ export default function Landing() {
         if (await resumePendingCheckout()) return;
         navigate('/app');
       } catch {
-        // Don't silently swallow a failed checkout — land in the app with a
+        // Don't silently swallow a failed checkout - land in the app with a
         // visible notice instead of pretending the trial started.
         navigate('/app?checkout=error');
       }
@@ -252,7 +252,7 @@ export default function Landing() {
           </nav>
           {/* v11 SC-01: acquisition CTAs go straight to signup. Pointing them at
               /app sent every anonymous visitor through a login screen they had
-              no account for — a silent detour at the most valuable moment.
+              no account for - a silent detour at the most valuable moment.
               Returning users have the "Sign in" link beside this. */}
           <Link className="lp-header-cta" to="/app/signup">
             Create my campaign
@@ -266,7 +266,7 @@ export default function Landing() {
             {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
             agencies: keep one offer&rsquo;s positioning, claims and CTA consistent across every
             channel you deliver for a client. Solo founders run their own launch the same way.
-            Launch-ready means structured, connected and ready for your review — publishing stays in your hands.
+            Launch-ready means structured, connected and ready for your review - publishing stays in your hands.
           </p>
 
           <div className="lp-hero-actions">
@@ -279,12 +279,12 @@ export default function Landing() {
           </div>
 
           <p className="lp-cta-note">
-            Create an account free — it takes an email and a password. Start a 3-day trial only when
+            Create an account free - it takes an email and a password. Start a 3-day trial only when
             you’re ready to generate; a payment method is required for the trial.
           </p>
 
           {/* v10 SC-05: what the product actually produces, above the fold.
-              Labels only — no metrics, counts, logos or outcome claims. */}
+              Labels only - no metrics, counts, logos or outcome claims. */}
           <ol className="lp-proof-strip" aria-label="What one brief produces">
             {PROOF_STEPS.map((s, i) => (
               <li key={s.label}>
@@ -302,7 +302,7 @@ export default function Landing() {
         <div className="lp-problem-inner">
           <Reveal>
             <div className="lp-eyebrow">The problem</div>
-            <h2 className="lp-h2">Your campaign should sound like one idea — not five separate AI chats.</h2>
+            <h2 className="lp-h2">Your campaign should sound like one idea - not five separate AI chats.</h2>
             <p className="lp-h2-sub">
               When website copy, emails, social posts and ads are created separately, the offer
               drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
@@ -323,15 +323,15 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 2b. Who it's for — two paths, one product ──────────────────── */}
+      {/* ── 2b. Who it's for - two paths, one product ──────────────────── */}
       <section className="lp-paths" id="who-its-for">
         <div className="lp-paths-inner">
           <Reveal>
             <div className="lp-eyebrow">Who it's for</div>
-            <h2 className="lp-h2">Two ways to use {BRAND.name} — one product, one workflow.</h2>
+            <h2 className="lp-h2">Two ways to use {BRAND.name} - one product, one workflow.</h2>
             <p className="lp-h2-sub">
               Same Brand Profile → Campaign Brief → Create → Review → Export. Choosing a path only tailors
-              your examples and setup guidance — it never changes what you can do or what you pay.
+              your examples and setup guidance - it never changes what you can do or what you pay.
             </p>
           </Reveal>
           <div className="lp-paths-grid">
@@ -366,7 +366,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 4. Value — what one campaign can include ───────────────────── */}
+      {/* ── 4. Value - what one campaign can include ───────────────────── */}
       <Reveal as="section" className="lp-trusted">
         <div className="lp-trusted-label">What one campaign can include</div>
         <Marquee items={VALUE_LIST} />
@@ -387,7 +387,7 @@ export default function Landing() {
             <Reveal className="lp-feature">
               <h3>Website</h3>
               <p className="lp-ex-quote">
-                Listing videos edited, captioned and ready to post within 24 hours — for agents who
+                Listing videos edited, captioned and ready to post within 24 hours - for agents who
                 need each property launch to move quickly.
               </p>
             </Reveal>

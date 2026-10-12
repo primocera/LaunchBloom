@@ -5,7 +5,7 @@ import { RECOVERY_ACTIONS } from '../lib/error-states';
 // ---------------------------------------------------------------------------
 // v13 SC-P1-10: one accessible renderer for a typed error/guidance state (see
 // lib/error-states.js). It always shows what happened, the reassurance line
-// (did I lose work / was I charged), and exactly one recovery action — plus a
+// (did I lose work / was I charged), and exactly one recovery action - plus a
 // support fallback and, for the empty-workspace guide, the ordered start steps.
 //
 // Accessibility: the container is role="alert" (or "status" for guidance) and
@@ -58,7 +58,7 @@ export default function ErrorState({ state, onRetry, onUpgrade, supportHref, cla
           {steps.map((s) => (
             <li key={s.key}>
               <Link to={s.to}>{s.label}</Link>
-              {s.hint ? <span className="flow-muted"> — {s.hint}</span> : null}
+              {s.hint ? <span className="flow-muted"> - {s.hint}</span> : null}
             </li>
           ))}
         </ol>

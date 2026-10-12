@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// LB-V17-03 — one versioned, bounded, user/workspace-scoped registry for every
+// LB-V17-03 - one versioned, bounded, user/workspace-scoped registry for every
 // browser DRAFT (recoverable form state). Before this, studio and campaign
 // drafts were written to localStorage with full client-confidential content, no
-// TTL, no owner binding and no purge — so a shared browser profile could hold
+// TTL, no owner binding and no purge - so a shared browser profile could hold
 // another client's offer, claims, names and notes indefinitely.
 //
 // Contract enforced here:
@@ -10,17 +10,17 @@
 //     storage-inventory contract test fails on any undeclared `lb-`/draft key.
 //   - Every draft is wrapped in a versioned envelope with createdAt/expiresAt
 //     and a scope tag (user + workspace). A draft is restored ONLY when the
-//     version, scope and TTL all still match — never across logout, account or
+//     version, scope and TTL all still match - never across logout, account or
 //     workspace switch, or an incompatible schema version.
 //   - A per-draft byte cap and safe-parse guard: corrupt/oversize/expired
 //     entries purge silently and restore nothing.
 //   - NEVER store auth tokens or financial truth here. This is device-only
-//     recovery, not a secure store — copy must say so and must not call it
+//     recovery, not a secure store - copy must say so and must not call it
 //     encrypted.
 // ---------------------------------------------------------------------------
 
 export const DRAFT_SCHEMA_VERSION = 1;
-export const MAX_DRAFT_BYTES = 64 * 1024; // 64KB — generous for a form, bounded.
+export const MAX_DRAFT_BYTES = 64 * 1024; // 64KB - generous for a form, bounded.
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days.
 
 // Every allowed draft key. `prefix: true` means the declared name is a stem and
@@ -74,7 +74,7 @@ function scopeTag(policy, { userId, workspaceId }) {
 
 /**
  * Persist `data` under `key` for the current owner. No-op (returns false) if the
- * key is undeclared or the serialized envelope exceeds the byte cap — we never
+ * key is undeclared or the serialized envelope exceeds the byte cap - we never
  * silently drop the cap.
  */
 export function saveDraft(key, data, owner = {}) {
@@ -98,7 +98,7 @@ export function saveDraft(key, data, owner = {}) {
 /**
  * Restore a draft for the current owner, or null. Returns null AND purges the
  * entry when it is corrupt, wrong-version, expired, oversize or belongs to a
- * different user/workspace — restoration never crosses those boundaries.
+ * different user/workspace - restoration never crosses those boundaries.
  */
 export function loadDraft(key, owner = {}) {
   const policy = policyFor(key);
@@ -136,7 +136,7 @@ function draftKeysPresent(ls) {
 /**
  * Purge ALL registered drafts on this device. Called on logout, account
  * deletion success and the explicit "Clear local drafts" control. Returns the
- * count removed (for a neutral "N drafts cleared" notice — never their content).
+ * count removed (for a neutral "N drafts cleared" notice - never their content).
  */
 export function clearAllDrafts() {
   const ls = store();

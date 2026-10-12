@@ -41,7 +41,7 @@ function authClient() {
 }
 
 // service_role admin client for privileged auth admin calls (e.g. global
-// sign-out / user deletion). Bypasses RLS — server-side only.
+// sign-out / user deletion). Bypasses RLS - server-side only.
 let adminClientInstance = null;
 function adminClient() {
   if (adminClientInstance) return adminClientInstance;
@@ -53,7 +53,7 @@ const proxy = new Proxy(
   {},
   {
     get(_t, prop) {
-      // Our own helpers must win over the underlying client's properties —
+      // Our own helpers must win over the underlying client's properties -
       // the get trap intercepts every access, so returning them here is the
       // only way `supabase.authClient()` resolves.
       if (prop === 'authClient') return authClient;

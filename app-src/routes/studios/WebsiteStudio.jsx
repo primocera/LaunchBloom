@@ -31,21 +31,21 @@ const FIELDS = [
       { value: 'landing', label: 'Landing Page', title: 'One campaign offer, one audience, one CTA' },
       { value: 'about', label: 'About', title: 'The brand story and trust signals you can support' },
       { value: 'faq', label: 'FAQ', title: 'Answers real pre-purchase questions and objections' },
-      { value: 'cart', label: 'Cart', title: 'Reassurance copy for the checkout moment — real policies only' },
+      { value: 'cart', label: 'Cart', title: 'Reassurance copy for the checkout moment - real policies only' },
       { value: 'contact', label: 'Contact', title: 'How to reach you, response expectations' },
       { value: 'thank_you', label: 'Thank You', title: 'Post-purchase confirmation and the honest next step' },
     ],
   },
   { name: 'website_goal', label: 'Website goal', type: 'text', placeholder: 'e.g. book discovery calls' },
-  // Ecommerce product facts — used verbatim for product/cart pages, so the AI
+  // Ecommerce product facts - used verbatim for product/cart pages, so the AI
   // never invents variants, shipping terms, discounts or proof.
   { name: 'product_facts', label: 'Product facts (ecommerce)', type: 'textarea', placeholder: 'Materials, dimensions, what it is, what it does…' },
   { name: 'benefits', label: 'Key benefits', type: 'textarea', placeholder: 'The outcomes a buyer cares about' },
   { name: 'objections', label: 'Common objections', type: 'textarea', placeholder: 'Doubts buyers have before purchasing' },
   { name: 'usage', label: 'How it is used', type: 'textarea', placeholder: 'How the customer uses / applies it' },
   { name: 'variants', label: 'Variants', type: 'text', placeholder: 'e.g. sizes, colours, bundles (leave blank if none)' },
-  { name: 'shipping_returns', label: 'Shipping & returns', type: 'text', placeholder: 'Real policy — leave blank to use placeholders' },
-  { name: 'proof', label: 'Verified proof', type: 'textarea', placeholder: 'Only real reviews / numbers / results — never invented' },
+  { name: 'shipping_returns', label: 'Shipping & returns', type: 'text', placeholder: 'Real policy - leave blank to use placeholders' },
+  { name: 'proof', label: 'Verified proof', type: 'textarea', placeholder: 'Only real reviews / numbers / results - never invented' },
   { name: 'free_shipping_threshold', label: 'Free-shipping threshold', type: 'text', placeholder: 'e.g. $50 (only if you actually offer it)' },
   { name: 'extra_context', label: 'Extra context', type: 'textarea' },
 ];
@@ -67,7 +67,7 @@ function renderPage(item) {
       <div className="gen-card-title">{(page.page_type || item.page_type || 'page').replace(/_/g, ' ')}</div>
       {placeholders > 0 && (
         <p className="flow-muted" role="note">
-          {placeholders} unresolved fact placeholder{placeholders === 1 ? '' : 's'} in brackets — replace with real details before this page is review-ready.
+          {placeholders} unresolved fact placeholder{placeholders === 1 ? '' : 's'} in brackets - replace with real details before this page is review-ready.
         </p>
       )}
       <AssetField label="Conversion goal" value={page.page_goal} />
@@ -133,7 +133,7 @@ export default function WebsiteStudio() {
   return (
     <GeneratorStudio
       title="Website copy"
-      blurb="Create structured drafts for the page’s job — with one primary CTA, evidence-aware claims and metadata to review."
+      blurb="Create structured drafts for the page’s job - with one primary CTA, evidence-aware claims and metadata to review."
       fields={FIELDS}
       initial={{ target_language: 'English', page_types: brief ? ['landing'] : ['home'], extra_context: brief || undefined }}
       generate={(v, opts) => api.generateWebsiteKit(v, opts)}

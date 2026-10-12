@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
-// v12 SC-V12-07 — signup cohort control, fail-closed.
+// v12 SC-V12-07 - signup cohort control, fail-closed.
 //
 // A small beta can absorb manual intervention; paid scale cannot absorb a cap
 // that silently disables itself. The previous check read
-// `Number(BETA_INVITE_CAP || 0)` and treated any non-numeric value as uncapped —
+// `Number(BETA_INVITE_CAP || 0)` and treated any non-numeric value as uncapped -
 // so a typo in the cap opened the doors. This module makes every decision
 // explicit and fails CLOSED on an emergency stop, a misconfigured cap, or a
 // count it cannot verify. Two switches are deliberately independent:
 //
-//   SIGNUP_PAUSED=1   emergency stop — refuse all new signups (kill switch).
+//   SIGNUP_PAUSED=1   emergency stop - refuse all new signups (kill switch).
 //   BETA_INVITE_CAP   a positive integer caps the cohort; unset or 0 is the
 //                     normal uncapped operation; anything else is a
 //                     misconfiguration and refuses signups until fixed.
@@ -28,7 +28,7 @@ function capIsActive(env = {}) {
 }
 
 /** True when the cap is SET to something that is not a valid uncapped value or a
- *  positive integer — a misconfiguration that must fail closed. */
+ *  positive integer - a misconfiguration that must fail closed. */
 function capIsMisconfigured(env = {}) {
   const raw = env.BETA_INVITE_CAP;
   if (raw == null || String(raw).trim() === '') return false; // unset = uncapped
@@ -41,7 +41,7 @@ function capIsMisconfigured(env = {}) {
  * Decide whether a signup may proceed.
  * @param env   { SIGNUP_PAUSED, BETA_INVITE_CAP }
  * @param count current workspace/account count, or null when it could not be read
- * @returns { allow, code, reason } — code is null when allowed
+ * @returns { allow, code, reason } - code is null when allowed
  */
 function signupDecision(env = {}, count = null) {
   if (String(env.SIGNUP_PAUSED || '') === '1') {

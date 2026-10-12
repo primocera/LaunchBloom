@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Prompt registry (playbook v6, Prompt 12). Immutable, append-only entries:
-// a version can never be edited once shipped — you add a new one and move
+// a version can never be edited once shipped - you add a new one and move
 // CURRENT_PROMPT_VERSION forward. Every generation records the registry
 // version (see lib/ai.js), so any asset can be traced to the exact prompt
 // era that produced it and a previous version can be restored by changing
@@ -33,7 +33,7 @@ function activePromptVersion() {
   const env = process.env.AI_PROMPT_VERSION;
   if (env && REGISTRY[env]) return env;
   if (env && !REGISTRY[env]) {
-    console.warn(`[prompt-registry] AI_PROMPT_VERSION="${env}" is not a registered version — using ${CURRENT_PROMPT_VERSION}`);
+    console.warn(`[prompt-registry] AI_PROMPT_VERSION="${env}" is not a registered version - using ${CURRENT_PROMPT_VERSION}`);
   }
   return CURRENT_PROMPT_VERSION;
 }

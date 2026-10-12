@@ -96,7 +96,7 @@ function renderItem(item) {
       {item.video_script && item.video_script.spoken_script ? <VideoScript vs={item.video_script} /> : null}
       <AssetField label="CTA" value={item.cta} copy />
       <AssetField label="Visual direction" value={item.visual_direction} copy />
-      <AssetField label="Hashtags (optional — not a growth guarantee)" value={item.hashtags} copy />
+      <AssetField label="Hashtags (optional - not a growth guarantee)" value={item.hashtags} copy />
     </>
   );
 }
@@ -133,7 +133,7 @@ function Calendar() {
   return (
     <div>
       <p className="flow-muted">
-        Dates here are planning suggestions — Scalvya does not post or schedule to any platform.
+        Dates here are planning suggestions - Scalvya does not post or schedule to any platform.
         Transfer planned posts to your publishing tool. Setting a date plans a post; clearing it
         moves it back to unplanned.
       </p>
@@ -142,11 +142,11 @@ function Calendar() {
         <div className="account-section" key={date}>
           <h3>{date}</h3>
           {dayItems.length > 2 && (
-            <p className="flow-muted" role="note">{dayItems.length} posts planned on one day — an unrealistic density for most solo teams. Consider spreading them out.</p>
+            <p className="flow-muted" role="note">{dayItems.length} posts planned on one day - an unrealistic density for most solo teams. Consider spreading them out.</p>
           )}
           {dayItems.map((it) => (
             <div className="calendar-row" key={it.id}>
-              <span>{itemLabel(it)} — {it.hook}</span>
+              <span>{itemLabel(it)} - {it.hook}</span>
               <input type="date" value={it.planned_date || ''} disabled={busyId === it.id} onChange={(e) => plan(it, e.target.value)} />
               <button className="account-link" disabled={busyId === it.id} onClick={() => plan(it, null)}>Clear date</button>
             </div>
@@ -159,7 +159,7 @@ function Calendar() {
         {unscheduled.length === 0 && <p className="flow-muted">Everything is planned.</p>}
         {unscheduled.map((it) => (
           <div className="calendar-row" key={it.id}>
-            <span>{itemLabel(it)} — {it.hook}</span>
+            <span>{itemLabel(it)} - {it.hook}</span>
             <input type="date" disabled={busyId === it.id} onChange={(e) => plan(it, e.target.value)} />
           </div>
         ))}
@@ -184,7 +184,7 @@ export default function SocialStudio() {
       {tab === 0 ? (
         <GeneratorStudio
           title="Social"
-          blurb="Create channel-aware posts and scripts — carousels slide-by-slide, reels with full scripts, captions and pins — then plan them on dates. Scalvya plans; it never posts or schedules to platforms."
+          blurb="Create channel-aware posts and scripts - carousels slide-by-slide, reels with full scripts, captions and pins - then plan them on dates. Scalvya plans; it never posts or schedules to platforms."
           fields={FIELDS}
           initial={{ target_language: 'English', number_of_items: 12, platforms: ['instagram'], formats: ['caption', 'carousel', 'reel'] }}
           generate={(v, opts) => api.generateSocialAssets(v, opts)}

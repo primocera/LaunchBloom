@@ -10,7 +10,7 @@ import '../flow.css';
 // v5 Prompt 4: Home as an action dashboard. One greeting row with a single
 // context-aware primary action, "continue where you left off", up to three
 // next best actions, active campaigns and recent assets. Detailed usage lives
-// in Account — Home only shows a compact warning at 80% / 100%.
+// in Account - Home only shows a compact warning at 80% / 100%.
 // ---------------------------------------------------------------------------
 
 const PLAN_LABELS = { free: 'Free', trial: '3-day trial', starter: 'Starter', pro: 'Pro', studio: 'Studio' };
@@ -39,7 +39,7 @@ export default function Dashboard() {
     api.campaigns().then((r) => setCampaigns(r.campaigns || [])).catch(() => setCampaigns([]));
     api.library({ limit: 6 }).then((r) => setAssets(r.items || r.assets || [])).catch(() => setAssets([]));
     api.dashboard().then(setDash).catch(() => setDash({}));
-    // v8 LB-S05: derived 4-step activation — server state, resumable.
+    // v8 LB-S05: derived 4-step activation - server state, resumable.
     api.activation().then((r) => setActivation(r.activation)).catch(() => setActivation(null));
   }, []);
 
@@ -87,7 +87,7 @@ export default function Dashboard() {
           <Link className="flow-btn dash-primary" to={primary.to}>{primary.label}</Link>
         </div>
 
-        {/* Compact usage warning only at 80% / 100% — details live in Account */}
+        {/* Compact usage warning only at 80% / 100% - details live in Account */}
         {usageLevel !== 'ok' && (
           <p className={usageLevel === 'over' ? 'flow-err' : 'dash-usage-warn'} role="status">
             {typeof account?.usage?.ai_actions === 'number' && account?.limits?.ai_actions
@@ -97,7 +97,7 @@ export default function Dashboard() {
           </p>
         )}
 
-        {/* v8 LB-S05: activation checklist until the first full value loop —
+        {/* v8 LB-S05: activation checklist until the first full value loop -
             each step is derived from server state and resumes at its route. */}
         {activation && activation.done < activation.total && (
           <div className="flow-card" style={{ marginBottom: 12 }}>
@@ -107,7 +107,7 @@ export default function Dashboard() {
                 <li key={s.key} style={{ margin: '4px 0' }}>
                   {s.done ? '✓ ' : '○ '}
                   {s.done ? <span className="flow-muted">{s.label}</span> : <Link to={s.to}>{s.label}</Link>}
-                  {!s.done && s.key === activation.next?.key && <span className="flow-muted"> — {s.hint}</span>}
+                  {!s.done && s.key === activation.next?.key && <span className="flow-muted"> - {s.hint}</span>}
                 </li>
               ))}
             </ul>
@@ -134,7 +134,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ── Next best actions (max 3, derived — never static) ── */}
+          {/* ── Next best actions (max 3, derived - never static) ── */}
           {actions.length > 0 && (
             <div className="flow-card">
               <div className="flow-eyebrow">Recommended next steps</div>

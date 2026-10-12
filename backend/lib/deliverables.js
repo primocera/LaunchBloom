@@ -3,7 +3,7 @@
 //
 // A campaign declares which outcomes it actually needs (required / optional /
 // not needed) instead of an implied five-of-five checklist. States are derived
-// purely from stored selections + real asset rows — never an opaque score.
+// purely from stored selections + real asset rows - never an opaque score.
 // Pure functions: no supabase, no AI, no quota. Consumed by the campaigns
 // routes and unit-tested directly.
 // ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ function campaignGap(campaign, planRows, assetsByTable) {
   const planSaved = plan.size > 0;
 
   const rows = DELIVERABLES.map((d) => {
-    // Backfill semantics: campaigns without a saved plan are "unplanned" —
+    // Backfill semantics: campaigns without a saved plan are "unplanned" -
     // we never infer that every channel is required.
     const requirement = plan.get(d.code) || 'unplanned';
     const assets = (assetsByTable && assetsByTable[d.table]) || [];

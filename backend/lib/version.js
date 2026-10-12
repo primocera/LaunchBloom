@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// v24 SV-24-01 (B) — the verifiable deployed version for the public /health.
+// v24 SV-24-01 (B) - the verifiable deployed version for the public /health.
 //
 // A release is only exact-SHA verifiable if production can say which commit it
 // runs. On Vercel, VERCEL_GIT_COMMIT_SHA carries the deployed commit; we expose
-// only a short hex prefix of it — never the env value verbatim, a deployment
+// only a short hex prefix of it - never the env value verbatim, a deployment
 // id, a URL, a path or any configuration.
 //
 // Resolved ONCE at module load (see server.js), never per request, and never by

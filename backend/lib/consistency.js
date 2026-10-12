@@ -2,7 +2,7 @@
 // v8 LB-S02: cross-channel consistency engine.
 //
 // Deterministic, explainable checks over STRUCTURED asset fields against the
-// campaign brief — never an LLM, never an AI action, never a truth claim.
+// campaign brief - never an LLM, never an AI action, never a truth claim.
 // Pure functions (no supabase); the campaigns route feeds it rows and persists
 // finding lifecycles. Checks with limited detection say so explicitly, and a
 // clean result means "no issues detected by these checks", not "approved".
@@ -13,7 +13,7 @@ const crypto = require('crypto');
 // Bump when rule logic changes so persisted findings can be distinguished.
 const RULES_VERSION = 'v8.1';
 
-// Structured text fields we scan per table (jsonb blobs are stringified —
+// Structured text fields we scan per table (jsonb blobs are stringified -
 // detection there is "limited" and labeled as such).
 const SCAN_FIELDS = {
   website_pages: ['title', 'seo_title', 'meta_description', 'cta'],
@@ -53,7 +53,7 @@ const FINDING_META = {
   },
   unsupported_claim_reference: {
     severity: 'high', ackable: true, detection: 'proof-like placeholders in structured fields',
-    why: 'The copy references proof the brief does not supply — publishing it would be an unsupported claim.',
+    why: 'The copy references proof the brief does not supply - publishing it would be an unsupported claim.',
     resolution: 'Add real proof to the Campaign Brief or remove the reference.',
   },
   unresolved_placeholder: {
@@ -134,14 +134,14 @@ function runConsistencyChecks(campaign, assetsByTable) {
     for (const asset of rows || []) if (asset && typeof asset === 'object') all.push({ table, asset });
   }
 
-  // 1. missing_primary_cta — per asset in CTA-carrying tables.
+  // 1. missing_primary_cta - per asset in CTA-carrying tables.
   for (const { table, asset } of all) {
     if (CTA_TABLES.includes(table) && !norm(asset.cta)) {
       findings.push(makeFinding('missing_primary_cta', { assets: [assetRef(table, asset)] }));
     }
   }
 
-  // 2. conflicting_cta_url — distinct URLs across assets' CTA/structured text.
+  // 2. conflicting_cta_url - distinct URLs across assets' CTA/structured text.
   const urlOwners = new Map(); // normalized url -> [refs]
   for (const { table, asset } of all) {
     const urls = (fieldsText(table, asset).match(URL_RX) || []).map((u) => u.replace(/[.,]$/, '').toLowerCase());
@@ -159,7 +159,7 @@ function runConsistencyChecks(campaign, assetsByTable) {
     }));
   }
 
-  // 3. promotion_term_mismatch — percentages / promo codes vs brief promo_terms.
+  // 3. promotion_term_mismatch - percentages / promo codes vs brief promo_terms.
   const promo = norm(c.promo_terms);
   if (promo) {
     const briefPcts = new Set((promo.match(PCT_RX) || []).map((m) => m.replace(/\s/g, '')));
@@ -182,7 +182,7 @@ function runConsistencyChecks(campaign, assetsByTable) {
     }
   }
 
-  // 4. date_or_timezone_mismatch — ISO dates outside the campaign window.
+  // 4. date_or_timezone_mismatch - ISO dates outside the campaign window.
   if (c.start_date || c.end_date) {
     const start = c.start_date || '0000-01-01';
     const end = c.end_date || c.deadline || '9999-12-31';
@@ -199,7 +199,7 @@ function runConsistencyChecks(campaign, assetsByTable) {
     }
   }
 
-  // 5. audience_mismatch — snapshot audience differs from current brief.
+  // 5. audience_mismatch - snapshot audience differs from current brief.
   for (const { table, asset } of all) {
     const snap = asset.brief_snapshot || {};
     if (norm(snap.audience) && norm(c.audience) && normLoose(snap.audience) !== normLoose(c.audience)) {
@@ -211,7 +211,7 @@ function runConsistencyChecks(campaign, assetsByTable) {
     }
   }
 
-  // 6. unsupported_claim_reference — proof-like placeholder with no brief proof.
+  // 6. unsupported_claim_reference - proof-like placeholder with no brief proof.
   if (!norm(c.proof)) {
     for (const { table, asset } of all) {
       const hits = [...new Set(fieldsText(table, asset).match(PROOF_HINT_RX) || [])];
@@ -225,7 +225,7 @@ function runConsistencyChecks(campaign, assetsByTable) {
     }
   }
 
-  // 7. unresolved_placeholder — any bracketed placeholder left in copy.
+  // 7. unresolved_placeholder - any bracketed placeholder left in copy.
   for (const { table, asset } of all) {
     const hits = [...new Set(fieldsText(table, asset).match(PLACEHOLDER_RX) || [])];
     // proof-hint placeholders already covered above when proof is missing
@@ -240,7 +240,7 @@ function runConsistencyChecks(campaign, assetsByTable) {
     }
   }
 
-  // 8. brief_snapshot_mismatch — material brief fields changed since generation.
+  // 8. brief_snapshot_mismatch - material brief fields changed since generation.
   for (const { table, asset } of all) {
     const snap = asset.brief_snapshot;
     if (!snap) continue;

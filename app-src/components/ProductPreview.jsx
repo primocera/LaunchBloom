@@ -1,7 +1,7 @@
 import { statusLabelFor } from '../lib/status-labels';
 
 // ---------------------------------------------------------------------------
-// v11 SC-04 — real-product proof on the landing page.
+// v11 SC-04 - real-product proof on the landing page.
 //
 // A code-native snapshot, not a screenshot: it renders the same canonical
 // status vocabulary the signed-in product renders (lib/status-labels.js), so
@@ -41,7 +41,7 @@ export default function ProductPreview() {
   return (
     <div className="lp-preview" aria-labelledby="lp-preview-title">
       <p className="lp-preview-caption" id="lp-preview-title">
-        A product view, rendered from example data — not a customer result.
+        A product view, rendered from example data - not a customer result.
       </p>
 
       <ol className="lp-preview-flow">
@@ -83,7 +83,7 @@ export default function ProductPreview() {
           </ul>
           <p className="lp-preview-handoff">
             Handoff packages what you approve as Word, PDF or a bundle. “Ready to export” means
-            structured and ready for your review — never approved, compliant or published.
+            structured and ready for your review - never approved, compliant or published.
           </p>
         </li>
       </ol>

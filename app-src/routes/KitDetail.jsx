@@ -219,12 +219,12 @@ function QualityCards({ quality, safety }) {
     <>
       {highRisk.map(([section, s]) => (
         <div className="flow-err" key={section}>
-          <strong>Safety warning — {QUALITY_LABELS[section] || section}:</strong> {s.explanation}
+          <strong>Safety warning - {QUALITY_LABELS[section] || section}:</strong> {s.explanation}
           {s.flagged_phrases.length > 0 && <div>Flagged: {s.flagged_phrases.map((p) => `"${p}"`).join(', ')}</div>}
           {s.safer_alternatives.length > 0 && (
             <ul className="kit-outline">{s.safer_alternatives.map((a) => <li key={a}>{a}</li>)}</ul>
           )}
-          <div className="flow-muted">You can still edit and use this copy — but rephrase before publishing.</div>
+          <div className="flow-muted">You can still edit and use this copy - but rephrase before publishing.</div>
         </div>
       ))}
 
@@ -266,7 +266,7 @@ function Overview({ kit }) {
         <p className="flow-muted">No checklist yet.</p>
       )}
       <p className="flow-muted" style={{ marginTop: 12 }}>
-        Work through the tabs above — each section is copy-ready and can be regenerated on its own.
+        Work through the tabs above - each section is copy-ready and can be regenerated on its own.
       </p>
     </div>
   );

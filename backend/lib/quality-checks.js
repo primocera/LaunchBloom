@@ -174,7 +174,7 @@ const RISKY_CLAIM = /\b\d+(?:[.,]\d+)?\s*%|\b\d[\d,]*\+?\s*(?:customers|clients|
 
 /**
  * Risky claims found in the generated pages that do not appear in the proof
- * the user actually supplied. Deterministic — the label is what the reviewer
+ * the user actually supplied. Deterministic - the label is what the reviewer
  * must verify or delete.
  */
 function claimProvenanceWarnings(pages = [], proofText = '') {
@@ -185,7 +185,7 @@ function claimProvenanceWarnings(pages = [], proofText = '') {
     const found = blob(p).match(RISKY_CLAIM) || [];
     for (const claim of new Set(found.map((c) => c.trim().toLowerCase()))) {
       if (!proof.includes(claim)) {
-        w.push(`${label}: claim "${claim}" is not in your supplied proof — verify the source or remove it before publishing.`);
+        w.push(`${label}: claim "${claim}" is not in your supplied proof - verify the source or remove it before publishing.`);
       }
     }
   });
@@ -212,9 +212,9 @@ function checkWebsitePages(pages = [], { proof = '' } = {}) {
     else if (p.meta_description.length > 160) w.push(`${label}: meta description is over 160 characters.`);
     const bullets = (p.sections || []).reduce((n, s) => n + ((s.bullets || []).length), 0);
     if (bullets < 3) w.push(`${label}: fewer than 3 benefit bullets.`);
-    if (GUARANTEE.test(blob(p))) w.push(`${label}: may contain invented testimonials or guarantees — verify before publishing.`);
+    if (GUARANTEE.test(blob(p))) w.push(`${label}: may contain invented testimonials or guarantees - verify before publishing.`);
     const placeholders = unresolvedPlaceholderCount(p);
-    if (placeholders > 0) w.push(`${label}: ${placeholders} unresolved fact placeholder(s) in brackets — fill in the real details before publishing.`);
+    if (placeholders > 0) w.push(`${label}: ${placeholders} unresolved fact placeholder(s) in brackets - fill in the real details before publishing.`);
   });
   w.push(...claimProvenanceWarnings(pages, proof));
   return w;
@@ -225,7 +225,7 @@ function checkEmails(items = [], { hasDeadline = false, timezone = null } = {}) 
   const w = [];
   // v6 Prompt 22: a real deadline without a timezone is operationally ambiguous.
   if (hasDeadline && !timezone) {
-    w.push('The campaign has an end date but no timezone — set one so send times and the deadline are unambiguous.');
+    w.push('The campaign has an end date but no timezone - set one so send times and the deadline are unambiguous.');
   }
   items.forEach((e, i) => {
     const label = `email ${e.email_order || i + 1}`;
@@ -258,7 +258,7 @@ function repeatedHookWarnings(items = []) {
       if (a.size < 3 || b.size < 3) continue;
       const shared = [...a].filter((t) => b.has(t)).length;
       if (shared / Math.min(a.size, b.size) >= 0.6) {
-        w.push(`items ${i + 1} and ${j + 1} share nearly the same hook — give each a distinct angle, not a rephrase.`);
+        w.push(`items ${i + 1} and ${j + 1} share nearly the same hook - give each a distinct angle, not a rephrase.`);
       }
     }
   }
@@ -279,10 +279,10 @@ function checkSocial(items = []) {
   // Role/pillar mix: a campaign set that is all one pillar is not a system.
   const pillars = new Set(items.map((s) => s.pillar).filter(Boolean));
   if (items.length >= 5 && pillars.size === 1) {
-    w.push(`all ${items.length} items serve the "${[...pillars][0]}" pillar — balance the set across education, proof, objections, community and sales.`);
+    w.push(`all ${items.length} items serve the "${[...pillars][0]}" pillar - balance the set across education, proof, objections, community and sales.`);
   }
   if (items.length > 21) {
-    w.push(`${items.length} items is more than one post per day for three weeks — an unrealistic publishing density for a solo founder. Plan the strongest ones first.`);
+    w.push(`${items.length} items is more than one post per day for three weeks - an unrealistic publishing density for a solo founder. Plan the strongest ones first.`);
   }
   return w;
 }
@@ -308,16 +308,16 @@ function searchAdCharWarnings(c = {}, label = 'search ad') {
 function creativeComplianceFlags(c = {}) {
   const flags = Array.isArray(c.compliance_flags) ? [...c.compliance_flags] : [];
   const text = `${c.hook || ''} ${c.headline || ''} ${c.primary_text || ''}`;
-  if (GUARANTEE.test(text)) flags.push('Mentions a guarantee, testimonial or review — needs real proof.');
-  if (FAKE_SCARCITY.test(text)) flags.push('Uses urgency/scarcity — must reflect a real deadline or stock level.');
-  if (UNREALISTIC.test(text)) flags.push('Contains a strong/unrealistic claim — verify before running.');
+  if (GUARANTEE.test(text)) flags.push('Mentions a guarantee, testimonial or review - needs real proof.');
+  if (FAKE_SCARCITY.test(text)) flags.push('Uses urgency/scarcity - must reflect a real deadline or stock level.');
+  if (UNREALISTIC.test(text)) flags.push('Contains a strong/unrealistic claim - verify before running.');
   return [...new Set(flags)];
 }
 
 /**
  * Whether a creative may move to "ready"/"published". Blocked when it has
  * compliance flags without a recorded proof source (v6 Prompt 24: a checkbox
- * acknowledgement alone cannot legalize an unsupported claim — the user must
+ * acknowledgement alone cannot legalize an unsupported claim - the user must
  * say where the proof lives). Returns { ok, reason }.
  */
 function creativeReadyGate(row = {}) {
@@ -330,7 +330,7 @@ function creativeReadyGate(row = {}) {
   return {
     ok: false,
     reason: ack.acknowledged
-      ? 'Attach the proof source (link or where the evidence lives) — acknowledgement alone cannot approve a high-risk claim.'
+      ? 'Attach the proof source (link or where the evidence lives) - acknowledgement alone cannot approve a high-risk claim.'
       : 'This creative has high-risk claims. Record the real proof source before marking it ready.',
   };
 }
@@ -350,7 +350,7 @@ function checkCreative(items = []) {
     if (!has(c.hook, 3)) w.push(`${label}: missing hook.`);
     if (!has(c.visual_direction, 5)) w.push(`${label}: missing visual direction.`);
     if (!has(c.cta, 2)) w.push(`${label}: missing CTA.`);
-    if (UNREALISTIC.test(`${c.hook} ${c.headline} ${c.primary_text}`)) w.push(`${label}: may contain an unrealistic claim — verify before "ready".`);
+    if (UNREALISTIC.test(`${c.hook} ${c.headline} ${c.primary_text}`)) w.push(`${label}: may contain an unrealistic claim - verify before "ready".`);
     if ((c.creative_type === 'video' || c.creative_type === 'ugc')) {
       const tl = c.video_timeline || {};
       if (!list(tl.scenes, 1)) w.push(`${label}: video idea has no scene-by-scene timeline.`);
@@ -358,10 +358,10 @@ function checkCreative(items = []) {
     }
     if (c.creative_type === 'search_ad') w.push(...searchAdCharWarnings(c, label));
     if (creativeComplianceFlags(c).length && !(c.compliance_ack && c.compliance_ack.acknowledged)) {
-      w.push(`${label}: has compliance flags — record the proof source before marking ready.`);
+      w.push(`${label}: has compliance flags - record the proof source before marking ready.`);
     }
   });
-  if (!conceptsDistinct(items)) w.push('Some concepts share the same angle — make each test a distinct mechanism, not a headline variant.');
+  if (!conceptsDistinct(items)) w.push('Some concepts share the same angle - make each test a distinct mechanism, not a headline variant.');
   return w;
 }
 
@@ -404,12 +404,12 @@ module.exports = {
   checkCreative,
   checkSeo,
   qualityWarnings,
-  // Prompt 11 — creative-specific helpers
+  // Prompt 11 - creative-specific helpers
   searchAdCharWarnings,
   creativeComplianceFlags,
   creativeReadyGate,
   conceptsDistinct,
-  // v6 Prompts 21/23 — provenance + distinctness helpers
+  // v6 Prompts 21/23 - provenance + distinctness helpers
   claimProvenanceWarnings,
   unresolvedPlaceholderCount,
   repeatedHookWarnings,

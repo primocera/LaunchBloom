@@ -4,8 +4,8 @@
   --border: #e8e2da;
   --border-strong: #d8cfc3;
   --text: #2b2320;
-  --text-muted: #767068; /* v18 X04: was #8a7f75 (3.91:1 on white) — now 4.90:1, WCAG AA */
-  --text-faint: #7a736b; /* v18 X04: was #a99e93 (2.63:1) — now 4.67:1, AA, still a step lighter than muted */
+  --text-muted: #767068; /* v18 X04: was #8a7f75 (3.91:1 on white) - now 4.90:1, WCAG AA */
+  --text-faint: #7a736b; /* v18 X04: was #a99e93 (2.63:1) - now 4.67:1, AA, still a step lighter than muted */
   --accent: #8a6851;
   --accent-soft: rgba(138, 104, 81, 0.08);
   --accent-ring: rgba(138, 104, 81, 0.28);
@@ -51,7 +51,7 @@ button {
 
 .shell.is-collapsed {
   /* Sidebar is unmounted when collapsed, so the main pane is the only grid
-     item — give it the full width (a leading 0-width column would swallow it
+     item - give it the full width (a leading 0-width column would swallow it
      and render a blank page). */
   grid-template-columns: 1fr;
 }
@@ -186,7 +186,7 @@ button {
   text-transform: uppercase;
 }
 
-/* v10 SC-01: demoted disclosures — the five studios in the sidebar and the
+/* v10 SC-01: demoted disclosures - the five studios in the sidebar and the
    "start from a playbook/template" chooser on Campaigns. Collapsed by default
    so one primary path stays obvious; native <details> keeps them keyboard-
    and screen-reader-operable without custom JS. */
@@ -1007,8 +1007,8 @@ button {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* The consent row. The <label> wraps the control, so the whole row — at least
-   44px tall — is the interactive target, without inflating the 18px box. */
+/* The consent row. The <label> wraps the control, so the whole row - at least
+   44px tall - is the interactive target, without inflating the 18px box. */
 .login-card .consent {
   display: flex;
   align-items: flex-start;
@@ -1070,7 +1070,7 @@ button {
 /* ── Mobile navigation drawer ─────────────────────────────────────────────
    The sidebar holds the ONLY copies of the main nav, the workspace switcher,
    Account & billing and Sign out. It used to be `display: none` here, which
-   left a phone with no navigation and no way to end a session — a privacy
+   left a phone with no navigation and no way to end a session - a privacy
    defect on a shared or lost device, not a missing convenience. It is now an
    off-canvas drawer reachable from the top bar. */
 

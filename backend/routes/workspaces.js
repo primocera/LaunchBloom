@@ -115,7 +115,7 @@ async function resolveWorkspace(req) {
 
 // ── workspace CRUD (Prompt 7) ───────────────────────────────────────────────
 
-// GET /api/workspaces — list active (+ archived) workspaces for the switcher.
+// GET /api/workspaces - list active (+ archived) workspaces for the switcher.
 router.get('/api/workspaces', requireAuth, async (req, res, next) => {
   try {
     const workspaces = await listWorkspaces(req.userId, { includeArchived: true });
@@ -125,7 +125,7 @@ router.get('/api/workspaces', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/workspaces — create a new workspace, enforcing the plan's cap.
+// POST /api/workspaces - create a new workspace, enforcing the plan's cap.
 router.post('/api/workspaces', requireAuth, express.json({ limit: '2kb' }), async (req, res, next) => {
   try {
     const { planFor } = require('./customers');
@@ -159,7 +159,7 @@ router.post('/api/workspaces', requireAuth, express.json({ limit: '2kb' }), asyn
   }
 });
 
-// PATCH /api/workspaces/:id — rename or archive/unarchive.
+// PATCH /api/workspaces/:id - rename or archive/unarchive.
 router.patch('/api/workspaces/:id', requireAuth, express.json({ limit: '2kb' }), async (req, res, next) => {
   try {
     const owned = await ownedWorkspace(req.params.id, req.userEmail, req.userId);
@@ -195,7 +195,7 @@ router.patch('/api/workspaces/:id', requireAuth, express.json({ limit: '2kb' }),
   }
 });
 
-// DELETE /api/workspaces/:id — delete a workspace and its data (not the last one).
+// DELETE /api/workspaces/:id - delete a workspace and its data (not the last one).
 router.delete('/api/workspaces/:id', requireAuth, async (req, res, next) => {
   try {
     const owned = await ownedWorkspace(req.params.id, req.userEmail, req.userId);
@@ -232,7 +232,7 @@ router.get('/api/workspace/brand-profile', requireAuth, async (req, res, next) =
   }
 });
 
-// PUT /api/workspace/brand-profile — upsert (autosave from the guided form).
+// PUT /api/workspace/brand-profile - upsert (autosave from the guided form).
 router.put('/api/workspace/brand-profile', requireAuth, express.json({ limit: '32kb' }), async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -252,7 +252,7 @@ router.put('/api/workspace/brand-profile', requireAuth, express.json({ limit: '3
   }
 });
 
-// GET /api/workspace — the caller's workspace + latest onboarding/positioning
+// GET /api/workspace - the caller's workspace + latest onboarding/positioning
 router.get('/api/workspace', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -268,7 +268,7 @@ router.get('/api/workspace', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/workspace/onboarding — save (replace) onboarding answers
+// POST /api/workspace/onboarding - save (replace) onboarding answers
 router.post('/api/workspace/onboarding', requireAuth, express.json({ limit: '32kb' }), async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -297,7 +297,7 @@ router.post('/api/workspace/onboarding', requireAuth, express.json({ limit: '32k
   }
 });
 
-// GET /api/workspace/offers — the caller's offers (newest first)
+// GET /api/workspace/offers - the caller's offers (newest first)
 router.get('/api/workspace/offers', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -313,7 +313,7 @@ router.get('/api/workspace/offers', requireAuth, async (req, res, next) => {
   }
 });
 
-// GET /api/workspace/launch-kits — the caller's launch kits (newest first)
+// GET /api/workspace/launch-kits - the caller's launch kits (newest first)
 router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -329,7 +329,7 @@ router.get('/api/workspace/launch-kits', requireAuth, async (req, res, next) => 
   }
 });
 
-// GET /api/workspace/activation — v8 LB-S05: the 4-step first-value
+// GET /api/workspace/activation - v8 LB-S05: the 4-step first-value
 // checklist, derived entirely from server state (never a stored flag), so
 // every interrupted step resumes safely.
 router.get('/api/workspace/activation', requireAuth, async (req, res, next) => {
@@ -364,7 +364,7 @@ router.get('/api/workspace/activation', requireAuth, async (req, res, next) => {
   }
 });
 
-// GET /api/workspace/dashboard — everything the Prompt 10 dashboard needs in
+// GET /api/workspace/dashboard - everything the Prompt 10 dashboard needs in
 // one round trip: brand snapshot, current offer, this week's tasks, latest
 // kit, and progress counts. All real Supabase data with nulls for empty state.
 router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
@@ -403,7 +403,7 @@ router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
       ]);
       const all = tasks.data || [];
 
-      // Prompt 10 mix: 3 content, 2 sales, 1 website, 1 review — open tasks first.
+      // Prompt 10 mix: 3 content, 2 sales, 1 website, 1 review - open tasks first.
       const open = all.filter((t) => !t.completed);
       const pick = (re, n) => open.filter((t) => re.test(`${t.task_type} ${t.task_title}`)).slice(0, n);
       const picked = [
@@ -442,7 +442,7 @@ router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/workspace/launch-kits/:id/section — save a user-edited section
+// PATCH /api/workspace/launch-kits/:id/section - save a user-edited section
 // Body: { section, data }. Edits are the user's own words: we only check the
 // section name and ownership, not the AI schema.
 const EDITABLE_SECTIONS = ['landing_page', 'content_plan', 'email_sequence', 'ads_kit', 'seo_kit', 'weekly_plan'];
@@ -482,7 +482,7 @@ router.patch(
   }
 );
 
-// GET /api/workspace/launch-kits/:id — one full launch kit
+// GET /api/workspace/launch-kits/:id - one full launch kit
 router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -499,7 +499,7 @@ router.get('/api/workspace/launch-kits/:id', requireAuth, async (req, res, next)
   }
 });
 
-// GET /api/workspace/launch-kits/:id/quality — Prompt 27 quality scores +
+// GET /api/workspace/launch-kits/:id/quality - Prompt 27 quality scores +
 // Prompt 28 safety scan for the kit's sections and its offer.
 const {
   scoreOfferQuality,
@@ -574,7 +574,7 @@ const ITEM_TABLES = {
     order: 'created_at',
     editable: ['task_type', 'task_title', 'task_description', 'priority', 'completed', 'week_start'],
   },
-  // Upgrade 004 marketing-asset tables — power the new generator studios
+  // Upgrade 004 marketing-asset tables - power the new generator studios
   // (list saved assets, edit fields, flip status: draft/edited/ready/published).
   website_pages: {
     order: 'created_at',
@@ -598,7 +598,7 @@ const ITEM_TABLES = {
   },
 };
 
-// GET /api/workspace/items/:table?launch_kit_id=... — list a studio's items
+// GET /api/workspace/items/:table?launch_kit_id=... - list a studio's items
 router.get('/api/workspace/items/:table', requireAuth, async (req, res, next) => {
   try {
     const cfg = ITEM_TABLES[req.params.table];
@@ -615,7 +615,7 @@ router.get('/api/workspace/items/:table', requireAuth, async (req, res, next) =>
   }
 });
 
-// PATCH /api/workspace/items/:table/:id — edit fields / status of one item
+// PATCH /api/workspace/items/:table/:id - edit fields / status of one item
 router.patch(
   '/api/workspace/items/:table/:id',
   requireAuth,
@@ -626,12 +626,12 @@ router.patch(
       if (!cfg) return res.status(400).json({ error: 'Unknown item table' });
       const ws = await resolveWorkspace(req);
 
-      // Only allow whitelisted, present fields — never workspace_id/id/kit id.
+      // Only allow whitelisted, present fields - never workspace_id/id/kit id.
       const updates = {};
       for (const k of cfg.editable) {
         if (k in (req.body || {})) updates[k] = req.body[k];
       }
-      // v6 Prompt 24: an acknowledgement carries its proof source — a bare
+      // v6 Prompt 24: an acknowledgement carries its proof source - a bare
       // checkbox cannot legalize a high-risk claim.
       if (typeof updates.compliance_ack === 'boolean') {
         updates.compliance_ack = {
@@ -669,7 +669,7 @@ router.patch(
   }
 );
 
-// POST /api/workspace/items/weekly_tasks — add a custom weekly task (Prompt 23)
+// POST /api/workspace/items/weekly_tasks - add a custom weekly task (Prompt 23)
 router.post(
   '/api/workspace/items/weekly_tasks',
   requireAuth,

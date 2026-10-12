@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
-// Canonical commercial catalog (v5 Prompt 1) — the ONE source of truth for
+// Canonical commercial catalog (v5 Prompt 1) - the ONE source of truth for
 // what each plan costs and includes. The landing page, account UI, upgrade
 // modals and checkout allowlist all consume this (via GET /api/plans);
 // enforcement limits come from PLAN_LIMITS so numbers can never drift.
 //
 // Prices are display prices in USD. Annual savings are CALCULATED from the
-// monthly/yearly numbers — never handwritten.
+// monthly/yearly numbers - never handwritten.
 // ---------------------------------------------------------------------------
 
 const { PLAN_LIMITS } = require('./plan-limits');
@@ -30,11 +30,11 @@ const STRIPE_ENV = {
   studio: { monthly: 'STRIPE_PRICE_STUDIO_MONTHLY', yearly: 'STRIPE_PRICE_STUDIO_YEARLY' },
 };
 
-// Canonical prices, per currency — the only place amounts are written outside
+// Canonical prices, per currency - the only place amounts are written outside
 // Stripe. USD is the base; EUR amounts are the USD amounts converted at the ECB
 // reference rate 1 USD = 0.8707 EUR (2026-07-31), monthly rounded to cents and
-// yearly to whole euros. This is a fixed, owner-approved snapshot — NOT a live
-// rate — so the displayed price always equals the charged price. Each Stripe
+// yearly to whole euros. This is a fixed, owner-approved snapshot - NOT a live
+// rate - so the displayed price always equals the charged price. Each Stripe
 // Price must carry both currencies (currency_options); verify-stripe-prices.js
 // asserts Stripe matches this table for both.
 const PRICES = {
@@ -43,7 +43,7 @@ const PRICES = {
   studio: { usd: { monthly: 59, yearly: 499 }, eur: { monthly: 51.37, yearly: 434 } },
 };
 
-// v8 LB-S08: value comms reframed around jobs completed — capacity (campaigns,
+// v8 LB-S08: value comms reframed around jobs completed - capacity (campaigns,
 // actions, workspaces) is what scales by tier; the campaign-control workflow
 // (gap map, consistency checks, brief-change review, review packet export)
 // is included for every paid/trial user and never uses AI actions. No badge
@@ -59,14 +59,14 @@ const PLAN_META = {
   },
   studio: {
     note: 'Agencies and multi-brand users',
-    jobs: 'Run many client campaigns in parallel — separate workspaces, high revision capacity, handoff packets per client.',
+    jobs: 'Run many client campaigns in parallel - separate workspaces, high revision capacity, handoff packets per client.',
   },
 };
 
 // Included on every plan AND the trial; never paywalled and never metered.
 const INCLUDED_FREE =
   'Campaign gap map, consistency checks, brief-change review, evidence locker, ' +
-  'review queue, editing and exports are included on every plan and the trial — ' +
+  'review queue, editing and exports are included on every plan and the trial - ' +
   'they never use AI actions.';
 
 function round2(n) {
@@ -102,7 +102,7 @@ function maxSavingsPct(currency = 'usd') {
 
 /**
  * Serializable catalog for GET /api/plans and any UI. Limits are read live
- * from PLAN_LIMITS — this function cannot disagree with enforcement.
+ * from PLAN_LIMITS - this function cannot disagree with enforcement.
  */
 function publicCatalog(currency = 'usd') {
   const cur = safeCurrency(currency);
@@ -163,7 +163,7 @@ function publicCatalog(currency = 'usd') {
 }
 
 // ---------------------------------------------------------------------------
-// v13 SC-P0-03 — authoritative server-side catalog selection.
+// v13 SC-P0-03 - authoritative server-side catalog selection.
 //
 // ONE function decides region -> currency -> price id -> availability. GET
 // /api/plans (what the buyer sees) and POST create-checkout-session (what the
@@ -213,7 +213,7 @@ function selectCatalog(req, opts = {}) {
   const region = EUR_COUNTRIES.has(country) ? 'eu' : 'non_eu';
 
   // What the region WOULD be quoted if EUR were fully live, vs what it actually
-  // gets. The fallback is decided here, before display — never after.
+  // gets. The fallback is decided here, before display - never after.
   const requested = eurEnabled() ? currencyForCountry(country) : 'usd';
   let currency = requested;
   let fallbackReason = null;

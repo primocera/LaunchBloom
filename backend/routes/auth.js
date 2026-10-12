@@ -30,7 +30,7 @@ const { signupDecision, capIsActive, MESSAGES: COHORT_MESSAGES } = require('../l
 
 const router = express.Router();
 
-// Local E2E signs in many seeded users from one IP — don't throttle tests
+// Local E2E signs in many seeded users from one IP - don't throttle tests
 // (matches the general/payment/AI limiters in server.js). Production stays at 20.
 const isTestEnv = process.env.NODE_ENV === 'test';
 const loginLimiter = rateLimit({
@@ -61,7 +61,7 @@ async function accountStatus(email, userId) {
   const usage = await usageFor(ws.id, plan, email, userId);
   return {
     // LB-V19 (LB-02): expose the STABLE Supabase user UUID so the client can
-    // scope device-local drafts by identity — never by the mutable email or the
+    // scope device-local drafts by identity - never by the mutable email or the
     // workspace id. This comes from the validated server session, not a client
     // claim (login/signup pass data.user.id; /me passes req.userId).
     id: userId || null,
@@ -223,7 +223,7 @@ router.post('/api/auth/forgot-password', loginLimiter, json, async (req, res) =>
         redirectTo: `${callbackUrl()}?flow=recovery`,
       });
     } catch {
-      /* swallow — never reveal whether the account exists */
+      /* swallow - never reveal whether the account exists */
     }
   }
   res.json({ ok: true, message: 'If an account exists for that email, a reset link is on its way.' });
@@ -236,7 +236,7 @@ router.post('/api/auth/reset-password', auth.requireAuth, json, async (req, res,
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
-    // service_role admin update — no need for the user's own token.
+    // service_role admin update - no need for the user's own token.
     const { error } = await supabase.adminClient().auth.admin.updateUserById(req.userId, { password });
     if (error) throw new Error(error.message);
     res.json({ ok: true });
@@ -296,8 +296,8 @@ router.get('/api/auth/callback', async (req, res) => {
     // template sends `{{ .ConfirmationURL }}` → `?code=…` with NO `type`, so on
     // a real deployment a confirmed signup fired NOTHING: no welcome email
     // (email_events had not one `welcome` row in production history), no
-    // `verified` analytics event — which silently zeroes that row of the beta
-    // funnel — and the new account landed on /app instead of Brand Profile
+    // `verified` analytics event - which silently zeroes that row of the beta
+    // funnel - and the new account landed on /app instead of Brand Profile
     // onboarding. One missing query parameter, three broken outcomes.
     //
     // A first verification is a signup whichever link form carried it, so it is
@@ -311,13 +311,13 @@ router.get('/api/auth/callback', async (req, res) => {
 
     if (!isRecovery && isSignup) {
       track('verified', { userId: user && user.id });
-      // Idempotent welcome email (v5 Prompt 14) — never blocks the redirect.
+      // Idempotent welcome email (v5 Prompt 14) - never blocks the redirect.
       if (user && user.email) {
         const { sendLifecycleEmail } = require('../lib/lifecycle-email');
         sendLifecycleEmail('welcome', user.id, user.email).catch(() => {});
       }
     }
-    // New signups land on Brand Profile onboarding (v5 Prompt 2) — account and
+    // New signups land on Brand Profile onboarding (v5 Prompt 2) - account and
     // profile first; the Stripe trial starts only at the first generation.
     if (isRecovery) return res.redirect(`${appUrl()}/app/reset-password`);
     if (isSignup) return res.redirect(`${appUrl()}/app/brand?welcome=1`);

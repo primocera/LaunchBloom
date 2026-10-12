@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // v9 SC-01: shared campaign constants + pure helpers. One source of truth for
-// the campaign list (Campaigns.jsx) and the campaign workspace sections —
+// the campaign list (Campaigns.jsx) and the campaign workspace sections -
 // no component re-derives status or brief rules on its own.
 // ---------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ export const TEMPLATES = [
   { key: 'content', label: 'Content month', brief: { objective: 'A month of consistent audience-building content', channels: ['social', 'email'] } },
 ];
 
-// Playbook v6 Prompt 18: the brief is a contract — these decisions must be
+// Playbook v6 Prompt 18: the brief is a contract - these decisions must be
 // present before assets can inherit a coherent campaign.
 export const REQUIRED_DECISIONS = [
   ['objective', 'a goal'],
@@ -61,7 +61,7 @@ export const STUDIO_BY_TABLE = {
   seo_assets: '/app/seo',
 };
 
-// v8 LB-S01: which deliverables a channel suggests — prefill only.
+// v8 LB-S01: which deliverables a channel suggests - prefill only.
 export const CHANNEL_SUGGESTS = {
   email: ['email_flow'],
   social: ['social_set'],

@@ -56,7 +56,7 @@ export function useKits() {
 }
 
 /**
- * v13 SC-P1-07 — the one loader every legacy studio shares.
+ * v13 SC-P1-07 - the one loader every legacy studio shares.
  *
  * The four studios previously ran `useEffect(() => { setItems(null); load(); },
  * [kitId])` with `load` suppressed out of the dependency list. Switching kits

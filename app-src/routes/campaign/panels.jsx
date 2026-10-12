@@ -67,7 +67,7 @@ export function Deliverables({ campaign, defaultOpen }) {
     <div className="campaign-deliverables">
       <h3 style={{ marginBottom: 4 }}>Campaign deliverables</h3>
       <p className="muted" style={{ marginTop: 0 }}>
-        Choose what this campaign actually needs — a campaign with two required outcomes is complete
+        Choose what this campaign actually needs - a campaign with two required outcomes is complete
         without the other three.{!gap.plan_saved && ' Suggestions come from your selected channels; nothing is required until you save.'}
       </p>
       {gap.deliverables.map((d) => (
@@ -94,7 +94,7 @@ export function Deliverables({ campaign, defaultOpen }) {
         </ul>
       )}
       {gap.plan_saved && gap.all_required_ready && (
-        <p className="muted">All required deliverables are ready — review and export from the Library when you decide they’re final.</p>
+        <p className="muted">All required deliverables are ready - review and export from the Library when you decide they’re final.</p>
       )}
       {error && <p className="login-err">{error}</p>}
       <div className="confirm-row">
@@ -106,7 +106,7 @@ export function Deliverables({ campaign, defaultOpen }) {
 }
 
 // v8 LB-S03: brief-change impact review. Each affected asset resolved independently.
-// (v9 SC-04: the standalone Consistency panel was folded into ReviewWorkbench —
+// (v9 SC-04: the standalone Consistency panel was folded into ReviewWorkbench -
 // BriefImpact stays because the Brief section shows change impact inline.)
 export function BriefImpact({ campaign, defaultOpen }) {
   const [open, setOpen] = useState(false);
@@ -168,7 +168,7 @@ export function BriefImpact({ campaign, defaultOpen }) {
   );
 }
 
-// v8 LB-S05: deterministic package preview — what the paid workflow assembles.
+// v8 LB-S05: deterministic package preview - what the paid workflow assembles.
 export function PackagePreview({ campaign, defaultOpen }) {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -194,7 +194,7 @@ export function PackagePreview({ campaign, defaultOpen }) {
         {preview.deliverables.map((d) => (
           <li key={d.code}>
             <strong>{d.label}</strong>
-            {d.requirement !== 'unplanned' ? ` (${d.requirement.replace('_', ' ')})` : ''} — {d.output_structure}
+            {d.requirement !== 'unplanned' ? ` (${d.requirement.replace('_', ' ')})` : ''} - {d.output_structure}
           </li>
         ))}
       </ul>
@@ -207,8 +207,8 @@ export function PackagePreview({ campaign, defaultOpen }) {
 }
 
 // v9 SC-07 (ADR-001 preserved): the Handoff screen. Server-owned preview of the
-// exact packet — readiness, included/excluded assets, unresolved items and
-// evidence — before any download, with a deterministic fingerprint so a stale
+// exact packet - readiness, included/excluded assets, unresolved items and
+// evidence - before any download, with a deterministic fingerprint so a stale
 // packet is visible after a material change. Export-only: no share links, no
 // email, no client accounts. This is a Review record, never an approval.
 export function HandoffExports({ campaign }) {
@@ -297,7 +297,7 @@ export function HandoffExports({ campaign }) {
         <p className="muted">Excluded (archived, disclosed): {h.excluded_assets.map((a) => a.title).join(', ')}.</p>
       )}
 
-      {/* "What remains outside Scalvya" — prominent, never fine print. */}
+      {/* "What remains outside Scalvya" - prominent, never fine print. */}
       <div className="account-section">
         <strong>What remains outside Scalvya</strong>
         <ul className="muted" style={{ marginBottom: 0 }}>
@@ -312,11 +312,11 @@ export function HandoffExports({ campaign }) {
         </label>
       )}
 
-      {/* v10 SC-04: what the bundle contains, stated BEFORE the download —
+      {/* v10 SC-04: what the bundle contains, stated BEFORE the download -
           no surprises about what a client is about to receive. */}
       {h.bundle_contents && (
         <p className="muted" style={{ marginTop: 8 }}>
-          The bundle contains {h.bundle_contents.join(', ')} — the documents plus the
+          The bundle contains {h.bundle_contents.join(', ')} - the documents plus the
           manifest they were built from.
         </p>
       )}
@@ -367,11 +367,11 @@ export function HandoffExports({ campaign }) {
       {h.last_handoff_at && (
         <p className="muted" style={{ marginTop: 6 }}>
           Last exported {new Date(h.last_handoff_at).toLocaleString()}{h.last_handoff_format ? ` · ${h.last_handoff_format.toUpperCase()}` : ''}.
-          {h.stale ? ' The campaign changed since — re-export for the current version.' : ' This matches the current campaign.'}
+          {h.stale ? ' The campaign changed since - re-export for the current version.' : ' This matches the current campaign.'}
         </p>
       )}
 
-      {/* v11 SC-07: asked once, after work has actually left the product —
+      {/* v11 SC-07: asked once, after work has actually left the product -
           the only point at which a beta user can say whether it was worth it.
           Hides itself if already answered and never blocks the export. */}
       {h.last_handoff_at && (

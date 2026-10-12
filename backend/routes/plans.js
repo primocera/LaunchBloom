@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// GET /api/plans — public, read-only commercial catalog (v5 Prompt 1).
+// GET /api/plans - public, read-only commercial catalog (v5 Prompt 1).
 // The frontend renders pricing from this so customer-facing numbers can never
 // drift from backend enforcement. In production a missing Stripe price env is
 // a configuration error, not a silent gap.
@@ -40,7 +40,7 @@ const { BRAND, LEGAL_VERSION, legalPlaceholders } = require('../lib/brand');
 
 function legalHandler(_req, res) {
   res.set('Cache-Control', 'public, max-age=300');
-  // v9 SC-00: fail closed. Never emit a placeholder entity to customers — when
+  // v9 SC-00: fail closed. Never emit a placeholder entity to customers - when
   // the legal identity isn't fully configured, entity-bearing fields are null
   // and the client renders an explicit "unavailable" state instead of a
   // fabricated name like "Scalvya (legal entity TBD)".

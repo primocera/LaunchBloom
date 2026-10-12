@@ -2,21 +2,21 @@
 // Region -> billing currency for explicit multi-currency pricing (Option 2).
 //
 // EU/EEA visitors are quoted AND charged in EUR; everyone else in USD. Both are
-// real, locked prices carried on the same Stripe Price via currency_options —
+// real, locked prices carried on the same Stripe Price via currency_options -
 // there is no live FX conversion at checkout, so a EUR customer is never handed
 // a USD 3DS charge their bank declines (see verify-stripe-prices.js for why that
 // specific failure looks like a card problem and is not one).
 //
 // Detection uses Vercel's edge geo header (x-vercel-ip-country, ISO-3166
 // alpha-2), with Cloudflare's header as a fallback. Unknown or missing location
-// FAILS TO USD — the base currency every price always carries, so a request we
+// FAILS TO USD - the base currency every price always carries, so a request we
 // cannot geolocate still checks out.
 // ---------------------------------------------------------------------------
 
 'use strict';
 
 // EU-27 + EEA (Iceland, Liechtenstein, Norway). Per the owner's rule "EU/EEA
-// sees EUR" — this charges EUR to all of these even where the local currency is
+// sees EUR" - this charges EUR to all of these even where the local currency is
 // not the euro (e.g. PL/SE/DK), which is the intended, simplest behaviour.
 const EUR_COUNTRIES = new Set([
   'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU',
@@ -41,7 +41,7 @@ function countryOf(req) {
 
 /**
  * Master switch for EUR pricing. OFF by default so this code can ship before the
- * Stripe prices carry their EUR currency_options — with the flag unset every
+ * Stripe prices carry their EUR currency_options - with the flag unset every
  * request is USD (today's behaviour), so an EU checkout can never request a
  * currency Stripe hasn't been configured for. Set EUR_PRICING_ENABLED=1 only
  * AFTER `npm run verify-prices` confirms EUR is live on all six prices. Unsetting
@@ -56,7 +56,7 @@ function eurEnabled() {
  * verified against Stripe. `npm run verify-prices` proves every plan/interval
  * carries a matching EUR currency_option; the owner then attests that result to
  * the runtime with EUR_PRICES_VERIFIED=1. In production, EUR_PRICING_ENABLED
- * alone is NOT enough — an unverified EUR catalog silently degrades to the
+ * alone is NOT enough - an unverified EUR catalog silently degrades to the
  * explicitly configured USD fallback BEFORE anything is displayed, so a buyer
  * can never be shown EUR and then charged USD. Outside production the flag is
  * sufficient so the path stays testable.
@@ -73,7 +73,7 @@ function eurCatalogReady() {
 
 /**
  * Billing currency for the request: USD unless EUR is enabled, VERIFIED, and the
- * buyer is EU/EEA. This is the single decision point — display and checkout both
+ * buyer is EU/EEA. This is the single decision point - display and checkout both
  * read it (via plan-catalog.selectCatalog) so they can never disagree.
  */
 function currencyForRequest(req) {

@@ -1,4 +1,4 @@
-/* The guided flow — the Scalvya palette from the spec. */
+/* The guided flow - the Scalvya palette from the spec. */
 
 /* v9 SC-09: one canonical token layer + baseline accessibility. Tokens mirror
    the palette already used across routes so components can converge on them
@@ -17,7 +17,7 @@
   --sc-tap: 44px; /* WCAG 2.5.5 minimum touch target */
 }
 
-/* Visible keyboard focus everywhere — never removed to look "clean". */
+/* Visible keyboard focus everywhere - never removed to look "clean". */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--sc-primary);
   outline-offset: 2px;
@@ -1006,7 +1006,7 @@
   white-space: nowrap;
   border: 0;
 }
-/* Visible keyboard focus everywhere — never remove without a replacement. */
+/* Visible keyboard focus everywhere - never remove without a replacement. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -1246,11 +1246,11 @@ textarea:focus-visible,
 .asset-diff-label { font-size: 12px; font-weight: 600; text-transform: capitalize; }
 .asset-diff-before p, .asset-diff-after p { margin: 2px 0 6px; white-space: pre-wrap; }
 .asset-diff-before p { color: #6b7280; text-decoration: line-through; }
-/* v9 SC-07: handoff export — disabled anchor while blockers/reminders unmet. */
+/* v9 SC-07: handoff export - disabled anchor while blockers/reminders unmet. */
 .btn-secondary.is-disabled { opacity: 0.5; pointer-events: none; }
 .campaign-readiness.is-blocked strong { color: #b91c1c; }
 
-/* v9 SC-01: campaign workspace — tabs, overview summary, quiet overflow menu. */
+/* v9 SC-01: campaign workspace - tabs, overview summary, quiet overflow menu. */
 .campaign-workspace .brand-head { align-items: flex-start; }
 .campaign-tabs {
   display: flex; gap: 4px; flex-wrap: wrap;
@@ -1272,7 +1272,7 @@ textarea:focus-visible,
 }
 .campaign-summary-card { display: flex; flex-direction: column; gap: 4px; }
 .campaign-summary-card strong { font-size: 20px; }
-/* v9 SC-02: transparent readiness groups — state colour on the left edge, plain
+/* v9 SC-02: transparent readiness groups - state colour on the left edge, plain
    reasons underneath. No synthetic 0–100 score. */
 .campaign-readiness { display: flex; flex-direction: column; gap: 6px; border-left: 3px solid #e5e7eb; }
 .campaign-readiness.is-ready { border-left-color: #10b981; }
@@ -1283,7 +1283,7 @@ textarea:focus-visible,
 .campaign-readiness-reasons { margin: 0; padding-left: 16px; font-size: 13px; color: #111827; }
 .campaign-readiness-reasons li { margin: 2px 0; }
 /* v9 SC-04: unified Review workbench. Severity is handoff risk, muted not
-   alarmist — a subtle left edge, never a wall of red. */
+   alarmist - a subtle left edge, never a wall of red. */
 .review-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .review-impact-summary { margin: 4px 0 10px; }
 .review-list { display: flex; flex-direction: column; gap: 6px; outline: none; }

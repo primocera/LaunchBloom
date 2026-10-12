@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// Campaign Studio (audit Prompt 12) — the product's organizing layer.
+// Campaign Studio (audit Prompt 12) - the product's organizing layer.
 //
 // A campaign holds one brief (objective, audience, offer, dates, channels,
 // promo terms). "Generate strategy" is an AI action that produces the message
 // hierarchy + calendar; the user approves the brief, then generates linked
-// assets (emails, social, ads, landing) from it — all sharing campaign_id so
+// assets (emails, social, ads, landing) from it - all sharing campaign_id so
 // discount, dates, CTA and audience stay consistent. No external publishing.
 // ---------------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ async function ownedCampaign(ws, id) {
 function briefPatch(body) {
   const patch = {};
   const b = body || {};
-  // v5 Prompt 6: the full brief — goal, offer, audience, markets, language,
+  // v5 Prompt 6: the full brief - goal, offer, audience, markets, language,
   // key message, proof, restrictions, promotion, dates and a real deadline.
   const strings = ['name', 'objective', 'audience', 'offer_summary', 'products', 'promo_terms', 'status',
     'markets', 'language', 'key_message', 'proof', 'restrictions'];
@@ -49,7 +49,7 @@ function briefPatch(body) {
   return patch;
 }
 
-// GET /api/campaigns — list with per-campaign asset completion counts.
+// GET /api/campaigns - list with per-campaign asset completion counts.
 router.get('/api/campaigns', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -88,7 +88,7 @@ router.get('/api/campaigns', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/campaigns — create from a brief (no AI, no action consumed).
+// POST /api/campaigns - create from a brief (no AI, no action consumed).
 router.post('/api/campaigns', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -109,7 +109,7 @@ router.post('/api/campaigns', requireAuth, async (req, res, next) => {
     // SC-95-03: server-confirmed repeat-value signal. Deduped per campaign id so
     // a retry/re-post cannot double-count; a workspace's 2nd distinct campaign is
     // what the scorecard's second_campaign_rate measures. campaign_id is an id,
-    // not content — safe in analytics.
+    // not content - safe in analytics.
     track('campaign_created', { userId: req.userId, workspaceId: ws.id, dedupeKey: `campaign:${data.id}`, properties: { campaign_id: data.id, source: 'brief' } });
     res.status(201).json({ campaign: data });
   } catch (err) {
@@ -143,7 +143,7 @@ async function assetsByTableFor(ws, campaignId) {
   return byTable;
 }
 
-// GET /api/campaigns/:id/deliverables — the gap map: per-deliverable state
+// GET /api/campaigns/:id/deliverables - the gap map: per-deliverable state
 // derived from the saved plan + real asset rows, with transparent blockers.
 router.get('/api/campaigns/:id/deliverables', requireAuth, async (req, res, next) => {
   try {
@@ -161,7 +161,7 @@ router.get('/api/campaigns/:id/deliverables', requireAuth, async (req, res, next
   }
 });
 
-// PUT /api/campaigns/:id/deliverables — save the user's plan. Unknown codes
+// PUT /api/campaigns/:id/deliverables - save the user's plan. Unknown codes
 // and states are rejected; the plan is replaced atomically per campaign.
 router.put('/api/campaigns/:id/deliverables', requireAuth, async (req, res, next) => {
   try {
@@ -209,7 +209,7 @@ async function fullAssetsByTableFor(ws, campaignId) {
   return byTable;
 }
 
-// GET /api/campaigns/:id/consistency — recompute, reconcile lifecycle, return.
+// GET /api/campaigns/:id/consistency - recompute, reconcile lifecycle, return.
 router.get('/api/campaigns/:id/consistency', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -242,7 +242,7 @@ router.get('/api/campaigns/:id/consistency', requireAuth, async (req, res, next)
       if (error) throw new Error('Failed to record findings: ' + error.message);
     }
 
-    // Findings that stopped appearing are resolved — server-confirmed event.
+    // Findings that stopped appearing are resolved - server-confirmed event.
     const currentFps = new Set(computed.map((f) => f.fingerprint));
     for (const row of persisted || []) {
       if (row.status !== 'resolved' && !currentFps.has(row.fingerprint)) {
@@ -274,7 +274,7 @@ router.get('/api/campaigns/:id/consistency', requireAuth, async (req, res, next)
       rule_version: RULES_VERSION,
       findings,
       // Honest empty state: absence of findings is not approval.
-      clean_message: findings.length === 0 ? 'No issues detected by these checks. This is not an approval — review remains yours.' : null,
+      clean_message: findings.length === 0 ? 'No issues detected by these checks. This is not an approval - review remains yours.' : null,
     });
   } catch (err) {
     next(err);
@@ -282,9 +282,9 @@ router.get('/api/campaigns/:id/consistency', requireAuth, async (req, res, next)
 });
 
 // ── v8 LB-S03: brief-change impact + stale-asset review ─────────────────────
-// Derived from snapshots — free, no AI action, no silent propagation.
+// Derived from snapshots - free, no AI action, no silent propagation.
 
-// GET /api/campaigns/:id/brief-impact — field-level diff of the current brief
+// GET /api/campaigns/:id/brief-impact - field-level diff of the current brief
 // vs each asset's generation-time snapshot, with per-asset review state.
 router.get('/api/campaigns/:id/brief-impact', requireAuth, async (req, res, next) => {
   try {
@@ -309,10 +309,10 @@ router.get('/api/campaigns/:id/brief-impact', requireAuth, async (req, res, next
   }
 });
 
-// POST /api/campaigns/:id/brief-impact/keep — explicitly keep one asset's
+// POST /api/campaigns/:id/brief-impact/keep - explicitly keep one asset's
 // snapshot for the CURRENT diff. Records reviewer + time; a further material
 // brief change produces a new fingerprint and reopens the review. Keeping a
-// snapshot is a decision on record — not a statement that it is factually
+// snapshot is a decision on record - not a statement that it is factually
 // correct.
 router.post('/api/campaigns/:id/brief-impact/keep', requireAuth, async (req, res, next) => {
   try {
@@ -330,7 +330,7 @@ router.post('/api/campaigns/:id/brief-impact/keep', requireAuth, async (req, res
     if (!asset) return res.status(404).json({ error: 'Asset not found in this campaign' });
 
     const changed = briefDiffForAsset(campaign, asset_table, asset);
-    if (!changed.length) return res.status(409).json({ error: 'This asset matches the current brief — nothing to keep.' });
+    if (!changed.length) return res.status(409).json({ error: 'This asset matches the current brief - nothing to keep.' });
 
     const { error } = await supabase.from('asset_brief_reviews').upsert({
       workspace_id: ws.id, campaign_id: campaign.id,
@@ -358,15 +358,15 @@ router.post('/api/campaigns/:id/brief-impact/keep', requireAuth, async (req, res
 
 // ── v8 LB-S06: first-party playbooks + workspace templates ──────────────────
 // Playbooks are versioned structure (objective, deliverable plan, questions),
-// never claims or benchmarks. Applying anything creates a NEW draft campaign —
+// never claims or benchmarks. Applying anything creates a NEW draft campaign -
 // existing campaigns are never overwritten and approval never transfers.
 
-// GET /api/playbooks — the versioned first-party catalog (preview data).
+// GET /api/playbooks - the versioned first-party catalog (preview data).
 router.get('/api/playbooks', requireAuth, async (_req, res) => {
   res.json({ playbooks: PLAYBOOKS });
 });
 
-// POST /api/campaigns/apply-playbook — create a draft campaign from one.
+// POST /api/campaigns/apply-playbook - create a draft campaign from one.
 router.post('/api/campaigns/apply-playbook', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -381,7 +381,7 @@ router.post('/api/campaigns/apply-playbook', requireAuth, async (req, res, next)
       objective: pb.suggested_objective,
       channels: pb.channels,
       status: 'draft',
-      // facts stay empty for the user to verify — never prefilled from a playbook
+      // facts stay empty for the user to verify - never prefilled from a playbook
     }).select().single();
     if (error) throw new Error('Failed to create campaign: ' + error.message);
 
@@ -397,7 +397,7 @@ router.post('/api/campaigns/apply-playbook', requireAuth, async (req, res, next)
       userId: req.userId, workspaceId: ws.id,
       properties: { playbook_id: pb.id, playbook_version: pb.version },
     });
-    // SC-95-03: applying a playbook creates a real new campaign — a repeat-value
+    // SC-95-03: applying a playbook creates a real new campaign - a repeat-value
     // signal, deduped per campaign id.
     track('campaign_created', { userId: req.userId, workspaceId: ws.id, dedupeKey: `campaign:${campaign.id}`, properties: { campaign_id: campaign.id, source: 'playbook' } });
     res.status(201).json({ campaign, brief_questions: pb.brief_questions });
@@ -406,7 +406,7 @@ router.post('/api/campaigns/apply-playbook', requireAuth, async (req, res, next)
   }
 });
 
-// GET /api/templates — this workspace's saved templates.
+// GET /api/templates - this workspace's saved templates.
 router.get('/api/templates', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -419,7 +419,7 @@ router.get('/api/templates', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/campaigns/:id/save-template — save a sanitized template from an
+// POST /api/campaigns/:id/save-template - save a sanitized template from an
 // existing campaign. `include` lists the brief fields to carry; everything
 // else (approval, statuses, strategy, evidence, dates) is dropped by design.
 router.post('/api/campaigns/:id/save-template', requireAuth, async (req, res, next) => {
@@ -449,7 +449,7 @@ router.post('/api/campaigns/:id/save-template', requireAuth, async (req, res, ne
   }
 });
 
-// POST /api/templates/:id/apply — new DRAFT campaign from a template.
+// POST /api/templates/:id/apply - new DRAFT campaign from a template.
 router.post('/api/templates/:id/apply', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -477,7 +477,7 @@ router.post('/api/templates/:id/apply', requireAuth, async (req, res, next) => {
         { onConflict: 'campaign_id,deliverable_code' });
     }
     track('user_template_reused', { userId: req.userId, workspaceId: ws.id, properties: { template_version: tpl.version } });
-    // SC-95-03: applying a saved template creates a real new campaign — a
+    // SC-95-03: applying a saved template creates a real new campaign - a
     // repeat-value signal, deduped per campaign id.
     track('campaign_created', { userId: req.userId, workspaceId: ws.id, dedupeKey: `campaign:${campaign.id}`, properties: { campaign_id: campaign.id, source: 'template' } });
     res.status(201).json({ campaign });
@@ -499,7 +499,7 @@ router.delete('/api/templates/:id', requireAuth, async (req, res, next) => {
 
 // ── v8 LB-S05: deterministic campaign package preview ───────────────────────
 // Shown BEFORE the trial/checkout: what the paid workflow will assemble from
-// this brief — inherited facts, planned deliverables, expected output
+// this brief - inherited facts, planned deliverables, expected output
 // structures and the review checks that run. No AI call, no fabricated draft.
 
 const OUTPUT_STRUCTURE = {
@@ -507,7 +507,7 @@ const OUTPUT_STRUCTURE = {
   email_flow: 'A sequenced email flow: subject options, preheader, body copy, timing and segment per email',
   social_set: 'Platform captions with hooks, CTAs, hashtags and visual direction (planned, never scheduled)',
   creative_brief: 'Ad creative briefs: hooks, headlines, primary text, shot list and testing angle (briefs, not media)',
-  seo_ideas: 'SEO research ideas: keywords, intent, titles, H-structure and FAQs — no invented volume or difficulty',
+  seo_ideas: 'SEO research ideas: keywords, intent, titles, H-structure and FAQs - no invented volume or difficulty',
 };
 
 router.get('/api/campaigns/:id/package-preview', requireAuth, async (req, res, next) => {
@@ -539,7 +539,7 @@ router.get('/api/campaigns/:id/package-preview', requireAuth, async (req, res, n
         output_structure: OUTPUT_STRUCTURE[d.code],
       })),
       review_checks: Object.entries(FINDING_META).map(([code, m]) => ({ code, why: m.why })),
-      honesty: 'This preview is assembled from your brief — nothing here is AI-generated content. ' +
+      honesty: 'This preview is assembled from your brief - nothing here is AI-generated content. ' +
         'Generation runs after the trial starts and uses 1 AI action per successful generation.',
     };
     track('package_preview_viewed', { userId: req.userId, workspaceId: ws.id, properties: { planned: plan.size } });
@@ -617,12 +617,12 @@ async function buildReviewQueue(ws, campaign) {
     evidence_reminders: evidenceReminders,
     assets: assetIndex,
     // Export-blocking items: unresolved high-severity findings. Everything
-    // else is a reminder — 'Ready to export' remains a human decision.
+    // else is a reminder - 'Ready to export' remains a human decision.
     blocking: openFindings.filter((f) => f.severity === 'high' && f.status !== 'acknowledged'),
   };
 }
 
-// GET /api/campaigns/:id/review — the campaign review queue by risk type.
+// GET /api/campaigns/:id/review - the campaign review queue by risk type.
 router.get('/api/campaigns/:id/review', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -634,7 +634,7 @@ router.get('/api/campaigns/:id/review', requireAuth, async (req, res, next) => {
   }
 });
 
-// GET /api/campaigns/:id/review-manifest — deterministic handoff record:
+// GET /api/campaigns/:id/review-manifest - deterministic handoff record:
 // asset index, statuses, snapshot timestamps, unresolved items and evidence
 // references. Explicitly NOT an approval or compliance certificate, and it
 // never erases unresolved items.
@@ -646,17 +646,17 @@ router.get('/api/campaigns/:id/review-manifest', requireAuth, async (req, res, n
 
     const q = await buildReviewQueue(ws, campaign);
     const lines = [
-      `# Review manifest — ${campaign.name}`,
+      `# Review manifest - ${campaign.name}`,
       '',
       'This is a handoff record generated by Scalvya. It is NOT an approval,',
-      'fact-check or compliance certificate — publishing decisions and platform/',
+      'fact-check or compliance certificate - publishing decisions and platform/',
       'legal review remain with you and your downstream owner.',
       '',
       `Brief approved: ${campaign.brief_approved ? 'yes' : 'no'}`,
       '',
       '## Assets',
       ...q.assets.map((a) =>
-        `- ${a.title} (${a.table}) — status: ${a.status}${a.brief_snapshot_at ? `, brief snapshot: ${a.brief_snapshot_at}` : ', no brief snapshot'}`),
+        `- ${a.title} (${a.table}) - status: ${a.status}${a.brief_snapshot_at ? `, brief snapshot: ${a.brief_snapshot_at}` : ', no brief snapshot'}`),
       '',
       '## Unresolved items',
       ...(q.blocking.length ? q.blocking.map((f) => `- BLOCKING · ${f.code}: ${f.assets.map((x) => x.title).join(', ')}`) : []),
@@ -668,7 +668,7 @@ router.get('/api/campaigns/:id/review-manifest', requireAuth, async (req, res, n
       '',
       '## Evidence references',
       ...(q.evidence.length
-        ? q.evidence.map((e) => `- ${e.label} (${e.type}) — checked ${e.checked_date}${e.source_url ? `, source: ${e.source_url}` : ''}${e.source_ref ? `, ref: ${e.source_ref}` : ''}`)
+        ? q.evidence.map((e) => `- ${e.label} (${e.type}) - checked ${e.checked_date}${e.source_url ? `, source: ${e.source_url}` : ''}${e.source_ref ? `, ref: ${e.source_ref}` : ''}`)
         : ['- none recorded']),
       '',
       `Generated ${new Date().toISOString()} · rules ${RULES_VERSION}`,
@@ -707,7 +707,7 @@ function packetMarkdown(campaign, q) {
     ...q.needs_review_assets.map((a) => `- needs review · ${a.title}`),
   ];
   return [
-    `# Campaign review packet — ${campaign.name}`,
+    `# Campaign review packet - ${campaign.name}`,
     '',
     '> Handoff record generated by Scalvya. NOT an approval, fact-check or',
     '> compliance certificate. Publishing, sending, scheduling and platform/',
@@ -733,14 +733,14 @@ function packetMarkdown(campaign, q) {
     '',
     '## Evidence references',
     ...(q.evidence.length
-      ? q.evidence.map((e) => `- ${e.label} (${e.type}) — checked ${e.checked_date}${e.source_url ? ` — ${e.source_url}` : ''}${e.source_ref ? ` — ${e.source_ref}` : ''}`)
+      ? q.evidence.map((e) => `- ${e.label} (${e.type}) - checked ${e.checked_date}${e.source_url ? ` - ${e.source_url}` : ''}${e.source_ref ? ` - ${e.source_ref}` : ''}`)
       : ['- none recorded']),
     '',
     '## Downstream owner checklist',
     '- [ ] Verify every fact, price, date and claim against your own sources.',
     '- [ ] Resolve the unresolved items above before publishing.',
     '- [ ] Check platform policies and legal/compliance requirements yourself.',
-    '- [ ] Set up publishing/sending/scheduling in your own tools — Scalvya does none of these.',
+    '- [ ] Set up publishing/sending/scheduling in your own tools - Scalvya does none of these.',
     '- [ ] Record final approval in your own process.',
     '',
     `Generated ${new Date().toISOString()} · consistency rules ${RULES_VERSION}`,
@@ -757,7 +757,7 @@ function packetHtml(campaign, md) {
     return ln.trim() ? `<p>${escHtml(ln)}</p>` : '';
   }).join('\n');
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="robots" content="noindex">` +
-    `<title>${escHtml(campaign.name)} — review packet</title>` +
+    `<title>${escHtml(campaign.name)} - review packet</title>` +
     `<style>body{font-family:Georgia,serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#111827}` +
     `h1{font-size:1.5rem}h2{font-size:1.1rem;margin-top:1.5rem;border-bottom:1px solid #E5E7EB;padding-bottom:4px}` +
     `.note{color:#6B7280;font-style:italic}li{margin:2px 0}@media print{body{margin:0}}</style>` +
@@ -777,7 +777,7 @@ router.get('/api/campaigns/:id/review-packet', requireAuth, async (req, res, nex
       userId: req.userId, workspaceId: ws.id,
       properties: { format: req.query.format === 'html' ? 'html' : 'md', assets: q.assets.length, unresolved: q.blocking.length },
     });
-    // v8 LB-S09 funnel: the value moment — a campaign with every required
+    // v8 LB-S09 funnel: the value moment - a campaign with every required
     // deliverable ready produced a handoff. Deduped once per campaign so repeat
     // exports don't inflate the completion count.
     try {
@@ -815,8 +815,8 @@ const RESPONSIBILITIES = [
   'Verify every fact, price, date and claim against your own sources.',
   'Resolve the unresolved items in this packet before publishing.',
   'Check platform policies and legal/compliance requirements yourself.',
-  'Set up publishing, sending and scheduling in your own tools — Scalvya does none of these.',
-  'Record final approval in your own process — this packet is not an approval.',
+  'Set up publishing, sending and scheduling in your own tools - Scalvya does none of these.',
+  'Record final approval in your own process - this packet is not an approval.',
 ];
 
 // Stable stringify (sorted keys) so the same canonical state always hashes the
@@ -829,7 +829,7 @@ function stableStringify(v) {
   return JSON.stringify(v === undefined ? null : v);
 }
 
-// The single canonical packet object — used for JSON export, the Markdown/HTML
+// The single canonical packet object - used for JSON export, the Markdown/HTML
 // packet's data and the fingerprint. No timestamps that aren't canonical.
 function handoffManifest(campaign, q, planRows) {
   const plan = new Map((planRows || []).map((r) => [r.deliverable_code, r.requirement_state]));
@@ -879,7 +879,7 @@ function packetFingerprint(manifest) {
 
 const band = (n) => (n <= 0 ? '0' : n <= 3 ? '1-3' : n <= 10 ? '4-10' : '10+');
 
-// GET /api/campaigns/:id/handoff — the Handoff screen preview: readiness,
+// GET /api/campaigns/:id/handoff - the Handoff screen preview: readiness,
 // included/excluded assets, unresolved items, evidence, formats, fingerprint
 // and whether a previously exported packet is now stale.
 router.get('/api/campaigns/:id/handoff', requireAuth, async (req, res, next) => {
@@ -912,7 +912,7 @@ router.get('/api/campaigns/:id/handoff', requireAuth, async (req, res, next) => 
           manifest.unresolved.needs_review.length + manifest.unresolved.evidence_reminders.length,
         formats: ['md', 'json', 'html', 'docx', 'pdf', 'zip'],
         bundle_contents: ['README.txt', 'manifest.json', 'handoff.docx', 'handoff.pdf'],
-        disclosure: 'This is a Review record prepared for your review — not an approval, fact-check, ' +
+        disclosure: 'This is a Review record prepared for your review - not an approval, fact-check, ' +
           'compliance certificate or a published/sent campaign. Publishing remains with you.',
         fingerprint,
         stale: !!(campaign.last_handoff_fingerprint && campaign.last_handoff_fingerprint !== fingerprint),
@@ -925,7 +925,7 @@ router.get('/api/campaigns/:id/handoff', requireAuth, async (req, res, next) => 
   }
 });
 
-// GET /api/campaigns/:id/handoff/manifest?format=json — deterministic JSON
+// GET /api/campaigns/:id/handoff/manifest?format=json - deterministic JSON
 // manifest (Markdown/HTML remain on the existing review-packet endpoint).
 router.get('/api/campaigns/:id/handoff/manifest', requireAuth, async (req, res, next) => {
   try {
@@ -946,13 +946,13 @@ router.get('/api/campaigns/:id/handoff/manifest', requireAuth, async (req, res, 
   }
 });
 
-// GET /api/campaigns/:id/handoff/export?format=docx|pdf|zip — v10 SC-04.
+// GET /api/campaigns/:id/handoff/export?format=docx|pdf|zip - v10 SC-04.
 // The premium deliverable: a real Word file, a fixed-layout PDF, or a bundle,
 // all built from the SAME canonical manifest as the md/json/html packets.
 //
 // Authorization and blockers are recomputed here from the database; nothing
 // about what may be exported is taken from the client. The response streams to
-// the authenticated caller rather than minting a shareable URL — there is no
+// the authenticated caller rather than minting a shareable URL - there is no
 // link to expire or leak.
 router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, next) => {
   try {
@@ -977,7 +977,7 @@ router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, ne
     const meta = {
       generatedAt: new Date().toISOString(),
       fingerprint,
-      disclosure: 'This is a Review record prepared for your review — not an approval, fact-check, ' +
+      disclosure: 'This is a Review record prepared for your review - not an approval, fact-check, ' +
         'compliance certificate or a published/sent campaign. Publishing remains with you.',
     };
 
@@ -988,7 +988,7 @@ router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, ne
       if (err.code === 'EXPORT_TOO_LARGE') {
         // Honest failure with a narrower option, never a truncated document.
         return res.status(413).json({
-          error: `${err.message} Nothing was lost — export a single format instead of the bundle, ` +
+          error: `${err.message} Nothing was lost - export a single format instead of the bundle, ` +
             'or archive assets you do not need in this handoff.',
           code: 'EXPORT_TOO_LARGE',
         });
@@ -996,8 +996,8 @@ router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, ne
       throw err;
     }
 
-    // Unresolved blockers never silently block the download — they are
-    // disclosed inside the document — but the event records that they existed.
+    // Unresolved blockers never silently block the download - they are
+    // disclosed inside the document - but the event records that they existed.
     track('handoff_exported', {
       userId: req.userId, workspaceId: ws.id,
       properties: {
@@ -1028,7 +1028,7 @@ router.get('/api/campaigns/:id/handoff/export', requireAuth, async (req, res, ne
   }
 });
 
-// POST /api/campaigns/:id/handoff/record — remember the fingerprint the user
+// POST /api/campaigns/:id/handoff/record - remember the fingerprint the user
 // just exported (so a later change flags staleness). Never blocks the download;
 // the client calls this after a successful export.
 router.post('/api/campaigns/:id/handoff/record', requireAuth, async (req, res, next) => {
@@ -1058,10 +1058,10 @@ router.post('/api/campaigns/:id/handoff/record', requireAuth, async (req, res, n
   }
 });
 
-// Categorical acknowledgment notes — never free text.
+// Categorical acknowledgment notes - never free text.
 const ACK_NOTES = ['intentional', 'reviewed_ok', 'external_check_pending', 'other'];
 
-// POST /api/campaigns/:id/consistency/ack — acknowledge one human-review
+// POST /api/campaigns/:id/consistency/ack - acknowledge one human-review
 // finding. Acknowledgment never rewrites data and never implies approval.
 router.post('/api/campaigns/:id/consistency/ack', requireAuth, async (req, res, next) => {
   try {
@@ -1076,7 +1076,7 @@ router.post('/api/campaigns/:id/consistency/ack', requireAuth, async (req, res, 
     const { data: row } = await supabase
       .from('consistency_findings').select('id, code, status')
       .eq('workspace_id', ws.id).eq('campaign_id', campaign.id).eq('fingerprint', fingerprint).single();
-    if (!row) return res.status(404).json({ error: 'Finding not found — refresh the check first.' });
+    if (!row) return res.status(404).json({ error: 'Finding not found - refresh the check first.' });
     const meta = FINDING_META[row.code];
     if (!meta || !meta.ackable) {
       return res.status(400).json({ error: 'This finding needs a fix, not an acknowledgment.' });
@@ -1101,7 +1101,7 @@ router.post('/api/campaigns/:id/consistency/ack', requireAuth, async (req, res, 
   }
 });
 
-// PATCH /api/campaigns/:id — edit the brief / approve / change status.
+// PATCH /api/campaigns/:id - edit the brief / approve / change status.
 router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -1113,7 +1113,7 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
 
     // v9 SC-03: optimistic concurrency for autosave. When the client sends the
     // updated_at it last saw, a newer row (edited in another tab/device) is a
-    // conflict — reject with 409 STALE and the current row so the client can
+    // conflict - reject with 409 STALE and the current row so the client can
     // recover instead of silently clobbering a newer approved brief.
     if (req.body.expected_updated_at && campaign.updated_at &&
         req.body.expected_updated_at !== campaign.updated_at) {
@@ -1128,7 +1128,7 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
     const { data, error } = await supabase.from('campaigns').update(patch).eq('id', campaign.id).select().single();
     if (error) throw new Error(error.message);
 
-    // v8 LB-S03: a material brief edit is a change-control event — recorded
+    // v8 LB-S03: a material brief edit is a change-control event - recorded
     // with field CODES only (never values/content). Assets are NOT touched:
     // impact is derived on review, nothing propagates silently.
     const ALL_MATERIAL = [...new Set(Object.values(MATERIAL_FIELDS).flat())];
@@ -1154,9 +1154,9 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
   }
 });
 
-// DELETE /api/campaigns/:id — assets keep existing (campaign_id set null by FK).
+// DELETE /api/campaigns/:id - assets keep existing (campaign_id set null by FK).
 // v5 Prompt 6: when the campaign still has assets, deletion needs explicit
-// ?confirm=1 — archiving is the default suggestion.
+// ?confirm=1 - archiving is the default suggestion.
 router.delete('/api/campaigns/:id', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -1187,7 +1187,7 @@ router.delete('/api/campaigns/:id', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/campaigns/:id/duplicate — copy the brief (not assets/strategy).
+// POST /api/campaigns/:id/duplicate - copy the brief (not assets/strategy).
 router.post('/api/campaigns/:id/duplicate', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);
@@ -1254,9 +1254,9 @@ const STRATEGY_SYSTEM =
   'asset (landing copy, emails, social posts, ads) will share: one core message, a message hierarchy, real ' +
   'proof points (bracketed placeholders if unknown), the main objections with answers, a realistic ' +
   'channel-by-channel calendar within the campaign dates, and one primary CTA. Stay strictly consistent ' +
-  'with the stated offer, discount terms and dates — never invent different ones.';
+  'with the stated offer, discount terms and dates - never invent different ones.';
 
-// POST /api/campaigns/:id/strategy — generate (or regenerate) the strategy.
+// POST /api/campaigns/:id/strategy - generate (or regenerate) the strategy.
 router.post('/api/campaigns/:id/strategy', planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
@@ -1313,7 +1313,7 @@ async function campaignContext(ws, campaignId) {
 
   const s = campaign.strategy || {};
   const text =
-    'CAMPAIGN BRIEF — every asset must stay consistent with this (same offer, discount, dates, audience, CTA):\n' +
+    'CAMPAIGN BRIEF - every asset must stay consistent with this (same offer, discount, dates, audience, CTA):\n' +
     [
       `Campaign: ${campaign.name}`,
       campaign.objective ? `Objective: ${campaign.objective}` : null,

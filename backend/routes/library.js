@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Asset Library (audit Prompt 13): one searchable place for everything the
-// studios generate — filters, pagination, favourites, archive, rename,
+// studios generate - filters, pagination, favourites, archive, rename,
 // duplicate, delete, bulk archive, immutable version history with restore, and
 // section-level AI rewrites. Every operation is ownership-scoped.
 // ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ async function snapshot(ws, table, row, { source = 'edit', author = null } = {})
 }
 
 function normalize(table, cfg, row) {
-  const text = cfg.searchFields.map((f) => row[f]).filter((v) => typeof v === 'string').join(' — ');
+  const text = cfg.searchFields.map((f) => row[f]).filter((v) => typeof v === 'string').join(' - ');
   return {
     table,
     type_label: cfg.label,
@@ -98,12 +98,12 @@ function normalize(table, cfg, row) {
     campaign_id: row.campaign_id || null,
     launch_kit_id: row.launch_kit_id || null,
     generation_run_id: row.generation_run_id || null,
-    // v5 Prompt 13: filterable facets (best-effort — not every table has each).
+    // v5 Prompt 13: filterable facets (best-effort - not every table has each).
     platform: row.platform || null,
     language: row.target_language || row.language || (row.brief_snapshot && row.brief_snapshot.language) || null,
     product: (row.brief_snapshot && row.brief_snapshot.offer) || row.product || null,
     created_at: row.created_at,
-    // v10 SC-02: what a campaign asset row must show without opening the asset —
+    // v10 SC-02: what a campaign asset row must show without opening the asset -
     // when it last changed, and which brief version it was generated from (so a
     // stale asset is visible as stale). Derived, never a new stored field.
     updated_at: row.updated_at || null,
@@ -152,11 +152,11 @@ router.get('/api/assets/library', requireAuth, async (req, res, next) => {
       const cfg = TABLES[table];
 
       if (!needsScan) {
-        // Exact count from the database — never derived from a fetched slice.
+        // Exact count from the database - never derived from a fetched slice.
         const { count, error: countErr } = await applyColumnFilters(
           supabase.from(table).select('id', { count: 'exact', head: true })
         );
-        if (countErr) continue; // missing table/column (migration pending) — skip
+        if (countErr) continue; // missing table/column (migration pending) - skip
         total += count || 0;
 
         // Each table is ordered by created_at desc, so the globally newest
@@ -205,7 +205,7 @@ router.get('/api/assets/library', requireAuth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/assets/library/:table/:id — edit fields (snapshots previous state).
+// PATCH /api/assets/library/:table/:id - edit fields (snapshots previous state).
 router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, next) => {
   try {
     const cfg = tableConfig(req.params.table, res);
@@ -216,7 +216,7 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
 
     const b = req.body || {};
     // v9 SC-06: optimistic concurrency for the asset drawer's manual edits.
-    // A stale expected_updated_at (edited elsewhere) is a conflict — reject with
+    // A stale expected_updated_at (edited elsewhere) is a conflict - reject with
     // 409 STALE and the current row instead of clobbering a newer version.
     if (b.expected_updated_at && row.updated_at && b.expected_updated_at !== row.updated_at) {
       return res.status(409).json({
@@ -230,7 +230,7 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
     if (typeof b.favourite === 'boolean') patch.favourite = b.favourite;
     if (typeof b.archived === 'boolean') patch.archived = b.archived;
     // v6 Prompt 24: acknowledging high-risk claims requires the actual proof
-    // source (link or where the evidence lives) — a bare checkbox no longer
+    // source (link or where the evidence lives) - a bare checkbox no longer
     // unlocks "ready". compliance_proof travels with compliance_ack.
     if (b.compliance_ack === true) {
       patch.compliance_ack = {
@@ -240,7 +240,7 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
       };
     } else if (b.compliance_ack === false) patch.compliance_ack = { acknowledged: false, at: new Date().toISOString() };
     // v6 Prompt 25: researched keyword metrics are only stored with their
-    // source AND date, recorded by the user — never by the generator.
+    // source AND date, recorded by the user - never by the generator.
     if (req.params.table === 'seo_assets' && ('metric_source' in b || 'metric_date' in b || 'metric_notes' in b)) {
       if (b.metric_source === null) { patch.metric_source = null; patch.metric_date = null; patch.metric_notes = null; }
       else {
@@ -264,13 +264,13 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
       }
       patch.status = nextStatus;
     }
-    // v5 Prompt 10: social calendar — plan an item on a date (or clear it)
+    // v5 Prompt 10: social calendar - plan an item on a date (or clear it)
     // without exporting. Scheduling metadata, so it never snapshots a version.
     if (b.planned_date === null) patch.planned_date = null;
     else if (typeof b.planned_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.planned_date)) {
       patch.planned_date = b.planned_date;
     }
-    // v5 Prompt 6: attach/detach an existing asset to a campaign — the
+    // v5 Prompt 6: attach/detach an existing asset to a campaign - the
     // campaign must belong to this workspace.
     if (b.campaign_id === null) patch.campaign_id = null;
     else if (typeof b.campaign_id === 'string') {
@@ -294,7 +294,7 @@ router.patch('/api/assets/library/:table/:id', requireAuth, async (req, res, nex
       .eq('id', row.id).select().single();
     if (error) throw new Error(error.message);
 
-    // v8 LB-S01: server-confirmed deliverable progress — only after the user
+    // v8 LB-S01: server-confirmed deliverable progress - only after the user
     // moved an asset to ready/published (never fired from the client).
     if ((patch.status === 'ready' || patch.status === 'published') && row.status !== 'ready' && row.status !== 'published') {
       await trackDeliverableProgress({
@@ -361,7 +361,7 @@ router.post('/api/assets/library/bulk', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: `action (${ALLOWED.join('|')}) and items are required.` });
     }
 
-    // Permanent delete is destructive — never without an explicit confirmation.
+    // Permanent delete is destructive - never without an explicit confirmation.
     if (action === 'delete' && confirm !== true) {
       return res.status(409).json({
         error: `Permanently delete ${items.length} asset(s)? This cannot be undone.`,
@@ -401,7 +401,7 @@ router.post('/api/assets/library/bulk', requireAuth, async (req, res, next) => {
   }
 });
 
-// v9 SC-06: GET /api/assets/library/:table/:id — full detail for the asset
+// v9 SC-06: GET /api/assets/library/:table/:id - full detail for the asset
 // drawer, fetched on demand (the list stays bounded to snippets, no N+1). The
 // editable text fields are named so the client can render + diff them.
 router.get('/api/assets/library/:table/:id', requireAuth, async (req, res, next) => {
@@ -438,7 +438,7 @@ router.get('/api/assets/library/:table/:id/versions', requireAuth, async (req, r
   }
 });
 
-// POST /api/assets/library/:table/:id/restore — { version_id }
+// POST /api/assets/library/:table/:id/restore - { version_id }
 router.post('/api/assets/library/:table/:id/restore', requireAuth, async (req, res, next) => {
   try {
     const cfg = tableConfig(req.params.table, res);
@@ -479,7 +479,7 @@ const REWRITE_MODES = {
   instruction: 'Apply the user instruction.',
 };
 
-// POST /api/ai/asset/:table/:id/rewrite — { mode, instruction? }
+// POST /api/ai/asset/:table/:id/rewrite - { mode, instruction? }
 router.post('/api/ai/asset/:table/:id/rewrite', planGate('regenerate_section'), async (req, res, next) => {
   try {
     const cfg = tableConfig(req.params.table, res);
@@ -504,7 +504,7 @@ router.post('/api/ai/asset/:table/:id/rewrite', planGate('regenerate_section'), 
 
     const brand = await brandContextFor(ws.id);
     const result = await generateJson({
-      system: `You rewrite existing marketing copy. ${rule} Keep the same facts and offer — never invent new claims. Return every field, rewritten where relevant.`,
+      system: `You rewrite existing marketing copy. ${rule} Keep the same facts and offer - never invent new claims. Return every field, rewritten where relevant.`,
       prompt: brand.text +
         `Rewrite this ${cfg.label.toLowerCase()}${instruction ? `\nInstruction: ${instruction}` : ''}\n\nCurrent copy:\n` +
         JSON.stringify(current, null, 2),

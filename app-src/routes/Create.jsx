@@ -10,7 +10,7 @@ import '../flow.css';
 // ---------------------------------------------------------------------------
 // v5 Prompt 3 / v6 Prompt 20 / v10 SC-01: Create is a campaign-context
 // RESOLVER, not a second navigation list. Without a campaign it asks which
-// campaign the work belongs to (and links to creating one) — it never offers
+// campaign the work belongs to (and links to creating one) - it never offers
 // the five studios, because an asset generated without an approved brief is
 // the "where do I start?" dead end this slice removes. With a campaign it
 // offers exactly the five canonical creation paths, carrying the campaign id.
@@ -64,11 +64,11 @@ export default function Create() {
 
   const current = campaigns && campaigns.find((c) => String(c.id) === String(campaign));
 
-  // v10 SC-01: the recommended path, measured from canonical state only —
+  // v10 SC-01: the recommended path, measured from canonical state only -
   // never a synthetic "onboarding done" flag. Entitlement is a coarse label.
   const entitlement = (account?.plan_label || 'free').toLowerCase();
   useEffect(() => {
-    if (campaigns === null) return; // still loading — nothing observed yet
+    if (campaigns === null) return; // still loading - nothing observed yet
     if (!campaign) {
       api.trackEvent('primary_path_started', { stage: 'resolve_campaign', entitlement });
       return;
@@ -114,7 +114,7 @@ export default function Create() {
           )}
 
           {campaigns && campaigns.length === 0 && !error && (
-            // v13 SC-P1-10: new/empty workspace — guide the one path (Brand
+            // v13 SC-P1-10: new/empty workspace - guide the one path (Brand
             // Profile → Campaign Brief → first reviewed asset), not the five
             // studios. Steps come from the typed empty-workspace state.
             <div className="flow-card">
@@ -130,7 +130,7 @@ export default function Create() {
                   <p className="flow-muted" style={{ marginTop: 4 }}>
                     {c.brief_approved
                       ? `Brief v${c.brief_version || 1} approved · ${totalAssets(c)} asset${totalAssets(c) === 1 ? '' : 's'}`
-                      : 'Brief not approved yet — complete it first so assets stay consistent.'}
+                      : 'Brief not approved yet - complete it first so assets stay consistent.'}
                   </p>
                   <Link
                     className={c.brief_approved ? 'flow-btn' : 'flow-btn is-ghost'}

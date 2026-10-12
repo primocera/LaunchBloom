@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// SC-95-05 — the weekly capped-beta decision record.
+// SC-95-05 - the weekly capped-beta decision record.
 //
 // One internal, mechanical decision generated FROM the canonical scorecard
-// (lib/beta-scorecard.js) — not a second scorecard and not a hand-filled memo.
+// (lib/beta-scorecard.js) - not a second scorecard and not a hand-filled memo.
 // It applies PRE-DECLARED hypotheses (fixed before the cohort; never tuned after
 // seeing results) and explicit maturity rules, then maps the result to exactly
 // one decision and one bounded action.
@@ -10,7 +10,7 @@
 // Maturity rule (honest, cohort-level): a metric that needs a time window
 // (repeat campaign, D7 return, renewal) is `pending` until the cohort itself is
 // old enough for that window. New users are PENDING, never failures. A low
-// result maps to removing friction/rework at the relevant stage — never to
+// result maps to removing friction/rework at the relevant stage - never to
 // adding another generator.
 //
 // Pure and DB-free so every decision is reproducible from its inputs.
@@ -71,7 +71,7 @@ function largestDrop(scorecard) {
  *
  * scorecard: output of computeScorecard.
  * opts: { now, cohortStart, invited, activated, billingIncidents }
- *   billingIncidents — count of billing-severity incidents in the window (0 = ok).
+ *   billingIncidents - count of billing-severity incidents in the window (0 = ok).
  */
 function weeklyDecisionRecord(scorecard = {}, { now = Date.now(), cohortStart = null, invited = null, billingIncidents = 0 } = {}) {
   const cohortAgeDays = cohortStart ? ageInDays(cohortStart, now) : null;
@@ -98,10 +98,10 @@ function weeklyDecisionRecord(scorecard = {}, { now = Date.now(), cohortStart = 
     action = 'Halt expansion and investigate the billing-severity incident(s) before any other change.';
   } else if (scorecard.data_available === false) {
     decision = 'Continue';
-    action = 'Restore analytics — no product decision can be made on an unavailable read. Do not expand.';
+    action = 'Restore analytics - no product decision can be made on an unavailable read. Do not expand.';
   } else if (gateBy.generation_failure_rate.state === 'below') {
     decision = 'Pause intake';
-    action = 'Stop adding users and fix generation reliability — the failure rate is above the ceiling.';
+    action = 'Stop adding users and fix generation reliability - the failure rate is above the ceiling.';
   } else if (reworkBlocked) {
     decision = 'Interview';
     action = 'Interview the users who reported heavy rework / nothing usable before changing the product.';
@@ -116,7 +116,7 @@ function weeklyDecisionRecord(scorecard = {}, { now = Date.now(), cohortStart = 
     action = 'Expand the cohort by a small, bounded increment; keep one canonical flow.';
   } else {
     decision = 'Continue';
-    action = 'Keep gathering — the cohort is not yet mature or large enough. New users are pending, not failures.';
+    action = 'Keep gathering - the cohort is not yet mature or large enough. New users are pending, not failures.';
   }
 
   return {

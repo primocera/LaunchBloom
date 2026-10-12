@@ -1,19 +1,19 @@
 // ---------------------------------------------------------------------------
-// v12 SC-V12-03 — authenticated-E2E preflight and evidence, as pure functions.
+// v12 SC-V12-03 - authenticated-E2E preflight and evidence, as pure functions.
 //
 // The runner (scripts/e2e-auth.mjs) supplies the environment and the Playwright
 // result summary; this module decides what they mean. No I/O, no secrets read
 // from anywhere but the passed-in env object, and nothing here ever returns a
-// secret value — only presence, a project-ref comparison outcome, and counts.
+// secret value - only presence, a project-ref comparison outcome, and counts.
 //
 // Three outcomes, kept distinct on purpose, because collapsing them is exactly
 // how a signed-in suite that never ran got reported as green:
 //
-//   BLOCKED   — a precondition is missing (env, or the non-production marker).
+//   BLOCKED   - a precondition is missing (env, or the non-production marker).
 //               Not a skip. The runner exits non-zero.
-//   FORBIDDEN — the target is a known production or other-app project. The
+//   FORBIDDEN - the target is a known production or other-app project. The
 //               runner refuses to seed it at all.
-//   READY     — preconditions hold; Playwright may run.
+//   READY     - preconditions hold; Playwright may run.
 //
 // The database-level marker (backend/migrations/E2E_MARKER.sql) is still the
 // ultimate backstop and cannot be faked by any environment variable. The
@@ -33,7 +33,7 @@ const REQUIRED_ENV = Object.freeze([
 
 const present = (v) => Boolean(String(v == null ? '' : v).trim());
 
-/** Which required variables are absent. Presence only — never a value. */
+/** Which required variables are absent. Presence only - never a value. */
 function missingEnv(env = {}) {
   return REQUIRED_ENV.filter((name) => !present(env[name]));
 }
@@ -41,7 +41,7 @@ function missingEnv(env = {}) {
 /**
  * The Supabase project ref in a URL like https://abcdefgh.supabase.co -> "abcdefgh".
  * A ref is the subdomain and appears in the URL itself, so it is not a secret in
- * the way a key is — but this module still never prints it, only compares it.
+ * the way a key is - but this module still never prints it, only compares it.
  */
 function projectRef(url) {
   const m = String(url || '').match(/^https?:\/\/([a-z0-9-]+)\.supabase\.(co|in|net)\b/i);
@@ -63,23 +63,23 @@ function forbiddenRefs(env = {}) {
 
 /**
  * A refusal reason when the target is a known production/other-app project, or
- * null. Never includes the ref itself in the message — only the outcome.
+ * null. Never includes the ref itself in the message - only the outcome.
  */
 function targetRefusal(env = {}) {
   const ref = projectRef(env.SUPABASE_URL);
-  if (!ref) return null; // local stack / unknown host — the DB marker still guards it
+  if (!ref) return null; // local stack / unknown host - the DB marker still guards it
   if (forbiddenRefs(env).includes(ref)) {
     return 'target Supabase project matches a forbidden production/other-app reference '
-      + '(E2E_FORBIDDEN_SUPABASE_REFS) — refusing to seed it';
+      + '(E2E_FORBIDDEN_SUPABASE_REFS) - refusing to seed it';
   }
   return null;
 }
 
-// v13 SC-P1-08 — an UNRECOGNIZED target is refused, not treated as local.
+// v13 SC-P1-08 - an UNRECOGNIZED target is refused, not treated as local.
 //
 // projectRef() returns null for two very different things: a genuine local
 // Supabase stack (http://127.0.0.1:54321) and any other host we do not
-// recognise — including a production database behind a custom domain or a
+// recognise - including a production database behind a custom domain or a
 // proxy. Letting the second case through as "local" meant the seeding runner's
 // only remaining protection was the DB marker. The runner now refuses anything
 // that is neither a Supabase project ref (where the denylist applies) nor a
@@ -101,10 +101,10 @@ function isLocalUrl(url) {
 /** A refusal reason when SUPABASE_URL is neither a Supabase project nor local. */
 function unrecognizedTargetRefusal(env = {}) {
   const url = String(env.SUPABASE_URL || '');
-  if (projectRef(url)) return null; // a real project — the denylist decides
+  if (projectRef(url)) return null; // a real project - the denylist decides
   if (isLocalUrl(url)) return null; // a local stack
   return 'SUPABASE_URL is neither a recognized Supabase project nor a local stack '
-    + '— refusing to seed an unrecognized target';
+    + '- refusing to seed an unrecognized target';
 }
 
 /**
@@ -116,7 +116,7 @@ function baseUrlRefusal(env = {}) {
   const base = String(env.E2E_BASE_URL || '').trim();
   if (!base) return null;
   if (isLocalUrl(base)) return null;
-  return 'E2E_BASE_URL points at a non-local origin — the authenticated matrix may only '
+  return 'E2E_BASE_URL points at a non-local origin - the authenticated matrix may only '
     + 'run against the locally started app';
 }
 
@@ -125,12 +125,12 @@ function baseUrlRefusal(env = {}) {
  * matrix drives checkout journeys; it must NEVER touch live money. Checkout
  * tests use Stripe test mode or a deterministic non-money seam, so a secret or
  * restricted LIVE key (sk_live_… / rk_live_…) is refused before any browser
- * starts. The key value itself is never printed — only that it is live.
+ * starts. The key value itself is never printed - only that it is live.
  */
 function liveStripeRefusal(env = {}) {
   const key = String(env.STRIPE_SECRET_KEY || '').trim();
   if (/^(sk|rk)_live_/.test(key)) {
-    return 'a LIVE Stripe key is configured (STRIPE_SECRET_KEY=sk_live_…) — the authenticated '
+    return 'a LIVE Stripe key is configured (STRIPE_SECRET_KEY=sk_live_…) - the authenticated '
       + 'matrix must never touch live money; use a test-mode key or unset it';
   }
   return null;
@@ -171,7 +171,7 @@ function classifyRun(summary = {}, env = {}) {
   if (failed > 0) reasons.push(`${failed} test(s) failed`);
   if (passed === 0 && failed === 0) reasons.push('no tests executed');
   if (isReleaseGate(env) && skipped > 0) {
-    reasons.push(`${skipped} required test(s) skipped — a skip cannot satisfy a release-candidate gate`);
+    reasons.push(`${skipped} required test(s) skipped - a skip cannot satisfy a release-candidate gate`);
   }
 
   return { ok: reasons.length === 0, exitCode: reasons.length === 0 ? 0 : 1, reasons };
@@ -189,7 +189,7 @@ function environmentClass(env = {}) {
 }
 
 /**
- * Machine-readable evidence for docs/launch — candidate SHA, environment class,
+ * Machine-readable evidence for docs/launch - candidate SHA, environment class,
  * project names, counts and timestamps. Never a secret value or user datum.
  */
 function buildEvidence({ sha, env = {}, projects = [], summary = {}, startedAtUtc, endedAtUtc, artifactPaths = [] }) {
@@ -206,7 +206,7 @@ function buildEvidence({ sha, env = {}, projects = [], summary = {}, startedAtUt
       flaky: Number(summary.flaky || 0),
     },
     // Where the raw run artifacts live (report, traces retained on failure).
-    // Paths only — the artifacts themselves are uploaded by the workflow.
+    // Paths only - the artifacts themselves are uploaded by the workflow.
     artifact_paths: [...artifactPaths],
     started_at_utc: startedAtUtc || null,
     ended_at_utc: endedAtUtc || null,

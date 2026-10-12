@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// v18 S05 — pull-based webhook reconciliation (the DETECTION core).
+// v18 S05 - pull-based webhook reconciliation (the DETECTION core).
 //
 // The existing reconcile-entitlements.js reconciles rows we ALREADY mirror. It
 // cannot see the failure this module targets: a Stripe subscription that a
 // webhook never delivered (or delivered out of order), so no local row exists
-// at all — or exists with a stale status. This is the pull direction: compare
+// at all - or exists with a stale status. This is the pull direction: compare
 // what Stripe actually holds against the local mirror and reason-code the gap.
 //
 // This file is pure: it takes plain Stripe-subscription objects and local rows
@@ -12,9 +12,9 @@
 // the diff logic is unit-testable without network or database.
 //
 // Reason codes (fail-closed, never invents access):
-//   missing_local  — owned subscription in Stripe, no local row (missed create)
-//   status_drift   — local row exists but its status differs from Stripe (missed update)
-//   foreign_skipped— not ours by the exact ownership rule; counted, never a finding
+//   missing_local  - owned subscription in Stripe, no local row (missed create)
+//   status_drift   - local row exists but its status differs from Stripe (missed update)
+//   foreign_skipped- not ours by the exact ownership rule; counted, never a finding
 // ---------------------------------------------------------------------------
 
 /**

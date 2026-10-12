@@ -10,7 +10,7 @@ import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 // Launch Flow, the five studios), and the account block with plan + usage.
 // ---------------------------------------------------------------------------
 
-// v5 Prompt 3: canonical navigation — Home, Brand, Campaigns, Create, Library,
+// v5 Prompt 3: canonical navigation - Home, Brand, Campaigns, Create, Library,
 // Account. One asset model, no duplicate generator destinations. The full
 // launch workflow lives inside Campaigns as the "Full launch campaign"
 // template; the old per-section legacy routes redirect to their studio.
@@ -121,7 +121,7 @@ export default function Sidebar({ onCollapse, mobileOpen = false, onNavigate }) 
       </nav>
 
       {/* v10 SC-01: the five studios are demoted behind a collapsed disclosure.
-          "Create" in the main nav is the one recommended path — it resolves a
+          "Create" in the main nav is the one recommended path - it resolves a
           campaign first, so an asset is never generated without a brief. These
           direct links stay for people who already know where they're going. */}
       <div className="sidebar-section">

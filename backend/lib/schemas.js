@@ -505,7 +505,7 @@ const creativeIdeasSchema = {
           designer_notes: { type: 'string', description: 'Composition, overlay and design notes for a static/carousel.' },
           shot_list: { type: 'array', maxItems: 12, items: { type: 'string' } },
           text_overlays: { type: 'array', maxItems: 12, items: { type: 'string' } },
-          // Video / UGC — timed, shootable. Empty for non-video formats.
+          // Video / UGC - timed, shootable. Empty for non-video formats.
           video_timeline: {
             type: 'object',
             properties: {
@@ -533,7 +533,7 @@ const creativeIdeasSchema = {
             required: ['first_frame_hook', 'duration_seconds', 'scenes', 'b_roll', 'product_moments', 'audio_direction', 'cta_end_card'],
             additionalProperties: false,
           },
-          // Carousel — cover + slide-by-slide + CTA slide. Empty for non-carousel.
+          // Carousel - cover + slide-by-slide + CTA slide. Empty for non-carousel.
           slides: {
             type: 'array', maxItems: 12,
             items: {
@@ -549,7 +549,7 @@ const creativeIdeasSchema = {
               additionalProperties: false,
             },
           },
-          // Search ad — platform char limits, keywords grouped by intent. Empty otherwise.
+          // Search ad - platform char limits, keywords grouped by intent. Empty otherwise.
           search_ad: {
             type: 'object',
             properties: {
@@ -573,7 +573,7 @@ const creativeIdeasSchema = {
           },
           cta: { type: 'string' },
           testing_angle: { type: 'string' },
-          // Test matrix — one major variable per test.
+          // Test matrix - one major variable per test.
           test: {
             type: 'object',
             properties: {
@@ -621,7 +621,7 @@ const campaignEmailSchema = {
             type: 'string',
             enum: ['teaser', 'educational', 'product_focus', 'social_proof', 'offer', 'last_chance', 'reminder', 'newsletter', 'announcement'],
           },
-          send_day: { type: 'string', description: 'Timing/day, sourced from the brief window — never an invented deadline.' },
+          send_day: { type: 'string', description: 'Timing/day, sourced from the brief window - never an invented deadline.' },
           objective: { type: 'string' },
           subject_line: { type: 'string' },
           subject_options: {
@@ -651,7 +651,7 @@ const campaignEmailSchema = {
 
 // ---------------------------------------------------------------------------
 // v6 Prompt 14: SEO Ideas as a first-class generator studio. Mirrors the
-// seo_assets table 1:1. Deliberately NO volume/difficulty/CPC fields — output
+// seo_assets table 1:1. Deliberately NO volume/difficulty/CPC fields - output
 // is content ideation to research, never fabricated keyword data.
 // ---------------------------------------------------------------------------
 const seoIdeasSchema = {
@@ -713,7 +713,7 @@ module.exports = {
   weeklyPlanSchema,
   launchSummarySchema,
   SECTION_SCHEMAS,
-  // Upgrade Prompt 6 — dedicated studio schemas
+  // Upgrade Prompt 6 - dedicated studio schemas
   websiteKitSchema,
   emailFlowSchema,
   socialCaptionSchema,

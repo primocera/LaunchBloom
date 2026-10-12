@@ -58,7 +58,7 @@ export default function EmailStudio() {
   return (
     <StudioShell
       title="Email Sequence Studio"
-      blurb="Your 7-email launch sequence, in order — copy, edit and mark each one ready."
+      blurb="Your 7-email launch sequence, in order - copy, edit and mark each one ready."
       kits={kits}
       kitId={kitId}
       onSelectKit={setKitId}

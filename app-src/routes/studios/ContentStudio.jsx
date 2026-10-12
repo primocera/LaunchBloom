@@ -72,7 +72,7 @@ export default function ContentStudio() {
   return (
     <StudioShell
       title="Content Plan Studio"
-      blurb="Your content plan — filter, mark done or skipped, and keep every post tied to your offer."
+      blurb="Your content plan - filter, mark done or skipped, and keep every post tied to your offer."
       kits={kits}
       kitId={kitId}
       onSelectKit={setKitId}
@@ -125,7 +125,7 @@ export default function ContentStudio() {
                 <button
                   key={i.id}
                   className={`cal-day is-${i.status}`}
-                  title={`${i.topic || ''} — ${i.platform || ''}`}
+                  title={`${i.topic || ''} - ${i.platform || ''}`}
                   onClick={() => setView('list')}
                 >
                   <span className="cal-num">{i.day_number}</span>

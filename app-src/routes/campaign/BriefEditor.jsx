@@ -7,7 +7,7 @@ import { CHANNELS, TEMPLATES, missingDecisions, hasNoDates } from './shared';
 // disclosure, an always-visible summary + missing-decisions list, debounced
 // server autosave with optimistic-concurrency conflict recovery, and honest
 // approval-inheritance disclosure. Editing never spends an AI action and never
-// approves — approval stays an explicit decision in the parent Brief section.
+// approves - approval stays an explicit decision in the parent Brief section.
 // ---------------------------------------------------------------------------
 
 const GROUPS = [
@@ -133,16 +133,16 @@ export default function BriefEditor({ campaign, onSaved }) {
           <span className={`brief-save-state is-${status}`} role="status" aria-live="polite">{savingLabel}</span>
         </div>
         {missing.length === 0
-          ? <p className="muted" style={{ marginTop: 4 }}>All required decisions are in. Editing is free and never approves the brief — approval stays an explicit step.</p>
+          ? <p className="muted" style={{ marginTop: 4 }}>All required decisions are in. Editing is free and never approves the brief - approval stays an explicit step.</p>
           : <p className="muted" style={{ marginTop: 4 }}>Still needed: {missing.map(([, l]) => l).join(', ')}. Editing is free and never spends an AI action.</p>}
         {campaign.brief_approved && (
           <p className="muted">
-            This brief is approved. Saved changes apply to <strong>new</strong> generations only — assets you already
+            This brief is approved. Saved changes apply to <strong>new</strong> generations only - assets you already
             generated keep the snapshot they were created from. Use Review to see which assets a change affects.
           </p>
         )}
         {hasNoDates(form) && (
-          <p className="muted">No dates set — urgency or deadline language will not be generated. Dates are optional.</p>
+          <p className="muted">No dates set - urgency or deadline language will not be generated. Dates are optional.</p>
         )}
       </div>
 
@@ -154,7 +154,7 @@ export default function BriefEditor({ campaign, onSaved }) {
       )}
       {status === 'error' && error && <p className="login-err">{error}</p>}
 
-      {/* Template chips — field-level preview, explicit Replace confirmation. */}
+      {/* Template chips - field-level preview, explicit Replace confirmation. */}
       <div className="brand-field">
         <label>Start from a template (optional)</label>
         <div className="campaign-channels">

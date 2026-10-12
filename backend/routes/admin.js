@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Minimal admin support view (audit Prompt 16). Read-only, behind an
-// ADMIN_EMAILS allowlist. Never returns customer content — only account
+// ADMIN_EMAILS allowlist. Never returns customer content - only account
 // state (plan, usage counts, subscription status) needed to answer a
 // support ticket.
 // ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Audit every admin view (Prompt 18): who looked, what at, when. Best-effort —
+// Audit every admin view (Prompt 18): who looked, what at, when. Best-effort -
 // never blocks the read. Admin endpoints stay read-only; a recovery action, if
 // ever added, must be its own separately-audited endpoint.
 async function audit(req, action, target = null) {
@@ -111,7 +111,7 @@ router.get('/api/admin/health', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// v9 SC-10: production readiness — one secret-safe report combining the
+// v9 SC-10: production readiness - one secret-safe report combining the
 // deterministic release-check config gates (presence booleans only, reused so
 // there is no second source of truth) with live operational signals: outbox
 // backlog, webhook failures and AI spend. No secret values, no customer content
@@ -123,7 +123,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
     const blockers = checks.filter((c) => !c.ok && c.level === 'blocker');
     const external = checks.filter((c) => !c.ok && c.level === 'external');
 
-    // Live signals — counts only, each defended so a missing table degrades
+    // Live signals - counts only, each defended so a missing table degrades
     // to null rather than failing the whole readiness report.
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const reservationCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
@@ -132,7 +132,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       countOf(() => supabase.from('email_outbox').select('id', { count: 'exact', head: true }).neq('status', 'sent')),
       countOf(() => supabase.from('stripe_events').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('created_at', since)),
       // Reservation leakage: AI-spend reservations still 'reserved' well past a
-      // normal generation — a leak means the daily brake is being consumed by
+      // normal generation - a leak means the daily brake is being consumed by
       // calls that never finalized or released.
       countOf(() => supabase.from('usage_events').select('id', { count: 'exact', head: true }).eq('status', 'reserved').lt('created_at', reservationCutoff)),
       supabase.from('ai_spend_ledger').select('amount_usd').gte('created_at', since).then((r) => r.data || [], () => []),
@@ -214,7 +214,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       checks, // presence booleans + detail strings, no secret values
       live,
       signals,
-      ownership, // { state, paid_ready, enforced, blockers[] } — fail-closed paid readiness
+      ownership, // { state, paid_ready, enforced, blockers[] } - fail-closed paid readiness
       operational_status: status, // 'ok' | 'degraded' | 'warn' | 'stop' (degraded = a signal could not be measured; never silently 'ok')
       note: 'Automated readiness is not a paid-launch GO. A live low-value charge + cancel/recover ' +
         'rehearsal with owner-recorded evidence is required (see docs/RUNBOOK_TRANSACTION_REHEARSAL.md).',
@@ -224,7 +224,7 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
   }
 });
 
-// Recent failed generations (released usage) — read-only, no content.
+// Recent failed generations (released usage) - read-only, no content.
 router.get('/api/admin/failed-generations', requireAuth, requireAdmin, async (req, res) => {
   try {
     await audit(req, 'failed_generations');
@@ -258,7 +258,7 @@ router.get('/api/admin/stuck-reservations', requireAuth, requireAdmin, async (re
 // The eleven-step campaign-control loop, computed from canonical events only
 // (ids + timestamps; properties are not selected, so no content can leak).
 // Every metric ships numerator, denominator, window, state and a decision.
-// Tiny cohorts are suppressed. Internal decision aid — never public proof.
+// Tiny cohorts are suppressed. Internal decision aid - never public proof.
 router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
   try {
     await audit(req, 'cohort');
@@ -269,7 +269,7 @@ router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
     const { rosterFromEnv } = require('../lib/beta-scorecard');
     const wanted = COHORT_FUNNEL.map((f) => f.event).filter(Boolean);
 
-    // ids + timestamps only — `properties` is deliberately not selected.
+    // ids + timestamps only - `properties` is deliberately not selected.
     const { data: eventRows } = await supabase
       .from('analytics_events')
       .select('event, user_id, workspace_id, campaign_id, created_at')
@@ -299,7 +299,7 @@ router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
         per_activated_account: costPerOutcome(spend, byStep.first_asset_saved),
         per_exporting_account: costPerOutcome(spend, byStep.handoff_exported),
         per_renewed_account: costPerOutcome(spend, byStep.subscription_renewed),
-        note: 'Null means the denominator was zero or spend is unknown — not that cost was zero.',
+        note: 'Null means the denominator was zero or spend is unknown - not that cost was zero.',
       },
       disclosure: 'Internal decision aid. These numbers are not benchmarks, are not ' +
         'statistically significant at beta scale, and must not be shown to customers or used as proof.',
@@ -325,7 +325,7 @@ const SCORECARD_DEFINITIONS = {
   cost_per_action: 'From the ai_spend_ledger table (input/output tokens + estimated USD per day); never fabricated here.',
 };
 
-// v6 Prompt 10: computed cohorts — every metric returns numerator,
+// v6 Prompt 10: computed cohorts - every metric returns numerator,
 // denominator, value and the exact date window, so numbers are decision-ready
 // and reconcilable to the source tables. Computation happens in JS over the
 // windowed event rows (beta-scale volumes; no content is ever read).
@@ -458,8 +458,8 @@ const { computeScorecard, rosterFromEnv } = require('../lib/beta-scorecard');
 const { weeklyDecisionRecord } = require('../lib/weekly-decision');
 
 // Compute the canonical scorecard for a window. Ids/timestamps/categorical
-// properties only — never content. SC-95-03: distinguish a real empty window
-// from an analytics OUTAGE — a read failure (thrown error or a Supabase {error}
+// properties only - never content. SC-95-03: distinguish a real empty window
+// from an analytics OUTAGE - a read failure (thrown error or a Supabase {error}
 // result) makes every metric UNAVAILABLE, never zero, so an outage cannot read
 // as "no activity" and blocks expansion.
 async function betaScorecardForWindow(days) {
@@ -549,8 +549,8 @@ router.post('/api/admin/email-outbox/replay/:id', requireAuth, requireAdmin, asy
 });
 
 // Cron entry point. Called by an external scheduler (cron-job.org on the free
-// stack — configure it to send `Authorization: Bearer ${CRON_SECRET}`).
-// No session — authenticated by the shared secret only.
+// stack - configure it to send `Authorization: Bearer ${CRON_SECRET}`).
+// No session - authenticated by the shared secret only.
 router.get('/api/cron/email-outbox', async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const auth = req.get('authorization') || '';

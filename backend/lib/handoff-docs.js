@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v10 SC-04 — real .docx, .pdf and .zip handoff documents.
+// v10 SC-04 - real .docx, .pdf and .zip handoff documents.
 //
 // Written against the SAME canonical handoffManifest() the md/json/html
 // packets use. There is no second content composer: if a fact is not in the
@@ -9,7 +9,7 @@
 // zlib, so one ZIP writer serves both the Word file and the bundle. pdfkit
 // (~2MB with embedded fonts) and anything headless-Chrome were rejected: this
 // project deploys to a free serverless tier where bundle size is cold-start
-// cost, and a handoff record is text — it does not need a typesetting engine.
+// cost, and a handoff record is text - it does not need a typesetting engine.
 //
 // Everything here is synchronous and bounded. Buffers are capped (see LIMITS)
 // and the caller gets a typed ExportTooLarge rather than an OOM.
@@ -65,7 +65,7 @@ function zip(files) {
   const central = [];
   let offset = 0;
 
-  // Fixed DOS timestamp (1980-01-01) — determinism over metadata fidelity.
+  // Fixed DOS timestamp (1980-01-01) - determinism over metadata fidelity.
   const DOS_TIME = 0;
   const DOS_DATE = 33;
 
@@ -178,18 +178,18 @@ function outline(manifest, { generatedAt, fingerprint, disclosure }) {
   for (const [label, value] of fields) if (value) li(`${label}: ${value}`);
   li(c.brief_approved
     ? `Brief approved by the owner${c.brief_approved_at ? ` on ${String(c.brief_approved_at).slice(0, 10)}` : ''}`
-    : 'Brief not approved — this campaign is still in draft');
+    : 'Brief not approved - this campaign is still in draft');
 
   h2('Deliverable plan');
   for (const d of manifest.deliverable_plan || []) li(`${d.label}: ${String(d.requirement).replace(/_/g, ' ')}`);
 
   h2('Included assets');
   if (!(manifest.included_assets || []).length) p('No assets are included in this handoff.');
-  for (const a of manifest.included_assets || []) li(`${a.title} — ${a.type.replace(/_/g, ' ')} · ${a.status}`);
+  for (const a of manifest.included_assets || []) li(`${a.title} - ${a.type.replace(/_/g, ' ')} · ${a.status}`);
 
   if ((manifest.excluded_assets || []).length) {
     h2('Excluded assets');
-    for (const a of manifest.excluded_assets) li(`${a.title} — excluded (${a.reason})`);
+    for (const a of manifest.excluded_assets) li(`${a.title} - excluded (${a.reason})`);
   }
 
   h2('Open items');
@@ -197,11 +197,11 @@ function outline(manifest, { generatedAt, fingerprint, disclosure }) {
   const anyOpen = (u.blocking || []).length || (u.findings || []).length || (u.brief_changes || []).length
     || (u.needs_review || []).length || (u.evidence_reminders || []).length;
   if (!anyOpen) p('No open items were recorded when this handoff was prepared.');
-  for (const f of u.blocking || []) li(`Blocks export — ${humanCode(f.code)}: ${(f.assets || []).join(', ')}`);
+  for (const f of u.blocking || []) li(`Blocks export - ${humanCode(f.code)}: ${(f.assets || []).join(', ')}`);
   for (const f of u.findings || []) li(`${humanCode(f.code)}${f.status ? ` (${f.status})` : ''}: ${(f.assets || []).join(', ')}`);
-  for (const b of u.brief_changes || []) li(`Brief changed since generation — ${b.title}: ${(b.fields || []).join(', ')}`);
-  for (const t of u.needs_review || []) li(`Edited since generation — ${t}`);
-  for (const e of u.evidence_reminders || []) li(`Evidence needs rechecking — ${e}`);
+  for (const b of u.brief_changes || []) li(`Brief changed since generation - ${b.title}: ${(b.fields || []).join(', ')}`);
+  for (const t of u.needs_review || []) li(`Edited since generation - ${t}`);
+  for (const e of u.evidence_reminders || []) li(`Evidence needs rechecking - ${e}`);
 
   if ((manifest.evidence || []).length) {
     h2('Evidence on record');
@@ -278,7 +278,7 @@ function wrap(text, width) {
   let line = '';
   for (const word of String(text).split(/\s+/).filter(Boolean)) {
     // v11 SC-05: a word longer than the line was previously emitted whole and
-    // ran off the right margin — a long URL in `proof`, or an unbroken
+    // ran off the right margin - a long URL in `proof`, or an unbroken
     // campaign name, was clipped by the page edge in every PDF reader. There
     // is no soft-wrap in a PDF content stream, so oversized words are broken
     // here or they are lost.
@@ -373,7 +373,7 @@ function buildPdf(manifest, meta) {
 function readme(manifest, meta) {
   const c = manifest.campaign || {};
   return [
-    `${c.name || 'Campaign'} — handoff bundle`,
+    `${c.name || 'Campaign'} - handoff bundle`,
     '',
     meta.disclosure,
     '',

@@ -24,7 +24,7 @@ import '../../flow.css';
 // ---------------------------------------------------------------------------
 // Upgrade Prompts 16-18: shared scaffold for the generator studios (Website,
 // Email, Captions, Creative). A studio is declared with a form field spec, a
-// generate() call, and how to render one result item — the scaffold handles
+// generate() call, and how to render one result item - the scaffold handles
 // loading / empty / error / upgrade states, copy buttons and saved assets.
 // ---------------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ function StructuredEdits({ table, item, onChange, onUpgrade }) {
 
   // v13 SC-P1-07: reset the draft when a different item is shown. React's
   // documented "adjust state during render" pattern rather than an effect with
-  // a suppressed dependency list — no extra commit, no stale-draft flash, and
+  // a suppressed dependency list - no extra commit, no stale-draft flash, and
   // (unlike depending on `item`) typing is not wiped by an unrelated re-render.
   const [seedId, setSeedId] = useState(item.id);
   if (seedId !== item.id) {
@@ -355,10 +355,10 @@ export default function GeneratorStudio({
   resultKey, // key in the response holding the array (e.g. 'pages', 'items', 'emails')
   table, // matching item table for saved list + status
   renderItem, // (item, { table, onChange }) => JSX
-  fullCopy, // (item) => string  — "copy full asset"
+  fullCopy, // (item) => string  - "copy full asset"
 }) {
   // v5 Prompt 2 / LB-V17-03: the completed brief survives auth, paywall and
-  // Stripe redirects — but recovery is now bounded, user/workspace-scoped and
+  // Stripe redirects - but recovery is now bounded, user/workspace-scoped and
   // TTL'd via the draft registry, not indefinite raw localStorage.
   const draftKey = `lb-draft-${table || title}`;
   const [values, setValues] = useState(initial);
@@ -376,7 +376,7 @@ export default function GeneratorStudio({
   const { account } = useAuth();
   const isFreePlan = !account || account.plan === 'free' || !account.plan;
   // v5 Prompt 6: launched from a campaign (?campaign=<id>) the generation
-  // inherits its brief — campaign_id rides along with every generate call.
+  // inherits its brief - campaign_id rides along with every generate call.
   const [searchParams] = useSearchParams();
   const campaignId = searchParams.get('campaign') || values.campaign_id || null;
 
@@ -386,7 +386,7 @@ export default function GeneratorStudio({
   }, [table]);
 
   // v5 Prompt 7: brand + campaign context drive the editable chips and the
-  // smart defaults (primary product/audience — never a silent first pick).
+  // smart defaults (primary product/audience - never a silent first pick).
   useEffect(() => {
     api.brandProfile().then((r) => setProfile(r.profile || {})).catch(() => setProfile({}));
   }, []);
@@ -401,7 +401,7 @@ export default function GeneratorStudio({
   // LB-V17-03 / LB-V19 (LB-02): owner scope for the bounded draft. The STABLE
   // user UUID (account.id) + the active workspace bind the draft so it never
   // restores across logout, a different user or a workspace switch. The UUID is
-  // the identity — email is mutable contact data and must not be the scope key.
+  // the identity - email is mutable contact data and must not be the scope key.
   const draftOwner = useMemo(
     () => ({ userId: account?.id || '', workspaceId: getActiveWorkspace() || '' }),
     [account?.id],
@@ -426,7 +426,7 @@ export default function GeneratorStudio({
   }
 
   // One idempotency key per generation INTENT (v6 Prompt 11): created on the
-  // first attempt, reused on retry after a failure, discarded on success — so
+  // first attempt, reused on retry after a failure, discarded on success - so
   // double clicks and network timeouts can't create duplicate assets/charges.
   const intentKeyRef = useRef(null);
 
@@ -507,7 +507,7 @@ export default function GeneratorStudio({
         <p className="sr-only" role="status" aria-live="polite">{announce}</p>
 
         <div className="flow-card gen-form" aria-busy={busy}>
-          {/* v5 Prompt 7 / v6 Prompt 20: editable context — the exact brand,
+          {/* v5 Prompt 7 / v6 Prompt 20: editable context - the exact brand,
               product, audience, campaign, language and goal this generation
               will use. Missing facts link to Brand Profile before generating. */}
           <div className="gen-context-head">Using this context</div>
@@ -520,7 +520,7 @@ export default function GeneratorStudio({
               ) : (
                 <span key={c.key} className="gen-context-chip">
                   <span className="gen-context-label">{c.label}</span>
-                  {c.value || '—'}
+                  {c.value || '-'}
                 </span>
               )
             ))}
@@ -535,7 +535,7 @@ export default function GeneratorStudio({
                       ? `, approved ${new Date(campaign.brief_approved_at || campaign.approved_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
                       : ''
                   }`
-                : 'Generating inside a campaign — the approved brief is applied automatically.'}
+                : 'Generating inside a campaign - the approved brief is applied automatically.'}
             </p>
           )}
           {fields.map((f) => (
@@ -543,7 +543,7 @@ export default function GeneratorStudio({
           ))}
 
           {/* v9 SC-05: show WHAT this studio produces and its boundary before
-              the user spends an action — structure, not a vague promise. */}
+              the user spends an action - structure, not a vague promise. */}
           {contract && (
             <div className="gen-output-contract" aria-label="What you'll get">
               <span className="gen-context-head">What you’ll get</span>
@@ -586,10 +586,10 @@ export default function GeneratorStudio({
             <div className="flow-row">
               <button className="kit-copy" onClick={exportAll}>Export all (Markdown)</button>
             </div>
-            {/* v7 LB-06/LB-11: exports are drafts — say what remains for the user. */}
+            {/* v7 LB-06/LB-11: exports are drafts - say what remains for the user. */}
             <p className="flow-muted gen-cost-note">
               Exports a Markdown draft file. Review facts, links, claims and how it fits your
-              platform before publishing — exporting is free and does not use AI actions.
+              platform before publishing - exporting is free and does not use AI actions.
             </p>
             <ErrorState state={exportErr} onRetry={exportAll} />
           </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-// The real pipeline a campaign package goes through — each one is a step the
+// The real pipeline a campaign package goes through - each one is a step the
 // backend actually runs, not invented social proof.
 const STEPS = [
   { icon: '✎', title: 'Learning about you', body: 'Your skills, audience and available time.' },

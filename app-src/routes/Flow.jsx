@@ -5,7 +5,7 @@ import '../flow.css';
 
 // ---------------------------------------------------------------------------
 // v10 SC-01: the guided "full launch campaign" flow is folded into the single
-// campaign-creation contract — a campaign is created in Campaigns and its work
+// campaign-creation contract - a campaign is created in Campaigns and its work
 // happens in the campaign workspace. There is no second creation path.
 //
 // This route is deliberately NOT a bare redirect. It is the only index of
@@ -45,7 +45,7 @@ export default function Flow() {
             <h2>Earlier launch work</h2>
             <p className="flow-muted">
               Full launch campaigns now start in Campaigns, so one brief drives every asset.
-              This page keeps what you made here readable — nothing was deleted.
+              This page keeps what you made here readable - nothing was deleted.
             </p>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function Flow() {
           <div className="flow-card" role="alert">
             <p className="flow-err" style={{ marginTop: 0 }}>{error}</p>
             <p className="flow-muted" style={{ marginBottom: 0 }}>
-              Your earlier work is saved — this page could not load it just now.{' '}
+              Your earlier work is saved - this page could not load it just now.{' '}
               <button className="account-link" onClick={() => window.location.reload()}>Try again</button>
             </p>
           </div>

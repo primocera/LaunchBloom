@@ -3,8 +3,8 @@
 //
 // Turns a workspace's saved brand profile into a ground-truth context block
 // that every AI generation prepends, plus a short "context used" summary the
-// UI can show. Missing facts must become bracketed placeholders — never
-// invented — so the rules are stated in the block itself.
+// UI can show. Missing facts must become bracketed placeholders - never
+// invented - so the rules are stated in the block itself.
 // ---------------------------------------------------------------------------
 
 const supabase = require('./supabase');
@@ -99,11 +99,11 @@ function formatBrandContext(profile) {
   if (lines.length === 0) return { text: '', summary: [], hasProfile: false };
 
   const text =
-    'BRAND PROFILE — treat as ground truth and stay consistent with it:\n' +
+    'BRAND PROFILE - treat as ground truth and stay consistent with it:\n' +
     lines.join('\n') +
     '\n\nGROUNDING RULES: Use only facts stated in this brand profile and the user data below. ' +
     'For any missing specific (price, statistic, testimonial, credential, date, guarantee), insert a clearly ' +
-    'bracketed placeholder such as [ADD PRICE] or [ADD TESTIMONIAL] — never invent it. Respect the words-to-avoid ' +
+    'bracketed placeholder such as [ADD PRICE] or [ADD TESTIMONIAL] - never invent it. Respect the words-to-avoid ' +
     'and compliance restrictions.\n';
 
   return { text, summary, hasProfile: true };

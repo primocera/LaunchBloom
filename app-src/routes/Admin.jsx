@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 // Admin scorecard (Prompt 10) rendered as a readable dashboard instead of raw
 // JSON. The endpoint 403s for non-allowlisted accounts, so this page shows an
 // honest "admins only" state rather than an error. Beta gates come from the
-// scorecard's own definitions — we render pass/below/no-data, never invent one.
+// scorecard's own definitions - we render pass/below/no-data, never invent one.
 
 const GATES = {
   activation: { min: 0.45, dir: 'gte', label: 'Activation', kind: 'ratio', hint: '≥ 45%' },
@@ -24,7 +24,7 @@ const ORDER = [
 ];
 
 function fmt(metric, kind) {
-  if (!metric || metric.value == null) return '—';
+  if (!metric || metric.value == null) return '-';
   if (kind === 'ratio') return `${Math.round(metric.value * 1000) / 10}%`;
   if (kind === 'minutes') return `${Math.round(metric.value)} min`;
   return String(metric.value);
@@ -83,7 +83,7 @@ function MetricCard({ mkey, metric }) {
 
 export default function Admin() {
   const [data, setData] = useState(null);
-  // v10 SC-07: the cohort funnel loads independently — a cohort failure must
+  // v10 SC-07: the cohort funnel loads independently - a cohort failure must
   // not blank the scorecard, and vice versa.
   const [cohort, setCohort] = useState(null);
   // SC-95-03: the canonical value scorecard loads independently too.
@@ -122,14 +122,14 @@ export default function Admin() {
   const w = (data && data.window) || {};
   const cancels = Object.entries((data && (data.metrics?.cancellation_reasons || data.cancellation_reasons)) || {});
   const cost = m.cost_per_action;
-  const fmtDate = (s) => (s ? new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—');
+  const fmtDate = (s) => (s ? new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '-');
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1040, margin: '0 auto', color: C.text }}>
       {/* SC-95-05: the one weekly decision, generated from the scorecard. */}
       <WeeklyDecision decision={decision} />
 
-      {/* SC-95-03: the canonical capped-beta value scorecard — one denominator,
+      {/* SC-95-03: the canonical capped-beta value scorecard - one denominator,
           server-confirmed milestones (including repeat campaigns), outage-aware.
           This is the decision system; the sections below are deprecated views. */}
       <BetaValueScorecard beta={beta} />
@@ -179,7 +179,7 @@ export default function Admin() {
             <div style={{ fontSize: 14, color: C.text }}>
               {cost && cost.value != null
                 ? `$${cost.value} ${cost.unit || ''}`.trim()
-                : <span style={{ color: C.muted }}>From the spend ledger — shown once there is spend to report.</span>}
+                : <span style={{ color: C.muted }}>From the spend ledger - shown once there is spend to report.</span>}
             </div>
           </div>
         </div>
@@ -199,7 +199,7 @@ function WeeklyDecision({ decision }) {
   const color = DECISION_COLOR[decision.decision] || C.muted;
   return (
     <section style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', marginBottom: 22 }}>
-      <div style={{ fontSize: 13, color: C.muted }}>Weekly decision · {decision.window?.days ?? 7}-day window · cohort age {decision.cohort?.cohort_age_days ?? '—'}d</div>
+      <div style={{ fontSize: 13, color: C.muted }}>Weekly decision · {decision.window?.days ?? 7}-day window · cohort age {decision.cohort?.cohort_age_days ?? '-'}d</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 22, fontWeight: 700, color }}>{decision.decision}</span>
         <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999, color: decision.expansion_allowed ? C.success : C.muted, background: decision.expansion_allowed ? 'rgba(16,185,129,.12)' : 'rgba(107,114,128,.12)' }}>
@@ -219,7 +219,7 @@ function WeeklyDecision({ decision }) {
   );
 }
 
-// SC-95-03: the canonical value loop. Renders the server's state verbatim —
+// SC-95-03: the canonical value loop. Renders the server's state verbatim -
 // no_data / insufficient_data / unavailable / reported read differently and
 // imply different actions; an analytics outage (data_available:false) shows a
 // clear banner and never a zero. Gates are pre-registered hypotheses.
@@ -247,7 +247,7 @@ function BetaValueScorecard({ beta }) {
 
       {outage && (
         <div style={{ background: 'rgba(180,83,9,.10)', border: `1px solid ${C.warn}`, borderRadius: 12, padding: '12px 16px', margin: '12px 0', color: C.warn, fontSize: 14 }}>
-          Analytics read failed for this window — every metric is <strong>unavailable</strong>, not zero.
+          Analytics read failed for this window - every metric is <strong>unavailable</strong>, not zero.
           Do not expand or change the product on an unavailable read.
         </div>
       )}
@@ -276,13 +276,13 @@ function BetaValueScorecard({ beta }) {
                     <div style={{ fontSize: 12, color: C.muted, fontWeight: 400 }}>{s.question}</div>
                   </th>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: st.color }}>
-                    {s.numerator == null ? '—' : `${s.numerator} / ${s.denominator ?? '—'}`}
+                    {s.numerator == null ? '-' : `${s.numerator} / ${s.denominator ?? '-'}`}
                   </td>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: st.color }}>
-                    {s.value == null ? <span title={st.note || ''}>—</span> : `${s.value}%`}
+                    {s.value == null ? <span title={st.note || ''}>-</span> : `${s.value}%`}
                   </td>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, fontSize: 13, color: st.color }}>
-                    {s.state}{st.note ? ` — ${st.note}` : ''}
+                    {s.state}{st.note ? ` - ${st.note}` : ''}
                   </td>
                 </tr>
               );
@@ -307,7 +307,7 @@ function BetaValueScorecard({ beta }) {
   );
 }
 
-// SC-95-04: post-handoff feedback — did the coordinated handoff reduce rework?
+// SC-95-04: post-handoff feedback - did the coordinated handoff reduce rework?
 // Categories only (never the free-text note). The reduced-rework claim is
 // blocked until respondents, low manual work and interviews support it.
 function HandoffFeedback({ fb }) {
@@ -316,9 +316,9 @@ function HandoffFeedback({ fb }) {
   const supported = fb.reduced_rework_claim_supported;
   return (
     <div style={{ marginTop: 20 }}>
-      <h2 style={{ fontSize: 16, margin: '0 0 6px' }}>Handoff feedback — reduced rework?</h2>
+      <h2 style={{ fontSize: 16, margin: '0 0 6px' }}>Handoff feedback - reduced rework?</h2>
       <p style={{ fontSize: 13, color: C.muted, marginTop: 0 }}>
-        {fb.respondents == null ? '—' : `${fb.respondents} respondents`}
+        {fb.respondents == null ? '-' : `${fb.respondents} respondents`}
         {fb.eligible ? ` of ${fb.eligible} who exported a handoff` : ''}
         {fb.response_rate != null ? ` · ${fb.response_rate}% response` : ''} · state: {fb.state}.
         Categories only; notes are never shown here.
@@ -328,7 +328,7 @@ function HandoffFeedback({ fb }) {
         color: supported ? C.success : C.warn,
         background: supported ? 'rgba(16,185,129,.12)' : 'rgba(180,83,9,.12)',
       }}>
-        {supported ? 'Reduced-rework claim supported by evidence' : 'Reduced-rework claim BLOCKED — evidence insufficient'}
+        {supported ? 'Reduced-rework claim supported by evidence' : 'Reduced-rework claim BLOCKED - evidence insufficient'}
       </span>
       {fb.state === 'reported' && (
         <div style={{ display: 'grid', gap: 12, marginTop: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
@@ -352,7 +352,7 @@ function HandoffFeedback({ fb }) {
 
 // v10 SC-07: the eleven-step campaign-control funnel.
 //
-// Renders the server's state verbatim — it never computes a rate the backend
+// Renders the server's state verbatim - it never computes a rate the backend
 // suppressed, and never fills a blank with a zero. "Insufficient data" and
 // "not instrumented" read differently from a real 0%, because they mean
 // different things and imply different actions.
@@ -369,7 +369,7 @@ function CohortFunnel({ cohort }) {
   const steps = c.steps || [];
   const drop = cohort.biggest_drop_off;
   const cost = cohort.cost || {};
-  const money = (v) => (v == null ? '—' : `$${v}`);
+  const money = (v) => (v == null ? '-' : `$${v}`);
 
   return (
     <section style={{ marginTop: 28 }}>
@@ -383,7 +383,7 @@ function CohortFunnel({ cohort }) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
           <div style={{ fontSize: 13, color: C.muted }}>Biggest drop-off</div>
           <div style={{ fontSize: 15, margin: '4px 0' }}>
-            <strong>{drop.from}</strong> → <strong>{drop.to}</strong> — lost {drop.lost} of {drop.of}
+            <strong>{drop.from}</strong> → <strong>{drop.to}</strong> - lost {drop.lost} of {drop.of}
           </div>
           <div style={{ fontSize: 13, color: C.muted }}>{drop.decision}</div>
         </div>
@@ -412,13 +412,13 @@ function CohortFunnel({ cohort }) {
                     {s.label}
                   </th>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: style.color }}>
-                    {s.numerator == null ? '—' : `${s.numerator} / ${s.denominator}`}
+                    {s.numerator == null ? '-' : `${s.numerator} / ${s.denominator}`}
                   </td>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: style.color }}>
-                    {s.value == null ? <span title={style.note || ''}>—</span> : `${s.value}%`}
+                    {s.value == null ? <span title={style.note || ''}>-</span> : `${s.value}%`}
                   </td>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, color: style.color }}>
-                    {s.step_value == null ? '—' : `${s.step_value}%`}
+                    {s.step_value == null ? '-' : `${s.step_value}%`}
                   </td>
                   <td style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, fontSize: 13, color: C.muted }}>
                     {s.decision}

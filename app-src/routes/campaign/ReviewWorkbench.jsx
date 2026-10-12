@@ -5,7 +5,7 @@ import { STUDIO_BY_TABLE } from './shared';
 // ---------------------------------------------------------------------------
 // v9 SC-04: one Review workbench that unifies the v8 control tools (consistency
 // findings, brief-change/stale assets, Needs-review assets and evidence
-// reminders) into a single review sequence — grouped by issue type, not by
+// reminders) into a single review sequence - grouped by issue type, not by
 // database table. It reuses the existing /review payload and the existing
 // resolution endpoints (ack finding, keep snapshot, asset status, evidence);
 // it never runs AI, never bulk-acknowledges, and never hides unresolved items
@@ -30,15 +30,15 @@ const GROUP_LABEL = {
 const IMPACT_LABEL = { hard: 'Hard blocker', reminder: 'Disclosed reminder', external: 'External work' };
 
 const ACK_NOTE_OPTIONS = [
-  ['intentional', 'Intentional — keep as is'],
-  ['reviewed_ok', 'Reviewed — looks correct'],
+  ['intentional', 'Intentional - keep as is'],
+  ['reviewed_ok', 'Reviewed - looks correct'],
   ['external_check_pending', 'Waiting on an external check'],
   ['other', 'Other reason'],
 ];
 
 const DETECTION_LIMITS =
   'These checks compare structured fields across your assets and the brief. They do not verify facts, ' +
-  'prices, claims, links or external platform/legal policies — that review stays with you.';
+  'prices, claims, links or external platform/legal policies - that review stays with you.';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -121,7 +121,7 @@ export function ReviewWorkbench({ campaign }) {
     [allItems, filter],
   );
 
-  // Counts per filter — the same numbers Overview and Handoff derive.
+  // Counts per filter - the same numbers Overview and Handoff derive.
   const counts = useMemo(() => {
     const c = { blocking: 0, decision: 0, evidence: 0, resolved: 0, all: allItems.length };
     for (const i of allItems) c[i.bucket] = (c[i.bucket] || 0) + 1;
@@ -165,13 +165,13 @@ export function ReviewWorkbench({ campaign }) {
         <button className="account-link" onClick={() => load(true)}>Recheck · free</button>
       </div>
       <p className="muted" style={{ marginTop: 0 }}>
-        One place to resolve every campaign risk before handoff. Recomputed on demand — reviewing never uses an AI action.
+        One place to resolve every campaign risk before handoff. Recomputed on demand - reviewing never uses an AI action.
         Severity is handoff risk, not a legal judgment.
       </p>
 
       {error && <p className="login-err">{error}</p>}
 
-      {/* Filters double as safe navigation — they never mutate anything. */}
+      {/* Filters double as safe navigation - they never mutate anything. */}
       <div className="review-filters" role="tablist" aria-label="Review filters">
         {FILTERS.map(([key, label]) => (
           <button
@@ -184,11 +184,11 @@ export function ReviewWorkbench({ campaign }) {
         ))}
       </div>
 
-      {/* Export-impact summary — mirrors what the manifest discloses. */}
+      {/* Export-impact summary - mirrors what the manifest discloses. */}
       <p className="muted review-impact-summary">
         Export impact: {counts.blocking} hard blocker{counts.blocking === 1 ? '' : 's'} ·{' '}
         {counts.decision} disclosed reminder{counts.decision === 1 ? '' : 's'} · {counts.evidence} external.
-        Unresolved items are always disclosed in the handoff — nothing is hidden.
+        Unresolved items are always disclosed in the handoff - nothing is hidden.
       </p>
 
       {review === null && <p className="muted">Building the review queue…</p>}
@@ -259,7 +259,7 @@ function ItemDrawer({ item, campaign, onClose, onResolved, onError }) {
   return (
     <div className="account-section review-drawer" role="dialog" aria-label="Review item">
       <div className="brand-head" style={{ alignItems: 'baseline' }}>
-        <strong>{GROUP_LABEL[item.group]} — {item.title}</strong>
+        <strong>{GROUP_LABEL[item.group]} - {item.title}</strong>
         <button className="account-link" onClick={onClose}>Close</button>
       </div>
       <p className="muted" style={{ marginTop: 4 }}>{item.why}</p>
@@ -288,10 +288,10 @@ function ItemDrawer({ item, campaign, onClose, onResolved, onError }) {
           </select>
         )}
         {item.kind === 'finding' && !item.ackable && item.status !== 'acknowledged' && (
-          <span className="muted">This needs a fix, not an acknowledgment — open the asset to correct it.</span>
+          <span className="muted">This needs a fix, not an acknowledgment - open the asset to correct it.</span>
         )}
         {item.kind === 'finding' && item.status === 'acknowledged' && (
-          <span className="muted">Acknowledged by you — it stays on the handoff record.</span>
+          <span className="muted">Acknowledged by you - it stays on the handoff record.</span>
         )}
 
         {item.kind === 'stale' && item.status !== 'snapshot_kept' && (
@@ -347,7 +347,7 @@ function ItemDrawer({ item, campaign, onClose, onResolved, onError }) {
 const EVIDENCE_TYPES = ['review', 'testimonial', 'statistic', 'certification', 'press', 'internal_data', 'other'];
 
 // Create evidence and optionally link it to the item's asset. We never fetch or
-// assert the source is true — we record the permitted claim, source and date.
+// assert the source is true - we record the permitted claim, source and date.
 function EvidenceForm({ campaign, asset, onSaved, onError }) {
   const [ev, setEv] = useState({ type: 'review', label: '', source_url: '', checked_date: today(), permitted_claim: '' });
   const [saving, setSaving] = useState(false);
@@ -365,7 +365,7 @@ function EvidenceForm({ campaign, asset, onSaved, onError }) {
   return (
     <form onSubmit={save} className="account-section" style={{ padding: 10, marginTop: 8 }}>
       <p className="muted" style={{ marginTop: 0 }}>
-        Record real proof once, reuse it across assets. This does not verify the source — it records the permitted claim,
+        Record real proof once, reuse it across assets. This does not verify the source - it records the permitted claim,
         where it came from and when you checked it.
       </p>
       <div className="brand-field">

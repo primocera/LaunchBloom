@@ -6,7 +6,7 @@
 // keep an additional sub-cap. Paid plans meter per rolling Stripe billing
 // period; trial/free use lifetime totals. The ledger lives in lib/usage.js.
 //
-// The plan itself comes from routes/customers.js planFor() — Stripe is the
+// The plan itself comes from routes/customers.js planFor() - Stripe is the
 // source of truth; this file only says what each plan may do.
 // ---------------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ function upgradeMessage(plan, feature) {
  * Express middleware factory. Authenticates, resolves the plan + workspace, and
  * meters the request against the AI-action pool (plus the launch-kit sub-cap).
  * It RESERVES an action before the route runs and, via a response hook,
- * finalizes it on success or releases it on failure — so failed generations
+ * finalizes it on success or releases it on failure - so failed generations
  * never consume quota. Pass feature=null to authenticate without metering.
  */
 function planGate(feature) {
@@ -130,7 +130,7 @@ function planGate(feature) {
 
         const since = await usage.windowStart(req.userEmail, plan);
 
-        // Launch-kit sub-cap — account-wide (counts reserved + succeeded).
+        // Launch-kit sub-cap - account-wide (counts reserved + succeeded).
         if (feature === 'launch_kits') {
           const kitsUsed = await usage.countUserActions(req.userId, since, 'launch_kits');
           if (kitsUsed >= limits.launch_kits) {
@@ -139,7 +139,7 @@ function planGate(feature) {
           }
         }
 
-        // AI-action pool — account-wide across the user's workspaces.
+        // AI-action pool - account-wide across the user's workspaces.
         const poolLimit = limits.ai_actions;
         if (poolLimit !== Infinity) {
           const used = await usage.countUserActions(req.userId, since, null);
@@ -167,7 +167,7 @@ function planGate(feature) {
 
         req.usageEventId = reservationId;
 
-        // Finalize on success, release on failure — exactly once.
+        // Finalize on success, release on failure - exactly once.
         let settled = false;
         res.on('finish', () => {
           if (settled) return;

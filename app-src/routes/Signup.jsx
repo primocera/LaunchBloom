@@ -63,8 +63,8 @@ export default function Signup() {
         return;
       }
       if (await resumePendingCheckout()) return;
-      // v7 LB-02: land new users in the 3-minute Brand Profile first run —
-      // the first activation step — not on a generic dashboard.
+      // v7 LB-02: land new users in the 3-minute Brand Profile first run -
+      // the first activation step - not on a generic dashboard.
       navigate('/app/brand?welcome=1');
     } catch (err) {
       // The email and both consent choices survive a recoverable failure; only
@@ -86,7 +86,7 @@ export default function Signup() {
               and sent people back to a phone they had already closed. */}
           <p>
             We sent a secure link to <strong>{email.trim()}</strong>. You can open it on any
-            device — phone, laptop or tablet — and you’ll land back in your saved setup.
+            device - phone, laptop or tablet - and you’ll land back in your saved setup.
           </p>
           <p>
             Links expire, and each one can only be used once. If yours has expired or you already
@@ -153,8 +153,8 @@ export default function Signup() {
             aria-describedby={describedBy('accept')}
           />
           <span>
-            I agree to the <Link to="/legal/terms">Terms</Link> and{' '}
-            <Link to="/legal/privacy">Privacy Policy</Link>.
+            I&apos;m 18 or older, I&apos;m using this for my work or business, and I agree to the{' '}
+            <Link to="/legal/terms">Terms</Link> and <Link to="/legal/privacy">Privacy Policy</Link>.
           </span>
         </label>
         <label className="consent">

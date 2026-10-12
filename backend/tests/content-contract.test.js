@@ -125,8 +125,23 @@ test('landing hero, final CTA and metadata all carry the canonical promise', () 
   const landing = read(path.join(APP_SRC, 'routes', 'Landing.jsx'));
   const html = read(path.join(APP_SRC, 'index.html'));
   assert.ok(landing.includes(`<h1>${PROMISE}.</h1>`), 'hero h1 must state the promise');
-  assert.ok(html.includes(`<title>Scalvya — ${PROMISE}</title>`), 'title must state the promise');
-  assert.ok(html.includes(`og:title" content="Scalvya — ${PROMISE}"`), 'og:title must match the visible hero');
+  assert.ok(html.includes(`<title>Scalvya - ${PROMISE}</title>`), 'title must state the promise');
+  assert.ok(html.includes(`og:title" content="Scalvya - ${PROMISE}"`), 'og:title must match the visible hero');
+});
+
+// ── No em dashes in app copy (owner decision 2026-10-12: use "-") ───────────
+
+test('no em dash anywhere in the frontend source', () => {
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (/\.(jsx?|css|html)$/.test(entry.name) && read(p).includes('—')) offenders.push(path.relative(APP_SRC, p));
+    }
+  };
+  walk(APP_SRC);
+  assert.deepEqual(offenders, [], 'use "-" instead of an em dash');
 });
 
 // ── Exactly five canonical Create paths, consistent across surfaces ─────────

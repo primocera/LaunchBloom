@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// SC-P1-12 — Activation analytics and capped-beta value scorecard.
+// SC-P1-12 - Activation analytics and capped-beta value scorecard.
 //
 // This module is the operator-facing layer on top of the existing analytics
 // ledger (lib/analytics.js). It adds three things the pack asks for that the
@@ -10,7 +10,7 @@
 //      plus a validator that rejects any envelope carrying content or PII.
 //   2. An auditable staff/test/demo exclusion rule so beta KPIs measure real
 //      ICP users, not the team. The rule is data (env + a pure predicate), so
-//      it can be reviewed and reproduced — it never silently drops rows.
+//      it can be reviewed and reproduced - it never silently drops rows.
 //   3. A weekly cohort scorecard whose funnel rates all share ONE denominator
 //      (the activated cohort), that never inflates a milestone on a retried
 //      event (distinct subjects), and whose gates are marked as HYPOTHESES.
@@ -47,7 +47,7 @@ const FAILURE_REASONS = new Set([
 ]);
 
 // The recognised runtime environments and event sources. Anything else is
-// invalid — an unknown env would silently pollute production KPIs.
+// invalid - an unknown env would silently pollute production KPIs.
 const ENVIRONMENTS = new Set(['production', 'staging', 'development', 'test']);
 const SOURCES = new Set(['web_app', 'backend', 'webhook', 'job']);
 
@@ -97,7 +97,7 @@ const PROVISIONAL_THRESHOLDS = [
 ];
 
 // Below this many subjects in a denominator, rates are suppressed. A 10–20 user
-// beta will trip this often — that is correct, most weeks are not conclusive.
+// beta will trip this often - that is correct, most weeks are not conclusive.
 const MIN_COHORT = 5;
 
 /**
@@ -141,7 +141,7 @@ function rosterFromEnv(env = process.env) {
  *   • any missing required envelope field;
  *   • an unknown env / source / (for *_failed) failure reason;
  *   • ANY forbidden (content/PII) key, at the top level or inside properties.
- * Never throws — a malformed input degrades to ok:false with reasons.
+ * Never throws - a malformed input degrades to ok:false with reasons.
  */
 function validateEventEnvelope(envelope) {
   const errors = [];
@@ -212,7 +212,7 @@ function distinctSubjects(rows, canonical, scope, { roster = {}, excludedWorkspa
  * SC-95-03: distinct workspaces that created at least `minCount` DISTINCT
  * campaigns. `campaign_created` is emitted once per real persisted campaign
  * (deduped per campaign id at write time), so counting distinct campaign ids
- * per workspace measures genuine repeat use — a retried create or a template
+ * per workspace measures genuine repeat use - a retried create or a template
  * clone of the same campaign cannot inflate it. Staff/test subjects excluded
  * with the same auditable roster as every other milestone.
  */
@@ -236,7 +236,7 @@ function workspacesWithRepeatCampaigns(rows, minCount = 2, { roster = {}, exclud
 }
 
 // SC-95-04: the handoff feedback categories (mirrors routes/feedback.js ALLOWED).
-// CATEGORIES only — the free-text note is never read here, aggregated, or logged.
+// CATEGORIES only - the free-text note is never read here, aggregated, or logged.
 const FEEDBACK_CATEGORIES = Object.freeze({
   job_done: ['full_campaign', 'part_of_campaign', 'single_asset', 'nothing_usable'],
   manual_work: ['almost_none', 'light_editing', 'heavy_editing', 'rewrote_most'],
@@ -245,11 +245,11 @@ const FEEDBACK_CATEGORIES = Object.freeze({
 
 /**
  * SC-95-04: safe aggregate of post-handoff feedback for the canonical scorecard.
- * Reads only `feedback_submitted` (moment=handoff) analytics events — categories
+ * Reads only `feedback_submitted` (moment=handoff) analytics events - categories
  * and ids, never the note. Denominators: respondents (distinct workspaces that
  * answered) over eligible (distinct workspaces that exported a handoff, i.e.
  * were asked). The reduced-rework claim is BLOCKED by default and only supported
- * once enough respondents report low manual work and zero nothing_usable — so
+ * once enough respondents report low manual work and zero nothing_usable - so
  * the product cannot claim "reduced rework" until the evidence supports it.
  */
 function handoffFeedback(rows, { roster = {}, excludedWorkspaces = new Set(), minCohort = MIN_COHORT } = {}) {
@@ -305,10 +305,10 @@ function handoffFeedback(rows, { roster = {}, excludedWorkspaces = new Set(), mi
  * The weekly operator scorecard for the capped beta.
  *
  * `rows` are ledger rows: { event, user_id, workspace_id, campaign_id,
- * created_at, properties } — ids/timestamps/categorical only, never content.
+ * created_at, properties } - ids/timestamps/categorical only, never content.
  *
  * Denominator rule (acceptance criterion): every funnel rate is measured
- * against ONE base — the activated cohort (distinct workspaces that completed a
+ * against ONE base - the activated cohort (distinct workspaces that completed a
  * brand profile). Mixing denominators is how funnels lie, so we don't.
  */
 function computeScorecard(rows = [], { window = null, roster = {}, minCohort = MIN_COHORT, excludedWorkspaces = new Set(), dataAvailable = true } = {}) {
@@ -332,7 +332,7 @@ function computeScorecard(rows = [], { window = null, roster = {}, minCohort = M
       handoff_feedback: { state: 'unavailable', respondents: null, eligible: null, response_rate: null, counts: {}, reduced_rework_claim_supported: false },
       thresholds: PROVISIONAL_THRESHOLDS,
       disclaimer:
-        'Analytics read FAILED for this window — every metric is UNAVAILABLE, not zero. ' +
+        'Analytics read FAILED for this window - every metric is UNAVAILABLE, not zero. ' +
         'Do not expand or change the product on an unavailable read.',
     };
   }
@@ -367,7 +367,7 @@ function computeScorecard(rows = [], { window = null, roster = {}, minCohort = M
       return {
         step: def.step, question: def.question, canonical: null,
         numerator: null, denominator: cohort, value: null, state: 'unavailable',
-        note: 'Not instrumented yet — fires no server-confirmed event, so it cannot be measured.',
+        note: 'Not instrumented yet - fires no server-confirmed event, so it cannot be measured.',
       };
     }
     const reached = distinctSubjects(safeRows, def.canonical, def.scope, opts).size;

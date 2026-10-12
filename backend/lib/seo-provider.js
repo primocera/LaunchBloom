@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// v5 Prompt 12 — SEO provider adapter interface.
+// v5 Prompt 12 - SEO provider adapter interface.
 //
 // Scalvya generates SEO content *ideas*, not researched keyword data. Until
 // a real keyword/SERP data provider is integrated, everything is "Not
@@ -32,7 +32,7 @@ const notResearchedProvider = {
 
 /**
  * Resolve the active provider from env. No vendor is wired yet, so this always
- * returns the not-researched provider — but the seam exists for the future.
+ * returns the not-researched provider - but the seam exists for the future.
  */
 function getSeoProvider() {
   // e.g. if (process.env.SEO_PROVIDER === 'acme' && process.env.ACME_API_KEY) return acmeProvider;
@@ -42,9 +42,9 @@ function getSeoProvider() {
 /** Steps a user can take to turn an idea into a researched keyword. */
 function researchChecklist() {
   return [
-    'Search the primary keyword in Google and read the top 10 results — match the dominant intent.',
+    'Search the primary keyword in Google and read the top 10 results - match the dominant intent.',
     'Check Google autocomplete and "People also ask" for real related phrases.',
-    'Use a keyword tool (e.g. Search Console, a keyword API) for volume and difficulty — record the source and date.',
+    'Use a keyword tool (e.g. Search Console, a keyword API) for volume and difficulty - record the source and date.',
     'Confirm you can create genuinely better/differentiated content than what ranks now.',
     'Check the target page does not compete with an existing page for the same keyword (cannibalization).',
   ];
@@ -68,7 +68,7 @@ function rejectFabricatedMetrics(items = []) {
       if (!hasSource) violations.push(`${label}: states an SEO metric without a source and retrieval date.`);
     }
     if (/\bwill rank\b|guaranteed to rank|can actually rank/i.test(blob)) {
-      violations.push(`${label}: promises rankings — SEO ideas cannot guarantee ranking.`);
+      violations.push(`${label}: promises rankings - SEO ideas cannot guarantee ranking.`);
     }
   });
   return violations;
