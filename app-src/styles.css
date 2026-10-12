@@ -938,21 +938,20 @@ button {
 }
 
 /* ── Login ────────────────────────────────────────────────────────────── */
-/* Auth pages (login, signup, forgot/reset password): a plain white page, the
-   logo top-left, and one open column - big heading, labels above tall fields,
-   a full-width pill button. Blue is the landing hero's #2f6ceb (4.7:1 with
-   white, WCAG AA) so the hand-off from the landing page feels continuous. */
+/* Auth pages (login, signup, forgot/reset password): a solid blue page, the
+   logo top-left, and one open column - big heading, labels above tall white
+   fields, a full-width white pill button. Blue is the landing hero's #2f6ceb;
+   all text on it is pure white (4.7:1, WCAG AA), and the focus ring is a dark
+   navy (#0b1b4d, 3.6:1 against the blue) so keyboard focus stays visible. */
 .login {
   --auth-blue: #2f6ceb;
-  --auth-blue-hover: #2459c9;
   --auth-ink: #111827;
-  --auth-muted: #4b5563;
-  --auth-line: #c9ced6;
+  --auth-focus: #0b1b4d;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #ffffff;
-  color: var(--auth-ink);
+  background: var(--auth-blue);
+  color: #ffffff;
 }
 
 .auth-top {
@@ -968,7 +967,7 @@ button {
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--auth-ink);
+  color: #ffffff;
   text-decoration: none;
 }
 
@@ -977,8 +976,8 @@ button {
   place-items: center;
   width: 32px;
   height: 32px;
-  color: #ffffff;
-  background: var(--auth-blue);
+  color: var(--auth-blue);
+  background: #ffffff;
   border-radius: 9px;
 }
 
@@ -1001,14 +1000,14 @@ button {
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.025em;
-  color: var(--auth-ink);
+  color: #ffffff;
 }
 
 .login-card p {
   margin: 0 0 24px;
   font-size: 15px;
   line-height: 1.55;
-  color: var(--auth-muted);
+  color: #ffffff;
 }
 
 .login-card .auth-lede {
@@ -1021,13 +1020,13 @@ button {
 
 .login-card a {
   font-weight: 600;
-  color: var(--auth-blue);
+  color: #ffffff;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .login-card a:hover {
-  color: var(--auth-blue-hover);
+  text-decoration-thickness: 2px;
 }
 
 .login-card .field {
@@ -1039,14 +1038,14 @@ button {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--auth-ink);
+  color: #ffffff;
 }
 
 .login-card .field-hint {
   display: block;
   margin-top: 6px;
   font-size: 13px;
-  color: var(--auth-muted);
+  color: #ffffff;
 }
 
 /* v11 SC-01: text fields only. This rule used to match every input in the
@@ -1061,19 +1060,15 @@ button {
   font-size: 16px;
   color: var(--auth-ink);
   background: #ffffff;
-  border: 1px solid var(--auth-line);
+  border: 1px solid #ffffff;
   border-radius: 10px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.login-card input:not([type='checkbox']):hover {
-  border-color: #9aa3b0;
-}
-
 .login-card input:not([type='checkbox']):focus {
-  border-color: var(--auth-blue);
-  box-shadow: 0 0 0 3px rgba(47, 108, 235, 0.2);
+  border-color: var(--auth-focus);
+  box-shadow: 0 0 0 3px var(--auth-focus);
 }
 
 .login-card input[aria-invalid='true'] {
@@ -1086,23 +1081,23 @@ button {
   margin-top: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
-  background: var(--auth-blue);
+  color: var(--auth-blue);
+  background: #ffffff;
   border-radius: 999px;
   transition: background 0.15s;
 }
 
 .login-card .btn-primary:hover:not(:disabled) {
-  background: var(--auth-blue-hover);
+  background: #e6eefd;
 }
 
 .login-card .btn-primary:focus-visible {
-  outline: 2px solid var(--auth-blue);
+  outline: 3px solid var(--auth-focus);
   outline-offset: 3px;
 }
 
 .login-card .btn-primary:disabled {
-  opacity: 0.45;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
@@ -1110,6 +1105,21 @@ button {
   margin: 24px 0 0;
   font-size: 15px;
   text-align: center;
+}
+
+.login-card .login-note,
+.login-card .link-btn {
+  color: #ffffff;
+}
+
+/* Consent rows on the blue page: white text and a navy check. The extra
+   .login keeps these ahead of the base consent rules further down. */
+.login .login-card .consent {
+  color: #ffffff;
+}
+
+.login .login-card .consent input[type='checkbox'] {
+  accent-color: var(--auth-focus);
 }
 
 .login-card .login-err {
