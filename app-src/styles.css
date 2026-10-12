@@ -938,48 +938,115 @@ button {
 }
 
 /* ── Login ────────────────────────────────────────────────────────────── */
-
-/* Auth pages (login, signup, forgot/reset password) share the landing hero's
-   sky: the approved blue (#2f6ceb, landing.css --sky-top) held at the top and
-   fading through pale blue to white. The card itself stays opaque white, so
-   every text colour inside it keeps its existing contrast. */
+/* Auth pages (login, signup, forgot/reset password): a plain white page, the
+   logo top-left, and one open column - big heading, labels above tall fields,
+   a full-width pill button. Blue is the landing hero's #2f6ceb (4.7:1 with
+   white, WCAG AA) so the hand-off from the landing page feels continuous. */
 .login {
+  --auth-blue: #2f6ceb;
+  --auth-blue-hover: #2459c9;
+  --auth-ink: #111827;
+  --auth-muted: #4b5563;
+  --auth-line: #c9ced6;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #ffffff;
+  color: var(--auth-ink);
+}
+
+.auth-top {
+  display: flex;
+  align-items: center;
+  padding: 22px 32px;
+}
+
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--auth-ink);
+  text-decoration: none;
+}
+
+.auth-logo-mark {
   display: grid;
   place-items: center;
-  min-height: 100%;
-  padding: 24px;
-  background: linear-gradient(
-    180deg,
-    #2f6ceb 0%,
-    #2f6ceb 38%,
-    #7ba4f3 62%,
-    #cfdefa 82%,
-    #ffffff 100%
-  );
+  width: 32px;
+  height: 32px;
+  color: #ffffff;
+  background: var(--auth-blue);
+  border-radius: 9px;
+}
+
+.auth-main {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: 56px 24px 72px;
 }
 
 .login-card {
   width: 100%;
-  max-width: 372px;
-  padding: 30px 28px;
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 16px;
-  box-shadow: 0 24px 60px -24px rgba(17, 45, 110, 0.45), 0 2px 8px rgba(17, 45, 110, 0.08);
+  max-width: 440px;
+  text-align: left;
 }
 
 .login-card h1 {
-  margin: 16px 0 6px;
-  font-size: 20px;
-  font-weight: 700;
+  margin: 0 0 10px;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--auth-ink);
 }
 
 .login-card p {
-  margin-bottom: 20px;
-  font-size: 13.5px;
+  margin: 0 0 24px;
+  font-size: 15px;
   line-height: 1.55;
-  color: var(--text-muted);
+  color: var(--auth-muted);
+}
+
+.login-card .auth-lede {
+  margin-bottom: 8px;
+}
+
+.login-card .auth-sub {
+  margin-bottom: 32px;
+}
+
+.login-card a {
+  font-weight: 600;
+  color: var(--auth-blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-card a:hover {
+  color: var(--auth-blue-hover);
+}
+
+.login-card .field {
+  margin-bottom: 20px;
+}
+
+.login-card .field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--auth-ink);
+}
+
+.login-card .field-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--auth-muted);
 }
 
 /* v11 SC-01: text fields only. This rule used to match every input in the
@@ -988,24 +1055,88 @@ button {
    is deliberately independent of it. */
 .login-card input:not([type='checkbox']) {
   width: 100%;
-  padding: 11px 13px;
+  height: 52px;
+  padding: 0 16px;
   font: inherit;
-  font-size: 14px;
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
+  font-size: 16px;
+  color: var(--auth-ink);
+  background: #ffffff;
+  border: 1px solid var(--auth-line);
   border-radius: 10px;
   outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-/* Breathing room between stacked fields (email / password / …). */
-.login-card input:not([type='checkbox']) + input:not([type='checkbox']) {
-  margin-top: 12px;
+.login-card input:not([type='checkbox']):hover {
+  border-color: #9aa3b0;
 }
 
 .login-card input:not([type='checkbox']):focus {
-  border-color: var(--accent-ring);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--auth-blue);
+  box-shadow: 0 0 0 3px rgba(47, 108, 235, 0.2);
 }
+
+.login-card input[aria-invalid='true'] {
+  border-color: #b91c1c;
+}
+
+.login-card .btn-primary {
+  width: 100%;
+  height: 52px;
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--auth-blue);
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+
+.login-card .btn-primary:hover:not(:disabled) {
+  background: var(--auth-blue-hover);
+}
+
+.login-card .btn-primary:focus-visible {
+  outline: 2px solid var(--auth-blue);
+  outline-offset: 3px;
+}
+
+.login-card .btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.login-card .login-alt {
+  margin: 24px 0 0;
+  font-size: 15px;
+  text-align: center;
+}
+
+.login-card .login-err {
+  margin: 4px 0 16px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+}
+
+@media (max-width: 560px) {
+  .auth-top {
+    padding: 16px;
+  }
+
+  .auth-main {
+    padding: 24px 16px 48px;
+  }
+
+  .login-card h1 {
+    font-size: 28px;
+  }
+}
+
 
 /* The consent row. The <label> wraps the control, so the whole row - at least
    44px tall - is the interactive target, without inflating the 18px box. */

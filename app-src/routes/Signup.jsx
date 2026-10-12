@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { resumePendingCheckout } from './Login';
-import BloomMark from '../components/BloomMark';
+import AuthLayout from '../components/AuthLayout';
 
 // ---------------------------------------------------------------------------
 // Prompt 8: email/password sign-up. Creates the account, signs the user in,
@@ -76,9 +76,8 @@ export default function Signup() {
 
   if (done) {
     return (
-      <div className="login">
+      <AuthLayout>
         <div className="login-card">
-          <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
           <h1>Verify your email to continue</h1>
           {/* v11 SC-01: the link carries a token hash and is verified
               server-side, so it works from any device or browser. The previous
@@ -96,53 +95,62 @@ export default function Signup() {
             <Link to="/app/login">Send a new verification link</Link>
           </p>
         </div>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="login">
+    <AuthLayout>
       <form className="login-card" onSubmit={submit}>
-        <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
         <h1>Create your Scalvya workspace</h1>
-        <p>Set up your brand and campaign brief free. You’ll choose a plan only when you’re ready to generate.</p>
+        <p className="auth-lede">Set up your brand and campaign brief free. You’ll choose a plan only when you’re ready to generate.</p>
+        <p className="auth-sub">
+          Already have an account? <Link to="/app/login">Sign in</Link>
+        </p>
 
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          autoComplete="email"
-          required
-          aria-label="Email address"
-          aria-required="true"
-          aria-invalid={invalid('email')}
-          aria-describedby={describedBy('email')}
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password (min 8 characters)"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          aria-label="Password"
-          aria-required="true"
-        />
-        <input
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          placeholder="Repeat password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          aria-label="Repeat password"
-          aria-required="true"
-          aria-invalid={invalid('confirm')}
-          aria-describedby={describedBy('confirm')}
-        />
+        <div className="field">
+          <label htmlFor="signup-email">Email address</label>
+          <input
+            id="signup-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+            aria-required="true"
+            aria-invalid={invalid('email')}
+            aria-describedby={describedBy('email')}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="signup-password">Password</label>
+          <input
+            id="signup-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            aria-required="true"
+          />
+          <span className="field-hint">At least 8 characters</span>
+        </div>
+        <div className="field">
+          <label htmlFor="signup-confirm">Repeat password</label>
+          <input
+            id="signup-confirm"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            aria-required="true"
+            aria-invalid={invalid('confirm')}
+            aria-describedby={describedBy('confirm')}
+          />
+        </div>
         <label className="consent">
           <input
             type="checkbox"
@@ -170,11 +178,7 @@ export default function Signup() {
         </button>
 
         {error && <p className="login-err" id="signup-error" role="alert">{error}</p>}
-
-        <p className="login-alt">
-          Already have an account? <Link to="/app/login">Sign in</Link>
-        </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

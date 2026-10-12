@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
-import BloomMark from '../components/BloomMark';
+import AuthLayout from '../components/AuthLayout';
 
 // ---------------------------------------------------------------------------
 // Prompt 8: email/password sign-in. Friendly errors, loading state, and a
@@ -90,36 +90,38 @@ export default function Login() {
   }
 
   return (
-    <div className="login">
+    <AuthLayout>
       <form className="login-card" onSubmit={submit}>
-        <div className="brand-mark" style={{ margin: '0 auto' }}><BloomMark /></div>
         <h1>Continue your campaign</h1>
-        <p>Sign in to return to your Brand Profile, campaigns and saved assets.</p>
+        <p className="auth-sub">
+          New to Scalvya? <Link to="/app/signup">Create your workspace</Link>
+        </p>
 
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          autoComplete="email"
-          required
-          aria-label="Email address"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          autoComplete="current-password"
-          required
-          minLength={8}
-          aria-label="Password"
-        />
-        <button className="btn-primary" type="submit" disabled={busy || !email.trim() || !password}>
-          {busy ? 'Signing in...' : 'Sign in'}
-        </button>
+        <div className="field">
+          <label htmlFor="login-email">Email address</label>
+          <input
+            id="login-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="login-password">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            minLength={8}
+          />
+        </div>
 
-        {error && <p className="login-err">{error}</p>}
+        {error && <p className="login-err" role="alert">{error}</p>}
         {unverified && (
           <p className="login-alt">
             <button type="button" className="link-btn" onClick={resend}>Resend verification email</button>
@@ -127,13 +129,14 @@ export default function Login() {
         )}
         {notice && <p className="login-note">{notice}</p>}
 
+        <button className="btn-primary" type="submit" disabled={busy || !email.trim() || !password}>
+          {busy ? 'Signing in...' : 'Sign in'}
+        </button>
+
         <p className="login-alt">
-          <Link to="/app/forgot-password">Forgot your password?</Link>
-        </p>
-        <p className="login-alt">
-          New here? <Link to="/app/signup">Create your workspace</Link>
+          <Link to="/app/forgot-password">Trouble signing in?</Link>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }
