@@ -32,6 +32,7 @@ import WebsiteStudio from './routes/studios/WebsiteStudio';
 import EmailFlowStudio from './routes/studios/EmailFlowStudio';
 import SocialStudio from './routes/studios/SocialStudio';
 import CreativeStudio from './routes/studios/CreativeStudio';
+import { useAppTheme } from './lib/theme';
 
 export default function App() {
   return (
@@ -138,6 +139,8 @@ function AppShell() {
   // of the main nav, the workspace switcher and Sign out, so without this a
   // phone had no navigation and no way to end a session at all.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Dark mode applies inside the signed-in app only.
+  useAppTheme();
 
   // Escape closes the drawer - a nav overlay must be dismissable from the
   // keyboard, and on mobile browsers a stuck overlay traps the whole page.

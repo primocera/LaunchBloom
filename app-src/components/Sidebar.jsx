@@ -4,6 +4,7 @@ import { BRAND } from '../brand';
 import BloomMark from './BloomMark';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
+import ThemeToggle from './ThemeToggle';
 
 // ---------------------------------------------------------------------------
 // Left sidebar: brand, nav (Dashboard,
@@ -75,6 +76,7 @@ function AccountBlock() {
         {' '}&middot;{' '}
         <button className="account-link" onClick={logout}>Sign out</button>
       </div>
+      <ThemeToggle />
     </div>
   );
 }
