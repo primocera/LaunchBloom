@@ -89,6 +89,7 @@ export const api = {
   archiveWorkspace: (id, archived) => request(`/api/workspaces/${id}`, { method: 'PATCH', body: { archived } }),
   deleteWorkspace: (id) => request(`/api/workspaces/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/api/workspace/dashboard'),
+  recentGenerations: () => request('/api/usage/recent'),
   // Admin support view (Prompt 10 + 16) - 403 for non-allowlisted accounts.
   // SC-95-03: the canonical capped-beta value scorecard (one denominator,
   // server-confirmed milestones incl. repeat campaigns, outage-aware).

@@ -111,6 +111,16 @@ function upgradeMessage(plan, feature) {
  * finalizes it on success or releases it on failure - so failed generations
  * never consume quota. Pass feature=null to authenticate without metering.
  */
+/**
+ * Which generation a request is, for the user's Recent generations list:
+ * the route path without params, e.g. '/generate-email-flow' →
+ * 'generate-email-flow', '/email/:id/subject' → 'email-subject'.
+ */
+function actionName(req) {
+  const path = (req.route && req.route.path) || req.path || '';
+  return String(path).replace(/\/:[^/]+/g, '').replace(/^\/+/, '').replace(/\//g, '-') || 'generate';
+}
+
 function planGate(feature) {
   return function (req, res, next) {
     requireAuth(req, res, async () => {
@@ -155,6 +165,7 @@ function planGate(feature) {
           workspaceId: ws.id,
           feature,
           model: process.env.ANTHROPIC_MODEL || null,
+          action: actionName(req),
         });
 
         if (poolLimit !== Infinity && reservationId) {

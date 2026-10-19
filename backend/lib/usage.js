@@ -84,14 +84,14 @@ async function countUserActions(userId, since, feature) {
 }
 
 /** Insert a reserved action; returns its id (or null if the ledger is missing). */
-async function reserveAction({ userId, workspaceId, feature, model }) {
+async function reserveAction({ userId, workspaceId, feature, model, action }) {
   const { data, error } = await supabase
     .from('usage_events')
     .insert({
       user_id: userId || null,
       workspace_id: workspaceId,
       feature,
-      action: 'generate',
+      action: action || 'generate',
       request_id: crypto.randomUUID(),
       units: 1,
       model: model || null,

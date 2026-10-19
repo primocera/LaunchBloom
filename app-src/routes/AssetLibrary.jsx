@@ -6,6 +6,7 @@ import { download, assetsCsv } from '../lib/export';
 import { STATUS_LABEL } from '../lib/status-labels';
 // v10 SC-02: one drawer, shared with the campaign Assets tab.
 import AssetDrawer, { statusLabel, provenanceLine } from '../components/AssetDrawer';
+import RecentGenerations from '../components/RecentGenerations';
 
 // ---------------------------------------------------------------------------
 // v9 SC-06: Library as a review workspace, not an admin utility. Filters live in
@@ -114,6 +115,8 @@ export default function AssetLibrary() {
     <div className="library-page">
       <h1>Library</h1>
       <p className="muted">Find, open, compare and prepare every campaign asset - with its campaign, brief version, source, status and edit history.</p>
+
+      <RecentGenerations />
 
       <div className="library-filters">
         <select aria-label="Type" value={filters.type} onChange={(e) => setFilter('type', e.target.value)}>

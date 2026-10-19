@@ -112,6 +112,24 @@ function normalize(table, cfg, row) {
 }
 
 // GET /api/assets/library?type=&status=&campaign_id=&favourite=&archived=&q=&page=&per=
+// Recent generations: the caller's last AI runs (account-wide, like the action
+// pool), including failed ones, so a user can see what happened and whether
+// it counted. Read-only; scoped to the authenticated user's id.
+router.get('/api/usage/recent', requireAuth, async (req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from('usage_events')
+      .select('id, feature, action, status, created_at')
+      .eq('user_id', req.userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) throw new Error('Failed to load recent generations: ' + error.message);
+    res.json({ items: data || [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/api/assets/library', requireAuth, async (req, res, next) => {
   try {
     const ws = await resolveWorkspace(req);

@@ -1207,6 +1207,21 @@ textarea:focus-visible,
   color: #6b7280;
 }
 .campaign-badge.is-ok { background: #d1fae5; color: #047857; }
+.campaign-badge.is-bad { background: #fee2e2; color: #b91c1c; }
+
+/* Library → Recent generations */
+.recent-gens summary { cursor: pointer; list-style: none; }
+.recent-gens summary::-webkit-details-marker { display: none; }
+.recent-gens summary h2 { display: inline; margin: 0; }
+.recent-gens summary h2::after { content: ' ▾'; color: #6b7280; font-size: 0.8em; }
+.recent-gens:not([open]) summary h2::after { content: ' ▸'; }
+.recent-gens-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.recent-gens-list li {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 0; border-top: 1px solid #e5e7eb;
+}
+.recent-gens-when { color: #6b7280; font-size: 13px; min-width: 110px; }
+.recent-gens-what { font-weight: 600; flex: 1; min-width: 140px; }
 .campaign-strategy { background: #f8f7f4; border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
 .campaign-strategy p { margin: 4px 0; }
 .campaign-calendar { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: #374151; }

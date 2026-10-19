@@ -121,6 +121,8 @@ test('a successful generation reserves then finalizes one action', async () => {
   await new Promise((res) => setImmediate(res));
   assert.equal(ledger._events.length, 1);
   assert.equal(ledger._events[0].status, 'succeeded');
+  // Recent generations: the run records which route it was.
+  assert.equal(ledger._events[0].action, 'gen');
 });
 
 test('a failed generation releases the reservation (no quota consumed)', async () => {
