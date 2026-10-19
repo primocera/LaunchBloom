@@ -1305,6 +1305,9 @@ textarea:focus-visible,
 .review-drawer { margin-top: 10px; border-left: 3px solid #2563eb; }
 .campaign-list-row .campaign-row-head h2 { margin: 0; }
 .campaign-menu { position: relative; display: inline-block; }
+/* Pin ⋯ to the row's right edge so its right-anchored popup opens into the
+   card instead of over the sidebar. */
+.campaign-list-row .confirm-row .campaign-menu { margin-left: auto; }
 .campaign-menu-pop {
   position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
