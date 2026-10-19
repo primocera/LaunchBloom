@@ -1499,3 +1499,21 @@ html[data-theme="dark"] :where(input, select, textarea) {
 html[data-theme="dark"] ::placeholder { color: var(--dk-faint); }
 
 .theme-toggle { display: block; margin-top: 8px; font-size: 13px; }
+
+/* Center the fixed-width app pages in the main area instead of hugging the
+   sidebar (Home, Create and the studios already center via margin: auto). */
+.account-page, .brand-page, .campaigns-page, .library-page {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Split view: while an asset is open (the 680px drawer on the right), move the
+   list back to the left and fit it beside the drawer so the two read side by
+   side instead of the drawer covering a centered list. */
+@media (min-width: 1100px) {
+  .main:has(.asset-drawer) :is(.library-page, .campaigns-page) {
+    margin-left: 0;
+    max-width: min(820px, calc(100% - 700px));
+  }
+}
