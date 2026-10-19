@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, getActiveWorkspace } from '../../lib/api';
@@ -304,7 +305,7 @@ function ResultCard({ item, table, renderItem, fullCopy, onChange, onUpgrade }) 
                   onChange={(e) => setInstruction(e.target.value)}
                 />
                 <button className="btn-secondary" disabled={busy || !instruction.trim()} onClick={() => regenerate('instruction')}>
-                  {busy ? <><span className="btn-spinner" aria-hidden="true" />Working…</> : 'Regenerate'}
+                  {busy ? <BusyLabel /> : 'Regenerate'}
                 </button>
               </div>
               {err && <p className="flow-err">{err}</p>}
@@ -554,7 +555,7 @@ export default function GeneratorStudio({
 
           <div className="flow-row">
             <button className="flow-btn" disabled={busy || missingRequired} onClick={onGenerate}>
-              {busy ? <><span className="btn-spinner" aria-hidden="true" />Creating drafts from your approved brief…</> : `Generate ${assetType} · 1 AI action`}
+              {busy ? <BusyLabel /> : `Generate ${assetType} · 1 AI action`}
             </button>
           </div>
           {/* v9 SC-05: explain a disabled button rather than greying out silently. */}

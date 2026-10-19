@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate } from './common';
@@ -136,7 +137,7 @@ export default function LandingStudio() {
                   <>
                     <button className="kit-copy" onClick={startEdit}>Edit</button>
                     <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                      {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate landing page'}
+                      {regenBusy ? <BusyLabel /> : 'Regenerate landing page'}
                     </button>
                   </>
                 ) : (

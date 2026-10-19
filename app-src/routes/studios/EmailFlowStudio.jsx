@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -191,7 +192,7 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
       ))}
       <div className="flow-row">
         <button className="flow-btn" disabled={busy || missing} onClick={run}>
-          {busy ? <><span className="btn-spinner" aria-hidden="true" />Generating…</> : 'Generate emails · 1 AI action'}
+          {busy ? <BusyLabel /> : 'Generate emails · 1 AI action'}
         </button>
       </div>
       <p className="flow-muted gen-cost-note" role="note">

@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
@@ -103,7 +104,7 @@ export default function ContentStudio() {
                 {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
               <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate full content plan'}
+                {regenBusy ? <BusyLabel /> : 'Regenerate full content plan'}
               </button>
             </div>
           </div>

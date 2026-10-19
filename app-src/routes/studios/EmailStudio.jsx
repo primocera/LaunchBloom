@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
@@ -74,7 +75,7 @@ export default function EmailStudio() {
             <div className="flow-row" style={{ marginTop: 0 }}>
               <CopyBtn text={() => items.map(emailText).join('\n\n---\n\n')} label="Copy full sequence" />
               <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate email sequence'}
+                {regenBusy ? <BusyLabel /> : 'Regenerate email sequence'}
               </button>
             </div>
           </div>

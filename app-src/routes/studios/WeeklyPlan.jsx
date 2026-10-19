@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
@@ -115,7 +116,7 @@ export default function WeeklyPlan() {
             <div className="flow-row" style={{ marginTop: 0 }}>
               <button className="kit-copy" onClick={() => setAdding(!adding)}>{adding ? 'Cancel' : 'Add custom task'}</button>
               <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate weekly plan'}
+                {regenBusy ? <BusyLabel /> : 'Regenerate weekly plan'}
               </button>
             </div>
           </div>

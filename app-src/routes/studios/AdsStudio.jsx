@@ -1,3 +1,4 @@
+import BusyLabel from '../../components/BusyLabel';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { CopyBtn, NoKit, StudioShell, useKits, useRegenerate, useStudioItems } from './common';
@@ -105,7 +106,7 @@ export default function AdsStudio() {
           <div className="flow-card studio-toolbar">
             <span className="flow-muted">{items.filter((i) => i.status === 'selected').length} selected for testing</span>
             <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-              {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate ads section'}
+              {regenBusy ? <BusyLabel /> : 'Regenerate ads section'}
             </button>
           </div>
 

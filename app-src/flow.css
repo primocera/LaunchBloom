@@ -213,20 +213,14 @@
   cursor: default;
 }
 
-/* Spinning dot shown inside a button while an AI generation runs, so a
-   30-90s wait doesn't look frozen. Reduced-motion users get a static ring. */
-.btn-spinner {
+/* BusyLabel: shimmering star + rotating verb inside a busy AI button. Fixed
+   width so the label doesn't jitter as the glyph changes shape. */
+.busy-glyph {
   display: inline-block;
-  width: 0.9em;
-  height: 0.9em;
-  margin-right: 8px;
-  vertical-align: -0.1em;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: btn-spin 0.8s linear infinite;
+  width: 1.1em;
+  margin-right: 6px;
+  text-align: center;
 }
-@keyframes btn-spin { to { transform: rotate(360deg); } }
 
 .flow-btn.is-ghost {
   background: transparent;
