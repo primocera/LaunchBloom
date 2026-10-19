@@ -61,3 +61,26 @@ test('production without an API key refuses (no fabricated output)', async () =>
 test('prompt version constant is exported', () => {
   assert.ok(AI_PROMPT_VERSION);
 });
+
+// Prompts tell the model to return "" for optional fields such as
+// secondary_cta / exclusions. The validator must accept exactly what the prompt
+// asks for, or every instruction-following answer fails as a 502.
+test('validator accepts "" for allowEmpty fields and still rejects other empty required fields', () => {
+  const { emailFlowSchema } = require('../lib/schemas');
+  const email = {
+    flow_type: 'welcome', email_order: 1, objective: 'Welcome', subject_line: 'Hi', subject_options: ['Hi', 'Hello'],
+    preheader: 'p', headline: 'h', body_copy: 'Body.', cta: 'Start', secondary_cta: '', personalization_tokens: [],
+    send_timing: 'day 0', segment: 'new', exclusions: '', design_notes: 'plain',
+  };
+  assert.deepEqual(validateAgainstSchema({ items: [email] }, emailFlowSchema), []);
+  const problems = validateAgainstSchema({ items: [{ ...email, body_copy: '' }] }, emailFlowSchema);
+  assert.deepEqual(problems, ['items[0].body_copy is required']);
+});
+
+test('allowEmpty is stripped from the schema sent to the API', () => {
+  const { sanitizeSchema } = require('../lib/ai');
+  const { emailFlowSchema, websiteKitSchema, socialCaptionSchema, campaignEmailSchema } = require('../lib/schemas');
+  for (const s of [emailFlowSchema, websiteKitSchema, socialCaptionSchema, campaignEmailSchema]) {
+    assert.ok(!JSON.stringify(sanitizeSchema(s)).includes('allowEmpty'));
+  }
+});

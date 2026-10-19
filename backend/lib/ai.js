@@ -243,6 +243,8 @@ function sanitizeSchema(schema, path = '', notes = []) {
         notes.push(`${path || 'items'}: at most ${v} items`);
       }
       // maxItems itself is never forwarded - the API rejects it.
+    } else if (k === 'allowEmpty') {
+      // Our own validator hint (see validateAgainstSchema) - not JSON Schema.
     } else if (k === 'properties') {
       out.properties = {};
       for (const [pk, pv] of Object.entries(v)) {
@@ -272,8 +274,12 @@ function validateAgainstSchema(data, schema, path = '') {
       errs.push(`${path || 'root'} must be an object`);
       return errs;
     }
+    // allowEmpty lists required fields the prompt explicitly lets the model
+    // leave as "" (e.g. "secondary_cta: empty string if none"). Rejecting
+    // those failed generations that followed the instructions exactly.
+    const allowEmpty = new Set(schema.allowEmpty || []);
     for (const req of schema.required || []) {
-      if (data[req] == null || data[req] === '') errs.push(`${path ? path + '.' : ''}${req} is required`);
+      if (data[req] == null || (data[req] === '' && !allowEmpty.has(req))) errs.push(`${path ? path + '.' : ''}${req} is required`);
     }
     for (const [k, sub] of Object.entries(schema.properties || {})) {
       if (data[k] != null) errs.push(...validateAgainstSchema(data[k], sub, path ? `${path}.${k}` : k));

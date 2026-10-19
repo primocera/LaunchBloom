@@ -8,6 +8,8 @@ const { EntitlementUnavailableError, isEntitlementUnavailable, planUnavailableBo
 
 // Stateful supabase: a real usage_events ledger; workspaces get-or-create
 // returns a fixed workspace; customers/subscriptions empty (lifetime window).
+let ledger_updateDelayMs = 0;
+
 function makeLedgerSupabase() {
   const events = [];
 
@@ -57,8 +59,10 @@ function makeLedgerSupabase() {
   function resolveList(st) {
     if (st.table === 'usage_events') {
       if (st.op === 'update') {
-        for (const e of events) if (matchEvent(e, st)) Object.assign(e, st.ins);
-        return { data: null, error: null };
+        const apply = () => { for (const e of events) if (matchEvent(e, st)) Object.assign(e, st.ins); return { data: null, error: null }; };
+        // A slow ledger write (real network) exposes settling after the response.
+        if (ledger_updateDelayMs) return new Promise((r) => setTimeout(() => r(apply()), ledger_updateDelayMs));
+        return apply();
       }
       if (st.head) {
         const count = events.filter((e) => matchEvent(e, st)).length;
@@ -127,6 +131,37 @@ test('a failed generation releases the reservation (no quota consumed)', async (
   assert.equal(r.status, 500);
   await new Promise((res) => setImmediate(res));
   assert.equal(ledger._events[0].status, 'failed');
+});
+
+// On Vercel the function may be frozen once the response is sent, so the
+// ledger must already be settled when the client receives the response - no
+// waiting afterwards, even when the database write is slow.
+test('a failed generation is released BEFORE the response is sent', async () => {
+  ledger._events.length = 0;
+  currentPlan = 'trial';
+  ledger_updateDelayMs = 50;
+  try {
+    const app = appWith((_req, _res, next) => next(Object.assign(new Error('AI failed'), { status: 502 })));
+    const r = await request(app).post('/gen').set(...AUTHED).send({});
+    assert.equal(r.status, 500);
+    assert.equal(ledger._events[0].status, 'failed', 'reservation still counted when the response went out');
+  } finally {
+    ledger_updateDelayMs = 0;
+  }
+});
+
+test('a successful generation is finalized BEFORE the response is sent', async () => {
+  ledger._events.length = 0;
+  currentPlan = 'trial';
+  ledger_updateDelayMs = 50;
+  try {
+    const app = appWith((req, res) => res.json({ ok: true }));
+    const r = await request(app).post('/gen').set(...AUTHED).send({});
+    assert.equal(r.status, 200);
+    assert.equal(ledger._events[0].status, 'succeeded');
+  } finally {
+    ledger_updateDelayMs = 0;
+  }
 });
 
 test('at the action limit the gate blocks with 402 UPGRADE', async () => {

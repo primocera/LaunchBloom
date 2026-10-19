@@ -167,19 +167,29 @@ function planGate(feature) {
 
         req.usageEventId = reservationId;
 
-        // Finalize on success, release on failure - exactly once.
+        // Finalize on success, release on failure - exactly once, and BEFORE
+        // the response goes out. On Vercel the function can be frozen as soon
+        // as the response is sent, so a release fired from 'finish' could
+        // never run and a failed generation stayed counted against the plan.
         let settled = false;
-        res.on('finish', () => {
-          if (settled) return;
+        const settle = () => {
+          if (settled) return Promise.resolve();
           settled = true;
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            usage.finalizeAction(reservationId, req.usageInfo || {}).catch(() => {});
             track('generation_success', { userId: req.userId, workspaceId: ws.id, properties: { feature, plan } });
-          } else {
-            usage.releaseAction(reservationId, res.statusCode >= 500).catch(() => {});
-            track('generation_failed', { userId: req.userId, workspaceId: ws.id, properties: { feature, plan, status: res.statusCode } });
+            return usage.finalizeAction(reservationId, req.usageInfo || {}).catch(() => {});
           }
-        });
+          track('generation_failed', { userId: req.userId, workspaceId: ws.id, properties: { feature, plan, status: res.statusCode } });
+          return usage.releaseAction(reservationId, res.statusCode >= 500).catch(() => {});
+        };
+        // Every AI route and the error handler answer through res.json.
+        const sendJson = res.json.bind(res);
+        res.json = (body) => {
+          settle().finally(() => sendJson(body));
+          return res;
+        };
+        // Fallback for any non-JSON response path.
+        res.on('finish', settle);
 
         next();
       } catch (err) {
