@@ -5,7 +5,7 @@ import { useRequestGuard } from '../lib/use-request-guard';
 import { download, assetsCsv } from '../lib/export';
 import { STATUS_LABEL } from '../lib/status-labels';
 // v10 SC-02: one drawer, shared with the campaign Assets tab.
-import AssetDrawer, { statusLabel, provenanceLine } from '../components/AssetDrawer';
+import AssetDrawer, { statusLabel, provenanceLine, confirmDiscardDrawerEdits } from '../components/AssetDrawer';
 import RecentGenerations from '../components/RecentGenerations';
 
 // ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ export default function AssetLibrary() {
               <button className="library-star" onClick={() => api.updateAsset(item.table, item.id, { favourite: !item.favourite }).then(load)} title="Favourite" aria-label="Toggle favourite">
                 {item.favourite ? '★' : '☆'}
               </button>
-              <button className="library-open-link" onClick={() => setOpenAsset({ table: item.table, id: item.id })}>
+              <button className="library-open-link" onClick={() => { if (confirmDiscardDrawerEdits()) setOpenAsset({ table: item.table, id: item.id }); }}>
                 {item.title}
               </button>
               <span className="campaign-badge">{item.type_label}</span>
@@ -177,7 +177,7 @@ export default function AssetLibrary() {
             {provenanceLine(item) && <div className="library-provenance">{provenanceLine(item)}</div>}
             <div className="library-snippet">{item.snippet}</div>
             <div className="library-actions">
-              <button className="btn-secondary" onClick={() => setOpenAsset({ table: item.table, id: item.id })}>Open</button>
+              <button className="btn-secondary" onClick={() => { if (confirmDiscardDrawerEdits()) setOpenAsset({ table: item.table, id: item.id }); }}>Open</button>
             </div>
           </div>
         </div>

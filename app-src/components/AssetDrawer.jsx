@@ -41,7 +41,30 @@ export function provenanceLine(item) {
 
 const prettyField = (f) => f.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function AssetDrawer({ table, id, onClose, onChanged, onError }) {
+// The drawer is a non-modal side panel: the page behind it stays usable, so
+// the user can open another asset while one has unsaved edits. Pages call this
+// before switching; only one drawer is ever open, so module state is enough.
+let unsavedEdits = false;
+export function confirmDiscardDrawerEdits() {
+  return !unsavedEdits || window.confirm('You have unsaved edits on the open asset. Discard them?');
+}
+
+export default function AssetDrawer({ table, id, onClose: closeDrawer, onChanged, onError }) {
+  const onClose = () => { if (confirmDiscardDrawerEdits()) { unsavedEdits = false; closeDrawer(); } };
+  useEffect(() => {
+    // Any link outside the drawer (sidebar, campaign tabs) would unmount it and
+    // drop unsaved edits silently now that the page behind is clickable. Ask
+    // first; capture phase so it runs before the router handles the click.
+    const onLinkClick = (e) => {
+      if (!unsavedEdits) return;
+      const link = e.target.closest && e.target.closest('a[href]');
+      if (!link || link.closest('.asset-drawer')) return;
+      if (window.confirm('You have unsaved edits on the open asset. Discard them?')) unsavedEdits = false;
+      else { e.preventDefault(); e.stopPropagation(); }
+    };
+    document.addEventListener('click', onLinkClick, true);
+    return () => { document.removeEventListener('click', onLinkClick, true); unsavedEdits = false; };
+  }, []);
   const [detail, setDetail] = useState(null); // {asset, edit_fields, title_field}
   const [versions, setVersions] = useState(null);
   const [compare, setCompare] = useState(null); // a version being compared
@@ -70,7 +93,7 @@ export default function AssetDrawer({ table, id, onClose, onChanged, onError }) 
 
   if (!detail) {
     return (
-      <div className="asset-drawer" role="dialog" aria-label="Asset detail" aria-modal="true">
+      <div className="asset-drawer" role="dialog" aria-label="Asset detail" aria-modal="false">
         <div className="asset-drawer-panel"><p className="muted">Loading asset…</p><button className="account-link" onClick={onClose}>Close</button></div>
       </div>
     );
@@ -80,6 +103,7 @@ export default function AssetDrawer({ table, id, onClose, onChanged, onError }) 
   const fields = detail.edit_fields;
   const fieldSpecs = fields.map((f) => [f, prettyField(f)]);
   const dirty = draft && fields.some((f) => (a[f] ?? '') !== (draft[f] ?? '')) || (a[detail.title_field] ?? a.title ?? '') !== (draft?.title ?? '');
+  unsavedEdits = Boolean(dirty);
 
   async function save() {
     setBusy(true); setNote(null);
@@ -143,7 +167,7 @@ export default function AssetDrawer({ table, id, onClose, onChanged, onError }) 
   const diff = compare ? diffFields(compare.snapshot, a, fieldSpecs) : null;
 
   return (
-    <div className="asset-drawer" role="dialog" aria-label="Asset detail" aria-modal="true" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
+    <div className="asset-drawer" role="dialog" aria-label="Asset detail" aria-modal="false" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
       <div className="asset-drawer-panel">
         <div className="brand-head" style={{ alignItems: 'baseline' }}>
           <h2 style={{ margin: 0 }}>{draft.title || a.title}</h2>

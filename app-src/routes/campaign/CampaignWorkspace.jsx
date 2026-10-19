@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
-import AssetDrawer, { statusLabel } from '../../components/AssetDrawer';
+import AssetDrawer, { statusLabel, confirmDiscardDrawerEdits } from '../../components/AssetDrawer';
 import { blockersByAsset, isStale } from '../../lib/asset-rows';
 import {
   SECTIONS, missingDecisions, hasNoDates, fmtDate, sectionPath,
@@ -290,6 +290,7 @@ function AssetsSection({ campaign }) {
     ? { table: openParam.split(':')[0], id: openParam.split(':').slice(1).join(':') }
     : null;
   const setOpenAsset = (a) => {
+    if (a && !confirmDiscardDrawerEdits()) return; // switching assets with unsaved edits
     const next = new URLSearchParams(params);
     if (a) next.set('asset', `${a.table}:${a.id}`); else next.delete('asset');
     setParams(next, { replace: !a });
