@@ -50,7 +50,19 @@ const COST_PER_MTOK = {
   'claude-opus-4-8': [5, 25],
   'claude-sonnet-5': [3, 15],
   'claude-haiku-4-5': [1, 5],
+  // Prompts under 100K tokens (all of ours); $0.50/$2.50 above that.
+  'claude-haiku-5-5': [0.1, 0.5],
 };
+
+// Haiku 5.5 (and the 4.7+ tokenizer generation) counts the same text as ~30%
+// more tokens, and its adaptive thinking is on by default and counts toward
+// max_tokens. Limits tuned for Haiku 4.5 would cut kits off mid-JSON, so give
+// every call headroom. max_tokens is a ceiling, not a charge - only generated
+// tokens are billed. Capped below the SDK's ~21.3K non-streaming limit.
+const NON_STREAMING_MAX_TOKENS = 21000;
+function withHeadroom(maxTokens) {
+  return Math.min(Math.ceil(maxTokens * 1.3) + 4000, NON_STREAMING_MAX_TOKENS);
+}
 
 function estimateCost(model, inTok, outTok) {
   const [i, o] = COST_PER_MTOK[model] || COST_PER_MTOK['claude-haiku-4-5'];
@@ -318,7 +330,7 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
       const response = await client.messages.create(
         {
           model: useModel,
-          max_tokens: maxTokens,
+          max_tokens: withHeadroom(maxTokens),
           system: BASE_SYSTEM + (system ? '\n\n' + system : '') + lengthRules + repairNote,
           messages: [{ role: 'user', content: prompt }],
           output_config: { format: { type: 'json_schema', schema: apiSchema } },
