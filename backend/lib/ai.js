@@ -60,6 +60,13 @@ const COST_PER_MTOK = {
 // every call headroom. max_tokens is a ceiling, not a charge - only generated
 // tokens are billed. Capped below the SDK's ~21.3K non-streaming limit.
 const NON_STREAMING_MAX_TOKENS = 21000;
+
+// Haiku 5.5's default effort (medium) thinks long enough to push a full email
+// flow past AI_TIMEOUT_MS. Our calls ran without thinking on Haiku 4.5, and
+// Anthropic's migration guide says to pick a lower effort in that case. Sent
+// only to models listed here - Haiku 4.5 rejects the effort parameter.
+const AI_EFFORT = process.env.ANTHROPIC_EFFORT || 'low';
+const EFFORT_MODELS = new Set(['claude-haiku-5-5']);
 function withHeadroom(maxTokens) {
   return Math.min(Math.ceil(maxTokens * 1.3) + 4000, NON_STREAMING_MAX_TOKENS);
 }
@@ -333,7 +340,10 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
           max_tokens: withHeadroom(maxTokens),
           system: BASE_SYSTEM + (system ? '\n\n' + system : '') + lengthRules + repairNote,
           messages: [{ role: 'user', content: prompt }],
-          output_config: { format: { type: 'json_schema', schema: apiSchema } },
+          output_config: {
+            format: { type: 'json_schema', schema: apiSchema },
+            ...(EFFORT_MODELS.has(useModel) ? { effort: AI_EFFORT } : {}),
+          },
         },
         { timeout: AI_TIMEOUT_MS, maxRetries: 0 }
       );

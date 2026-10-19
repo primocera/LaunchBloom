@@ -103,7 +103,7 @@ export default function ContentStudio() {
                 {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
               <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                {regenBusy ? 'Regenerating…' : 'Regenerate full content plan'}
+                {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate full content plan'}
               </button>
             </div>
           </div>

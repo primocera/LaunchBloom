@@ -115,7 +115,7 @@ export default function WeeklyPlan() {
             <div className="flow-row" style={{ marginTop: 0 }}>
               <button className="kit-copy" onClick={() => setAdding(!adding)}>{adding ? 'Cancel' : 'Add custom task'}</button>
               <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                {regenBusy ? 'Regenerating…' : 'Regenerate weekly plan'}
+                {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate weekly plan'}
               </button>
             </div>
           </div>

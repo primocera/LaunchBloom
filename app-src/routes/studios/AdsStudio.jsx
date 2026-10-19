@@ -105,7 +105,7 @@ export default function AdsStudio() {
           <div className="flow-card studio-toolbar">
             <span className="flow-muted">{items.filter((i) => i.status === 'selected').length} selected for testing</span>
             <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-              {regenBusy ? 'Regenerating…' : 'Regenerate ads section'}
+              {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate ads section'}
             </button>
           </div>
 

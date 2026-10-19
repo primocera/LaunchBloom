@@ -136,7 +136,7 @@ export default function LandingStudio() {
                   <>
                     <button className="kit-copy" onClick={startEdit}>Edit</button>
                     <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                      {regenBusy ? 'Regenerating…' : 'Regenerate landing page'}
+                      {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate landing page'}
                     </button>
                   </>
                 ) : (

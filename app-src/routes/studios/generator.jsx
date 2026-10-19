@@ -304,7 +304,7 @@ function ResultCard({ item, table, renderItem, fullCopy, onChange, onUpgrade }) 
                   onChange={(e) => setInstruction(e.target.value)}
                 />
                 <button className="btn-secondary" disabled={busy || !instruction.trim()} onClick={() => regenerate('instruction')}>
-                  {busy ? 'Working…' : 'Regenerate'}
+                  {busy ? <><span className="btn-spinner" aria-hidden="true" />Working…</> : 'Regenerate'}
                 </button>
               </div>
               {err && <p className="flow-err">{err}</p>}
@@ -554,7 +554,7 @@ export default function GeneratorStudio({
 
           <div className="flow-row">
             <button className="flow-btn" disabled={busy || missingRequired} onClick={onGenerate}>
-              {busy ? 'Creating drafts from your approved brief…' : `Generate ${assetType} · 1 AI action`}
+              {busy ? <><span className="btn-spinner" aria-hidden="true" />Creating drafts from your approved brief…</> : `Generate ${assetType} · 1 AI action`}
             </button>
           </div>
           {/* v9 SC-05: explain a disabled button rather than greying out silently. */}

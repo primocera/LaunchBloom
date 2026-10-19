@@ -74,7 +74,7 @@ export default function EmailStudio() {
             <div className="flow-row" style={{ marginTop: 0 }}>
               <CopyBtn text={() => items.map(emailText).join('\n\n---\n\n')} label="Copy full sequence" />
               <button className="kit-copy" disabled={regenBusy} onClick={regenerate}>
-                {regenBusy ? 'Regenerating…' : 'Regenerate email sequence'}
+                {regenBusy ? <><span className="btn-spinner" aria-hidden="true" />Regenerating…</> : 'Regenerate email sequence'}
               </button>
             </div>
           </div>
