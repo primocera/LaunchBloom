@@ -88,6 +88,8 @@
 > deploy) and 4 (independent certification) remain owner-run. Scoped to the v24
 > doc only.
 
+> **Agents / prompt authors:** the release status and "before writing a prompt pack" notes that used to sit at the top of `README.md` now live in [`docs/internal/RELEASE_NOTES_FOR_AGENTS.md`](docs/internal/RELEASE_NOTES_FOR_AGENTS.md) — read it before writing or executing a pack. Internal handoffs and old prompt-pack `.docx` files are in `docs/internal/`.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
