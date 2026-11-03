@@ -244,6 +244,15 @@ export default function TrialPaywall({ open, onClose, reason = null }) {
           )}
         </p>
 
+        {(eligState === 'eligible' || eligState === 'ineligible') && (
+          <p className="paywall-footer">
+            Your plan renews automatically every {interval === 'yearly' ? 'year' : 'month'} at
+            this price until you cancel.{' '}
+            <a href="/legal/terms" target="_blank" rel="noopener noreferrer">Terms</a> &middot;{' '}
+            <a href="/legal/refund" target="_blank" rel="noopener noreferrer">Refund &amp; cancellation</a>
+          </p>
+        )}
+
         {catalog?.currency_note && <p className="paywall-footer">{catalog.currency_note}</p>}
 
         <button type="button" className="paywall-close" onClick={onClose} aria-label="Close">×</button>

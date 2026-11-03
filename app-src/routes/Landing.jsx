@@ -475,7 +475,7 @@ export default function Landing() {
                   {p.cta}
                 </button>
                 <div className="lp-price-micro">
-                  3 days free · payment method required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'} · cancel before the displayed charge date
+                  3 days free · payment method required · then {p.price[interval]}{interval === 'yearly' ? '/yr' : '/mo'}, renewing automatically until you cancel · cancel before the displayed charge date to pay nothing
                   {interval === 'yearly' && p.savings ? ` · save ${p.savings.display} (${p.savings.pct}%)` : ''}
                 </div>
               </Reveal>
@@ -487,6 +487,11 @@ export default function Landing() {
           <p className="lp-price-definition">
             {catalog?.ai_action_definition || 'One AI action is one successful generation or regeneration. Failed generations, editing, copying and exporting do not count.'}
             {catalog?.included_free ? ` ${catalog.included_free}` : ''}
+          </p>
+          <p className="lp-price-definition">
+            Plans renew automatically each month or year until you cancel from Account &amp; billing. See
+            the <Link to="/legal/terms">Terms</Link> and{' '}
+            <Link to="/legal/refund">Refund &amp; cancellation policy</Link>.
           </p>
         </div>
       </section>

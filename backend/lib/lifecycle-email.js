@@ -11,7 +11,7 @@
 const supabase = require('./supabase');
 const { BRAND, emailFrom } = require('./brand');
 // v10 SC-06: consent gate - categories, suppression and unsubscribe links.
-const { categoryOf, isSuppressed, unsubscribeUrl } = require('./email-consent');
+const { categoryOf, isSuppressed, hasMarketingConsent, unsubscribeUrl } = require('./email-consent');
 
 let resend = null;
 if (process.env.RESEND_API_KEY) {
@@ -83,8 +83,10 @@ const TEMPLATES = {
   trial_ending: ({ chargeAt, planLabel, price, interval } = {}) => {
     const pc = priceClause({ price, interval });
     return {
-      subject: `Your ${BRAND.name} trial ends tomorrow`,
-      html: template(`Your ${BRAND.name} trial ends tomorrow`, `<p>Your trial ends and ${planLabel ? `the <strong>${planLabel}</strong> plan` : 'your subscription'} starts on <strong>${fmtDateTime(chargeAt)}</strong>${pc ? `, at <strong>${pc}</strong>` : ''}.</p><p>Want to keep going? Do nothing. Want to cancel? <a href="${billingLink()}">Cancel in Account &amp; billing</a> before that time and you won't be charged.</p>`),
+      // Stripe sends trial_will_end up to 3 days before the trial ends - with a
+      // 3-day trial that is right at the start - so name the date, never "tomorrow".
+      subject: `Your ${BRAND.name} trial ends on ${fmtDate(chargeAt)}`,
+      html: template(`Your ${BRAND.name} trial ends on ${fmtDate(chargeAt)}`, `<p>Your trial ends and ${planLabel ? `the <strong>${planLabel}</strong> plan` : 'your subscription'} starts on <strong>${fmtDateTime(chargeAt)}</strong>${pc ? `, at <strong>${pc}</strong>` : ''}.</p><p>Want to keep going? Do nothing. Want to cancel? <a href="${billingLink()}">Cancel in Account &amp; billing</a> before that time and you won't be charged.</p>`),
       text: `Your ${BRAND.name} trial ends on ${fmtDateTime(chargeAt)}${planLabel ? ` - ${planLabel} plan` : ''}${pc ? ` at ${pc}` : ''}. Cancel before then at ${billingLink()} and you won't be charged.`,
     };
   },
@@ -175,11 +177,11 @@ function withConsentFooter(built, type, to) {
 
   const htmlFooter = marketing && url
     ? `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">You're receiving this because you created a ${BRAND.name} account. <a href="${url}">Unsubscribe from optional email</a> - you'll still get billing and account messages.</p>`
-    : `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">This is a billing and account message about your ${BRAND.name} subscription, so it isn't part of optional email.</p>`;
+    : `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#6b7280">This is an account or billing message about your ${BRAND.name} account, so it isn't part of optional email.</p>`;
 
   const textFooter = marketing && url
     ? `\n\n---\nYou're receiving this because you created a ${BRAND.name} account. Unsubscribe from optional email: ${url} (billing and account messages continue).`
-    : `\n\n---\nThis is a billing and account message about your ${BRAND.name} subscription, so it isn't part of optional email.`;
+    : `\n\n---\nThis is an account or billing message about your ${BRAND.name} account, so it isn't part of optional email.`;
 
   return { subject: built.subject, html: `${built.html}${htmlFooter}`, text: `${built.text}${textFooter}` };
 }
@@ -214,10 +216,11 @@ async function sendLifecycleEmail(type, dedupeId, to, params = {}) {
   const category = categoryOf(type);
 
   try {
-    // v10 SC-06: consent gate. Marketing is checked against the suppression
-    // list; transactional never is - withholding a receipt or a charge notice
-    // because someone opted out of product news would be the worse failure.
-    if (category === 'marketing' && (await isSuppressed(to))) {
+    // v10 SC-06: consent gate. Marketing needs the signup opt-in AND no
+    // suppression entry; transactional is never gated - withholding a receipt
+    // or a charge notice because someone opted out of product news would be
+    // the worse failure.
+    if (category === 'marketing' && ((await isSuppressed(to)) || !(await hasMarketingConsent(to)))) {
       await supabase
         .from('email_events')
         .insert({ dedupe_key: dedupeKey, email_type: type, recipient: to, status: 'suppressed', category, payload: params })

@@ -20,7 +20,8 @@ const { stubModule } = require('./helpers');
 function makeSupabase() {
   const suppressions = new Map();
   const events = new Map();
-  const flags = { failSuppressionLookup: false };
+  const consents = new Map(); // email → [legal_consents rows]
+  const flags = { failSuppressionLookup: false, failConsentLookup: false };
 
   function builder(table) {
     const st = { table, op: 'select', filters: {}, payload: null };
@@ -65,11 +66,15 @@ function makeSupabase() {
         return { data: row ? [row] : [], error: null };
       }
     }
+    if (st.table === 'legal_consents' && st.op === 'select') {
+      if (flags.failConsentLookup) return { data: null, error: { code: 'XXNET', message: 'db down' } };
+      return { data: consents.get(st.filters.email) || [], error: null };
+    }
     if (single) return { data: null, error: { code: 'PGRST116' } };
     return { data: null, error: null };
   }
 
-  return { from: builder, _suppressions: suppressions, _events: events, _flags: flags };
+  return { from: builder, _suppressions: suppressions, _events: events, _consents: consents, _flags: flags };
 }
 
 const db = makeSupabase();
@@ -90,10 +95,11 @@ test('every shipped template is explicitly classified', () => {
 test('money and account records are transactional, nudges are not', () => {
   // Getting these backwards is the whole risk this slice addresses.
   for (const t of ['trial_started', 'trial_ending', 'payment_succeeded', 'payment_failed',
-    'payment_recovered', 'cancellation_scheduled', 'cancellation_completed', 'plan_changed', 'deletion_completed']) {
+    'payment_recovered', 'cancellation_scheduled', 'cancellation_completed', 'plan_changed', 'deletion_completed',
+    'welcome']) {
     assert.equal(consent.categoryOf(t), 'transactional', `${t} must never be suppressible`);
   }
-  for (const t of ['welcome', 'activation_nudge']) {
+  for (const t of ['activation_nudge']) {
     assert.equal(consent.categoryOf(t), 'marketing', `${t} must be optional`);
   }
 });
@@ -161,6 +167,35 @@ test('marketing email to an unsubscribed address is suppressed, not sent', async
   const row = db._events.get('activation_nudge:ws-1');
   assert.equal(row.status, 'suppressed', 'the ledger must distinguish suppressed from failed');
   assert.equal(row.category, 'marketing');
+});
+
+test('marketing email needs the signup opt-in - no record or an unticked box is not consent', async () => {
+  db._suppressions.clear(); db._events.clear(); db._consents.clear();
+
+  assert.equal(await sendLifecycleEmail('activation_nudge', 'ws-a', 'never@example.com', {}), 'suppressed');
+
+  db._consents.set('no@example.com', [{ marketing_opt_in: false, accepted_at: '2026-10-01T00:00:00Z' }]);
+  assert.equal(await sendLifecycleEmail('activation_nudge', 'ws-b', 'no@example.com', {}), 'suppressed');
+
+  // The latest record wins: an opt-in followed by a later opt-out is no consent.
+  db._consents.set('changed@example.com', [
+    { marketing_opt_in: true, accepted_at: '2026-09-01T00:00:00Z' },
+    { marketing_opt_in: false, accepted_at: '2026-10-01T00:00:00Z' },
+  ]);
+  assert.equal(await consent.hasMarketingConsent('changed@example.com'), false);
+
+  db._consents.set('yes@example.com', [{ marketing_opt_in: true, accepted_at: '2026-10-01T00:00:00Z' }]);
+  assert.equal(await consent.hasMarketingConsent('Yes@Example.com'), true);
+  // Consented and not suppressed: permitted (recorded 'skipped' without a provider key).
+  assert.notEqual(await sendLifecycleEmail('activation_nudge', 'ws-c', 'yes@example.com', {}), 'suppressed');
+});
+
+test('a consent lookup failure fails CLOSED for marketing', async () => {
+  db._consents.clear();
+  db._consents.set('yes@example.com', [{ marketing_opt_in: true, accepted_at: '2026-10-01T00:00:00Z' }]);
+  db._flags.failConsentLookup = true;
+  assert.equal(await consent.hasMarketingConsent('yes@example.com'), false);
+  db._flags.failConsentLookup = false;
 });
 
 test('transactional email still reaches an unsubscribed address', async () => {

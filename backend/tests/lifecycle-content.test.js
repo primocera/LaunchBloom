@@ -25,7 +25,8 @@ test('trial_started states the first charge date, price and campaign allowance',
 
 test('trial_ending shows the exact timestamp with timezone', () => {
   const m = TEMPLATES.trial_ending({ chargeAt, planLabel: 'Starter', price: '$12.99', interval: 'month' });
-  assert.match(m.subject, /trial ends tomorrow/);
+  assert.match(m.subject, /trial ends on August 1, 2026/);
+  assert.ok(!/tomorrow/i.test(m.subject + m.html + m.text), 'Stripe fires trial_will_end days early - never say "tomorrow"');
   assert.match(m.html, /UTC/); // timezone label present
   assert.match(m.html, /\$12\.99\/month/);
 });

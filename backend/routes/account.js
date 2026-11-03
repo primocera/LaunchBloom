@@ -310,7 +310,7 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
     }
 
     // 4. Retained records, stated explicitly (playbook: no silent retention).
-    step('retained_records', 'ok', 'Billing/invoice records are retained by Stripe for legal reasons; anonymized analytics events are retained.');
+    step('retained_records', 'ok', 'Billing/invoice records are retained by Stripe for legal reasons; account-level events (sign-up, subscription changes) linked to an internal account ID, the terms-acceptance record and the account email log are retained - see the Privacy Policy.');
 
     clearSessionCookies(res);
     track('account_deleted', { userId });

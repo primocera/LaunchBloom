@@ -51,6 +51,8 @@ function legalHandler(_req, res) {
     support_email: BRAND.supportEmail,
     privacy_email: BRAND.privacyEmail,
     governing_law: configured ? BRAND.governingLaw : '',
+    registration_number: configured ? BRAND.legalRegNo : '',
+    vat_id: configured ? BRAND.vatId : '',
     version: LEGAL_VERSION,
     configured,
   });

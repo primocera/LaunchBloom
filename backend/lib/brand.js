@@ -30,6 +30,10 @@ const BRAND = {
   legalAddress: process.env.BRAND_LEGAL_ADDRESS || '', // e.g. "123 Main St, Austin, TX 78701, USA"
   privacyEmail: process.env.BRAND_PRIVACY_EMAIL || process.env.BRAND_SUPPORT_EMAIL || 'support@scalvya.com',
   governingLaw: process.env.BRAND_GOVERNING_LAW || '', // e.g. "the State of Delaware, USA"
+  // Optional business-register and VAT identifiers, shown on the legal pages
+  // when set (EU e-commerce information duty). Never hardcode them here.
+  legalRegNo: process.env.BRAND_LEGAL_REG_NO || '',
+  vatId: process.env.BRAND_VAT_ID || '',
 };
 
 /**

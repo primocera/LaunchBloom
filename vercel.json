@@ -3,7 +3,12 @@
   "functions": {
     "api/index.js": { "maxDuration": 300 }
   },
+  "redirects": [
+    { "source": "/terms", "destination": "/legal/terms", "permanent": true },
+    { "source": "/privacy", "destination": "/legal/privacy", "permanent": true }
+  ],
   "rewrites": [
+    { "source": "/legal/(.*)", "destination": "/app/index.html" },
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
     { "source": "/", "destination": "/app/index.html" },

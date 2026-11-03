@@ -36,8 +36,11 @@ const CATEGORY = {
   cancellation_completed: 'transactional',
   plan_changed: 'transactional',
   deletion_completed: 'transactional',
-  // Marketing / optional - helpful, but nobody is owed them.
-  welcome: 'marketing',
+  // The welcome mail confirms a just-verified account and where to start - an
+  // account message, not promotion.
+  welcome: 'transactional',
+  // Marketing / optional - helpful, but nobody is owed them. Sent only with a
+  // recorded signup opt-in (hasMarketingConsent) AND no suppression entry.
   activation_nudge: 'marketing',
 };
 
@@ -121,6 +124,29 @@ async function isSuppressed(email) {
   }
 }
 
+/**
+ * True only when the address's most recent consent record has the optional
+ * marketing box ticked (signup, legal_consents.marketing_opt_in). No record,
+ * an unticked box or a failed read all mean "no consent" - fail CLOSED, like
+ * isSuppressed: an un-consented marketing email is worse than a missed nudge.
+ */
+async function hasMarketingConsent(email) {
+  const addr = String(email || '').trim().toLowerCase();
+  if (!addr) return false;
+  try {
+    const { data, error } = await supabase
+      .from('legal_consents').select('marketing_opt_in, accepted_at').eq('email', addr);
+    if (error) throw new Error(error.message);
+    const rows = Array.isArray(data) ? data : [];
+    if (!rows.length) return false;
+    const latest = rows.reduce((a, b) => (String(b.accepted_at || '') > String(a.accepted_at || '') ? b : a));
+    return latest.marketing_opt_in === true;
+  } catch (err) {
+    console.error('[email-consent] consent lookup failed, refusing to send marketing:', err.message);
+    return false;
+  }
+}
+
 /** Idempotent: unsubscribing twice is not an error. */
 async function suppress(email, { reason = 'unsubscribed', sourceTemplate = null } = {}) {
   const addr = String(email || '').trim().toLowerCase();
@@ -146,5 +172,5 @@ async function unsuppress(email) {
 module.exports = {
   CATEGORY, categoryOf, isTransactional,
   unsubscribeToken, verifyUnsubscribeToken, unsubscribeUrl,
-  isSuppressed, suppress, unsuppress,
+  isSuppressed, hasMarketingConsent, suppress, unsuppress,
 };
