@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import { api, getActiveWorkspace } from '../../lib/api';
 import { useRequestGuard } from '../../lib/use-request-guard';
 import { download } from '../../lib/export';
 import { CHANNEL_SUGGESTS, REQUIREMENT_OPTIONS, STUDIO_BY_TABLE } from './shared';
 import FeedbackMoment from '../../components/FeedbackMoment';
+
+// Plain <a href> downloads send no X-Workspace-Id header, so the server fell
+// back to the user's FIRST workspace and a campaign in any other workspace
+// 404'd. resolveWorkspace also reads ?workspace_id (ownership-checked).
+function wsParam() {
+  try {
+    const id = getActiveWorkspace();
+    return id ? `&workspace_id=${encodeURIComponent(id)}` : '';
+  } catch {
+    return '';
+  }
+}
 
 // ---------------------------------------------------------------------------
 // v9 SC-01: the v8 campaign control panels, extracted verbatim from the old
@@ -323,19 +335,19 @@ export function HandoffExports({ campaign }) {
 
       <div className="confirm-row" style={{ marginTop: 8 }}>
         <a className={`btn-primary${canExport ? '' : ' is-disabled'}`}
-          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=docx` : undefined}
+          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=docx${wsParam()}` : undefined}
           onClick={() => canExport && record('docx')} aria-disabled={!canExport}
           title="A real Word document (.docx) built from the canonical manifest. Opens in Word, Pages or Google Docs.">
           Download Word (.docx)
         </a>
         <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
-          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=pdf` : undefined}
+          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=pdf${wsParam()}` : undefined}
           onClick={() => canExport && record('pdf')} aria-disabled={!canExport}
           title="Fixed-layout PDF of the same record.">
           Download PDF
         </a>
         <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
-          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=zip` : undefined}
+          href={canExport ? `/api/campaigns/${campaign.id}/handoff/export?format=zip${wsParam()}` : undefined}
           onClick={() => canExport && record('zip')} aria-disabled={!canExport}
           title="Everything in one archive: Word, PDF, the manifest and a README.">
           Download bundle (.zip)
@@ -356,7 +368,7 @@ export function HandoffExports({ campaign }) {
             Export manifest (JSON)
           </button>
           <a className={`btn-secondary${canExport ? '' : ' is-disabled'}`}
-            href={canExport ? `/api/campaigns/${campaign.id}/review-packet?format=html` : undefined}
+            href={canExport ? `/api/campaigns/${campaign.id}/review-packet?format=html${wsParam()}` : undefined}
             onClick={() => canExport && record('html')}
             target="_blank" rel="noreferrer" aria-disabled={!canExport}
             title="Print-friendly HTML view in the browser.">

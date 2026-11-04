@@ -21,7 +21,10 @@ const rateLimit = require('express-rate-limit');
 const auth = require('../lib/auth');
 const supabase = require('../lib/supabase');
 const { BRAND, LEGAL_VERSION } = require('../lib/brand');
-const { setSessionCookies, clearSessionCookies, readAccessToken } = require('../lib/session');
+const {
+  setSessionCookies, clearSessionCookies, readAccessToken, readRefreshToken,
+  setRecoveryCookie, clearRecoveryCookie, hasRecoveryMarker,
+} = require('../lib/session');
 const { planFor } = require('./customers');
 const { limitsFor, usageFor } = require('../lib/plan-limits');
 const { ensureWorkspace } = require('./workspaces');
@@ -243,15 +246,32 @@ router.post('/api/auth/login', loginLimiter, json, async (req, res, next) => {
 
 // ── logout (revokes the session server-side) ───────────────────────────────
 router.post('/api/auth/logout', json, async (req, res) => {
+  // Revoke server-side. The access token lives ~1h while the cookies live 30
+  // days, so an idle user's access token is usually expired; signing out with
+  // it then fails and the refresh token would stay valid. Fall back to a fresh
+  // access token minted from the refresh token, then revoke globally.
+  const admin = supabase.adminClient().auth.admin;
+  let revoked = false;
   const token = readAccessToken(req);
   if (token) {
     try {
-      await supabase.adminClient().auth.admin.signOut(token, 'global');
+      const { error } = (await admin.signOut(token, 'global')) || {};
+      revoked = !error;
     } catch {
-      /* best-effort revocation; cookie is cleared regardless */
+      /* fall through to the refresh-token path */
+    }
+  }
+  const refresh = readRefreshToken(req);
+  if (!revoked && refresh) {
+    try {
+      const { data } = await supabase.authClient().auth.refreshSession({ refresh_token: refresh });
+      if (data && data.session && data.session.access_token) await admin.signOut(data.session.access_token, 'global');
+    } catch {
+      /* best-effort revocation; cookies are cleared regardless */
     }
   }
   clearSessionCookies(res);
+  clearRecoveryCookie(res);
   res.json({ ok: true });
 });
 
@@ -277,9 +297,23 @@ router.post('/api/auth/reset-password', auth.requireAuth, json, async (req, res,
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
+    // Only a session that came through the recovery-email link may set a new
+    // password without the current one. A plain (possibly stolen) session gets
+    // the same 401 an expired link gets, so the page shows "request a new one".
+    if (!hasRecoveryMarker(req, req.userId)) {
+      return res.status(401).json({ error: 'This reset link has expired. Request a new one.', code: 'RECOVERY_REQUIRED' });
+    }
     // service_role admin update - no need for the user's own token.
-    const { error } = await supabase.adminClient().auth.admin.updateUserById(req.userId, { password });
+    const admin = supabase.adminClient().auth.admin;
+    const { error } = await admin.updateUserById(req.userId, { password });
     if (error) throw new Error(error.message);
+    // A reset usually follows a lost or compromised login: end every OTHER
+    // session (keeps this one). Best-effort - the password change stands.
+    const token = readAccessToken(req);
+    if (token) {
+      try { await admin.signOut(token, 'others'); } catch { /* best-effort */ }
+    }
+    clearRecoveryCookie(res);
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -331,6 +365,8 @@ router.get('/api/auth/callback', async (req, res) => {
     setSessionCookies(res, session);
 
     const isRecovery = flow === 'recovery' || type === 'recovery';
+    // Marks this session as one that may set a new password (15 min).
+    if (isRecovery) setRecoveryCookie(res, session.user && session.user.id);
 
     // 2026-07-28: every branch below used to require `type === 'signup'`, which
     // only exists on the token_hash form of the link. Supabase's default

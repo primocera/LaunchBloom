@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 const express = require('express');
+const { requireLaunchReady } = require('../lib/launch-config');
 const crypto = require('crypto');
 const router = express.Router();
 const supabase = require('../lib/supabase');
@@ -1111,6 +1112,13 @@ router.patch('/api/campaigns/:id', requireAuth, async (req, res, next) => {
     const patch = briefPatch(req.body);
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Nothing to update.' });
 
+    // Same ownership check as POST: a campaign may only link an offer from its
+    // own workspace.
+    if (patch.offer_id) {
+      const { data: offer } = await supabase.from('offers').select('id').eq('id', patch.offer_id).eq('workspace_id', ws.id).single();
+      if (!offer) return res.status(404).json({ error: 'Offer not found' });
+    }
+
     // v9 SC-03: optimistic concurrency for autosave. When the client sends the
     // updated_at it last saw, a newer row (edited in another tab/device) is a
     // conflict - reject with 409 STALE and the current row so the client can
@@ -1257,7 +1265,10 @@ const STRATEGY_SYSTEM =
   'with the stated offer, discount terms and dates - never invent different ones.';
 
 // POST /api/campaigns/:id/strategy - generate (or regenerate) the strategy.
-router.post('/api/campaigns/:id/strategy', planGate('asset_generations'), async (req, res, next) => {
+// AI route outside /api/ai, so it gets the same launch-readiness gate the
+// studios get in server.js (fail closed when production launch config is
+// incomplete) in addition to the plan gate.
+router.post('/api/campaigns/:id/strategy', requireLaunchReady('generation'), planGate('asset_generations'), async (req, res, next) => {
   try {
     const ws = req.workspace;
     const campaign = await ownedCampaign(ws, req.params.id);

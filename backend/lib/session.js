@@ -73,12 +73,57 @@ function readRefreshToken(req) {
   return readCookie(req, REFRESH_COOKIE);
 }
 
+// ── password-recovery marker ────────────────────────────────────────────────
+// A normal session must not be able to set a new password without the current
+// one (a stolen cookie could lock the owner out). Only the recovery-email
+// callback sets this short-lived, HttpOnly, HMAC-signed marker; reset-password
+// requires it for the same user. Signed with SESSION_SECRET, like the
+// unsubscribe tokens.
+const crypto = require('crypto');
+
+const RECOVERY_COOKIE = 'sb_recovery';
+const RECOVERY_MAX_AGE = 15 * 60; // seconds
+
+function recoverySig(userId, exp) {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return null;
+  return crypto.createHmac('sha256', secret).update(`recovery:${userId}:${exp}`).digest('base64url');
+}
+
+function setRecoveryCookie(res, userId) {
+  if (!userId) return;
+  const exp = Math.floor(Date.now() / 1000) + RECOVERY_MAX_AGE;
+  const sig = recoverySig(userId, exp);
+  if (!sig) return;
+  appendCookie(res, `${RECOVERY_COOKIE}=${encodeURIComponent(`${exp}.${sig}`)}; ${cookieAttrs(RECOVERY_MAX_AGE)}`);
+}
+
+function clearRecoveryCookie(res) {
+  appendCookie(res, `${RECOVERY_COOKIE}=; ${cookieAttrs(0)}`);
+}
+
+/** True only for an unexpired marker the recovery callback issued to `userId`. */
+function hasRecoveryMarker(req, userId) {
+  const raw = readCookie(req, RECOVERY_COOKIE);
+  if (!raw || !userId) return false;
+  const [expStr, given] = raw.split('.');
+  const exp = Number(expStr);
+  if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000) || !given) return false;
+  const expected = recoverySig(userId, exp);
+  if (!expected || given.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+}
+
 module.exports = {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
+  RECOVERY_COOKIE,
   readCookie,
   setSessionCookies,
   clearSessionCookies,
   readAccessToken,
   readRefreshToken,
+  setRecoveryCookie,
+  clearRecoveryCookie,
+  hasRecoveryMarker,
 };

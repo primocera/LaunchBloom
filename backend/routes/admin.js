@@ -19,6 +19,11 @@ function requireAdmin(req, res, next) {
   if (!admins.includes((req.userEmail || '').toLowerCase())) {
     return res.status(403).json({ error: 'Forbidden' });
   }
+  // An unconfirmed address proves nothing: with e-mail confirmation off,
+  // anyone could register an ADMIN_EMAILS address that has no account yet.
+  if (req.authUser && !req.authUser.email_confirmed_at) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   next();
 }
 
@@ -554,7 +559,10 @@ router.post('/api/admin/email-outbox/replay/:id', requireAuth, requireAdmin, asy
 router.get('/api/cron/email-outbox', async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const auth = req.get('authorization') || '';
-  if (!secret || auth !== `Bearer ${secret}`) {
+  const expected = Buffer.from(`Bearer ${secret || ''}`);
+  const given = Buffer.from(auth);
+  // Constant-time compare (same as the e2e seed guard).
+  if (!secret || given.length !== expected.length || !require('crypto').timingSafeEqual(given, expected)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   res.json(await processEmailOutbox({ limit: 50 }));

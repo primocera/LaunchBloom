@@ -297,7 +297,10 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       for (const ws of owned) {
         try {
           await deleteWorkspaceData(ws.id);
-          await supabase.from('workspaces').delete().eq('id', ws.id);
+          // supabase-js reports a failed delete as { error }, it does not throw -
+          // without this check a failed erasure produced an "ok" receipt.
+          const { error: wsErr } = await supabase.from('workspaces').delete().eq('id', ws.id);
+          if (wsErr) throw wsErr;
         } catch {
           wsFailures++;
         }

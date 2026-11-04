@@ -404,7 +404,12 @@ router.post('/api/assets/library/bulk', requireAuth, async (req, res, next) => {
       if (action === 'archive' || action === 'unarchive') {
         await supabase.from(it.table).update({ archived: action === 'archive' }).eq('id', row.id);
       } else if (action === 'status') {
-        await supabase.from(it.table).update({ status: String(value || 'draft').slice(0, 30) }).eq('id', row.id);
+        const nextStatus = String(value || 'draft').slice(0, 30);
+        // Same gate as PATCH: unsupported proof / fake scarcity cannot reach
+        // "ready"/"published" through the bulk path either. Skipped, not counted.
+        if (it.table === 'creative_assets' && (nextStatus === 'ready' || nextStatus === 'published')
+            && !creativeReadyGate(row).ok) continue;
+        await supabase.from(it.table).update({ status: nextStatus }).eq('id', row.id);
       } else if (action === 'campaign') {
         await supabase.from(it.table).update({ campaign_id: campId }).eq('id', row.id);
       } else if (action === 'delete') {
@@ -456,6 +461,11 @@ router.get('/api/assets/library/:table/:id/versions', requireAuth, async (req, r
   }
 });
 
+const RESTORE_KEEP_CURRENT = [
+  'id', 'created_at', 'updated_at', 'workspace_id', 'campaign_id', 'offer_id', 'launch_kit_id',
+  'status', 'archived', 'compliance_ack', 'planned_date',
+];
+
 // POST /api/assets/library/:table/:id/restore - { version_id }
 router.post('/api/assets/library/:table/:id/restore', requireAuth, async (req, res, next) => {
   try {
@@ -473,9 +483,12 @@ router.post('/api/assets/library/:table/:id/restore', requireAuth, async (req, r
     if (!version) return res.status(404).json({ error: 'Version not found' });
 
     await snapshot(ws, req.params.table, row, { source: 'restore', author: req.userEmail }); // current state becomes a version too
+    // Restore the CONTENT of the version only. Workflow and placement state -
+    // status, archive flag, campaign link, planned date, compliance ack - stays
+    // as it is now; restoring them from an old snapshot silently re-linked
+    // assets to old (or deleted) campaigns and undid approvals.
     const restore = { ...version.snapshot };
-    delete restore.id;
-    delete restore.created_at;
+    for (const k of RESTORE_KEEP_CURRENT) delete restore[k];
     restore.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase.from(req.params.table).update(restore).eq('id', row.id).select().single();

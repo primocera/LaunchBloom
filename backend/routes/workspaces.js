@@ -213,7 +213,8 @@ router.delete('/api/workspaces/:id', requireAuth, async (req, res, next) => {
 
     const { deleteWorkspaceData } = require('../lib/workspace-data');
     await deleteWorkspaceData(owned.id);
-    await supabase.from('workspaces').delete().eq('id', owned.id).then(() => {}, () => {});
+    const { error: delErr } = await supabase.from('workspaces').delete().eq('id', owned.id);
+    if (delErr) return res.status(500).json({ error: 'The workspace could not be fully deleted. Please try again.', code: 'DELETE_FAILED' });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -399,7 +400,7 @@ router.get('/api/workspace/dashboard', requireAuth, async (req, res, next) => {
     let progress = null;
     if (kit) {
       const [tasks, contentCount, emailCount] = await Promise.all([
-        supabase.from('weekly_tasks').select('*').eq('launch_kit_id', kit.id)
+        supabase.from('weekly_tasks').select('*').eq('launch_kit_id', kit.id).eq('workspace_id', ws.id)
           .order('created_at', { ascending: true }),
         supabase.from('content_items').select('id', { count: 'exact', head: true })
           .eq('launch_kit_id', kit.id),
@@ -685,6 +686,11 @@ router.post(
       const b = req.body || {};
       if (!b.launch_kit_id) return res.status(400).json({ error: 'launch_kit_id is required' });
       if (!b.task_title) return res.status(400).json({ error: 'task_title is required' });
+      // The kit must belong to this workspace - otherwise a task could be
+      // planted in another workspace's dashboard by guessing a kit id.
+      const { data: kit } = await supabase.from('launch_kits').select('id')
+        .eq('id', b.launch_kit_id).eq('workspace_id', ws.id).single();
+      if (!kit) return res.status(404).json({ error: 'Launch kit not found' });
       const row = {
         workspace_id: ws.id,
         launch_kit_id: b.launch_kit_id,

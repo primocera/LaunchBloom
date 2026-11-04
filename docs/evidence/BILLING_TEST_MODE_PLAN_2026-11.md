@@ -14,7 +14,7 @@ by itself and a separate billing plan is required. This is that plan. It runs in
 | `/api/legal` exposes registration number + VAT ID | `backend/routes/plans.js` | `6111cf9` | no |
 | Invoice webhooks resolve the dahlia subscription reference and **send email only** (receipt, payment failed, recovered); status still comes only from `customer.subscription.*` | `backend/routes/webhooks.js` | `a0f8fda` | **no** — the status writes were removed, not added |
 | Yearly plans meter the monthly allowance per monthly cycle; `usage.resets_at` | `backend/lib/usage.js`, `backend/lib/plan-limits.js` | `a0f8fda` | no (usage window only) |
-| Account delete/export include `generation_jobs`; receipt text | `backend/routes/account.js` | `6111cf9`, `a0f8fda` | no (Stripe cancellation step unchanged) |
+| Account delete/export include `generation_jobs`; receipt text; a failed workspace delete is reported instead of an "ok" receipt | `backend/routes/account.js` | `6111cf9`, `a0f8fda`, review-fixes commit | no (Stripe cancellation step unchanged) |
 
 Checkout (`payments.js`), the billing portal, customer ownership, entitlement
 (`subscription-state.js`) and migrations are unchanged.

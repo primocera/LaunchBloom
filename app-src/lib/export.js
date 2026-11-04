@@ -27,10 +27,21 @@ export function assetPlainText(item = {}) {
     .join('\n');
 }
 
+/**
+ * One quoted CSV cell. A value starting with = + - @ (or a tab / CR) runs as a
+ * formula in Excel and Sheets, and AI or brand-profile text can start that way,
+ * so prefix it with ' to keep it text (OWASP CSV-injection guidance).
+ */
+function csvCell(v) {
+  let s = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 /** Library rows → CSV with a stable column set. */
 export function assetsCsv(items = []) {
   const cols = ['type_label', 'title', 'status', 'platform', 'language', 'campaign_id', 'created_at'];
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const esc = csvCell;
   return [cols.join(','), ...(items || []).map((i) => cols.map((c) => esc(i[c])).join(','))].join('\n');
 }
 
@@ -147,7 +158,7 @@ export function emailSequenceMarkdown(items = []) {
 
 // Spec headers: day, platform, content_type, topic, hook, caption_angle, cta, goal, status
 export function contentPlanCsv(items = []) {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const esc = csvCell;
   const headers = ['day', 'platform', 'content_type', 'topic', 'hook', 'caption_angle', 'cta', 'goal', 'status'];
   const rows = items.map((i) =>
     [i.day_number, i.platform, i.content_type, i.topic, i.hook, i.caption_angle, i.cta, i.goal, i.status].map(esc).join(',')

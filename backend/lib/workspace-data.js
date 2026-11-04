@@ -65,10 +65,20 @@ async function collectWorkspaceData(workspaceId) {
   return out;
 }
 
+/**
+ * Delete every workspace-scoped row, children first. Keeps going past a failed
+ * table (the final workspaces delete cascades most of them) and returns the
+ * tables that failed, so callers can log them instead of losing them.
+ */
 async function deleteWorkspaceData(workspaceId) {
+  const failed = [];
   for (const table of WORKSPACE_TABLES) {
-    await supabase.from(table).delete().eq('workspace_id', workspaceId).then(() => {}, () => {});
+    const { error } = await supabase.from(table).delete().eq('workspace_id', workspaceId)
+      .then((r) => r || {}, (e) => ({ error: e }));
+    if (error) failed.push(table);
   }
+  if (failed.length) console.error('[workspace-data] delete failed for tables', { workspaceId, failed });
+  return failed;
 }
 
 module.exports = { WORKSPACE_TABLES, collectWorkspaceData, deleteWorkspaceData };

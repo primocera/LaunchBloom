@@ -144,7 +144,11 @@ function zip(files) {
 
 // ── shared rendering ───────────────────────────────────────────────────────
 
+// XML 1.0 forbids most C0 control characters; one pasted vertical tab used to
+// make Word refuse to open the whole .docx.
 const xmlEscape = (s) => String(s == null ? '' : s)
+  // eslint-disable-next-line no-control-regex -- stripping control chars is the point
+  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
@@ -265,11 +269,26 @@ const PAGE_W = 595, PAGE_H = 842, MARGIN = 56, LINE = 15;
 const MAX_CHARS = 92; // conservative wrap width for Helvetica 10pt
 
 /** PDF strings are Latin-1; anything outside it is transliterated, not dropped. */
+// The PDF font uses WinAnsiEncoding and the file is written as latin1 bytes, so
+// Latin-1 letters (é, ü, ß…) map 1:1; these WinAnsi-only ones need their byte.
+const WINANSI_EXTRA = { '€': 0x80, '…': 0x85, 'Š': 0x8a, 'Œ': 0x8c, 'Ž': 0x8e, 'š': 0x9a, 'œ': 0x9c, 'ž': 0x9e, 'Ÿ': 0x9f };
+const NO_DECOMPOSITION = { 'đ': 'd', 'Đ': 'D', 'ł': 'l', 'Ł': 'L', 'ø': 'o', 'Ø': 'O' };
+
+function pdfChar(ch) {
+  const code = ch.charCodeAt(0);
+  if ((code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff)) return ch;
+  if (WINANSI_EXTRA[ch]) return String.fromCharCode(WINANSI_EXTRA[ch]);
+  if (NO_DECOMPOSITION[ch]) return NO_DECOMPOSITION[ch];
+  // č → c, ć → c, ő → o …: drop the accent, not the whole letter.
+  const base = ch.normalize('NFKD').replace(/[̀-ͯ]/g, '');
+  return /^[\x20-\x7e]+$/.test(base) ? base : '';
+}
+
 function pdfText(s) {
-  return String(s == null ? '' : s)
+  return Array.from(String(s == null ? '' : s)
     .replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
-    .replace(/[–—]/g, '-').replace(/→/g, '->').replace(/•/g, '-')
-    .replace(/[^\x20-\x7e]/g, '')
+    .replace(/[–—]/g, '-').replace(/→/g, '->').replace(/•/g, '-'))
+    .map(pdfChar).join('')
     .replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
@@ -425,3 +444,6 @@ const FORMATS = {
 };
 
 module.exports = { FORMATS, LIMITS, ExportTooLarge, buildDocx, buildPdf, buildBundle, safeFilename, zip, outline };
+// Exported for the encoding tests only.
+module.exports.pdfText = pdfText;
+module.exports.xmlEscape = xmlEscape;

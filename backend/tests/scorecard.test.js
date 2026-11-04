@@ -58,7 +58,7 @@ const fakeSupabase = {
   from: (t) => builder(t),
   authClient: () => ({
     auth: {
-      getUser: async () => ({ data: { user: { id: 'admin', email: 'admin@app.com' } }, error: null }),
+      getUser: async () => ({ data: { user: { id: 'admin', email: 'admin@app.com', email_confirmed_at: '2026-01-01T00:00:00Z' } }, error: null }),
       refreshSession: async () => ({ data: { session: null, user: null }, error: { message: 'no' } }),
     },
   }),
