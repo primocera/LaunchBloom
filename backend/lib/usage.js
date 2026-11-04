@@ -22,8 +22,42 @@ function monthStart() {
 }
 
 /**
+ * The latest monthly anniversary of `periodStart` that is not in the future.
+ * Plan allowances are MONTHLY ("120 AI actions / month") on both intervals, but
+ * a yearly subscription's Stripe period is the whole year - metering from its
+ * start would hand a yearly buyer one month's allowance for twelve months. For
+ * a monthly subscription the anniversary is the period start itself. The day
+ * of month is clamped (Jan 31 → Feb 28), matching how Stripe bills.
+ */
+/** `start` moved `monthsAhead` calendar months, day of month clamped. */
+function addMonthsClamped(start, monthsAhead) {
+  const y = start.getUTCFullYear();
+  const m = start.getUTCMonth() + monthsAhead;
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(start.getUTCDate(), lastDay),
+    start.getUTCHours(), start.getUTCMinutes(), start.getUTCSeconds()));
+}
+
+function monthlyWindowStart(periodStart, now = new Date()) {
+  const start = new Date(periodStart);
+  if (Number.isNaN(start.getTime()) || start > now) return periodStart;
+  let months = 0;
+  while (addMonthsClamped(start, months + 1) <= now) months++;
+  return months === 0 ? periodStart : addMonthsClamped(start, months).toISOString();
+}
+
+/** When a monthly window that began at `since` resets (null for lifetime). */
+function windowResetsAt(since) {
+  if (!since) return null;
+  const start = new Date(since);
+  if (Number.isNaN(start.getTime())) return null;
+  return addMonthsClamped(start, 1).toISOString();
+}
+
+/**
  * Resolve the start of the metering window for an account.
- * - paid plans: the current subscription period start (rolling), else month.
+ * - paid plans: the current monthly cycle inside the subscription period
+ *   (rolling from the billing date), else the calendar month.
  * - trial/free: null → lifetime totals.
  */
 async function windowStart(email, plan) {
@@ -43,7 +77,7 @@ async function windowStart(email, plan) {
         .order('current_period_start', { ascending: false })
         .limit(1)
         .single();
-      if (sub && sub.current_period_start) return sub.current_period_start;
+      if (sub && sub.current_period_start) return monthlyWindowStart(sub.current_period_start);
     }
   } catch {
     /* fall through to calendar month */
@@ -129,6 +163,8 @@ async function releaseAction(id, failed = false) {
 
 module.exports = {
   windowStart,
+  monthlyWindowStart,
+  windowResetsAt,
   countActions,
   countUserActions,
   reserveAction,

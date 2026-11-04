@@ -40,5 +40,6 @@ test('every plan defines the metered fields', () => {
 test('usageFor returns ai_actions + launch_kits from the ledger', async () => {
   // makeFakeSupabase returns count 0 for usage_events by default.
   const u = await usageFor('ws-1', 'trial', 'a@b.com');
-  assert.deepEqual(u, { ai_actions: 0, launch_kits: 0 });
+  // A trial meters lifetime totals, so its window never resets.
+  assert.deepEqual(u, { ai_actions: 0, launch_kits: 0, resets_at: null });
 });

@@ -3,10 +3,9 @@
 // Stripe deliveries.
 //
 // Stripe guarantees neither ordering nor exactly-once delivery. The failure
-// this suite exists to prevent is silent and expensive: a late
-// invoice.payment_failed landing AFTER the recovery invoice.paid, flipping a
-// recovered subscription back to past_due and revoking entitlement the
-// customer has already paid for.
+// this suite exists to prevent is silent and expensive: a late event flipping a
+// recovered subscription back to past_due (or resurrecting a canceled one) and
+// changing entitlement the customer has already paid for.
 // ---------------------------------------------------------------------------
 
 const test = require('node:test');
@@ -170,25 +169,43 @@ test('a late payment_failed does NOT revoke entitlement after recovery', async (
   assert.equal(db._subs.get('sub_late').stripe_event_at, iso(T_NEW), 'the newer event timestamp is preserved');
 });
 
-test('an in-order payment_failed still moves the subscription to past_due', async () => {
+// Status is mirrored ONLY from customer.subscription.* events (Stripe sends
+// subscription.updated with status past_due / active on every dunning
+// transition). Invoice events drive email, never the mirror - see webhooks.js.
+
+test('an in-order payment_failed leaves status to subscription.updated', async () => {
   seedSub('sub_inorder', { status: 'active', stripe_event_at: iso(T_OLD) });
 
   const r = await post(paymentFailed('evt_inorder_fail', 'sub_inorder', T_NEW));
-
   assert.equal(r.status, 200);
+  assert.equal(db._subs.get('sub_inorder').status, 'active', 'an invoice event never writes the mirror');
+
+  await post(subUpdated('evt_inorder_pd', 'sub_inorder', T_NEW + 1, 'past_due'));
   assert.equal(db._subs.get('sub_inorder').status, 'past_due');
-  assert.equal(db._subs.get('sub_inorder').stripe_event_at, iso(T_NEW), 'payment_failed must stamp its event time');
+  assert.equal(db._subs.get('sub_inorder').stripe_event_at, iso(T_NEW + 1));
 });
 
 test('recovery after a failure restores active entitlement', async () => {
   seedSub('sub_recover', { status: 'active', stripe_event_at: iso(T_OLD - 1) });
 
   await post(paymentFailed('evt_rec_fail', 'sub_recover', T_OLD));
+  await post(subUpdated('evt_rec_pd', 'sub_recover', T_OLD + 1, 'past_due'));
   assert.equal(db._subs.get('sub_recover').status, 'past_due');
 
   await post(invoicePaid('evt_rec_paid', 'sub_recover', T_NEW));
+  await post(subUpdated('evt_rec_active', 'sub_recover', T_NEW + 1, 'active'));
   assert.equal(db._subs.get('sub_recover').status, 'active');
-  assert.equal(db._subs.get('sub_recover').stripe_event_at, iso(T_NEW));
+  assert.equal(db._subs.get('sub_recover').stripe_event_at, iso(T_NEW + 1));
+});
+
+test('a paid $0 trial invoice or a late paid invoice never flips status', async () => {
+  seedSub('sub_trialinv', { status: 'trialing', stripe_event_at: iso(T_OLD) });
+  await post(invoicePaid('evt_trial_inv', 'sub_trialinv', T_NEW));
+  assert.equal(db._subs.get('sub_trialinv').status, 'trialing');
+
+  seedSub('sub_dead', { status: 'canceled', stripe_event_at: iso(T_OLD) });
+  await post(invoicePaid('evt_dead_inv', 'sub_dead', T_NEW));
+  assert.equal(db._subs.get('sub_dead').status, 'canceled', 'paying an old invoice must not resurrect a canceled subscription');
 });
 
 // ── duplicate delivery ─────────────────────────────────────────────────────
@@ -228,7 +245,8 @@ test('an unseeded subscription is written by its first event', async () => {
 // ── ledger durability ──────────────────────────────────────────────────────
 
 test('every processed event is recorded exactly once in the ledger', async () => {
-  const ids = ['evt_late_fail', 'evt_inorder_fail', 'evt_rec_fail', 'evt_rec_paid', 'evt_dup_fail', 'evt_ooo'];
+  const ids = ['evt_late_fail', 'evt_inorder_fail', 'evt_inorder_pd', 'evt_rec_fail', 'evt_rec_pd',
+    'evt_rec_paid', 'evt_rec_active', 'evt_trial_inv', 'evt_dead_inv', 'evt_dup_fail', 'evt_ooo'];
   for (const id of ids) {
     assert.equal(db._events.get(id).status, 'processed', `${id} should be durably processed`);
   }

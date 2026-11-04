@@ -89,7 +89,9 @@ async function usageFor(workspaceId, plan, email, userId) {
         usage.countActions(workspaceId, since, null),
         usage.countActions(workspaceId, since, 'launch_kits'),
       ]);
-  return { ai_actions: actions, launch_kits: kits };
+  // resets_at: when this monthly window rolls over (null for lifetime plans).
+  // A yearly plan's subscription period ends in a year; its allowance does not.
+  return { ai_actions: actions, launch_kits: kits, resets_at: usage.windowResetsAt(since) };
 }
 
 // Which plan a user should upgrade to when they hit a wall on their current one.

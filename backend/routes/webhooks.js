@@ -705,42 +705,46 @@ async function onTrialWillEnd(subscription) {
   }
 }
 
-async function onInvoicePaid(invoice, eventAt) {
-  if (!invoice.subscription) return;
+// Invoice events drive EMAIL and analytics only. The subscription mirror
+// (status, periods) is written solely from customer.subscription.* events,
+// which carry the authoritative status - that is the path the live-money
+// rehearsal verified. On the dahlia API (2026-04-22) `invoice.subscription` no
+// longer exists, so these handlers used to return early and no receipt or
+// payment-failed email was ever sent; the reference is now resolved through
+// invoiceSubscriptionId(), the same resolver ownership classification uses.
+// Invoice periods are deliberately NOT mirrored: for a cycle invoice they cover
+// the previous period, and a hard-coded 'active' would flip a trial to active
+// on the $0 trial invoice or resurrect a canceled subscription.
 
-  if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
+/** The plan/price line of an invoice, across the classic and dahlia shapes. */
+function invoiceLine(invoice) {
+  const line = invoice.lines?.data?.[0] || null;
+  if (!line) return { priceId: null, periodEnd: null };
+  const priceId = line.price?.id || line.pricing?.price_details?.price || null;
+  const periodEnd = line.period?.end || null;
+  return { priceId: typeof priceId === 'string' ? priceId : null, periodEnd };
+}
+
+async function onInvoicePaid(invoice, eventAt) {
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
+
+  if (await isStaleSubscriptionEvent(subscriptionId, eventAt)) {
     opsSignal('reconciliation_correction', {
-      event_type: 'invoice.paid', subscription_id: invoice.subscription, invoice_id: invoice.id,
+      event_type: 'invoice.paid', subscription_id: subscriptionId, invoice_id: invoice.id,
       reason: 'stale_out_of_order_skipped', severity: 'info',
     });
     return;
   }
 
-  // v10 SC-06: was this payment a RECOVERY? Read the prior state before the
-  // update overwrites it - a customer who was told "action needed" must be
-  // told the problem is resolved, not left with an unanswered money warning.
+  // v10 SC-06: was this payment a RECOVERY? A customer who was told "action
+  // needed" must be told the problem is resolved. subscription.updated may have
+  // already flipped the mirror back to active, so an invoice that needed more
+  // than one attempt also counts as a recovery.
   const { data: priorRow } = await supabase
     .from('subscriptions').select('status')
-    .eq('stripe_subscription_id', invoice.subscription).single();
-  const wasPastDue = priorRow && priorRow.status === 'past_due';
-
-  const { error } = await supabase
-    .from('subscriptions')
-    .update({
-      status: 'active',
-      current_period_start: invoice.period_start
-        ? new Date(invoice.period_start * 1000).toISOString()
-        : null,
-      current_period_end: invoice.period_end
-        ? new Date(invoice.period_end * 1000).toISOString()
-        : null,
-      stripe_event_at: eventAt,
-    })
-    .eq('stripe_subscription_id', invoice.subscription);
-
-  if (error) {
-    throw new Error(`Supabase update failed for invoice.paid: ${error.message}`);
-  }
+    .eq('stripe_subscription_id', subscriptionId).single();
+  const wasPastDue = (priorRow && priorRow.status === 'past_due') || (invoice.attempt_count || 0) > 1;
 
   // v10 SC-07: a renewal is a recurring cycle invoice, not the first one.
   // Stripe's billing_reason distinguishes them, so this needs no heuristic.
@@ -758,7 +762,11 @@ async function onInvoicePaid(invoice, eventAt) {
   if (invoice.total > 0) {
     const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));
     if (email) {
-      const periodEnd = invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null;
+      // The line period is the period just paid for; invoice.period_end is the
+      // previous period on cycle invoices, so it is only a fallback.
+      const { priceId, periodEnd: linePeriodEnd } = invoiceLine(invoice);
+      const periodEndUnix = linePeriodEnd || invoice.period_end || null;
+      const periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
       // Exact amount + plan for the receipt (Prompt 29).
       let amount = null;
       if (invoice.total != null) {
@@ -766,7 +774,6 @@ async function onInvoicePaid(invoice, eventAt) {
         const val = (invoice.total / 100).toFixed(2);
         amount = cur === 'USD' ? `$${val}` : `${val} ${cur}`;
       }
-      const priceId = invoice.lines?.data?.[0]?.price?.id;
       let planLabel = null;
       if (priceId) {
         const { pricePlans } = require('./customers');
@@ -785,28 +792,18 @@ async function onInvoicePaid(invoice, eventAt) {
 }
 
 async function onInvoicePaymentFailed(invoice, eventAt) {
-  if (!invoice.subscription) return;
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
   // SC-V10-00 out-of-order guard: a late payment_failed delivered AFTER the
-  // recovery invoice.paid must not flip a recovered subscription back to
-  // past_due - that would revoke entitlement the customer has paid for.
-  if (await isStaleSubscriptionEvent(invoice.subscription, eventAt)) {
-    // The regression this guards: a late payment_failed delivered after recovery
-    // would otherwise revoke paid access. Record the correction for the operator.
+  // recovery must not send an "action needed" email for a resolved payment.
+  // (Status itself comes from customer.subscription.updated - see above.)
+  if (await isStaleSubscriptionEvent(subscriptionId, eventAt)) {
     opsSignal('reconciliation_correction', {
-      event_type: 'invoice.payment_failed', subscription_id: invoice.subscription, invoice_id: invoice.id,
+      event_type: 'invoice.payment_failed', subscription_id: subscriptionId, invoice_id: invoice.id,
       reason: 'stale_out_of_order_skipped', severity: 'warn',
     });
     return;
-  }
-
-  const { error } = await supabase
-    .from('subscriptions')
-    .update({ status: 'past_due', stripe_event_at: eventAt })
-    .eq('stripe_subscription_id', invoice.subscription);
-
-  if (error) {
-    throw new Error(`Supabase update failed for invoice.payment_failed: ${error.message}`);
   }
 
   const email = invoice.customer_email || (await emailForStripeCustomer(invoice.customer));

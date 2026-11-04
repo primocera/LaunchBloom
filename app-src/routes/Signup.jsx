@@ -17,6 +17,8 @@ export default function Signup() {
   const [confirm, setConfirm] = useState('');
   const [accept, setAccept] = useState(false);
   const [marketing, setMarketing] = useState(false);
+  // Honeypot (routes/auth.js): people never see or fill this; bots do.
+  const [website, setWebsite] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   // Which field the current error belongs to, so a screen reader hears it on
@@ -55,7 +57,7 @@ export default function Signup() {
 
     const address = email.trim();
     try {
-      const data = await signup(address, password, accept, marketing);
+      const data = await signup(address, password, accept, marketing, website);
       // Email confirmation required: show a "check your inbox" notice and stop.
       if (data && data.requiresVerification) {
         setDone(true);
@@ -169,6 +171,20 @@ export default function Signup() {
           <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
           <span>Send me occasional product tips and updates (optional).</span>
         </label>
+        {/* Honeypot: off-screen, hidden from assistive tech, skipped by Tab and
+            autofill. A filled value marks the request as automated. */}
+        <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', top: 'auto', width: 1, height: 1, overflow: 'hidden' }}>
+          <label htmlFor="signup-website">Website</label>
+          <input
+            id="signup-website"
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+          />
+        </div>
         <button
           className="btn-primary"
           type="submit"

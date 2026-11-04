@@ -41,8 +41,46 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many attempts - try again in a few minutes.' },
 });
 
+// Abuse limits on the endpoints that create accounts or send email. The shared
+// loginLimiter (20 / 15 min per IP) stays in front; these are tighter and also
+// key on the target address, so a script rotating IPs still cannot loop signups
+// for one address or flood someone's inbox with reset / verification mail.
+// express-rate-limit answers 429 with Retry-After + RateLimit-* headers.
+const signupIpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isTestEnv ? 100000 : 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many sign-up attempts from this network - try again in an hour.' },
+});
+const emailKey = (req) => {
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+  return email ? `e:${email}` : `ip:${req.ip}`;
+};
+const signupEmailLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: isTestEnv ? 100000 : 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { error: 'Too many sign-up attempts for this email - check your inbox or try again tomorrow.' },
+});
+const emailSendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isTestEnv ? 100000 : 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { error: 'Too many emails requested for this address - try again in an hour.' },
+});
+
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const json = express.json({ limit: '2kb' });
+
+// Honeypot: the signup form renders a `website` field that people never see or
+// fill (off-screen, aria-hidden, no tab stop). Bots that fill every input give
+// themselves away; they get the normal generic response and nothing is created.
+const isHoneypotHit = (req) => String((req.body || {}).website || '').trim() !== '';
 
 /** Absolute app base URL for email-link redirects (never trust request Origin). */
 function appUrl() {
@@ -94,8 +132,11 @@ function readCredentials(req, res) {
 }
 
 // ── signup ───────────────────────────────────────────────────────────────
-router.post('/api/auth/signup', loginLimiter, json, async (req, res, next) => {
+router.post('/api/auth/signup', loginLimiter, signupIpLimiter, json, signupEmailLimiter, async (req, res, next) => {
   try {
+    // Same response a real new signup gets - never tell a bot it was caught.
+    if (isHoneypotHit(req)) return res.status(201).json({ ok: true, requiresVerification: true });
+
     const creds = readCredentials(req, res);
     if (!creds) return;
 
@@ -215,7 +256,7 @@ router.post('/api/auth/logout', json, async (req, res) => {
 });
 
 // ── forgot password (always generic) ───────────────────────────────────────
-router.post('/api/auth/forgot-password', loginLimiter, json, async (req, res) => {
+router.post('/api/auth/forgot-password', loginLimiter, json, emailSendLimiter, async (req, res) => {
   const email = String((req.body || {}).email || '').trim().toLowerCase();
   if (EMAIL_RE.test(email)) {
     try {
@@ -246,7 +287,7 @@ router.post('/api/auth/reset-password', auth.requireAuth, json, async (req, res,
 });
 
 // ── resend verification (always generic) ───────────────────────────────────
-router.post('/api/auth/resend-verification', loginLimiter, json, async (req, res) => {
+router.post('/api/auth/resend-verification', loginLimiter, json, emailSendLimiter, async (req, res) => {
   const email = String((req.body || {}).email || '').trim().toLowerCase();
   if (EMAIL_RE.test(email)) {
     try {

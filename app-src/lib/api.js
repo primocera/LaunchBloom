@@ -55,8 +55,9 @@ export const api = {
 
   // Auth
   login: (email, password) => request('/api/auth/login', { method: 'POST', body: { email, password } }),
-  signup: (email, password, acceptTerms, marketingOptIn = false) =>
-    request('/api/auth/signup', { method: 'POST', body: { email, password, acceptTerms, marketingOptIn } }),
+  // `website` is the signup honeypot - empty for people, see routes/auth.js.
+  signup: (email, password, acceptTerms, marketingOptIn = false, website = '') =>
+    request('/api/auth/signup', { method: 'POST', body: { email, password, acceptTerms, marketingOptIn, website } }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/auth/me'),
   forgotPassword: (email) => request('/api/auth/forgot-password', { method: 'POST', body: { email } }),

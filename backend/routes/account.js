@@ -213,12 +213,21 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
       archives.push({ workspace: ws, data: await collectWorkspaceData(ws.id) });
     }
 
+    // generation_jobs (migration 026) is keyed by user, not workspace, and holds
+    // the stored response body of every idempotent generation - the user's own
+    // AI output - so it belongs in an access request too.
+    const { data: jobs } = await supabase
+      .from('generation_jobs')
+      .select('*')
+      .eq('user_id', req.userId);
+
     const payload = {
       export_version: 2,
       exported_at: new Date().toISOString(),
       account: { email: req.userEmail, user_id: req.userId },
       workspace_count: archives.length,
       workspaces: archives,
+      generation_jobs: Array.isArray(jobs) ? jobs : [],
     };
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', 'attachment; filename="scalvya-export.json"');
@@ -297,6 +306,16 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       else step('workspace_data', 'ok', `${owned.length} workspace(s) deleted`);
     } catch {
       step('workspace_data', 'failed', 'workspace lookup failed');
+    }
+
+    // 2b. Stored generation results (migration 026) are keyed by user_id with no
+    // FK, so neither the workspace cascade nor the auth-user delete removes them.
+    try {
+      const { error } = await supabase.from('generation_jobs').delete().eq('user_id', userId);
+      if (error) throw error;
+      step('generation_results', 'ok');
+    } catch {
+      step('generation_results', 'failed', 'stored generation results could not be deleted - contact support');
     }
 
     // 3. Delete the Supabase Auth user (revokes all sessions).

@@ -75,6 +75,10 @@ async function resolveUser(req, res) {
  * (req, res, next) signature.
  */
 function requireAuth(req, res, next) {
+  // Idempotent within one request: server.js authenticates /api/ai before the
+  // per-user AI limiter, and planGate authenticates again - reuse the result
+  // instead of a second Supabase round trip (and a second token refresh).
+  if (req.authUser && req.userId) return next();
   resolveUser(req, res)
     .then((user) => {
       if (!user) {

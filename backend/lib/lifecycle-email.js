@@ -97,8 +97,10 @@ const TEMPLATES = {
   }),
   payment_failed: () => ({
     subject: `Action needed: update your payment method`,
-    html: template('Action needed: update your payment method', `<p>We couldn't process your latest payment. We'll retry automatically, and your account stays accessible during the retry window.</p><p>To avoid losing generation access, update your payment method: <a href="${billingLink()}">Account &amp; billing → Manage billing</a>.</p>`),
-    text: `We couldn't process your latest payment. We'll retry automatically; update your payment method to keep generation access: ${billingLink()}`,
+    // past_due is not an entitling status (subscription-state.js), so the copy
+    // must not promise generation access during the retry window.
+    html: template('Action needed: update your payment method', `<p>We couldn't process your latest payment. We'll retry automatically. New AI generations are paused until the payment goes through - your workspace and saved work stay available.</p><p>Update your payment method to restore generation: <a href="${billingLink()}">Account &amp; billing → Manage billing</a>.</p>`),
+    text: `We couldn't process your latest payment. We'll retry automatically. New AI generations are paused until it goes through; your saved work stays available. Update your payment method: ${billingLink()}`,
   }),
   // v10 SC-06: recovery closes the loop that payment_failed opens. Without it
   // the last thing a customer heard was "action needed", even after the charge

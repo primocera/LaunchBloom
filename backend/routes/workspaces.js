@@ -72,11 +72,16 @@ async function ownedWorkspace(workspaceId, email, userId) {
     const { data } = await q.eq('user_id', userId).single();
     if (data) return data;
   }
+  // Legacy fallback for pre-user_id rows ONLY (same rule as ensureWorkspace).
+  // workspaces.user_email is never rewritten on an email change, so without the
+  // user_id IS NULL guard whoever later registers a previous owner's old address
+  // would pass this check for that owner's already-stamped workspace.
   if (email) {
     const { data } = await supabase
       .from('workspaces')
       .select('*')
       .eq('id', workspaceId)
+      .is('user_id', null)
       .eq('user_email', email)
       .single();
     return data || null;

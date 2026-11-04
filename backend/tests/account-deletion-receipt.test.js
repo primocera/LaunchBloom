@@ -84,4 +84,13 @@ test('deletion receipt surfaces a failed Stripe cancellation instead of returnin
   // Data deletion still ran for both workspaces (idempotent, resumable).
   const wsStep = r.body.receipt.steps.find((s) => s.name === 'workspace_data');
   assert.equal(wsStep.status, 'ok');
+  // Stored generation results (migration 026, keyed by user_id) are erased too.
+  const jobsStep = r.body.receipt.steps.find((s) => s.name === 'generation_results');
+  assert.equal(jobsStep && jobsStep.status, 'ok');
+});
+
+test('export includes the stored generation results keyed by user', async () => {
+  const r = await request(app).get('/api/account/export').set(...AUTHED);
+  const body = JSON.parse(r.text);
+  assert.ok(Array.isArray(body.generation_jobs), 'generation_jobs must be part of an access request');
 });
