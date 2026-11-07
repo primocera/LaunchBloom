@@ -1,7 +1,7 @@
 {
   "name": "scalvya",
   "version": "1.0.0",
-  "description": "Scalvya — Vite frontend + Express API on Vercel (serverless)",
+  "description": "Scalvya â€” Vite frontend + Express API on Vercel (serverless)",
   "private": true,
   "scripts": {
     "dev": "node --watch backend/server.js",
@@ -12,9 +12,9 @@
     "test": "node --test \"backend/tests/*.test.js\"",
     "test:unit": "node --test \"backend/tests/*.test.js\"",
     "test:integration": "node --test \"backend/tests/*.test.js\"",
-    "_comment_e2e": "Playwright runs LOCALLY (not in CI — CI stays lean by design). One-time setup: npx playwright install chromium",
+    "_comment_e2e": "Playwright runs LOCALLY (not in CI â€” CI stays lean by design). One-time setup: npx playwright install chromium",
     "test:e2e": "playwright test",
-    "_comment_e2e_auth": "v11 SC-03: the signed-in matrix. Needs a NON-PRODUCTION Supabase project — see docs/RUNBOOK_AUTH_E2E.md. Not running it is a release blocker, not a pass.",
+    "_comment_e2e_auth": "v11 SC-03: the signed-in matrix. Needs a NON-PRODUCTION Supabase project â€” see docs/RUNBOOK_AUTH_E2E.md. Not running it is a release blocker, not a pass.",
     "test:e2e:auth": "node scripts/e2e-auth.mjs",
     "_comment_e2e_a11y": "v18 X04: axe-core automated accessibility scan on public routes. Local-only. One-time: npx playwright install chromium.",
     "test:e2e:a11y": "playwright test a11y-axe",
@@ -35,10 +35,10 @@
     "launch:gate": "node backend/scripts/launch-state.js gate",
     "launch:drift": "node backend/scripts/launch-state.js drift",
     "launch:render": "node backend/scripts/launch-state.js render",
-    "_comment_export_integrity": "DOCX/PDF/ZIP structural validation and bounds — the export path that protects the paid deliverable.",
+    "_comment_export_integrity": "DOCX/PDF/ZIP structural validation and bounds â€” the export path that protects the paid deliverable.",
     "test:export": "node --test backend/tests/handoff-export-integrity.test.js",
     "backfill:consistency": "node backend/scripts/backfill-consistency.js",
-    "_comment_reconcile_webhooks": "v18 S05: pull-based reconciliation — detects Stripe subscriptions whose webhook was never delivered (missing/stale local mirror). Read-only by default; --apply is owner-gated (RECONCILE_OWNER_MODE=1).",
+    "_comment_reconcile_webhooks": "v18 S05: pull-based reconciliation â€” detects Stripe subscriptions whose webhook was never delivered (missing/stale local mirror). Read-only by default; --apply is owner-gated (RECONCILE_OWNER_MODE=1).",
     "reconcile:webhooks": "node backend/scripts/reconcile-stripe-webhooks.js",
     "_comment_rehearsal": "SC-04: validate a completed live-money rehearsal record against the canonical eight-transition matrix. Read-only; owner runs the rehearsal itself.",
     "rehearsal:validate": "node backend/scripts/validate-rehearsal.js",
@@ -73,10 +73,11 @@
     "supertest": "^7.2.2",
     "vite": "^5.4.8"
   },
-  "_comment_overrides": "v23 SV-23-01 security patch: pin the transitive advisory chain above express's own ranges. body-parser ~1.20.5 would otherwise stay at the vulnerable 1.20.6 (GHSA-x5fp-wj9c-mxmx) and qs at 6.15.3 (GHSA-4mjr-xmp4-gh2g); force both to the fixed floors so npm audit --omit=dev returns 0. Stays in the 4.x line — no Express 5.",
+  "_comment_overrides": "Security patch floor: pin the transitive advisory chain above the parents' own ranges so npm audit --omit=dev returns 0. v23 SV-23-01 set body-parser 1.20.8 / qs 6.16.0; 2026-11 raised them to body-parser 1.20.9 (GHSA-27r3-jxmh-p828) and qs 6.16.2 (GHSA-6pq8-jhm2-2vcw, still inside express ~6.16), plus zod 4.6.7 (GHSA-mrhx-c7xc-m3w5, optional peer of @anthropic-ai/sdk). Stays in the Express 4.x line, no Express 5.",
   "overrides": {
-    "body-parser": "1.20.8",
-    "qs": "6.16.0"
+    "body-parser": "1.20.9",
+    "qs": "6.16.2",
+    "zod": "4.6.7"
   },
   "engines": {
     "node": ">=20.0.0"
