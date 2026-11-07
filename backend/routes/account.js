@@ -14,7 +14,7 @@ const { clearSessionCookies } = require('../lib/session');
 const { ensureWorkspace } = require('./workspaces');
 const { planFor, findCustomerRow } = require('./customers');
 const { ownershipEnforced } = require('../lib/stripe-ownership');
-const { limitsFor, usageFor } = require('../lib/plan-limits');
+const { limitsFor, usageFor, canBuyTopup } = require('../lib/plan-limits');
 const { collectWorkspaceData, deleteWorkspaceData } = require('../lib/workspace-data');
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 const { track } = require('../lib/analytics');
@@ -119,6 +119,7 @@ router.get('/api/account/billing', requireAuth, async (req, res, next) => {
       usage,
       limits: {
         ai_actions: limits.ai_actions === Infinity ? null : limits.ai_actions,
+        can_buy_topup: canBuyTopup(plan),
         launch_kits: limits.launch_kits === Infinity ? null : limits.launch_kits,
         monthly: limits.monthly,
       },

@@ -31,6 +31,8 @@ export const ERROR_CATEGORIES = {
 export const RECOVERY_ACTIONS = {
   RETRY: 'retry',
   UPGRADE: 'upgrade',
+  // Paid plan at its limit: one-time pack of extra AI actions.
+  BUY_TOPUP: 'buy_topup',
   SUPPORT: 'support',
   LINK: 'link',
 };
@@ -126,7 +128,9 @@ export function usageLimitState(err = {}) {
     reassurance: 'Your work is saved. Editing and exporting are always free.',
     action: paused
       ? { kind: RECOVERY_ACTIONS.RETRY, label: 'Try again later' }
-      : { kind: RECOVERY_ACTIONS.UPGRADE, label: 'See plans' },
+      : err.can_buy_topup
+        ? { kind: RECOVERY_ACTIONS.BUY_TOPUP, label: 'Buy more AI actions' }
+        : { kind: RECOVERY_ACTIONS.UPGRADE, label: 'See plans' },
     reqId: err.req_id || err.requestId || null,
   };
 }

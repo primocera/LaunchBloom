@@ -15,7 +15,8 @@ const {
 } = require('../lib/subscription-state');
 const { requireAuth } = require('../lib/auth');
 const { track } = require('../lib/analytics');
-const { selectCatalog, selectionTelemetry } = require('../lib/plan-catalog');
+const { selectCatalog, selectionTelemetry, topupPack, topupPriceId } = require('../lib/plan-catalog');
+const { topupPlan } = require('../lib/plan-limits');
 const { opsSignal } = require('../lib/ops-signal');
 // SV-01 (v20): the canonical, typed ownership service. payments shares its exact
 // source tag and customer classifier so checkout and the webhook decide identity
@@ -537,6 +538,113 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       return checkoutUnavailable(res, { retryable: true, reason: type });
     }
     return checkoutUnavailable(res, { status: 500, retryable: true, reason: type || 'error' });
+  }
+});
+
+/**
+ * POST /api/payments/create-topup-checkout  (auth required)
+ * One-time Checkout (mode=payment) for a pack of extra AI actions. Body: { pack }.
+ *
+ * Only paying subscribers (starter/pro/studio, monthly or yearly) can buy: a
+ * pack extends the CURRENT monthly window and expires at its reset, so it needs
+ * a paid window to attach to. Free and trial accounts get 403
+ * TOPUP_REQUIRES_PLAN (they start or finish the trial instead). The grant
+ * happens in the webhook, keyed on the Checkout Session id, never here.
+ */
+router.post('/create-topup-checkout', requireAuth, async (req, res) => {
+  try {
+    const email = req.userEmail;
+    const userId = req.userId;
+    const packKey = String((req.body || {}).pack || '');
+    const pack = topupPack(packKey);
+    if (!pack) {
+      return res.status(400).json({ error: 'Choose a valid AI action pack.' });
+    }
+    const priceId = topupPriceId(packKey);
+    if (!priceId) {
+      console.error(`[topup-checkout] no price configured for ${packKey} (${pack.env})`);
+      return checkoutUnavailable(res, { retryable: false, reason: 'price_not_configured' });
+    }
+
+    {
+      const { launchConfigProblems, launchConfigEnforced } = require('../lib/launch-config');
+      const problems = launchConfigProblems();
+      if (problems.length) {
+        console.warn('[topup-checkout] launch config incomplete:', problems.join('; '));
+        if (launchConfigEnforced()) {
+          return res.status(503).json({
+            error: 'Checkout is temporarily unavailable. Your workspace and drafts are unaffected.',
+            code: 'LAUNCH_CONFIG_INCOMPLETE',
+            req_id: req.id,
+          });
+        }
+      }
+    }
+
+    // Fail closed: an unverifiable plan never sells a pack.
+    const { state, plan: currentPlan } = await resolveEntitlement({ userId, email });
+    if (state === 'unavailable' || state === 'unmapped') {
+      return res.status(503).json(planUnavailableBody());
+    }
+    if (!topupPlan(currentPlan)) {
+      return res.status(403).json({
+        error: 'Extra AI actions are available on Starter, Pro and Studio. Choose a plan first.',
+        code: 'TOPUP_REQUIRES_PLAN',
+        plan: currentPlan || 'free',
+      });
+    }
+
+    const baseUrl = resolveBaseUrl();
+    const customerId = await ensureStripeCustomer(email, userId);
+    const selection = selectCatalog(req);
+    const stamp = { kind: 'action_topup', pack: packKey, app_user_id: userId || '' };
+
+    const sessionParams = {
+      mode: 'payment',
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer: customerId,
+      client_reference_id: userId || undefined,
+      metadata: {
+        scalvya: '1',
+        ...stamp,
+        catalog_version: selection.catalog_version,
+        catalog_currency: selection.currency,
+      },
+      // The charge carries the exact ownership stamp so refunds and disputes on
+      // the shared Stripe account are matched on proof, not on a lookup.
+      payment_intent_data: { metadata: { source: APP_STRIPE_SOURCE, ...stamp } },
+      invoice_creation: { enabled: true },
+      success_url: `${baseUrl}/app?checkout=topup_success&pack=${packKey}`,
+      cancel_url: `${baseUrl}/app?checkout=cancelled`,
+    };
+
+    track('checkout_catalog_selected', { userId, properties: { ...selectionTelemetry(selection), pack: packKey } });
+    const session = await stripe.checkout.sessions.create(
+      selection.currency === 'eur' ? { ...sessionParams, currency: 'eur' } : sessionParams
+    );
+    if (!session || !session.url) {
+      track('checkout_failed', { userId, properties: { pack: packKey, reason: 'no_url' } });
+      return checkoutUnavailable(res, { reason: 'no_url' });
+    }
+    return res.status(200).json({ url: session.url });
+  } catch (err) {
+    if (isEntitlementUnavailable(err)) {
+      return checkoutUnavailable(res, { retryable: true, reason: 'billing_state_unavailable' });
+    }
+    if (err instanceof CustomerReconciliationRequiredError || err.code === 'CUSTOMER_RECONCILIATION_REQUIRED') {
+      opsSignal('reconciliation_correction', {
+        reason: `multiple_stripe_customers:${err.candidateCount}`,
+        severity: 'high',
+      });
+      return checkoutUnavailable(res, { retryable: false, reason: 'customer_reconciliation_required' });
+    }
+    console.error('[create-topup-checkout] error', err.type, err.code, err.message);
+    track('checkout_failed', { userId: req.userId, properties: { reason: err.code || err.type || 'error' } });
+    const type = (err && err.type) || '';
+    if (type === 'StripeInvalidRequestError' || type === 'StripeAuthenticationError' || type === 'StripePermissionError') {
+      return checkoutUnavailable(res, { retryable: false, reason: type });
+    }
+    return checkoutUnavailable(res, { status: type ? 503 : 500, retryable: true, reason: type || 'error' });
   }
 });
 

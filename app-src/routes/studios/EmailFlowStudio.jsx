@@ -1,5 +1,6 @@
 import BusyLabel from '../../components/BusyLabel';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { download } from '../../lib/export';
@@ -178,7 +179,7 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
     } catch (e) {
       if (e.status === 402 || e.code === 'UPGRADE') {
         if (isFreePlan || e.plan === 'free') setPaywall(true);
-        else setUpgrade(true);
+        else setUpgrade(e.can_buy_topup ? 'topup' : true);
       } else setError(e.message);
     } finally {
       setBusy(false);
@@ -202,7 +203,9 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
       {upgrade && (
         <p className="flow-err">
           You've hit your plan limit for generations.{' '}
-          <button className="account-link" onClick={() => setPaywall(true)}>Upgrade your plan</button> to keep going.
+          {upgrade === 'topup'
+            ? <Link className="account-link" to="/app/account?topup=1">Buy more AI actions</Link>
+            : <button className="account-link" onClick={() => setPaywall(true)}>Upgrade your plan</button>} to keep going.
         </p>
       )}
       {warnings.length > 0 && (

@@ -68,6 +68,27 @@ const PLAN_LIMITS = {
 // Old accounts / data may still resolve to "business"; treat it as studio.
 const PLAN_ALIASES = { business: 'studio' };
 
+// Paying subscribers (monthly or yearly) can buy one-time packs of extra AI
+// actions. A pack only raises the current monthly window's limit.
+const TOPUP_PLANS = ['starter', 'pro', 'studio'];
+
+/** The plan may buy and use packs (the gate counts valid packs for it). */
+function topupPlan(plan) {
+  return TOPUP_PLANS.includes(PLAN_ALIASES[plan] || plan);
+}
+
+/**
+ * A pack can actually be bought right now: an eligible plan AND at least one
+ * pack price configured. The UI offers "Buy more AI actions" only then, so an
+ * unconfigured deployment never replaces the upgrade path with a dead end.
+ */
+function canBuyTopup(plan) {
+  if (!topupPlan(plan)) return false;
+  // Lazy: plan-catalog requires this module.
+  const { TOPUP_PACKS, topupPriceId } = require('./plan-catalog');
+  return Object.keys(TOPUP_PACKS).some((key) => topupPriceId(key));
+}
+
 function limitsFor(plan) {
   return PLAN_LIMITS[PLAN_ALIASES[plan] || plan] || PLAN_LIMITS.free;
 }
@@ -91,7 +112,14 @@ async function usageFor(workspaceId, plan, email, userId) {
       ]);
   // resets_at: when this monthly window rolls over (null for lifetime plans).
   // A yearly plan's subscription period ends in a year; its allowance does not.
-  return { ai_actions: actions, launch_kits: kits, resets_at: usage.windowResetsAt(since) };
+  // ai_actions_extra: valid top-up actions on top of the plan allowance.
+  const extra = userId && topupPlan(plan) ? await usage.activeTopupActions(userId) : 0;
+  return {
+    ai_actions: actions,
+    launch_kits: kits,
+    resets_at: usage.windowResetsAt(since),
+    ...(extra ? { ai_actions_extra: extra } : {}),
+  };
 }
 
 // Which plan a user should upgrade to when they hit a wall on their current one.
@@ -147,12 +175,14 @@ function planGate(feature) {
           const kitsUsed = await usage.countUserActions(req.userId, since, 'launch_kits');
           if (kitsUsed >= limits.launch_kits) {
             track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature: 'launch_kits' } });
-            return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits));
+            return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits, { pool: false }));
           }
         }
 
         // AI-action pool - account-wide across the user's workspaces.
-        const poolLimit = limits.ai_actions;
+        // Valid top-up packs extend a paid plan's limit for this month only.
+        const extra = topupPlan(plan) ? await usage.activeTopupActions(req.userId) : 0;
+        const poolLimit = limits.ai_actions + extra;
         if (poolLimit !== Infinity) {
           const used = await usage.countUserActions(req.userId, since, null);
           if (used >= poolLimit) {
@@ -212,7 +242,9 @@ function planGate(feature) {
   };
 }
 
-function gateBody(plan, feature, used, limit) {
+// `pool`: the block came from the AI-action pool (a pack helps), not from the
+// launch-kit sub-cap (packs add no kits).
+function gateBody(plan, feature, used, limit, { pool = true } = {}) {
   return {
     error: upgradeMessage(plan, feature),
     code: 'UPGRADE',
@@ -220,11 +252,15 @@ function gateBody(plan, feature, used, limit) {
     used,
     limit,
     plan,
+    // The client offers "Buy more AI actions" only when a pack would help.
+    can_buy_topup: pool && canBuyTopup(plan),
   };
 }
 
 module.exports = {
   PLAN_LIMITS,
+  topupPlan,
+  canBuyTopup,
   limitsFor,
   usageFor,
   planGate,

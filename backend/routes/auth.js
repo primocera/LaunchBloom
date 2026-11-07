@@ -26,7 +26,7 @@ const {
   setRecoveryCookie, clearRecoveryCookie, hasRecoveryMarker,
 } = require('../lib/session');
 const { planFor } = require('./customers');
-const { limitsFor, usageFor } = require('../lib/plan-limits');
+const { limitsFor, usageFor, canBuyTopup } = require('../lib/plan-limits');
 const { ensureWorkspace } = require('./workspaces');
 const { track } = require('../lib/analytics');
 const { signupDecision, capIsActive, MESSAGES: COHORT_MESSAGES } = require('../lib/cohort-control');
@@ -112,6 +112,7 @@ async function accountStatus(email, userId) {
     usage,
     limits: {
       ai_actions: limits.ai_actions === Infinity ? null : limits.ai_actions,
+      can_buy_topup: canBuyTopup(plan),
       launch_kits: limits.launch_kits === Infinity ? null : limits.launch_kits,
       content_plan_days: limits.content_plan_days,
       can_export: limits.can_export,

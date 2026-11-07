@@ -43,6 +43,32 @@ const PRICES = {
   studio: { usd: { monthly: 59, yearly: 499 }, eur: { monthly: 51.37, yearly: 434 } },
 };
 
+// One-time top-up packs of extra AI actions for paying subscribers (Checkout
+// mode=payment). A pack adds AI actions to the CURRENT monthly window only and
+// expires when that window resets - no rollover. Priced a little above the Pro
+// and Studio per-action rate, so a plan upgrade stays the better deal for
+// steady use. Same fixed ECB snapshot as PRICES for EUR; each Stripe Price must
+// carry both currencies (currency_options).
+const TOPUP_PACKS = {
+  actions_40: { actions: 40, env: 'STRIPE_PRICE_ACTIONS_40', usd: 9.99, eur: 8.70 },
+  actions_100: { actions: 100, env: 'STRIPE_PRICE_ACTIONS_100', usd: 24.99, eur: 21.76 },
+};
+
+const TOPUP_DISCLOSURE =
+  'One-time purchase. Extra AI actions are added to this month only and expire when your monthly AI actions reset. ' +
+  'Available on Starter, Pro and Studio.';
+
+/** A pack definition by key, or null. */
+function topupPack(key) {
+  return Object.prototype.hasOwnProperty.call(TOPUP_PACKS, key) ? TOPUP_PACKS[key] : null;
+}
+
+/** Stripe price id for a pack from env, or null when not configured. */
+function topupPriceId(key) {
+  const pack = topupPack(key);
+  return pack ? process.env[pack.env] || null : null;
+}
+
 // v8 LB-S08: value comms reframed around jobs completed - capacity (campaigns,
 // actions, workspaces) is what scales by tier; the campaign-control workflow
 // (gap map, consistency checks, brief-change review, review packet export)
@@ -149,6 +175,15 @@ function publicCatalog(currency = 'usd') {
     },
     yearly_badge: `Save up to ${maxSavingsPct(cur)}%`,
     ai_action_definition: AI_ACTION_DEFINITION,
+    // Only packs whose Stripe price is configured are offered.
+    topups: Object.entries(TOPUP_PACKS)
+      .filter(([key]) => topupPriceId(key))
+      .map(([key, p]) => ({
+        pack: key,
+        actions: p.actions,
+        price: { currency: cur, amount: p[cur], display: money(p[cur], cur) },
+      })),
+    topup_disclosure: TOPUP_DISCLOSURE,
     included_free: INCLUDED_FREE,
     // Region-based pricing note. Only shown once EUR pricing is actually live
     // (EUR_PRICING_ENABLED=1); while off, everyone is billed USD so a "EU pays
@@ -286,6 +321,9 @@ module.exports = {
   selectCatalog,
   selectionTelemetry,
   AI_ACTION_DEFINITION,
+  TOPUP_PACKS,
+  topupPack,
+  topupPriceId,
   money,
   yearlySavings,
   maxSavingsPct,

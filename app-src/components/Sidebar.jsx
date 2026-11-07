@@ -69,6 +69,9 @@ function AccountBlock() {
           {used}/{limit} AI action{limit === 1 ? '' : 's'} {limits?.monthly ? 'this month' : 'used'}
         </div>
       )}
+      {usage?.ai_actions_extra > 0 && (
+        <div className="account-usage">+{usage.ai_actions_extra} extra from top-ups</div>
+      )}
       <div className="account-hint">
         {planLabel || 'Free'} plan
         {' '}&middot;{' '}

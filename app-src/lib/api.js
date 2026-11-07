@@ -39,6 +39,8 @@ async function request(path, { method = 'GET', body, signal, idempotencyKey } = 
       code: data.code,
       plan: data.plan,
       feature: data.feature,
+      // A paid plan at its limit can buy extra AI actions (402 UPGRADE).
+      can_buy_topup: data.can_buy_topup,
       req_id,
       retry_after,
     });
@@ -212,4 +214,7 @@ export const api = {
   // Email is derived from the authenticated session server-side (Prompt 4).
   checkout: (plan, interval = 'monthly') =>
     request('/api/payments/create-checkout-session', { method: 'POST', body: { plan, interval } }),
+  // One-time pack of extra AI actions (paid plans only). Only the pack key is sent.
+  buyTopup: (pack) =>
+    request('/api/payments/create-topup-checkout', { method: 'POST', body: { pack } }),
 };

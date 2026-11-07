@@ -69,7 +69,8 @@ export function missingRequiredDeliverables(campaign) {
 
 export function usageLevel(account) {
   const used = account?.usage?.ai_actions ?? 0;
-  const limit = account?.limits?.ai_actions;
+  const base = account?.limits?.ai_actions;
+  const limit = base == null ? base : base + (account?.usage?.ai_actions_extra || 0);
   if (limit == null || limit === 0) return used > 0 ? 'over' : 'ok';
   if (used >= limit) return 'over';
   if (used / limit >= 0.8) return 'warn';

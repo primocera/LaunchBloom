@@ -16,8 +16,7 @@ const supabase = require('./supabase');
 const COUNTED_STATUSES = ['reserved', 'succeeded'];
 
 /** UTC start of the current calendar month (fallback window for paid plans). */
-function monthStart() {
-  const d = new Date();
+function monthStart(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
 }
 
@@ -68,21 +67,85 @@ async function windowStart(email, plan) {
       .select('id')
       .eq('email', (email || '').toLowerCase())
       .single();
-    if (customer) {
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('current_period_start')
-        .eq('customer_id', customer.id)
-        .in('status', ['active', 'trialing', 'past_due'])
-        .order('current_period_start', { ascending: false })
-        .limit(1)
-        .single();
-      if (sub && sub.current_period_start) return monthlyWindowStart(sub.current_period_start);
-    }
+    if (customer) return await customerWindowStart(customer.id);
   } catch {
     /* fall through to calendar month */
   }
   return monthStart();
+}
+
+/**
+ * The paid monthly window for a known customers.id, as of `at` (default now).
+ * Falls back to the calendar month. Used to date a top-up pack's expiry.
+ */
+async function customerWindowStart(customerId, at = new Date()) {
+  try {
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('current_period_start')
+      .eq('customer_id', customerId)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .order('current_period_start', { ascending: false })
+      .limit(1)
+      .single();
+    if (sub && sub.current_period_start) return monthlyWindowStart(sub.current_period_start, at);
+  } catch {
+    /* fall through to calendar month */
+  }
+  return monthStart(at);
+}
+
+/**
+ * The exact next monthly reset after `at` for a subscription anchored on
+ * `periodStart`: the next anniversary of the ORIGINAL anchor, clamped per month
+ * (anchor Jan 31 → Feb 28 → Mar 31), matching the window monthlyWindowStart
+ * meters. Used to date a top-up pack's expiry.
+ */
+function monthlyWindowEnd(periodStart, at = new Date()) {
+  const start = new Date(periodStart);
+  if (Number.isNaN(start.getTime())) return null;
+  if (start > at) return addMonthsClamped(start, 1).toISOString();
+  let months = 0;
+  while (addMonthsClamped(start, months + 1) <= at) months++;
+  return addMonthsClamped(start, months + 1).toISOString();
+}
+
+/**
+ * When a top-up pack bought at `at` expires: the next monthly reset of the
+ * customer's subscription window (monthly and yearly alike). Unlike the gate's
+ * window lookup this THROWS on a read error, so a paid grant is retried by
+ * Stripe rather than silently dated by the calendar month. No subscription row
+ * at all → the next calendar month start (the gate's fallback window).
+ */
+async function customerWindowEnd(customerId, at = new Date()) {
+  const { data: sub, error } = await supabase
+    .from('subscriptions')
+    .select('current_period_start')
+    .eq('customer_id', customerId)
+    .in('status', ['active', 'trialing', 'past_due'])
+    .order('current_period_start', { ascending: false })
+    .limit(1)
+    .single();
+  if (error && error.code !== 'PGRST116') throw new Error(`subscription window unavailable: ${error.message}`);
+  if (sub && sub.current_period_start) return monthlyWindowEnd(sub.current_period_start, at);
+  return new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1)).toISOString();
+}
+
+/**
+ * Extra AI actions from paid top-up packs that are still valid right now. A
+ * pack is valid only until the reset of the monthly window it was bought in.
+ * Unreadable (e.g. migration 041 not applied) counts as none.
+ */
+async function activeTopupActions(userId) {
+  if (!userId) return 0;
+  const { data, error } = await supabase
+    .from('action_topups')
+    .select('actions')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString());
+  if (error || !Array.isArray(data)) return 0;
+  return data.reduce((sum, r) => sum + (Number(r.actions) || 0), 0);
 }
 
 /** Count metered actions for a workspace since `since` (null = lifetime). */
@@ -163,6 +226,10 @@ async function releaseAction(id, failed = false) {
 
 module.exports = {
   windowStart,
+  customerWindowStart,
+  customerWindowEnd,
+  monthlyWindowEnd,
+  activeTopupActions,
   monthlyWindowStart,
   windowResetsAt,
   countActions,

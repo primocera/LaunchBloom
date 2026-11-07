@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api, getActiveWorkspace, setActiveWorkspace } from '../lib/api';
 import { BRAND } from '../brand';
 import TrialPaywall from '../components/TrialPaywall';
+import TopupDialog from '../components/TopupDialog';
 import ErrorState from '../components/ErrorState';
 import { planVerificationState, exportFailureState, trackErrorState } from '../lib/error-states';
 import { clearAllDrafts, draftCount } from '../lib/local-drafts';
@@ -35,6 +36,17 @@ export default function Account() {
   // Plan selection happens here, in the app - sending a signed-in user to the
   // marketing page's #pricing anchor dropped them on the landing page instead.
   const [paywall, setPaywall] = useState(false);
+  // ?topup=1 (from an "out of AI actions" prompt) opens the top-up dialog.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [topup, setTopup] = useState(() => searchParams.get('topup') === '1');
+  function closeTopup() {
+    setTopup(false);
+    if (searchParams.get('topup')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('topup');
+      setSearchParams(next, { replace: true });
+    }
+  }
 
   // v13 SC-P0-01: a 503 PLAN_UNAVAILABLE must not render the user as Free and
   // must not spin forever - show the recoverable notice with an explicit retry.
@@ -277,7 +289,16 @@ export default function Account() {
               <strong>{billing.usage?.launch_kits ?? 0} of {billing.limits?.launch_kits ?? '-'}</strong>{' '}
               full launch campaigns used
             </p>
+            {billing.usage?.ai_actions_extra > 0 && (
+              <p>
+                <strong>+{billing.usage.ai_actions_extra}</strong> extra AI actions from top-ups, valid until
+                your monthly AI actions reset
+              </p>
+            )}
             <p className="muted">Editing and exporting are always free.</p>
+            {billing.limits?.can_buy_topup && (
+              <button className="btn-secondary" onClick={() => setTopup(true)}>Buy more AI actions</button>
+            )}
           </>
         ) : <p className="muted">Loading…</p>}
       </section>
@@ -347,6 +368,7 @@ export default function Account() {
       </p>
 
       <TrialPaywall open={paywall} onClose={() => setPaywall(false)} />
+      <TopupDialog open={topup} onClose={closeTopup} />
     </div>
   );
 }

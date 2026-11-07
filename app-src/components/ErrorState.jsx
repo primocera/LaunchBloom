@@ -31,6 +31,9 @@ export default function ErrorState({ state, onRetry, onUpgrade, supportHref, cla
     if (a.kind === RECOVERY_ACTIONS.LINK && a.to) {
       return <Link className="flow-btn is-ghost" to={a.to}>{a.label}</Link>;
     }
+    if (a.kind === RECOVERY_ACTIONS.BUY_TOPUP) {
+      return <Link className="account-link" to="/app/account?topup=1">{a.label}</Link>;
+    }
     if (a.kind === RECOVERY_ACTIONS.UPGRADE) {
       return <button type="button" className="account-link" onClick={onUpgrade}>{a.label}</button>;
     }

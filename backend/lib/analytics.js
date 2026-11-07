@@ -30,6 +30,8 @@ const CANONICAL_EVENTS = {
   first_asset_saved: 'The account saved its first generated asset.',
   campaign_created: 'A campaign was created.',
   limit_reached: 'A plan limit was hit (402 UPGRADE).',
+  topup_viewed: 'The extra AI actions (top-up) dialog was shown.',
+  topup_purchased: 'A one-time pack of extra AI actions was paid and granted.',
   subscription_activated: 'A subscription became active (paid).',
   subscription_canceled: 'A subscription was canceled or scheduled to cancel.',
   feedback_submitted: 'The user submitted beta feedback.',
@@ -137,6 +139,7 @@ const CLIENT_EVENTS = new Set([
   'onboarding_step_completed',
   'onboarding_completed',
   'paywall_viewed',
+  'topup_viewed',
   'feedback_submitted',
   // v8 LB-S05: client-observed activation + first-value moments (no content)
   'activation_step_completed',

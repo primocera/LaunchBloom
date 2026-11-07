@@ -30,7 +30,7 @@ function makeFakeSupabase(results = {}) {
     const b = {};
     const chain = [
       'select', 'insert', 'update', 'upsert', 'delete',
-      'eq', 'neq', 'in', 'is', 'gte', 'lte', 'order', 'limit',
+      'eq', 'neq', 'in', 'is', 'gt', 'gte', 'lte', 'order', 'limit',
     ];
     for (const m of chain) b[m] = () => b;
     b.single = () => Promise.resolve(result);

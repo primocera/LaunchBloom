@@ -269,3 +269,77 @@ test('cancel-subscription requires auth', async () => {
   const r = await request(app).post('/api/payments/cancel-subscription').send({ subscriptionId: 'sub_123' });
   assert.equal(r.status, 401);
 });
+
+// ── AI-action top-up packs (one-time Checkout) ─────────────────────────────────
+
+test('top-up checkout: a paying subscriber gets a one-time, stamped payment session', async () => {
+  reset();
+  process.env.STRIPE_PRICE_ACTIONS_40 = 'price_actions_40';
+  try {
+    for (const plan of ['starter', 'pro', 'studio']) {
+      state.currentPlan = plan;
+      lastCheckout = null;
+      const r = await request(app).post('/api/payments/create-topup-checkout').set(...AUTHED).send({ pack: 'actions_40' });
+      assert.equal(r.status, 200, plan);
+      assert.equal(lastCheckout.mode, 'payment');
+      assert.deepEqual(lastCheckout.line_items, [{ price: 'price_actions_40', quantity: 1 }]);
+      assert.equal(lastCheckout.metadata.scalvya, '1');
+      assert.equal(lastCheckout.metadata.kind, 'action_topup');
+      assert.equal(lastCheckout.metadata.pack, 'actions_40');
+      assert.equal(lastCheckout.metadata.app_user_id, 'user-1');
+      assert.equal(lastCheckout.payment_intent_data.metadata.source, 'launchbloom');
+      assert.equal(lastCheckout.subscription_data, undefined, 'never a subscription');
+      assert.ok(lastCheckout.success_url.startsWith('https://app.example.com/app?checkout=topup_success'));
+    }
+  } finally {
+    delete process.env.STRIPE_PRICE_ACTIONS_40;
+  }
+});
+
+test('top-up checkout: trial and free accounts cannot buy packs', async () => {
+  reset();
+  process.env.STRIPE_PRICE_ACTIONS_40 = 'price_actions_40';
+  try {
+    for (const plan of ['trial', null]) {
+      state.currentPlan = plan;
+      const r = await request(app).post('/api/payments/create-topup-checkout').set(...AUTHED).send({ pack: 'actions_40' });
+      assert.equal(r.status, 403, String(plan));
+      assert.equal(r.body.code, 'TOPUP_REQUIRES_PLAN');
+    }
+    assert.equal(lastCheckout, null, 'no session created');
+  } finally {
+    delete process.env.STRIPE_PRICE_ACTIONS_40;
+  }
+});
+
+test('top-up checkout: unknown pack, a client action count and an unconfigured price are refused', async () => {
+  reset();
+  state.currentPlan = 'pro';
+  let r = await request(app).post('/api/payments/create-topup-checkout').set(...AUTHED).send({ pack: 'actions_9999', actions: 9999 });
+  assert.equal(r.status, 400);
+  r = await request(app).post('/api/payments/create-topup-checkout').set(...AUTHED).send({ pack: 'actions_40' });
+  assert.equal(r.status, 503, 'no STRIPE_PRICE_ACTIONS_40 → stable unavailable error');
+  assert.equal(r.body.code, 'CHECKOUT_UNAVAILABLE');
+  assert.equal(lastCheckout, null);
+});
+
+test('top-up checkout fails closed when the plan cannot be verified', async () => {
+  reset();
+  process.env.STRIPE_PRICE_ACTIONS_40 = 'price_actions_40';
+  try {
+    state.currentPlan = null;
+    state.entitlementState = 'unavailable';
+    const r = await request(app).post('/api/payments/create-topup-checkout').set(...AUTHED).send({ pack: 'actions_40' });
+    assert.equal(r.status, 503);
+    assert.equal(lastCheckout, null);
+  } finally {
+    delete process.env.STRIPE_PRICE_ACTIONS_40;
+  }
+});
+
+test('top-up checkout requires authentication', async () => {
+  reset();
+  state.user = null;
+  const r = await request(app).post('/api/payments/create-topup-checkout').send({ pack: 'actions_40' });
+  assert.equal(r.status, 401);
+});

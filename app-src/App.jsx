@@ -76,6 +76,7 @@ function ShellNotices() {
     next.delete('checkout');
     next.delete('plan');
     next.delete('interval');
+    next.delete('pack');
     setParams(next, { replace: true });
   }
 
@@ -100,6 +101,17 @@ function ShellNotices() {
           <>Checkout complete. Your plan may take a moment to activate - refresh if it doesn't appear. </>
         )}
         <Link to="/app/account">Manage billing</Link>{' '}
+        <button className="account-link" onClick={dismiss}>Dismiss</button>
+      </div>
+    );
+  }
+  if (checkout === 'topup_success') {
+    // The pack is granted by the Stripe webhook, usually within seconds.
+    return (
+      <div className="shell-notice" role="status">
+        Thanks for your purchase. Your extra AI actions are added as soon as the payment is confirmed -
+        usually within seconds. They expire when your monthly AI actions reset.{' '}
+        <Link to="/app/account">See usage</Link>{' '}
         <button className="account-link" onClick={dismiss}>Dismiss</button>
       </div>
     );

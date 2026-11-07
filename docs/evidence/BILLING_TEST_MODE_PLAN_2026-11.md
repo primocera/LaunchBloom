@@ -15,9 +15,11 @@ by itself and a separate billing plan is required. This is that plan. It runs in
 | Invoice webhooks resolve the dahlia subscription reference and **send email only** (receipt, payment failed, recovered); status still comes only from `customer.subscription.*` | `backend/routes/webhooks.js` | `a0f8fda` | **no** — the status writes were removed, not added |
 | Yearly plans meter the monthly allowance per monthly cycle; `usage.resets_at` | `backend/lib/usage.js`, `backend/lib/plan-limits.js` | `a0f8fda` | no (usage window only) |
 | Account delete/export include `generation_jobs`; receipt text; a failed workspace delete is reported instead of an "ok" receipt | `backend/routes/account.js` | `6111cf9`, `a0f8fda`, review-fixes commit | no (Stripe cancellation step unchanged) |
+| One-time packs of extra AI actions (top-ups): NEW route `POST /api/payments/create-topup-checkout` (mode=payment, paid plans only), a NEW grant branch in `checkout.session.completed` / `checkout.session.async_payment_succeeded` for `metadata.kind = action_topup`, a fully refunded pack charge revokes the pack, `planGate` adds valid pack actions to a paid plan's monthly limit, migration `041_action_topups.sql` | `payments.js`, `webhooks.js`, `plan-limits.js`, `usage.js`, `plan-catalog.js` | 2026-11-07 | **no** — the subscription checkout route, subscription events and entitlement are untouched; packs are never written to `payments` |
 
-Checkout (`payments.js`), the billing portal, customer ownership, entitlement
-(`subscription-state.js`) and migrations are unchanged.
+The subscription checkout route, the billing portal, customer ownership and
+entitlement (`subscription-state.js`) are unchanged. The only new billing
+surface is the one-time top-up above (T6-T9).
 
 ## Preconditions — stop if any is false
 
@@ -76,6 +78,38 @@ select stripe_subscription_id, status, current_period_start, current_period_end
    Stripe test dashboard), `workspace_data` ok, `generation_results` ok,
    `auth_user` ok. `customer.subscription.deleted` → 200.
 
+**Top-up preconditions:** migration `041_action_topups.sql` applied to the
+non-production project; in Stripe **test mode** create two one-time prices
+(USD with an EUR `currency_option`): 40 AI actions $9.99 / €8.70 and 100 AI
+actions $24.99 / €21.76; put them in `STRIPE_PRICE_ACTIONS_40` and
+`STRIPE_PRICE_ACTIONS_100`; the webhook endpoint also sends
+`checkout.session.async_payment_succeeded`.
+
+```sql
+select pack, actions, status, expires_at, stripe_checkout_session_id from action_topups order by created_at desc limit 5;
+```
+
+**T6 — monthly subscriber buys a pack**
+1. Account on monthly Starter (trial ended: `stripe subscriptions update <sub_id> --trial-end=now`).
+2. Account & billing → Buy more AI actions → 40 → pay with `4242…`.
+3. Expect: `checkout.session.completed` → 200; one `action_topups` row, `actions` = 40,
+   `expires_at` = the `usage.resets_at` shown on the Account page; Account shows "+40 extra";
+   the app returns with the "Payment received" notice. Nothing new in `payments` or `subscriptions`.
+
+**T7 — the pack really extends the limit**
+1. With the T6 account, generate until 30 plan actions are used (or seed `usage_events`).
+2. Expect generation keeps working up to 70 total, then 402 with the "Buy more AI actions" action.
+
+**T8 — yearly subscriber + redelivery**
+1. Account on yearly Pro, buy 100.
+2. Expect `expires_at` ≈ one month after the current monthly window start (not the yearly renewal).
+3. `stripe events resend <evt_id>` for that `checkout.session.completed` → 200, still ONE row.
+
+**T9 — refund and trial**
+1. Refund the T8 pack in full from the Stripe test dashboard → `charge.refunded` → 200; the row's `status` = `refunded`; Account no longer shows the extra actions.
+2. A trialing account: Account shows no "Buy more AI actions" button, and
+   `POST /api/payments/create-topup-checkout` returns 403 `TOPUP_REQUIRES_PLAN`.
+
 **Stop condition:** any webhook answering non-2xx, any status other than the
 expected one, or a missing email row. Stop, record it, do not ship.
 
@@ -88,7 +122,11 @@ expected one, or a missing email row. Stop, record it, do not ship.
 | T3 | — | — | NOT RUN | — | — |
 | T4 | — | — | NOT RUN | — | — |
 | T5 | — | — | NOT RUN | — | — |
+| T6 | — | — | NOT RUN | — | — |
+| T7 | — | — | NOT RUN | — | — |
+| T8 | — | — | NOT RUN | — | — |
+| T9 | — | — | NOT RUN | — | — |
 
-When all five pass on the frozen FINAL SHA, step 7 is satisfied for this
+When all nine pass on the frozen FINAL SHA, step 7 is satisfied for this
 release: the live A–H evidence stays valid for everything the diff does not
 touch, and this record covers what it does.

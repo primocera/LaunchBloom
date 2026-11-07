@@ -13,6 +13,8 @@ const { track } = require('../lib/analytics');
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
 // v12 SC-V12-04: structured, PII-free operational signals.
 const { opsSignal } = require('../lib/ops-signal');
+const usage = require('../lib/usage');
+const { topupPack } = require('../lib/plan-catalog');
 // SV-01 (v20): the ONE canonical, typed ownership rule. webhooks delegates to it
 // so checkout, the reconciler, the portal and account deletion cannot drift to a
 // second rule. Behaviour is identical to the prior inline logic; the typed states
@@ -417,6 +419,16 @@ async function handleEvent(event) {
       }
       await onCheckoutSessionCompleted(data);
       break;
+    // A top-up pack paid by a delayed method (bank debit etc.) completes the
+    // session unpaid first; the grant lands when the money does. Same exact
+    // discriminator gate as checkout.session.completed.
+    case 'checkout.session.async_payment_succeeded':
+      if (data.metadata?.scalvya !== '1') {
+        ignoreForeign();
+        return;
+      }
+      await onCheckoutSessionCompleted(data);
+      break;
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
       if (!ownSubscriptionOrDrop()) return;
@@ -440,12 +452,14 @@ async function handleEvent(event) {
       break;
     // A refund or a dispute does NOT itself change the subscription status, so
     // it must not change entitlement here - the status transition Stripe sends
-    // (e.g. customer.subscription.deleted) is what does. We acknowledge it,
-    // record a signal for the operator, and make no data mutation. Foreign ones
-    // are dropped exactly like any other foreign event.
+    // (e.g. customer.subscription.deleted) is what does. We acknowledge it and
+    // record a signal for the operator. The one mutation: a FULLY refunded
+    // top-up pack charge revokes that pack's extra AI actions. Foreign ones are dropped
+    // exactly like any other foreign event.
     case 'charge.refunded':
       if (!(await isOurCharge(data))) { ignoreForeign(); return; }
       opsSignal('charge_refunded', { event_id: event.id, event_type: event.type, charge_id: data.id, severity: 'info' });
+      await revokeRefundedTopup(data);
       break;
     case 'charge.dispute.created':
     case 'charge.dispute.closed':
@@ -453,6 +467,8 @@ async function handleEvent(event) {
       opsSignal('charge_dispute', {
         event_id: event.id, event_type: event.type, dispute_id: data.id, charge_id: data.charge, severity: 'warn',
       });
+      // A LOST dispute on a top-up charge takes the pack back, like a refund.
+      if (event.type === 'charge.dispute.closed') await revokeLostDisputeTopup(data);
       break;
     case 'customer.created':
     case 'customer.updated':
@@ -567,6 +583,7 @@ async function onCheckoutSessionCompleted(session) {
       await supabase.from('subscriptions').update({ customer_id: customer.id }).eq('stripe_subscription_id', session.subscription);
       console.log(`Checkout subscription linked: ${session.subscription} → customer ${customer.id}`);
     }
+    await grantTopupPack(session, customer.id, appUserId);
     return;
   }
 
@@ -597,9 +614,85 @@ async function onCheckoutSessionCompleted(session) {
 
     console.log(`Checkout subscription linked: ${session.subscription} → customer ${customer.id}`);
   }
+  await grantTopupPack(session, customer.id, appUserId);
 
   // v5 Prompt 14: no "subscription active" email here - entitlement is only
   // durable once the subscription events land (trial_started covers welcome).
+}
+
+/**
+ * Grant a paid top-up pack exactly once. The pack definition comes from OUR
+ * catalog by key (never an action count from metadata). It is valid until the
+ * next reset of the monthly window that is current when the payment lands -
+ * for monthly AND yearly subscribers, since both meter per monthly window. It
+ * is dated at grant time, not session creation, so a checkout opened before a
+ * reset and paid after it (or a delayed payment method) is never granted
+ * already expired. Idempotent on the Checkout Session id (unique), so a
+ * redelivered or concurrent event is a no-op. Never written to `payments`
+ * (that table means lifetime access).
+ */
+async function grantTopupPack(session, customerId, appUserId) {
+  if (session.mode !== 'payment' || session.metadata?.kind !== 'action_topup') return;
+  if (session.payment_status !== 'paid') {
+    // Delayed payment method: checkout.session.async_payment_succeeded grants.
+    console.log(`top-up pack awaiting payment: ${session.id}`);
+    return;
+  }
+  const pack = topupPack(session.metadata.pack);
+  if (!pack || !appUserId) {
+    opsSignal('reconciliation_correction', { reason: 'topup_pack_unresolvable', severity: 'high' });
+    return;
+  }
+  // Throws on a read error so Stripe redelivers instead of mis-dating the pack.
+  const expiresAt = await usage.customerWindowEnd(customerId, new Date());
+  const { data: inserted, error } = await supabase
+    .from('action_topups')
+    .upsert(
+      {
+        user_id: appUserId,
+        pack: session.metadata.pack,
+        actions: pack.actions,
+        expires_at: expiresAt,
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: session.payment_intent || null,
+        amount_total: session.amount_total ?? null,
+        currency: session.currency || null,
+      },
+      { onConflict: 'stripe_checkout_session_id', ignoreDuplicates: true },
+    )
+    .select('id');
+  // Throw so Stripe redelivers; the unique key keeps the retry from doubling.
+  if (error) throw new Error(`top-up pack grant failed for ${session.id}: ${error.message}`);
+  // A skipped duplicate returns no row: count each purchase once.
+  if (Array.isArray(inserted) && inserted.length) {
+    track('topup_purchased', { userId: appUserId, properties: { pack: session.metadata.pack, actions: pack.actions } });
+  }
+}
+
+/** A fully refunded top-up charge takes that pack's extra AI actions back. */
+async function revokeRefundedTopup(charge) {
+  if (!charge || !charge.refunded || !charge.payment_intent) return;
+  await revokeTopupByPaymentIntent(charge.payment_intent, charge.id);
+}
+
+/**
+ * A dispute closed as LOST on a top-up charge takes the pack back: Stripe keeps
+ * the money for the buyer without a Refund object, so charge.refunded never
+ * fires for it. Won / warning_closed disputes change nothing.
+ */
+async function revokeLostDisputeTopup(dispute) {
+  if (!dispute || dispute.status !== 'lost' || !dispute.payment_intent) return;
+  await revokeTopupByPaymentIntent(dispute.payment_intent, dispute.charge);
+}
+
+async function revokeTopupByPaymentIntent(paymentIntentId, chargeId) {
+  const { error } = await supabase
+    .from('action_topups')
+    .update({ status: 'refunded' })
+    .eq('stripe_payment_intent_id', paymentIntentId);
+  // Not thrown: a subscription refund must never be retried forever because
+  // the top-up table is unavailable. The operator signal is the follow-up.
+  if (error) opsSignal('reconciliation_correction', { reason: 'topup_pack_revoke_failed', charge_id: chargeId, severity: 'high' });
 }
 
 async function onSubscriptionUpdated(subscription, eventAt, eventType, previous = {}) {
@@ -840,3 +933,5 @@ module.exports.invoiceSubscriptionId = invoiceSubscriptionId;
 // SV-21-01: exported so the enforced-path test can assert a wrong-user / foreign
 // checkout customer is never persisted and the owner key is app_user_id.
 module.exports.onCheckoutSessionCompleted = onCheckoutSessionCompleted;
+module.exports.revokeRefundedTopup = revokeRefundedTopup;
+module.exports.revokeLostDisputeTopup = revokeLostDisputeTopup;
