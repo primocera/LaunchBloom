@@ -22,3 +22,7 @@ key.txt
 "*.local.txt"
 env*.txt
 *local.txt
+
+# Brand assets (favicon / app icons / share image) are real deliverables.
+!app-src/public/*.png
+!app/*.png

@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { BRAND } from '../brand';
-import BloomMark from './BloomMark';
+import ScalvyaMark from './ScalvyaMark';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
 import ThemeToggle from './ThemeToggle';
@@ -98,7 +98,7 @@ export default function Sidebar({ onCollapse, mobileOpen = false, onNavigate }) 
     >
       <div className="sidebar-head">
         <Link to="/" className="brand" style={{ textDecoration: 'none' }}>
-          <div className="brand-mark"><BloomMark /></div>
+          <div className="brand-mark"><ScalvyaMark variant="white" size={20} /></div>
           <div>
             <div className="brand-name">{BRAND.name}</div>
             <div className="brand-sub">AI marketing workspace</div>

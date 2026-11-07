@@ -4,7 +4,8 @@ import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { BRAND } from '../brand';
 import { resumePendingCheckout } from './Login';
-import BloomMark from '../components/BloomMark';
+import ScalvyaMark from '../components/ScalvyaMark';
+import HeroStripes from '../components/HeroStripes';
 import Marquee from '../components/Marquee';
 import Meteors from '../components/Meteors';
 import Reveal from '../components/Reveal';
@@ -233,13 +234,16 @@ export default function Landing() {
     <div className="lp">
       {/* ── 1. Hero (animated sky kept from the CF design system) ─────── */}
       <div className="lp-sky">
-        <div className="lp-clouds" aria-hidden="true" />
+        {/* v26 brand-board match: the hero is white now, with the logo's own
+            icy/cobalt/navy ribbon (HeroStripes) bleeding off the right/
+            bottom edge and the cobalt wind streaks (Meteors) over it. */}
+        <HeroStripes />
         <Meteors />
 
         <header className="lp-header">
           <div className="lp-brand">
             <span className="lp-brand-mark">
-              <BloomMark />
+              <ScalvyaMark variant="color" size={34} />
             </span>
             {BRAND.name}
           </div>
@@ -260,28 +264,32 @@ export default function Landing() {
         </header>
 
         <main className="lp-hero" id="main-content">
-          <div className="lp-eyebrow lp-hero-eyebrow">FROM ONE BRIEF TO ONE CONNECTED CAMPAIGN</div>
-          <h1>Turn one offer into a launch-ready campaign.</h1>
-          <p className="lp-sub">
-            {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
-            agencies: keep one offer&rsquo;s positioning, claims and CTA consistent across every
-            channel you deliver for a client. Solo founders run their own launch the same way.
-            Launch-ready means structured, connected and ready for your review - publishing stays in your hands.
-          </p>
+          <div className="lp-hero-grid">
+            <div className="lp-hero-copy">
+              <div className="lp-eyebrow lp-hero-eyebrow">FROM ONE BRIEF TO ONE CONNECTED CAMPAIGN</div>
+              <h1>Turn one offer into a launch-ready campaign.</h1>
+              <p className="lp-sub">
+                {BRAND.name} is the campaign-control workspace for freelance marketers and boutique
+                agencies: keep one offer&rsquo;s positioning, claims and CTA consistent across every
+                channel you deliver for a client. Solo founders run their own launch the same way.
+                Launch-ready means structured, connected and ready for your review - publishing stays in your hands.
+              </p>
 
-          <div className="lp-hero-actions">
-            <Link className="lp-cta" to="/app/signup">
-              Create my campaign
-            </Link>
-            <a className="lp-cta-ghost" href="#example">
-              See an example
-            </a>
+              <div className="lp-hero-actions">
+                <Link className="lp-cta" to="/app/signup">
+                  Create my campaign
+                </Link>
+                <a className="lp-cta-ghost" href="#example">
+                  See an example
+                </a>
+              </div>
+
+              <p className="lp-cta-note">
+                Create an account free - it takes an email and a password. Start a 3-day trial only when
+                you’re ready to generate; a payment method is required for the trial.
+              </p>
+            </div>
           </div>
-
-          <p className="lp-cta-note">
-            Create an account free - it takes an email and a password. Start a 3-day trial only when
-            you’re ready to generate; a payment method is required for the trial.
-          </p>
 
           {/* v10 SC-05: what the product actually produces, above the fold.
               Labels only - no metrics, counts, logos or outcome claims. */}
@@ -535,7 +543,7 @@ export default function Landing() {
         <div className="lp-footer-inner">
           <div className="lp-brand is-dark">
             <span className="lp-brand-mark">
-              <BloomMark />
+              <ScalvyaMark variant="color" size={26} />
             </span>
             {BRAND.name}
           </div>

@@ -2,12 +2,18 @@
    body copy inside feature cards, black pill buttons. Scoped to .lp so the
    warm-neutral app shell is untouched. */
 .lp {
-  --blue: #2563eb;
+  /* Brand board palette (CONNECTED / REFINED): Cobalt Blue #3069E9, Midnight
+     Navy #0D1B3A, Ice Blue, White. --blue now matches the approved hero blue
+     (--sky-top, #2f6ceb - practically identical to #3069E9) so every accent
+     below the hero - eyebrows, links, bullets, buttons - reads as one brand
+     blue instead of the old generic #2563eb. */
+  --blue: #2f6ceb;
   --blue-hi: #2469ff;
-  --blue-deep: #1e5fe0;
+  --blue-deep: #0d1b3a;
   --sky-top: #2f6ceb;
-  --tint: #f2f6ff;
-  --tint-deep: #eaf1fe;
+  --navy: #0d1b3a;
+  --tint: #dcebfb;
+  --tint-deep: #c9ddf5;
   --ink: #111111;
   --ink-deep: #050505;
 
@@ -16,6 +22,15 @@
   --text: #111111;
   --text-muted: #6b6b6b;
   --text-faint: #727272; /* v18 X04: was #9a9a9a (2.81:1 on white) - now 4.81:1, WCAG AA */
+
+  /* v26 brand-board white hero: a slate-navy secondary text colour and a
+     matching light border, sampled off the mockup's nav/body copy and its
+     "Log in" outline pill - distinct from --text-muted (plain grey, used
+     below the fold) because the mockup's muted hero text carries a blue
+     cast. 7.32:1 on white - comfortably WCAG AA, verified by
+     backend/tests/landing-contrast.test.js. */
+  --hero-muted: #4b5578;
+  --hero-border: #dde5f7;
 
   min-height: 100%;
   overflow-x: hidden;
@@ -51,38 +66,33 @@
   }
 }
 
-/* ── Blue sky block: header + hero live inside it ─────────────────────── */
+/* ── White hero block: header + hero live inside it ───────────────────── */
 
 .lp-sky {
   position: relative;
   overflow: hidden;
-  /* Saturated open sky at the top, washing to white where the next section
-     starts. The approved blue is --sky-top (#2f6ceb), unchanged.
+  /* v26 brand-board "01 / CONNECTED" match: the owner's laptop mockup hero is
+     WHITE (not the earlier saturated cobalt sky) - navy headline, slate body
+     copy, and the logo's own icy/cobalt/navy ribbon (HeroStripes) bleeding
+     off the right/bottom edge supplies all the colour. The gradient stays
+     (rather than a flat background) only for the barely-there cool wash in
+     its last few percent, right where the ribbon's navy corner sits - still
+     white everywhere hero text renders. --sky-top (#2f6ceb) is unchanged and
+     still backs the dark final-CTA band further down the page.
 
-     v12 SC-V12-02 fixes the real WCAG AA defect without a scrim and without
-     dulling the blue. The earlier palette lightened THROUGH the hero (4.70:1
-     at the top, 4.10:1 at 26%, then 2.49:1 at 62% and 1.99:1 by 70%), so the
-     CTA note and proof strip - the lowest hero copy - were the least readable
-     text on the page. The owner rejected the v11 navy scrim and glass surfaces
-     for dulling the blue, so neither is used here.
-
-     Instead the approved blue is HELD flat across the whole text band (0-70%),
-     where white hero copy, the CTA disclosure and the proof strip render, so
-     white text measures a uniform 4.70:1 (>= AA's 4.5) everywhere it appears.
-     The fade toward pale blue and white is delayed to BELOW the text band
-     (70-100%), which keeps the open-sky character and the section transition
-     while making the hero accessible. Verified by backend/tests/
-     landing-contrast.test.js, which samples the full band and requires AA.
-
-     Hero copy is OPAQUE white (never translucent): alpha over a gradient is
-     what produced the worst historical ratios. */
-  background: linear-gradient(
+     Hero text is opaque navy/slate (never translucent) on this near-white
+     band, so contrast is large everywhere by construction. backend/tests/
+     landing-contrast.test.js still computes it for real - against every
+     stop of this gradient, not just asserted - rather than assuming white
+     text is automatically readable on white. */
+  /* Soft cobalt glow behind the artwork, as on the brand board. */
+  background:
+    radial-gradient(55% 70% at 88% 55%, rgba(205, 222, 255, 0.75) 0%, rgba(205, 222, 255, 0) 70%),
+    linear-gradient(
     180deg,
-    var(--sky-top) 0%,
-    var(--sky-top) 70%,
-    #7ba4f3 82%,
-    #cfdefa 92%,
-    #ffffff 100%
+    #ffffff 0%,
+    #ffffff 94%,
+    #f2f6ff 100%
   );
 }
 
@@ -97,11 +107,14 @@
 }
 
 /* Each streak starts off-screen left and is carried across on its own clock;
-   duration and delay come from the element, so no two travel together. */
+   duration and delay come from the element, so no two travel together.
+   v26: the hero is white now, so a white-on-white streak would be invisible -
+   cobalt (the board's own accent, #2F68E8) at low opacity keeps the same
+   "wind" motion legible on the new background. */
 .lp-meteor {
   position: absolute;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #fff, transparent);
+  background: linear-gradient(90deg, transparent, #2f68e8, transparent);
   border-radius: 999px;
   transform: translateX(-180px) rotate(-12deg);
   animation-name: meteor;
@@ -111,34 +124,17 @@
 
 @keyframes meteor {
   0% { opacity: 0; transform: translateX(-180px) rotate(-12deg); }
-  12% { opacity: 0.9; }
-  62% { opacity: 0.9; }
+  12% { opacity: 0.4; }
+  62% { opacity: 0.4; }
   100% { opacity: 0; transform: translateX(720px) rotate(-12deg); }
 }
 
-/* Soft cloud banks drifting across the lower half of the sky. */
-.lp-clouds {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(48% 32% at 18% 74%, rgba(255, 255, 255, 0.5), transparent 70%),
-    radial-gradient(42% 26% at 78% 66%, rgba(255, 255, 255, 0.42), transparent 72%),
-    radial-gradient(60% 30% at 50% 88%, rgba(255, 255, 255, 0.6), transparent 70%),
-    radial-gradient(30% 20% at 32% 52%, rgba(255, 255, 255, 0.24), transparent 74%);
-  animation: clouds 34s ease-in-out infinite alternate;
-}
-
-@keyframes clouds {
-  from { transform: translateX(-2%) scale(1); }
-  to { transform: translateX(2%) scale(1.05); }
-}
 
 /* ── Header: transparent, sits on the blue ────────────────────────────── */
 
 .lp-header {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -151,9 +147,11 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  /* v26: the header sits on the new white hero, same as the mockup's navy
+     wordmark next to its colour mark. */
+  color: var(--navy);
   letter-spacing: -0.01em;
 }
 
@@ -161,55 +159,71 @@
   color: var(--ink);
 }
 
+/* Brand-board match: the logo mark sits bare next to the wordmark (no app-icon
+   box) - white on the blue header, full colour on the white footer. */
 .lp-brand-mark {
   display: grid;
+  flex: none;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--blue);
-  background: #fff;
-  border-radius: 8px;
 }
 
-.lp-brand.is-dark .lp-brand-mark {
-  color: #fff;
-  background: var(--ink);
-}
-
+/* v26 brand-board match: the mockup's header "Get started" is a solid cobalt
+   pill, not a white one - the header no longer sits on a blue sky, so a
+   white button would vanish against the new white hero. */
 .lp-header-cta {
-  padding: 11px 22px;
+  padding: 12px 26px;
   font-size: 14.5px;
   font-weight: 600;
-  color: var(--ink);
+  color: #ffffff;
   text-decoration: none;
-  background: #fff;
+  background: var(--blue);
   border-radius: 10px;
-  transition: transform 0.15s;
+  transition: transform 0.15s, background 0.15s;
 }
 
 .lp-header-cta:hover {
   transform: translateY(-1px);
+  background: var(--navy);
 }
 
 /* Primary nav (Prompt 15): Product · How it works · Example campaign · Pricing · Sign in */
 .lp-nav {
   display: flex;
-  gap: 26px;
+  gap: 22px;
   align-items: center;
 }
 
 .lp-nav a {
   font-size: 14.5px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.88);
+  /* v26: the header sits on white now - the mockup's nav text is a muted
+     slate, not translucent white. */
+  color: var(--hero-muted);
   text-decoration: none;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 
 .lp-nav a:hover {
-  color: #fff;
+  color: var(--navy);
+}
+
+/* Brand-board match: "Sign in" is the nav's last link and is restyled as the
+   outline pill the mockup uses for its secondary header action ("Log in"),
+   without touching the <Link> element itself - backend/tests/
+   signup-conversion.test.js requires the exact, class-free
+   `<Link to="/app/login">Sign in</Link>` markup so returning users always get
+   an unambiguous, separately labelled login link. */
+.lp-nav a:last-child {
+  padding: 9px 20px;
+  color: var(--hero-muted);
+  border: 1px solid var(--hero-border);
+  border-radius: 10px;
+}
+
+.lp-nav a:last-child:hover {
+  color: var(--navy);
+  background: var(--tint);
+  border-color: var(--blue);
 }
 
 @media (max-width: 860px) {
@@ -223,24 +237,76 @@
 .lp-hero {
   position: relative;
   z-index: 2;
-  max-width: 960px;
-  padding: 56px 24px 110px;
+  max-width: 1240px;
+  padding: 40px 32px 100px;
   margin: 0 auto;
-  text-align: center;
+  text-align: left;
 }
 
-/* text-[76px] font-normal leading-[0.95] tracking-[-3px], verbatim. */
+/* Brand refresh: copy on the left, the logo's three widening strokes on the
+   right (HeroStripes), bled off the edge. Stacks to copy-only below 1024px. */
+.lp-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.lp-hero-art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 49%;
+  overflow: hidden;
+  pointer-events: none;
+  /* v26: the mockup's ribbon is fully opaque all the way to the edge it
+     bleeds off - no fade. The proof strip (z-index: 2, above this layer)
+     stays readable on its own tinted cards without needing the art to fade
+     out behind it. */
+}
+
+/* The mark, huge: its bottom-left tips sit inside the box, its top-right ends
+   run off the right edge, as on the brand board's landing. */
+@media (max-width: 1199px) {
+  .lp-hero-art {
+    display: none;
+  }
+}
+
+.lp-hero-art svg {
+  position: absolute;
+  top: 96px;
+  right: 1%;
+  width: 98%;
+  height: auto;
+  aspect-ratio: 1.3;
+}
+
+@media (max-width: 1023px) {
+  .lp-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-hero-art {
+    display: none;
+  }
+}
+
 .lp-hero h1 {
-  font-size: 76px;
-  font-weight: 400;
-  line-height: 0.95;
-  color: #fff;
-  letter-spacing: -3px;
+  font-size: 62px;
+  font-weight: 800;
+  line-height: 1.04;
+  /* v26 brand-board match: navy headline on the new white hero, matching the
+     mockup's "One campaign. Every channel. Fully coordinated." weight. */
+  color: var(--navy);
+  letter-spacing: -2.2px;
 }
 
 @media (max-width: 1023px) {
   .lp-hero h1 {
-    font-size: 64px;
+    font-size: 54px;
   }
 }
 
@@ -261,18 +327,21 @@
 }
 
 .lp-sub {
-  max-width: 640px;
-  margin: 20px auto 0;
+  max-width: 600px;
+  margin: 22px 0 0;
   font-size: clamp(15px, 1.6vw, 19px);
   line-height: 1.5;
-  /* v10 SC-05: opaque - alpha over the gradient dropped this below AA. */
-  color: #fff;
+  /* v26: slate body copy on the new white hero (still opaque - alpha over a
+     gradient is what dropped the old white version below AA, and a
+     translucent colour would do the same here). */
+  color: var(--hero-muted);
 }
 
 .lp-hero-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 30px;
 }
 
@@ -286,6 +355,11 @@
   transition: transform 0.15s, background 0.15s;
 }
 
+/* Base .lp-cta/.lp-cta-ghost still serve the dark final-CTA band further down
+   the page (its own dark gradient, unchanged) - white pill on dark blue. The
+   hero itself is white now, so `.lp-hero-actions` below overrides both for
+   the mockup's solid-cobalt "Get started" / outline "See how it works" look,
+   the only place .lp-cta-ghost is used. */
 .lp-cta {
   color: var(--ink);
   background: #fff;
@@ -293,9 +367,7 @@
 
 .lp-cta-ghost {
   color: #fff;
-  /* v10 SC-05: a white veil LIGHTENED the button and cut contrast to 3.41.
-     A dark scrim raises white-on-button to 6.39 and keeps the ghost look. */
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.65);
 }
 
@@ -311,8 +383,51 @@
 }
 
 .lp-cta-ghost:hover {
-  background: rgba(0, 0, 0, 0.32);
+  background: rgba(0, 0, 0, 0.26);
   border-color: #fff;
+}
+
+/* v26 brand-board match: the hero's own "Get started" / "See how it works"
+   look - solid cobalt pill with a trailing arrow, outline pill with a
+   leading play mark, both on the white hero. The icons are CSS-generated
+   (::before/::after), so the Link text stays exactly "Create my campaign" /
+   "See an example" (backend/tests/signup-conversion.test.js matches that
+   text verbatim) and screen readers announce only the real label. */
+.lp-hero-actions .lp-cta {
+  color: #ffffff;
+  background: var(--blue);
+}
+
+.lp-hero-actions .lp-cta:hover {
+  background: var(--navy);
+}
+
+.lp-hero-actions .lp-cta::after {
+  content: '\2192';
+  margin-left: 8px;
+  font-weight: 700;
+}
+
+.lp-hero-actions .lp-cta-ghost {
+  color: var(--hero-muted);
+  background: #ffffff;
+  border: 1px solid var(--hero-border);
+}
+
+.lp-hero-actions .lp-cta-ghost:hover {
+  color: var(--navy);
+  background: var(--tint);
+  border-color: var(--blue);
+}
+
+.lp-hero-actions .lp-cta-ghost::before {
+  content: '';
+  display: inline-block;
+  margin-right: 10px;
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent var(--blue);
+  vertical-align: middle;
 }
 
 /* Focus is drawn outside the button, so nothing reflows when it appears. */
@@ -323,8 +438,21 @@
   outline-offset: 3px;
 }
 
+/* The header CTA and both hero CTAs sit on the white hero/header, where a
+   white focus ring is invisible - everything else using .lp-cta still sits
+   on the dark final-CTA gradient, where white is correct and stays above. */
+.lp-header .lp-header-cta:focus-visible,
+.lp-hero-actions .lp-cta:focus-visible,
+.lp-hero-actions .lp-cta-ghost:focus-visible {
+  outline-color: var(--navy);
+}
+
 .lp-cta-ghost:focus-visible {
   background: rgba(0, 0, 0, 0.32);
+}
+
+.lp-hero-actions .lp-cta-ghost:focus-visible {
+  background: var(--tint);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -342,25 +470,24 @@
 }
 
 /* Hero eyebrow + CTA note + example trust line (Prompt 15) */
-/* v10 SC-05: the element carries BOTH .lp-eyebrow and .lp-hero-eyebrow. Both
-   were single-class specificity, and .lp-eyebrow is declared ~475 lines later,
-   so it won with color: var(--blue) - blue text on the blue sky at 1.10:1,
-   effectively invisible. The compound selector makes the hero rule win.
-   Guarded by the browser assertion in e2e/smoke.spec.js, which is what caught
-   this; a stylesheet parser cannot see a cascade conflict. */
+/* v26: the hero is white now, so the eyebrow just takes the normal cobalt
+   .lp-eyebrow colour - no more cascade fight with a hero-only override. The
+   compound selector stays (still needed wherever .lp-eyebrow is declared
+   relative to this rule) but the colour matches the base brand-blue eyebrow
+   used everywhere else on the page. */
 .lp-eyebrow.lp-hero-eyebrow {
   display: inline-block;
   margin-bottom: 20px;
-  color: #fff;
+  color: var(--blue);
 }
 
 .lp-cta-note {
   max-width: 560px;
-  margin: 20px auto 0;
+  margin: 20px 0 0;
   font-size: 13.5px;
   line-height: 1.5;
-  /* v10 SC-05: was .78 - the worst offender at 2.07 on the lower gradient. */
-  color: #fff;
+  /* v26: slate on the new white hero, still opaque. */
+  color: var(--hero-muted);
 }
 
 .lp-trust-line {
@@ -1009,7 +1136,8 @@
   content: '';
 }
 
-/* The only black on the page, exactly as on ReelPanda. */
+/* v25 brand-board match: cobalt, not black - the board's own primary action
+   colour, same blue as the hero's "Get started" and the header CTA. */
 .lp-price-btn {
   width: 100%;
   padding: 15px;
@@ -1017,13 +1145,14 @@
   font-size: 14.5px;
   font-weight: 600;
   color: #fff;
-  background: var(--ink-deep);
+  background: var(--blue);
   border-radius: 999px;
-  transition: transform 0.15s;
+  transition: transform 0.15s, background 0.15s;
 }
 
 .lp-price-btn:hover {
   transform: translateY(-1px);
+  background: var(--navy);
 }
 
 .lp-price-micro {
@@ -1284,7 +1413,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-clouds,
   .lp-meteor,
   .marquee-track,
   .type-cursor {
@@ -1518,16 +1646,16 @@
 }
 
 /* ── v10 SC-05: above-fold proof strip ────────────────────────────────────
-   The mechanism made concrete in the hero. Text is opaque white on the dark
-   band (see .lp-sky); the card tint is a DARK scrim, because a white veil
-   lightens the background and costs contrast. */
+   The mechanism made concrete in the hero. v26: the hero is white now, so
+   the cards are a light brand-tint (same --tint used below the fold) with a
+   slate border, and the text is navy/slate rather than white-on-dark-scrim. */
 .lp-proof-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  max-width: 860px;
+  max-width: none;
   padding: 0;
-  margin: 34px auto 0;
+  margin: 44px 0 0;
   list-style: none;
 }
 
@@ -1537,15 +1665,16 @@
   gap: 3px;
   padding: 14px 14px 15px;
   text-align: left;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: #fff;
+  border: 1px solid var(--hero-border);
   border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(16, 28, 69, 0.08);
 }
 
 .lp-proof-n {
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
+  color: var(--blue);
   letter-spacing: 0.12em;
 }
 
@@ -1553,13 +1682,13 @@
   font-size: 14.5px;
   font-weight: 600;
   line-height: 1.25;
-  color: #fff;
+  color: var(--navy);
 }
 
 .lp-proof-detail {
   font-size: 12.5px;
   line-height: 1.35;
-  color: #fff;
+  color: var(--hero-muted);
 }
 
 /* Two columns on tablets, one on phones - never a horizontal scroll. */
@@ -1739,4 +1868,11 @@
   .lp-preview-severity {
     justify-self: start;
   }
+}
+
+/* Brand board: rectangular buttons with soft corners in the hero (the final
+   CTA band further down keeps its pills). */
+.lp-hero-actions .lp-cta,
+.lp-hero-actions .lp-cta-ghost {
+  border-radius: 10px;
 }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BRAND } from '../brand';
-import BloomMark from './BloomMark';
+import ScalvyaMark from './ScalvyaMark';
 
 // Shared frame for the auth pages (login, signup, forgot/reset password):
 // a plain white page with the logo top-left and one centered column, so the
@@ -10,7 +10,7 @@ export default function AuthLayout({ children }) {
     <div className="login">
       <header className="auth-top">
         <Link to="/" className="auth-logo" aria-label={`${BRAND.name} home`}>
-          <span className="auth-logo-mark"><BloomMark /></span>
+          <span className="auth-logo-mark"><ScalvyaMark variant="color" size={22} /></span>
           {BRAND.name}
         </Link>
       </header>
