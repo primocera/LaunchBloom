@@ -104,6 +104,16 @@ test('create + list a campaign', async () => {
   assert.ok('asset_counts' in list.body.campaigns[0]);
 });
 
+test('campaign detail carries asset_counts + deliverable_plan like a list row (F2)', async () => {
+  const id = db._campaigns[0].id;
+  const r = await request(app).get(`/api/campaigns/${id}`).set(...AUTHED);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.campaign.id, id);
+  assert.deepEqual(Object.keys(r.body.campaign.asset_counts).sort(),
+    ['creative_assets', 'email_assets', 'seo_assets', 'social_assets', 'website_pages']);
+  assert.ok(Array.isArray(r.body.campaign.deliverable_plan));
+});
+
 test('create requires a name', async () => {
   const r = await request(app).post('/api/campaigns').set(...AUTHED).send({ objective: 'x' });
   assert.equal(r.status, 400);

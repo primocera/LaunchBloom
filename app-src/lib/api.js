@@ -3,14 +3,22 @@
 // cookies with `credentials: 'include'`.
 
 import { messageForError } from './microcopy';
+import { readActiveWorkspace, writeActiveWorkspace, dropActiveWorkspace } from './workspace-pin';
 
-const WORKSPACE_KEY = 'active_workspace_id';
+function storages() {
+  let local = null;
+  let session = null;
+  try { local = window.localStorage; } catch { /* blocked */ }
+  try { session = window.sessionStorage; } catch { /* blocked */ }
+  return [local, session];
+}
+// Pinned per tab (lib/workspace-pin.js): another tab switching client can't
+// redirect this tab's writes.
 export function getActiveWorkspace() {
-  return localStorage.getItem(WORKSPACE_KEY);
+  return readActiveWorkspace(...storages());
 }
 export function setActiveWorkspace(id) {
-  if (id) localStorage.setItem(WORKSPACE_KEY, id);
-  else localStorage.removeItem(WORKSPACE_KEY);
+  writeActiveWorkspace(...storages(), id);
 }
 
 async function request(path, { method = 'GET', body, signal, idempotencyKey } = {}) {
@@ -45,6 +53,9 @@ async function request(path, { method = 'GET', body, signal, idempotencyKey } = 
       retry_after,
     });
     err.userMessage = messageForError(err);
+    // The workspace this tab was pinned to is gone: drop the pin so a reload
+    // lands in an active workspace instead of failing every save.
+    if (data.code === 'WORKSPACE_UNAVAILABLE') dropActiveWorkspace(...storages(), ws);
     throw err;
   }
   return data;

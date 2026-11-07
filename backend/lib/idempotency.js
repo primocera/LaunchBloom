@@ -66,11 +66,32 @@ function idempotent(route) {
             });
           }
           // failed or orphaned → take the claim over and re-run.
-          await supabase
-            .from('generation_jobs')
-            .update({ status: 'in_flight', http_status: null, result: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-            .eq('user_id', req.userId)
-            .eq('idempotency_key', key);
+          const takeover = { status: 'in_flight', http_status: null, result: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+          if (job) {
+            // Compare-and-swap on the row we just read: of two concurrent
+            // retries only one matches; the other gets IN_PROGRESS instead of
+            // a second generation (and a second charge).
+            const { data: took, error: takeErr } = await supabase
+              .from('generation_jobs')
+              .update(takeover)
+              .eq('user_id', req.userId)
+              .eq('idempotency_key', key)
+              .eq('status', job.status)
+              .eq('created_at', job.created_at)
+              .select('idempotency_key');
+            if (!takeErr && Array.isArray(took) && took.length === 0) {
+              return res.status(409).json({
+                error: 'This generation is still running. Please wait for it to finish.',
+                code: 'IN_PROGRESS',
+              });
+            }
+          } else {
+            await supabase
+              .from('generation_jobs')
+              .update(takeover)
+              .eq('user_id', req.userId)
+              .eq('idempotency_key', key);
+          }
         }
 
         // Capture the JSON response so replays can return it verbatim.

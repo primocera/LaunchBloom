@@ -260,6 +260,11 @@ app.use((err, req, res, _next) => {
     logError('plan_unavailable', { req_id: req.id, path: req.path, message: err.message });
     return res.status(503).json({ ...planUnavailableBody(), req_id: req.id });
   }
+  // A write aimed at an archived/deleted workspace: stable code so the client
+  // can drop its stale workspace pin (routes/workspaces.js resolveWorkspace).
+  if (workspacesRouter.isWorkspaceUnavailable(err)) {
+    return res.status(409).json({ error: err.message, code: err.code, req_id: req.id });
+  }
   logError('unhandled_error', { req_id: req.id, path: req.path, message: err.message, stack: err.stack });
   const status = err.status || err.statusCode || 500;
   res.status(status).json({

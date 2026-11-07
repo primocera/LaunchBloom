@@ -97,6 +97,19 @@ async function listWorkspaces(userId, { includeArchived = false } = {}) {
   return data || [];
 }
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const WORKSPACE_UNAVAILABLE = 'WORKSPACE_UNAVAILABLE';
+
+function workspaceUnavailable() {
+  return Object.assign(
+    new Error('This workspace was archived or deleted. Reload the page to continue in another workspace.'),
+    { status: 409, code: WORKSPACE_UNAVAILABLE },
+  );
+}
+function isWorkspaceUnavailable(err) {
+  return !!err && err.code === WORKSPACE_UNAVAILABLE;
+}
+
 /**
  * Resolve the workspace a request should act on: the client-supplied
  * X-Workspace-Id when the caller owns it and it isn't archived, otherwise the
@@ -112,6 +125,10 @@ async function resolveWorkspace(req) {
   if (wanted) {
     const owned = await ownedWorkspace(wanted, req.userEmail, req.userId);
     if (owned && !owned.archived) return owned;
+    // A WRITE aimed at a workspace that is archived, deleted or not the caller's
+    // must not silently land in another client's workspace. Reads keep the
+    // fallback so a stale id still shows a usable app.
+    if (!SAFE_METHODS.has(req.method)) throw workspaceUnavailable();
   }
   const active = await listWorkspaces(req.userId);
   if (active[0]) return active[0];
@@ -714,3 +731,4 @@ module.exports.ensureWorkspace = ensureWorkspace;
 module.exports.ownedWorkspace = ownedWorkspace;
 module.exports.resolveWorkspace = resolveWorkspace;
 module.exports.listWorkspaces = listWorkspaces;
+module.exports.isWorkspaceUnavailable = isWorkspaceUnavailable;

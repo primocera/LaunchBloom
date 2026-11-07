@@ -239,15 +239,23 @@ export default function BrandProfile() {
   const [status, setStatus] = useState('');
   const [open, setOpen] = useState('basics');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // A failed load must not show an empty editable form: the first keystroke
+  // would PUT that near-empty object over the whole stored profile.
+  const [loadFailed, setLoadFailed] = useState(false);
   const timer = useRef(null);
   const saveSeq = useRef(0); // stale-response guard
 
-  useEffect(() => {
+  function load() {
+    setLoadFailed(false);
     api.brandProfile().then(({ profile: p }) => {
       setProfile(p || {});
       const empty = !p || !p.brand_name;
       if (params.get('welcome') === '1' && empty) setShowOnboarding(true);
-    }).catch(() => setProfile({}));
+    }).catch(() => setLoadFailed(true));
+  }
+
+  useEffect(() => {
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -260,13 +268,27 @@ export default function BrandProfile() {
       try {
         await api.saveBrandProfile(next);
         if (seq === saveSeq.current) setStatus('Brand Profile saved. New generations will use these facts.');
-      } catch {
+      } catch (e) {
+        // The workspace was archived/deleted elsewhere: retrying can never
+        // succeed, so say so instead of looping.
+        if (e && e.code === 'WORKSPACE_UNAVAILABLE') {
+          if (seq === saveSeq.current) setStatus(e.message);
+          return;
+        }
         if (seq === saveSeq.current) setStatus('Could not save - retrying. Your changes are still on this device.');
         setTimeout(() => { if (seq === saveSeq.current) persist(next); }, 4000);
       }
     }, 700);
   }
 
+  if (!profile && loadFailed) {
+    return (
+      <div className="brand-page">
+        <p className="flow-err" role="alert">Could not load your Brand Profile. Nothing was changed.</p>
+        <button type="button" className="flow-btn" onClick={load}>Try again</button>
+      </div>
+    );
+  }
   if (!profile) return <div className="brand-page"><p className="muted">Loading…</p></div>;
 
   if (showOnboarding) {

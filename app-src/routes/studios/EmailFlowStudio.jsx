@@ -1,8 +1,9 @@
 import BusyLabel from '../../components/BusyLabel';
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../../lib/api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { api, getActiveWorkspace } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { saveDraft, loadDraft, clearDraft } from '../../lib/local-drafts';
 import { download } from '../../lib/export';
 import { promoWindow, emailPlainText, emailMarkdown, emailsMarkdown } from '../../lib/email-preview';
 import TrialPaywall from '../../components/TrialPaywall';
@@ -155,7 +156,7 @@ function EmailCard({ item, onChange }) {
 }
 
 /** A generate form for one tab. Returns generated emails up to the parent. */
-function EmailForm({ fields, initial, generate, onGenerated }) {
+function EmailForm({ fields, initial, generate, onGenerated, draftKey, campaignId }) {
   const [values, setValues] = useState(initial || {});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -165,6 +166,29 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
   const { account } = useAuth();
   const isFreePlan = !account || account.plan === 'free' || !account.plan;
 
+  // Same bounded, user+workspace-scoped draft as the other studios: the form
+  // survives the tab switch (this form unmounts) and the Stripe round-trip.
+  const draftOwner = useMemo(
+    () => ({ userId: account?.id || '', workspaceId: getActiveWorkspace() || '' }),
+    [account?.id],
+  );
+  const draftRestored = useRef(false);
+  useEffect(() => {
+    if (draftRestored.current || !account || !draftKey) return;
+    draftRestored.current = true;
+    const saved = loadDraft(draftKey, draftOwner);
+    if (saved && typeof saved === 'object') setValues((prev) => ({ ...prev, ...saved }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, draftKey]);
+
+  function setField(name, v) {
+    setValues((prev) => {
+      const next = { ...prev, [name]: v };
+      if (draftKey) saveDraft(draftKey, next, draftOwner);
+      return next;
+    });
+  }
+
   const missing = fields.some(
     (f) => f.required && (values[f.name] == null || values[f.name] === '' || (Array.isArray(values[f.name]) && !values[f.name].length))
   );
@@ -173,9 +197,10 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
     if (isFreePlan) { setPaywall(true); return; } // v5 Prompt 2: trial paywall
     setBusy(true); setError(null); setUpgrade(false); setWarnings([]);
     try {
-      const res = await generate(values);
+      const res = await generate(campaignId ? { ...values, campaign_id: campaignId } : values);
       setWarnings(res.quality_warnings || []);
       onGenerated(res.emails || []);
+      if (draftKey) clearDraft(draftKey);
     } catch (e) {
       if (e.status === 402 || e.code === 'UPGRADE') {
         if (isFreePlan || e.plan === 'free') setPaywall(true);
@@ -188,8 +213,13 @@ function EmailForm({ fields, initial, generate, onGenerated }) {
 
   return (
     <div className="flow-card gen-form">
+      {campaignId && (
+        <p className="flow-muted gen-brief-line" role="status">
+          Generating inside a campaign - the approved brief is applied automatically.
+        </p>
+      )}
       {fields.map((f) => (
-        <FormField key={f.name} field={f} value={values[f.name]} onChange={(v) => setValues((p) => ({ ...p, [f.name]: v }))} />
+        <FormField key={f.name} field={f} value={values[f.name]} onChange={(v) => setField(f.name, v)} />
       ))}
       <div className="flow-row">
         <button className="flow-btn" disabled={busy || missing} onClick={run}>
@@ -224,6 +254,10 @@ const TABS = ['Lifecycle Flows', 'Campaign Emails', 'Saved Emails'];
 export default function EmailFlowStudio() {
   const [tab, setTab] = useState(0);
   const [items, setItems] = useState([]); // generated/saved email_assets
+  // Launched from a campaign (?campaign=<id>): campaign_id rides along with the
+  // generate call so the server applies the approved brief and links the emails.
+  const [searchParams] = useSearchParams();
+  const campaignId = searchParams.get('campaign') || null;
 
   useEffect(() => {
     api.assets('email_assets').then((r) => setItems(r.items || [])).catch(() => setItems([]));
@@ -267,6 +301,8 @@ export default function EmailFlowStudio() {
               initial={{ target_language: 'English', flow_types: ['welcome'] }}
               generate={(v, opts) => api.generateEmailFlow(v, opts)}
               onGenerated={prepend}
+              draftKey="lb-draft-email_assets-lifecycle"
+              campaignId={campaignId}
             />
             {lifecycleEmails.length > 0 && (
               <div className="flow-row" style={{ margin: '12px 0' }}>
@@ -286,6 +322,8 @@ export default function EmailFlowStudio() {
               initial={{ target_language: 'English' }}
               generate={(v, opts) => api.generateCampaignEmails(v, opts)}
               onGenerated={prepend}
+              draftKey="lb-draft-email_assets-campaign"
+              campaignId={campaignId}
             />
             {campaignEmails.length > 0 && (
               <div className="flow-row" style={{ margin: '12px 0' }}>

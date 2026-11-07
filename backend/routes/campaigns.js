@@ -124,7 +124,20 @@ router.get('/api/campaigns/:id', requireAuth, async (req, res, next) => {
     const ws = await resolveWorkspace(req);
     const campaign = await ownedCampaign(ws, req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    res.json({ campaign });
+
+    // Same shape as one row of the list route: the Overview's next action and
+    // deliverables panel read deliverable_plan + asset_counts from this object.
+    const { data: planRows } = await supabase
+      .from('campaign_deliverables').select('deliverable_code, requirement_state')
+      .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+    const counts = {};
+    await Promise.all(ASSET_TABLES.map(async (t) => {
+      const { count, error } = await supabase
+        .from(t).select('id', { count: 'exact', head: true })
+        .eq('workspace_id', ws.id).eq('campaign_id', campaign.id);
+      counts[t] = error ? 0 : (count || 0);
+    }));
+    res.json({ campaign: { ...campaign, asset_counts: counts, deliverable_plan: planRows || [] } });
   } catch (err) {
     next(err);
   }

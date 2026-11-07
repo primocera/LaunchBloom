@@ -17,11 +17,11 @@ function fakeSupabase() {
   return {
     from: (table) => {
       assert.equal(table, 'generation_jobs');
-      let op = null, payload = null, filters = {};
+      let op = null, payload = null, filters = {}, returning = false;
       const b = {
         insert(p) { op = 'insert'; payload = p; return b; },
         update(p) { op = 'update'; payload = p; return b; },
-        select() { op = op || 'select'; return b; },
+        select() { if (op === 'update') returning = true; op = op || 'select'; return b; },
         eq(col, val) { filters[col] = val; return b; },
         single() {
           const row = jobs.get(`${filters.user_id}:${filters.idempotency_key}`) || null;
@@ -34,7 +34,11 @@ function fakeSupabase() {
             if (jobs.has(k)) result = { data: null, error: { code: '23505', message: 'duplicate' } };
             else jobs.set(k, { ...payload, created_at: new Date().toISOString() });
           } else if (op === 'update') {
-            if (jobs.has(k)) Object.assign(jobs.get(k), payload);
+            // Honour extra conditions (status / created_at) like PostgREST does.
+            const row = jobs.get(k);
+            const hit = row && Object.entries(filters).every(([c, v]) => row[c] === v);
+            if (hit) Object.assign(row, payload);
+            if (returning) result = { data: hit ? [{ idempotency_key: row.idempotency_key }] : [], error: null };
           }
           return Promise.resolve(result).then(ok, err);
         },
@@ -104,6 +108,20 @@ test('a failed run is retryable with the same key and error bodies are not repla
   assert.equal(retry.status, 200);
   assert.equal(retry.body.items[0].id, 'a1');
   assert.equal(handlerRuns, 2, 'failure must allow a real retry');
+});
+
+test('two concurrent retries of a failed key run the handler once (B5)', async () => {
+  jobs.clear(); handlerRuns = 0; handlerBehavior = 'hang';
+  jobs.set('u1:k5', {
+    user_id: 'u1', idempotency_key: 'k5', route: 'gen', status: 'failed',
+    created_at: new Date(Date.now() - 1000).toISOString(),
+  });
+  const [a, b] = await Promise.all([
+    request(app).post('/gen').set('Idempotency-Key', 'k5'),
+    request(app).post('/gen').set('Idempotency-Key', 'k5'),
+  ]);
+  assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+  assert.equal(handlerRuns, 1, 'only one retry may take the failed claim over');
 });
 
 test('an orphaned in-flight row (old timestamp) is taken over', async () => {
