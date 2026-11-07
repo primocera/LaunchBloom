@@ -11,16 +11,16 @@ F4, F5, B4, B5 - additive only, see the "Fixed" notes in the tables below.
 
 | # | Sev | Bug | Where | Verified |
 |---|---|---|---|---|
-| S1 | High | `action_topups` (041) is in neither account delete nor data export: a bought pack (amount, currency, payment intent) survives account deletion and is missing from the export | `account.js` export/delete, `lib/workspace-data.js` (table is keyed by user_id, like `generation_jobs`) | yes (grep) |
-| S2 | Medium | Account delete does not cancel queued `email_events`: a failed `payment_failed`/`trial_ending` retry is still sent to the deleted address | `account.js` delete, `lib/lifecycle-email.js` processEmailOutbox | agent |
-| S3 | Medium | Admin cohort selects `analytics_events.campaign_id`, which no migration creates; the error is swallowed, so the funnel is always empty | `admin.js:280`, migrations 014/033 | yes |
-| S4 | Medium | Admin readiness + cohort read `ai_spend_ledger.amount_usd` / `created_at`; the table has `day` + `estimated_cost_usd`. AI spend always reports 0 and `spend_over_ceiling` never trips (the real spend cap in spend-guard is fine) | `admin.js:143,294`, migration 024 | yes |
+| S1 | High | `action_topups` (041) is in neither account delete nor data export: a bought pack (amount, currency, payment intent) survives account deletion and is missing from the export | `account.js` export/delete, `lib/workspace-data.js` (table is keyed by user_id, like `generation_jobs`) | yes (grep). **Fixed:** export key `action_topups`, delete step `topup_packs` (missing 041 table = ok) |
+| S2 | Medium | Account delete does not cancel queued `email_events`: a failed `payment_failed`/`trial_ending` retry is still sent to the deleted address | `account.js` delete, `lib/lifecycle-email.js` processEmailOutbox | agent. **Fixed:** delete step `queued_emails` sets pending/failed rows for that recipient to `skipped` before the deletion email is queued |
+| S3 | Medium | Admin cohort selects `analytics_events.campaign_id`, which no migration creates; the error is swallowed, so the funnel is always empty | `admin.js:280`, migrations 014/033 | yes. **Fixed:** reads `properties.campaign_id` (only campaign events that carry it; others still count by workspace as before) |
+| S4 | Medium | Admin readiness + cohort read `ai_spend_ledger.amount_usd` / `created_at`; the table has `day` + `estimated_cost_usd`. AI spend always reports 0 and `spend_over_ceiling` never trips (the real spend cap in spend-guard is fine) | `admin.js:143,294`, migration 024 | yes. **Fixed:** sums `estimated_cost_usd` by UTC `day` (24h = yesterday + today, never under-reports) |
 | S5 | Low | `/api/ai/asset/:table/:id/rewrite` has no `idempotent()` wrapper (double click = 2 AI calls) | `library.js:514` | agent |
 | S6 | Low | Export omits `legal_consents` / `email_events` although the privacy page says "export all of your data" | `account.js` export | agent |
 | S7 | Low | Billing-portal POST is under the generic 100/15min limiter, not the 10/min payment limiter | `server.js:163` | agent |
 | S8 | Low | Stale comment: email-preferences router "mounted before CORS" - CORS is registered first | `server.js:165` | agent |
 
-Agent claim NOT accepted: "the rewrite route bypasses `aiLimit` + `requireLaunchReady`". `app.use('/api/ai', apiLimit, requireAuth, aiLimit, requireLaunchReady(...), aiRouter)` runs those middlewares for every `/api/ai/*` path before falling through to `libraryRouter`, so the route is covered. Side effect worth checking (unverified): requests that fall through the first `/api/ai` mount (assets routes, the rewrite route) pass `apiLimit`/`aiLimit` twice and may be counted twice.
+Agent claim NOT accepted: "the rewrite route bypasses `aiLimit` + `requireLaunchReady`". `app.use('/api/ai', apiLimit, requireAuth, aiLimit, requireLaunchReady(...), aiRouter)` runs those middlewares for every `/api/ai/*` path before falling through to `libraryRouter`, so the route is covered. Double counting checked and ruled out: `countOnce()` (`server.js:68`) counts each request once per limiter. Locked by `backend/tests/rate-limit-count-once.test.js` (boots the real app; with countOnce disabled an unknown `/api/ai` path counted 11x, a studio route 2x, so the test does catch it).
 
 ## High (frontend)
 

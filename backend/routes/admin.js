@@ -140,10 +140,11 @@ router.get('/api/admin/readiness', requireAuth, requireAdmin, async (req, res) =
       // normal generation - a leak means the daily brake is being consumed by
       // calls that never finalized or released.
       countOf(() => supabase.from('usage_events').select('id', { count: 'exact', head: true }).eq('status', 'reserved').lt('created_at', reservationCutoff)),
-      supabase.from('ai_spend_ledger').select('amount_usd').gte('created_at', since).then((r) => r.data || [], () => []),
+      // ai_spend_ledger is one row per UTC `day` (migration 024): include the day containing `since`, so "24h" = yesterday + today (UTC) and never under-reports.
+      supabase.from('ai_spend_ledger').select('day, estimated_cost_usd').gte('day', since.slice(0, 10)).then((r) => r.data || [], () => []),
     ]);
     const spend24h = Array.isArray(spendRows)
-      ? Math.round(spendRows.reduce((s, r) => s + (Number(r.amount_usd) || 0), 0) * 100) / 100
+      ? Math.round(spendRows.reduce((s, r) => s + (Number(r.estimated_cost_usd) || 0), 0) * 100) / 100
       : null;
     const ceiling = Number(process.env.AI_SPEND_DAILY_CEILING_USD || 0) || null;
 
@@ -261,7 +262,7 @@ router.get('/api/admin/stuck-reservations', requireAuth, requireAdmin, async (re
 
 // ── v10 SC-07: cohort funnel ────────────────────────────────────────────────
 // The eleven-step campaign-control loop, computed from canonical events only
-// (ids + timestamps; properties are not selected, so no content can leak).
+// (ids + timestamps; only properties.campaign_id is kept, so no content can leak).
 // Every metric ships numerator, denominator, window, state and a decision.
 // Tiny cohorts are suppressed. Internal decision aid - never public proof.
 router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
@@ -274,25 +275,35 @@ router.get('/api/admin/cohort', requireAuth, requireAdmin, async (req, res) => {
     const { rosterFromEnv } = require('../lib/beta-scorecard');
     const wanted = COHORT_FUNNEL.map((f) => f.event).filter(Boolean);
 
-    // ids + timestamps only - `properties` is deliberately not selected.
+    // analytics_events has no campaign_id column (migration 014): campaign-scoped
+    // events carry it in `properties`. Only that id is lifted out below; the rest
+    // of `properties` is dropped before counting, so the funnel stays ids-only.
     const { data: eventRows } = await supabase
       .from('analytics_events')
-      .select('event, user_id, workspace_id, campaign_id, created_at')
+      .select('event, user_id, workspace_id, properties, created_at')
       .in('event', wanted)
       .gte('created_at', since)
       .limit(20000);
+    const funnelRows = (Array.isArray(eventRows) ? eventRows : []).map((r) => ({
+      event: r.event,
+      user_id: r.user_id,
+      workspace_id: r.workspace_id,
+      campaign_id: (r.properties && typeof r.properties === 'object' && r.properties.campaign_id) || null,
+      created_at: r.created_at,
+    }));
 
     // v18 X01: exclude staff/test/demo subjects using the same auditable roster
     // as the weekly scorecard, so the north-star funnel measures real customers.
-    const funnel = computeFunnel(Array.isArray(eventRows) ? eventRows : [], {
+    const funnel = computeFunnel(funnelRows, {
       window: { days, since },
       roster: rosterFromEnv(),
     });
 
     // AI cost per outcome, from the ledger. Null rather than a divide-by-zero.
+    // The ledger is per UTC `day` (migration 024): include the day containing `since` so the window never under-reports.
     const { data: spendRows } = await supabase
-      .from('ai_spend_ledger').select('amount_usd').gte('created_at', since);
-    const spend = (spendRows || []).reduce((sum, r) => sum + (Number(r.amount_usd) || 0), 0);
+      .from('ai_spend_ledger').select('day, estimated_cost_usd').gte('day', since.slice(0, 10));
+    const spend = (spendRows || []).reduce((sum, r) => sum + (Number(r.estimated_cost_usd) || 0), 0);
     const byStep = Object.fromEntries(funnel.steps.map((s) => [s.step, s.numerator]));
 
     res.json({

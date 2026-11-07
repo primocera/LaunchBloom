@@ -22,6 +22,12 @@ const { configuredAppUrl } = require('../lib/launch-config');
 const { isOwnedScalvyaCustomer } = require('./payments');
 const { opsSignal } = require('../lib/ops-signal');
 
+// A table from a not-yet-applied migration (e.g. 041 action_topups).
+function isMissingTable(error) {
+  const msg = String((error && error.message) || '');
+  return (error && error.code === '42P01') || /relation .* does not exist|could not find the table/i.test(msg);
+}
+
 /**
  * XAPP-95-01: the shared customers.stripe_customer_id link is not ownership
  * proof by itself - the same column that checkout must verify (SC-95-01) is also
@@ -222,6 +228,13 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
       .select('*')
       .eq('user_id', req.userId);
 
+    // action_topups (migration 041) is keyed by user too: the AI-action packs
+    // this account bought. Until 041 is applied the read errors and this is [].
+    const { data: topups } = await supabase
+      .from('action_topups')
+      .select('*')
+      .eq('user_id', req.userId);
+
     const payload = {
       export_version: 2,
       exported_at: new Date().toISOString(),
@@ -229,6 +242,7 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
       workspace_count: archives.length,
       workspaces: archives,
       generation_jobs: Array.isArray(jobs) ? jobs : [],
+      action_topups: Array.isArray(topups) ? topups : [],
     };
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', 'attachment; filename="scalvya-export.json"');
@@ -320,6 +334,33 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       step('generation_results', 'ok');
     } catch {
       step('generation_results', 'failed', 'stored generation results could not be deleted - contact support');
+    }
+
+    // 2c. AI-action packs (migration 041) are keyed by user_id with no FK. The
+    // payment record itself stays with Stripe. Not applied yet = nothing to delete.
+    try {
+      const { error } = await supabase.from('action_topups').delete().eq('user_id', userId);
+      if (error && !isMissingTable(error)) throw error;
+      step('topup_packs', 'ok');
+    } catch {
+      step('topup_packs', 'failed', 'AI-action pack records could not be deleted - contact support');
+    }
+
+    // 2d. Cancel lifecycle emails still queued for this address (e.g. a failed
+    // payment_failed / trial_ending send waiting for its retry), so nothing is
+    // sent to a deleted account. The deletion-record email below is queued after.
+    if (email) {
+      try {
+        const { error } = await supabase
+          .from('email_events')
+          .update({ status: 'skipped', last_error: 'account_deleted', locked_until: null })
+          .eq('recipient', email)
+          .in('status', ['pending', 'failed']);
+        if (error) throw error;
+        step('queued_emails', 'ok');
+      } catch {
+        step('queued_emails', 'failed', 'queued account emails could not be cancelled - contact support');
+      }
     }
 
     // 3. Delete the Supabase Auth user (revokes all sessions).
