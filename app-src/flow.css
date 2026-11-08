@@ -475,6 +475,18 @@
   margin-bottom: 18px;
 }
 
+/* Studio page headers: the channel's brand-board icon sits beside the title. */
+.studio-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-title-icon {
+  flex: none;
+  color: var(--icon-fg, #2563eb);
+}
+
 .studio-select {
   font: inherit;
   font-size: 13px;
@@ -800,6 +812,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
+}
+
+/* Create: the brand-board channel icon sits above each studio card's title. */
+.create-card-icon {
+  margin-bottom: 10px;
 }
 
 .gen-card-head,
@@ -1230,11 +1247,20 @@ textarea:focus-visible,
 .campaign-row-head { display: flex; align-items: center; gap: 10px; }
 .campaign-row-head h2 { margin: 0; }
 .campaign-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   padding: 3px 8px;
   border-radius: 999px;
   background: var(--dk-subtle, #f3f4f6);
   color: var(--dk-muted, #6b7280);
+}
+
+.campaign-badge-icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
 }
 
 /* Status/severity modifiers (brief approval, asset status, generation result,
@@ -1568,6 +1594,10 @@ html[data-theme="dark"] {
   --dk-ok-text: #6ee7b7;
   --dk-ok-bg: #173329;
   --dk-ok-border: #22513f;
+  /* Brand-board channel icons (BrandIcons.jsx .icon-tile): the same lighter
+     cobalt already used for dark-mode warnings (>=3:1 on the dark tile). */
+  --icon-fg: var(--dk-warn-text);
+  --icon-tile-bg: var(--dk-warn-bg);
 
   /* Existing token layers (styles.css + the --sc-* layer above). */
   --bg: #1f1e1d;

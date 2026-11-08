@@ -9,6 +9,7 @@ import { promoWindow, emailPlainText, emailMarkdown, emailsMarkdown } from '../.
 import TrialPaywall from '../../components/TrialPaywall';
 import { CopyBtn } from './common';
 import { AssetField, FormField, StatusPill } from './generator';
+import { ChannelIcon } from '../../components/BrandIcons';
 import '../../flow.css';
 
 const TONE_FIELD = {
@@ -278,7 +279,10 @@ export default function EmailFlowStudio() {
       <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
-            <h2>Email</h2>
+            <h2 className="studio-title">
+              <ChannelIcon channel="Email" className="studio-title-icon" />
+              Email
+            </h2>
             <p className="flow-muted">
               Build lifecycle flows or campaign sequences with audience, timing, exclusions and
               complete body copy - subject options, preheader, CTAs and a plain-text version to

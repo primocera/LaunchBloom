@@ -9,6 +9,7 @@ import TrialPaywall from '../../components/TrialPaywall';
 import ErrorState from '../../components/ErrorState';
 import { errorStateFor, usageLimitState, exportFailureState, trackErrorState } from '../../lib/error-states';
 import { CopyBtn } from './common';
+import { ChannelIcon } from '../../components/BrandIcons';
 import { STATUS_VALUES, statusLabelFor } from '../../lib/status-labels';
 import {
   deriveContext,
@@ -499,7 +500,10 @@ export default function GeneratorStudio({
       <section className="flow-main is-wide">
         <div className="studio-head">
           <div>
-            <h2>{title}</h2>
+            <h2 className="studio-title">
+              <ChannelIcon channel={table} className="studio-title-icon" />
+              {title}
+            </h2>
             {blurb && <p className="flow-muted">{blurb}</p>}
           </div>
         </div>

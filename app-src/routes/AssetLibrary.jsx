@@ -7,6 +7,7 @@ import { STATUS_LABEL } from '../lib/status-labels';
 // v10 SC-02: one drawer, shared with the campaign Assets tab.
 import AssetDrawer, { statusLabel, statusTone, provenanceLine, confirmDiscardDrawerEdits } from '../components/AssetDrawer';
 import RecentGenerations from '../components/RecentGenerations';
+import { ChannelIcon } from '../components/BrandIcons';
 
 // ---------------------------------------------------------------------------
 // v9 SC-06: Library as a review workspace, not an admin utility. Filters live in
@@ -171,7 +172,10 @@ export default function AssetLibrary() {
               <button className="library-open-link" onClick={() => { if (confirmDiscardDrawerEdits()) setOpenAsset({ table: item.table, id: item.id }); }}>
                 {item.title}
               </button>
-              <span className="campaign-badge">{item.type_label}</span>
+              <span className="campaign-badge">
+                <ChannelIcon channel={item.table} className="campaign-badge-icon" />
+                {item.type_label}
+              </span>
               <span className={`campaign-badge is-${statusTone(item)}`}>{statusLabel(item)}</span>
             </div>
             {provenanceLine(item) && <div className="library-provenance">{provenanceLine(item)}</div>}

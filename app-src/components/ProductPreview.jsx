@@ -1,4 +1,5 @@
 import { statusLabelFor } from '../lib/status-labels';
+import { ChannelIcon } from './BrandIcons';
 
 // ---------------------------------------------------------------------------
 // v11 SC-04 - real-product proof on the landing page.
@@ -61,7 +62,10 @@ export default function ProductPreview() {
           <ul className="lp-preview-assets">
             {ASSETS.map((a) => (
               <li key={a.channel}>
-                <span className="lp-preview-channel">{a.channel}</span>
+                <span className="lp-preview-channel">
+                  <ChannelIcon channel={a.channel} className="lp-preview-channel-icon" />
+                  {a.channel}
+                </span>
                 <span className="lp-preview-title">{a.title}</span>
                 <span className={`lp-preview-status is-${a.status}`}>{statusLabelFor(a.status)}</span>
               </li>

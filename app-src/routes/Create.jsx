@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { totalAssets, sectionPath } from './campaign/shared';
 import ErrorState from '../components/ErrorState';
 import { emptyWorkspaceState } from '../lib/error-states';
+import { IconTile } from '../components/BrandIcons';
 import '../flow.css';
 
 // ---------------------------------------------------------------------------
@@ -176,6 +177,7 @@ export default function Create() {
         <div className="gen-results">
           {CATEGORIES.map((c) => (
             <Link key={c.to} to={withCampaign(c.to)} className="flow-card gen-card create-card">
+              <IconTile channel={c.title} className="create-card-icon" />
               <h3>{c.title}</h3>
               <p className="flow-muted">{c.body}</p>
             </Link>

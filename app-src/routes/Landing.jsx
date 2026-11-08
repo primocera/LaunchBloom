@@ -10,6 +10,7 @@ import Marquee from '../components/Marquee';
 import Meteors from '../components/Meteors';
 import Reveal from '../components/Reveal';
 import ProductPreview from '../components/ProductPreview';
+import { WebsiteIcon, EmailIcon, SocialIcon, AdsIcon, SeoIcon, IconTile, ChannelIcon } from '../components/BrandIcons';
 import '../landing.css';
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,20 @@ const VALUE_LIST = [
   'Static, UGC and search-ad briefs',
   'SEO content ideas',
 ];
+
+// Brand-board icon for each VALUE_LIST line - keyed by the exact text above,
+// so the marquee never has to guess a channel from free-form copy.
+const VALUE_ICONS = {
+  'Website pages': WebsiteIcon,
+  'Lifecycle and campaign emails': EmailIcon,
+  'Social captions, carousels and scripts': SocialIcon,
+  'Static, UGC and search-ad briefs': AdsIcon,
+  'SEO content ideas': SeoIcon,
+};
+
+// The five channels named in the "Connected assets" proof step - rendered as
+// a small decorative icon row above the existing (unchanged) detail text.
+const CHANNEL_ROW = ['Website', 'Email', 'Social', 'Ads', 'SEO'];
 
 // v5 Prompt 1 / v6: pricing renders from GET /api/plans - the backend catalog
 // is the single commercial source of truth. Entitlement label is "full launch
@@ -298,6 +313,13 @@ export default function Landing() {
               <li key={s.label}>
                 <span className="lp-proof-n" aria-hidden="true">{i + 1}</span>
                 <span className="lp-proof-label">{s.label}</span>
+                {s.label === 'Connected assets' && (
+                  <span className="lp-proof-channels" aria-hidden="true">
+                    {CHANNEL_ROW.map((c) => (
+                      <ChannelIcon key={c} channel={c} width={14} height={14} />
+                    ))}
+                  </span>
+                )}
                 <span className="lp-proof-detail">{s.detail}</span>
               </li>
             ))}
@@ -377,7 +399,7 @@ export default function Landing() {
       {/* ── 4. Value - what one campaign can include ───────────────────── */}
       <Reveal as="section" className="lp-trusted">
         <div className="lp-trusted-label">What one campaign can include</div>
-        <Marquee items={VALUE_LIST} />
+        <Marquee items={VALUE_LIST} iconFor={(item) => VALUE_ICONS[item]} />
       </Reveal>
 
       {/* ── 5. Example campaign ────────────────────────────────────────── */}
@@ -393,6 +415,7 @@ export default function Landing() {
           </Reveal>
           <div className="lp-example-grid">
             <Reveal className="lp-feature">
+              <IconTile channel="Website" className="lp-feature-icon" />
               <h3>Website</h3>
               <p className="lp-ex-quote">
                 Listing videos edited, captioned and ready to post within 24 hours - for agents who
@@ -400,14 +423,17 @@ export default function Landing() {
               </p>
             </Reveal>
             <Reveal className="lp-feature" delay={90}>
+              <IconTile channel="Email" className="lp-feature-icon" />
               <h3>Email</h3>
               <p className="lp-ex-quote">Subject: Your next listing already has a content plan</p>
             </Reveal>
             <Reveal className="lp-feature" delay={180}>
+              <IconTile channel="Social" className="lp-feature-icon" />
               <h3>Social</h3>
               <p className="lp-ex-quote">Hook: One listing should give you more than one post.</p>
             </Reveal>
             <Reveal className="lp-feature" delay={270}>
+              <IconTile channel="Ad" className="lp-feature-icon" />
               <h3>Ad</h3>
               <p className="lp-ex-quote">
                 Angle: Turnaround speed, backed only by the delivery time entered in Brand Profile.

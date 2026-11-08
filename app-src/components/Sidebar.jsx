@@ -4,6 +4,7 @@ import { BRAND } from '../brand';
 import ScalvyaMark from './ScalvyaMark';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { CollapseIcon, PagesIcon, SavedIcon, TrendsIcon } from './icons';
+import { WebsiteIcon, EmailIcon, SocialIcon, AdsIcon, SeoIcon } from './BrandIcons';
 import ThemeToggle from './ThemeToggle';
 
 // ---------------------------------------------------------------------------
@@ -24,12 +25,14 @@ const MAIN_NAV = [
   { to: '/app/account', label: 'Account', Icon: SavedIcon },
 ];
 
+// v26 brand-board sweep: each studio link gets its own channel icon (the same
+// outline set the landing page uses) instead of one reused placeholder icon.
 const STUDIO_NAV = [
-  { to: '/app/website', label: 'Website' },
-  { to: '/app/email-studio', label: 'Email' },
-  { to: '/app/social', label: 'Social' },
-  { to: '/app/creative', label: 'Ads & Creative' },
-  { to: '/app/seo', label: 'SEO Ideas' },
+  { to: '/app/website', label: 'Website', Icon: WebsiteIcon },
+  { to: '/app/email-studio', label: 'Email', Icon: EmailIcon },
+  { to: '/app/social', label: 'Social', Icon: SocialIcon },
+  { to: '/app/creative', label: 'Ads & Creative', Icon: AdsIcon },
+  { to: '/app/seo', label: 'SEO Ideas', Icon: SeoIcon },
 ];
 
 function AccountBlock() {
@@ -133,13 +136,13 @@ export default function Sidebar({ onCollapse, mobileOpen = false, onNavigate }) 
         <details className="sidebar-disclosure">
           <summary className="section-title">Create directly</summary>
           <nav className="sidebar-nav is-sub">
-            {STUDIO_NAV.map(({ to, label }) => (
+            {STUDIO_NAV.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) => (isActive ? 'nav-item is-active' : 'nav-item')}
               >
-                <SavedIcon />
+                <Icon width={17} height={17} />
                 {label}
               </NavLink>
             ))}

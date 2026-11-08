@@ -1,10 +1,13 @@
+// v26 brand-board sweep: strokeWidth 2 (was 1.8) matches the brand board's
+// outline weight (BrandIcons.jsx), so every icon in the app reads as one
+// consistent icon language.
 const base = {
   width: 17,
   height: 17,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 1.8,
+  strokeWidth: 2,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
   'aria-hidden': true,

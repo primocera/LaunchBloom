@@ -13,6 +13,11 @@
   --accent: #2563eb;
   --accent-soft: rgba(37, 99, 235, 0.08);
   --accent-ring: rgba(37, 99, 235, 0.28);
+  /* Brand-board channel icons (BrandIcons.jsx): cobalt on a very light icy
+     tile. landing.css (.lp) and the dark theme (flow.css) each override these
+     two tokens to match their own palette. */
+  --icon-fg: var(--accent);
+  --icon-tile-bg: #eef4ff;
   --radius: 12px;
   --sidebar-w: 264px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -165,6 +170,31 @@ button {
 
 .nav-item svg {
   flex: none;
+}
+
+/* Brand-board channel icons: cobalt outline on a light icy tile. Default size
+   fits a card/header; .is-sm fits an inline row (nav links, badges). */
+.icon-tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--icon-fg, #2563eb);
+  background: var(--icon-tile-bg, #eef4ff);
+  border-radius: 14px;
+}
+
+.icon-tile.is-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+}
+
+.icon-tile.is-sm svg {
+  width: 17px;
+  height: 17px;
 }
 
 .sidebar-section {
