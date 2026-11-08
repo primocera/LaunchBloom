@@ -63,7 +63,7 @@ function legalUrls() {
 
 // Bump when Terms/Privacy change materially; signup records the accepted
 // version so consent is auditable (Prompt 14).
-const LEGAL_VERSION = process.env.LEGAL_VERSION || '2026-10-12';
+const LEGAL_VERSION = process.env.LEGAL_VERSION || '2026-11-08';
 
 /** "Scalvya <hello@scalvya.com>" for email `from` headers. */
 function emailFrom() {

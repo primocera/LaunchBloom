@@ -12,4 +12,4 @@ export const BRAND = {
 };
 
 // Keep in sync with backend/lib/brand.js LEGAL_VERSION.
-export const LEGAL_VERSION = '2026-10-12';
+export const LEGAL_VERSION = '2026-11-08';
