@@ -35,6 +35,8 @@ export function blockersByAsset(review) {
       put(a.table, a.id, {
         label: high ? 'Blocks export' : 'Needs a decision',
         detail: f.why || String(f.code || '').replace(/_/g, ' '),
+        // CSS modifier for the status dot (is-blocked: coral; is-neutral: cobalt).
+        tone: high ? 'is-blocked' : 'is-neutral',
       }, high ? RANK.blocking : RANK.decision);
     }
   }
@@ -42,12 +44,14 @@ export function blockersByAsset(review) {
     put(a.table, a.id, {
       label: 'Brief changed since generated',
       detail: 'Keep its snapshot on record or update it.',
+      tone: 'is-neutral',
     }, RANK.stale);
   }
   for (const a of (review && review.needs_review_assets) || []) {
     put(a.table, a.id, {
       label: 'Edited since generated',
       detail: 'Confirm it is ready or keep reviewing.',
+      tone: 'is-neutral',
     }, RANK.decision);
   }
   return map;

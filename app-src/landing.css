@@ -1038,7 +1038,7 @@
 }
 .lp-path-card h3 { margin: 6px 0 8px; font-size: 22px; }
 .lp-path-card p { flex: 1; color: var(--muted); }
-.lp-path-who { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent, #2563eb); }
+.lp-path-who { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--blue, #2563eb); }
 
 .lp-price-top {
   display: flex;
@@ -1798,27 +1798,33 @@
   font-size: 14px;
 }
 
+/* Status = a small dot + plain label (no pill). Green ring = in progress,
+   green dot = done, coral = failed/blocked only, cobalt = neutral. */
 .lp-preview-status {
-  padding: 3px 10px;
-  font-size: 12px;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #1f2937;
+  color: #33415c;
   white-space: nowrap;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 999px;
 }
 
-.lp-preview-status.is-ready {
-  color: #065f46;
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+.lp-preview-status::before {
+  width: 8px;
+  height: 8px;
+  content: '';
+  border: 2px solid #10b981;
+  border-radius: 50%;
 }
 
-.lp-preview-status.is-edited {
-  color: #92400e;
-  background: #fffbeb;
-  border-color: #fcd34d;
+.lp-preview-status.is-ready::before {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.lp-preview-status.is-edited::before {
+  background: transparent;
 }
 
 .lp-preview-findings li {
@@ -1830,23 +1836,35 @@
 }
 
 .lp-preview-severity {
-  padding: 3px 10px;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 700;
   white-space: nowrap;
-  border-radius: 999px;
+}
+
+.lp-preview-severity::before {
+  width: 8px;
+  height: 8px;
+  content: '';
+  border-radius: 50%;
 }
 
 .lp-preview-severity.is-high {
-  color: #991b1b;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  color: #b93a2f;
+}
+
+.lp-preview-severity.is-high::before {
+  background: #ff6b5b;
 }
 
 .lp-preview-severity.is-low {
-  color: #1f2937;
-  background: var(--tint-deep);
-  border: 1px solid var(--line);
+  color: #33415c;
+}
+
+.lp-preview-severity.is-low::before {
+  background: var(--blue);
 }
 
 .lp-preview-handoff {

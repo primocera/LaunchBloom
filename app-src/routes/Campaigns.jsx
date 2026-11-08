@@ -299,7 +299,7 @@ export default function Campaigns() {
               <h2>
                 <Link to={sectionPath(c.id, 'overview')} className="account-link">{c.name}</Link>
               </h2>
-              <span className={`campaign-badge ${c.brief_approved ? 'is-ok' : ''}`}>
+              <span className={`campaign-badge ${c.brief_approved ? 'is-ok' : 'is-draft'}`}>
                 {c.brief_approved
                   ? `Brief v${c.brief_version || 1} approved`
                   : missing.length

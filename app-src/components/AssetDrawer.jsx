@@ -22,11 +22,22 @@ const REWRITES = [
   ['native', 'More native'],
 ];
 
+/**
+ * Canonical status, with the same "unresolved claim blocks Ready/Published"
+ * override as statusLabel - the CSS modifier (is-draft/is-edited/is-ready/
+ * is-published/is-blocked) a status dot needs alongside the customer-facing
+ * label.
+ */
+export function statusTone(item) {
+  const warnings = item.quality_warnings || item.warnings || [];
+  if ((item.status === 'ready' || item.status === 'published') && warnings.length) return 'blocked';
+  return item.status || 'draft';
+}
+
 /** Unresolved claims block "Ready to export" - surface that instead. */
 export function statusLabel(item) {
-  const warnings = item.quality_warnings || item.warnings || [];
-  if ((item.status === 'ready' || item.status === 'published') && warnings.length) return STATUS_LABEL.blocked;
-  return STATUS_LABEL[item.status] || item.status || 'Draft';
+  const tone = statusTone(item);
+  return STATUS_LABEL[tone] || item.status || 'Draft';
 }
 
 export function provenanceLine(item) {

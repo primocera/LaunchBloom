@@ -32,11 +32,11 @@ const STUCK_MS = 6 * 60 * 1000;
 function result(item) {
   if (item.status === 'succeeded') return { text: 'Saved', tone: 'is-ok' };
   if (item.status === 'failed') return { text: 'Failed · not counted', tone: 'is-bad' };
-  if (item.status === 'released') return { text: 'Stopped · not counted', tone: '' };
+  if (item.status === 'released') return { text: 'Stopped · not counted', tone: 'is-neutral' };
   const age = Date.now() - new Date(item.created_at).getTime();
   return age > STUCK_MS
     ? { text: 'Did not finish · counted', tone: 'is-bad' }
-    : { text: 'Running…', tone: '' };
+    : { text: 'Running…', tone: 'is-draft' };
 }
 
 function when(iso) {

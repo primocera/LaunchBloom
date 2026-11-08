@@ -6,9 +6,13 @@
   --text: #2b2320;
   --text-muted: #767068; /* v18 X04: was #8a7f75 (3.91:1 on white) - now 4.90:1, WCAG AA */
   --text-faint: #7a736b; /* v18 X04: was #a99e93 (2.63:1) - now 4.67:1, AA, still a step lighter than muted */
-  --accent: #8a6851;
-  --accent-soft: rgba(138, 104, 81, 0.08);
-  --accent-ring: rgba(138, 104, 81, 0.28);
+  /* v24 brand sweep: --accent used to be brown (#8a6851) - the studios already
+     overrode .btn-primary to this exact cobalt ("Match the studios' blue
+     accent instead of the inherited brown --accent", flow.css) - this makes
+     that the one accent everywhere instead of a page-by-page override. */
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-ring: rgba(37, 99, 235, 0.28);
   --radius: 12px;
   --sidebar-w: 264px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -318,7 +322,9 @@ button {
 }
 
 .account-hint a {
-  color: var(--accent);
+  /* Text, not a fill: --dk-link (not --accent) so this stays >=4.5:1 against
+     the dark-mode page background too (plain --accent would be ~3.2:1 there). */
+  color: var(--dk-link, #2563eb);
 }
 
 .account-signin {
@@ -938,20 +944,28 @@ button {
 }
 
 /* ── Login ────────────────────────────────────────────────────────────── */
-/* Auth pages (login, signup, forgot/reset password): a solid blue page, the
-   logo top-left, and one open column - big heading, labels above tall white
-   fields, a full-width white pill button. Blue is the landing hero's #2f6ceb;
-   all text on it is pure white (4.7:1, WCAG AA), and the focus ring is a dark
-   navy (#0b1b4d, 3.6:1 against the blue) so keyboard focus stays visible. */
+/* Auth pages (login, signup, forgot/reset password) match the landing's
+   "01 / CONNECTED" board: a white page with a soft cobalt glow, the colour
+   mark + navy wordmark top-left (same as the landing header), navy headings,
+   slate body copy/labels, white fields with a light border and a cobalt
+   focus ring, and a solid cobalt primary button (10px radius, white text -
+   4.7:1, WCAG AA). Focus rings use the deep navy so keyboard focus stays
+   visible against both the white page and the cobalt button. */
 .login {
   --auth-blue: #2f6ceb;
+  --auth-navy: #0d1b3a;
   --auth-ink: #111827;
-  --auth-focus: #0b1b4d;
+  --auth-muted: #4b5578;
+  --auth-border: #dbe3f3;
+  --auth-focus: #0d1b3a;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--auth-blue);
-  color: #ffffff;
+  /* Same soft cobalt glow as the landing hero (.lp-sky), washing to white. */
+  background:
+    radial-gradient(60% 55% at 88% 6%, rgba(205, 222, 255, 0.65) 0%, rgba(205, 222, 255, 0) 70%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 85%, #f2f6ff 100%);
+  color: var(--auth-ink);
 }
 
 .auth-top {
@@ -967,18 +981,15 @@ button {
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: var(--auth-navy);
   text-decoration: none;
 }
 
+/* Brand-board match: the mark sits bare next to the wordmark, same as the
+   landing header - no icon-tile background. */
 .auth-logo-mark {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--auth-blue);
-  background: var(--dk-surface, #ffffff);
-  border-radius: 9px;
 }
 
 .auth-main {
@@ -1000,14 +1011,14 @@ button {
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.025em;
-  color: #ffffff;
+  color: var(--auth-navy);
 }
 
 .login-card p {
   margin: 0 0 24px;
   font-size: 15px;
   line-height: 1.55;
-  color: #ffffff;
+  color: var(--auth-muted);
 }
 
 .login-card .auth-lede {
@@ -1020,7 +1031,7 @@ button {
 
 .login-card a {
   font-weight: 600;
-  color: #ffffff;
+  color: var(--auth-blue);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1038,14 +1049,14 @@ button {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--auth-muted);
 }
 
 .login-card .field-hint {
   display: block;
   margin-top: 6px;
   font-size: 13px;
-  color: #ffffff;
+  color: var(--auth-muted);
 }
 
 /* v11 SC-01: text fields only. This rule used to match every input in the
@@ -1059,16 +1070,16 @@ button {
   font: inherit;
   font-size: 16px;
   color: var(--auth-ink);
-  background: var(--dk-surface, #ffffff);
-  border: 1px solid #ffffff;
+  background: #ffffff;
+  border: 1px solid var(--auth-border);
   border-radius: 10px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .login-card input:not([type='checkbox']):focus {
-  border-color: var(--auth-focus);
-  box-shadow: 0 0 0 3px var(--auth-focus);
+  border-color: var(--auth-blue);
+  box-shadow: 0 0 0 3px rgba(47, 108, 235, 0.3);
 }
 
 .login-card input[aria-invalid='true'] {
@@ -1081,14 +1092,14 @@ button {
   margin-top: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: var(--auth-blue);
-  background: var(--dk-surface, #ffffff);
-  border-radius: 999px;
+  color: #ffffff;
+  background: var(--auth-blue);
+  border-radius: 10px;
   transition: background 0.15s;
 }
 
 .login-card .btn-primary:hover:not(:disabled) {
-  background: #e6eefd;
+  background: var(--auth-navy);
 }
 
 .login-card .btn-primary:focus-visible {
@@ -1107,19 +1118,27 @@ button {
   text-align: center;
 }
 
-.login-card .login-note,
-.login-card .link-btn {
-  color: #ffffff;
+.login-card .login-note {
+  color: var(--auth-muted);
 }
 
-/* Consent rows on the blue page: white text and a navy check. The extra
-   .login keeps these ahead of the base consent rules further down. */
+.login-card .link-btn {
+  color: var(--auth-blue);
+  font-weight: 600;
+}
+
+/* Consent rows: slate text and a cobalt check. The extra .login keeps these
+   ahead of the base consent rules further down. */
 .login .login-card .consent {
-  color: #ffffff;
+  color: var(--auth-muted);
 }
 
 .login .login-card .consent input[type='checkbox'] {
-  accent-color: var(--auth-focus);
+  accent-color: var(--auth-blue);
+}
+
+.login .login-card .consent input[type='checkbox']:focus-visible {
+  outline-color: var(--auth-blue);
 }
 
 .login-card .login-err {
@@ -1360,7 +1379,7 @@ button {
   padding: 10px 16px; font-size: 13px; text-align: center;
   background: var(--dk-subtle, #eff6ff); color: var(--dk-link, #1e40af); border-bottom: 1px solid var(--dk-border-soft, #dbeafe);
 }
-.shell-notice.is-warn { background: var(--dk-warn-bg, #fffbeb); color: var(--dk-warn-text, #92400e); border-bottom-color: var(--dk-warn-border, #fde68a); }
+.shell-notice.is-warn { background: var(--dk-warn-bg, #eef3ff); color: var(--dk-warn-text, #1d4ed8); border-bottom-color: var(--dk-warn-border, #c7d7fb); }
 .shell-notice a { color: inherit; font-weight: 600; }
 
 /* v5 Prompt 3: Create landing page cards */
@@ -1372,7 +1391,7 @@ button {
 .dash-hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
 .dash-hero .flow-h2 { margin: 0; }
 .dash-primary { min-height: 44px; }
-.dash-usage-warn { background: var(--dk-warn-bg, #fffbeb); border: 1px solid var(--dk-warn-border, #fde68a); color: var(--dk-warn-text, #92400e); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.dash-usage-warn { background: var(--dk-warn-bg, #eef3ff); border: 1px solid var(--dk-warn-border, #c7d7fb); color: var(--dk-warn-text, #1d4ed8); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 .dash-usage-warn a { color: inherit; font-weight: 600; }
 
 /* v5 Prompt 5: sectioned Brand Profile */

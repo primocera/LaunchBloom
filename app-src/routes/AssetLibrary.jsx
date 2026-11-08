@@ -5,7 +5,7 @@ import { useRequestGuard } from '../lib/use-request-guard';
 import { download, assetsCsv } from '../lib/export';
 import { STATUS_LABEL } from '../lib/status-labels';
 // v10 SC-02: one drawer, shared with the campaign Assets tab.
-import AssetDrawer, { statusLabel, provenanceLine, confirmDiscardDrawerEdits } from '../components/AssetDrawer';
+import AssetDrawer, { statusLabel, statusTone, provenanceLine, confirmDiscardDrawerEdits } from '../components/AssetDrawer';
 import RecentGenerations from '../components/RecentGenerations';
 
 // ---------------------------------------------------------------------------
@@ -172,7 +172,7 @@ export default function AssetLibrary() {
                 {item.title}
               </button>
               <span className="campaign-badge">{item.type_label}</span>
-              <span className="campaign-badge">{statusLabel(item)}</span>
+              <span className={`campaign-badge is-${statusTone(item)}`}>{statusLabel(item)}</span>
             </div>
             {provenanceLine(item) && <div className="library-provenance">{provenanceLine(item)}</div>}
             <div className="library-snippet">{item.snippet}</div>

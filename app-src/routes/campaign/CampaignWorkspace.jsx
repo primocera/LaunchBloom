@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
-import AssetDrawer, { statusLabel, confirmDiscardDrawerEdits } from '../../components/AssetDrawer';
+import AssetDrawer, { statusLabel, statusTone, confirmDiscardDrawerEdits } from '../../components/AssetDrawer';
 import { blockersByAsset, isStale } from '../../lib/asset-rows';
 import {
   SECTIONS, missingDecisions, hasNoDates, fmtDate, sectionPath,
@@ -87,7 +87,7 @@ export default function CampaignWorkspace() {
         <div>
           <Link className="account-link" to="/app/campaigns">← Campaigns</Link>
           <h1 style={{ margin: '4px 0' }}>{campaign.name}{campaign.archived ? ' · archived' : ''}</h1>
-          <span className={`campaign-badge ${campaign.brief_approved ? 'is-ok' : ''}`}>
+          <span className={`campaign-badge ${campaign.brief_approved ? 'is-ok' : 'is-draft'}`}>
             {campaign.brief_approved
               ? `Brief v${campaign.brief_version || 1} approved${campaign.brief_approved_at ? ` · ${fmtDate(campaign.brief_approved_at)}` : ''}`
               : missing.length
@@ -350,7 +350,7 @@ function AssetsSection({ campaign }) {
                 {it.title || 'Untitled asset'}
               </button>
               <span className="campaign-badge">{it.type_label || it.table}</span>
-              <span className="campaign-badge">{statusLabel(it)}</span>
+              <span className={`campaign-badge is-${statusTone(it)}`}>{statusLabel(it)}</span>
             </div>
             <p className="muted" style={{ margin: '4px 0' }}>
               {[
@@ -360,7 +360,7 @@ function AssetsSection({ campaign }) {
             </p>
             {blocker && (
               <p className="muted" style={{ margin: '4px 0' }}>
-                <span className="campaign-badge">{blocker.label}</span> {blocker.detail}
+                <span className={`campaign-badge ${blocker.tone}`}>{blocker.label}</span> {blocker.detail}
               </p>
             )}
             <div className="confirm-row">

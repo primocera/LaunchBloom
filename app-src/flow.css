@@ -605,8 +605,27 @@
   background: var(--dk-bg, #f8f7f4);
 }
 
-.kit-badge.is-pass { background: rgba(16, 185, 129, 0.12); color: var(--dk-ok-text, #059669); }
-.kit-badge.is-fail { background: rgba(185, 28, 28, 0.1); color: var(--dk-bad-text, #b91c1c); }
+/* Quality pass/fail - a small dot instead of a filled capsule (same language
+   as the status/severity dots further down this file). */
+.kit-badge.is-pass, .kit-badge.is-fail {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0;
+  background: none;
+  font-weight: 700;
+}
+.kit-badge.is-pass::before, .kit-badge.is-fail::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.kit-badge.is-pass::before { background: #10b981; }
+.kit-badge.is-fail::before { background: #ff6b5b; }
+.kit-badge.is-pass { color: var(--dk-ok-text, #059669); }
+.kit-badge.is-fail { color: var(--dk-coral-text, #b93a2f); }
 
 /* ── App shell / sidebar (Scalvya palette overrides) ─────────────────── */
 
@@ -828,31 +847,48 @@
   margin: 10px 0;
 }
 
+/* Asset status (draft/edited/ready/published): a small dot + plain label,
+   matching the landing preview (landing.css .lp-preview-status,
+   components/ProductPreview.jsx) instead of a filled capsule. Still a real
+   button (click cycles the status) - the dot replaces the pill chrome, an
+   underline on hover/focus keeps it legible as interactive. */
 .gen-status {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--dk-border, #e5e7eb);
-  background: var(--dk-bg, #f8f7f4);
-  color: var(--dk-muted, #6b7280);
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dk-text-2, #33415c);
   cursor: pointer;
 }
+.gen-status:hover, .gen-status:focus-visible { text-decoration: underline; }
+.gen-status:disabled { cursor: default; opacity: 0.6; }
 
-.gen-status.is-ready { background: var(--dk-ok-bg, #ecfdf5); color: var(--dk-ok-text, #10b981); border-color: var(--dk-ok-border, #a7f3d0); }
-.gen-status.is-published { background: var(--dk-subtle, #eff6ff); color: var(--dk-link, #2563eb); border-color: #bfdbfe; }
-.gen-status.is-edited { background: var(--dk-warn-bg, #fffbeb); color: var(--dk-warn-text, #b45309); border-color: var(--dk-warn-border, #fde68a); }
+.gen-status::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid #10b981; /* in progress (draft): green ring, no fill */
+  background: transparent;
+}
+
+.gen-status.is-ready::before, .gen-status.is-published::before { background: #10b981; border-color: #10b981; }
+.gen-status.is-edited::before { background: transparent; border-color: #10b981; }
 
 .gen-warnings {
   margin-top: 14px;
   padding: 12px 14px;
-  border: 1px solid var(--dk-warn-border, #fde68a);
-  background: var(--dk-warn-bg, #fffbeb);
+  border: 1px solid var(--dk-warn-border, #c7d7fb);
+  background: var(--dk-warn-bg, #eef3ff);
   border-radius: 10px;
   font-size: 13px;
-  color: var(--dk-warn-text, #92400e);
+  color: var(--dk-warn-text, #1d4ed8);
 }
 
 .gen-warnings ul {
@@ -872,7 +908,7 @@
 /* v9 SC-05: pre-generation output contract + inline structured edits. */
 .gen-output-contract { margin: 10px 0; padding: 10px; border: 1px solid var(--dk-border, #e5e7eb); border-radius: 8px; background: var(--dk-bg, #f8f7f4); }
 .gen-output-contract .kit-outline { margin: 4px 0; }
-.gen-missing-note { color: var(--dk-warn-text, #b45309); margin: 4px 0; }
+.gen-missing-note { color: var(--dk-warn-text, #1d4ed8); margin: 4px 0; }
 .gen-structured { margin: 10px 0; border-top: 1px dashed var(--dk-border, #e5e7eb); padding-top: 8px; }
 .gen-structured > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
 .gen-context {
@@ -898,9 +934,9 @@
 .gen-context-label { color: var(--dk-muted, #6b7280); font-weight: 600; }
 .gen-context-chip.is-missing {
   border-style: solid;
-  border-color: #f59e0b;
-  color: var(--dk-warn-text, #92400e);
-  background: var(--dk-warn-bg, #fffbeb);
+  border-color: #2563eb;
+  color: var(--dk-warn-text, #1d4ed8);
+  background: var(--dk-warn-bg, #eef3ff);
   text-decoration: none;
 }
 .gen-context-edit { margin-left: auto; font-size: 12px; color: var(--dk-link, #2563eb); }
@@ -909,7 +945,7 @@
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: var(--dk-warn-text, #b45309);
+  color: var(--dk-warn-text, #1d4ed8);
 }
 
 .gen-tabs {
@@ -1046,9 +1082,9 @@ textarea:focus-visible,
   display: inline-block;
   font-size: 11px;
   font-weight: 600;
-  color: var(--dk-warn-text, #92400e);
-  background: var(--dk-warn-bg, #fffbeb);
-  border: 1px solid var(--dk-warn-border, #fde68a);
+  color: var(--dk-warn-text, #1d4ed8);
+  background: var(--dk-warn-bg, #eef3ff);
+  border: 1px solid var(--dk-warn-border, #c7d7fb);
   border-radius: 999px;
   padding: 1px 8px;
   vertical-align: middle;
@@ -1125,7 +1161,7 @@ textarea:focus-visible,
 
 /* Account/billing extras (Prompt 8) */
 .account-section .muted { color: var(--dk-muted, #6b7280); }
-.account-section .warn { color: var(--dk-warn-text, #b45309); }
+.account-section .warn { color: var(--dk-warn-text, #1d4ed8); }
 .btn-primary.inline, .btn-secondary.inline { display: inline-block; text-decoration: none; }
 .account-section .btn-secondary { margin-top: 6px; }
 
@@ -1200,8 +1236,41 @@ textarea:focus-visible,
   background: var(--dk-subtle, #f3f4f6);
   color: var(--dk-muted, #6b7280);
 }
-.campaign-badge.is-ok { background: var(--dk-ok-bg, #d1fae5); color: var(--dk-ok-text, #047857); }
-.campaign-badge.is-bad { background: var(--dk-bad-bg, #fee2e2); color: var(--dk-bad-text, #b91c1c); }
+
+/* Status/severity modifiers (brief approval, asset status, generation result,
+   blocker reason): a small dot + plain label instead of a filled pill - same
+   language as .gen-status/.review-impact above. A bare .campaign-badge with
+   none of these modifiers (a type/category tag, e.g. "Website pages") keeps
+   its plain pill look from the rule above. */
+.campaign-badge.is-draft, .campaign-badge.is-edited, .campaign-badge.is-ready,
+.campaign-badge.is-published, .campaign-badge.is-blocked, .campaign-badge.is-ok,
+.campaign-badge.is-bad, .campaign-badge.is-neutral {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 0;
+  background: none;
+  color: var(--dk-text-2, #33415c);
+}
+.campaign-badge.is-draft::before, .campaign-badge.is-edited::before, .campaign-badge.is-ready::before,
+.campaign-badge.is-published::before, .campaign-badge.is-blocked::before, .campaign-badge.is-ok::before,
+.campaign-badge.is-bad::before, .campaign-badge.is-neutral::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid #10b981; /* in progress (draft): green ring, no fill */
+  background: transparent;
+}
+.campaign-badge.is-ready::before, .campaign-badge.is-published::before, .campaign-badge.is-ok::before {
+  background: #10b981;
+  border-color: #10b981;
+}
+.campaign-badge.is-edited::before { background: transparent; border-color: #10b981; }
+.campaign-badge.is-blocked::before, .campaign-badge.is-bad::before { background: #ff6b5b; border-color: #ff6b5b; }
+.campaign-badge.is-blocked, .campaign-badge.is-bad { color: var(--dk-coral-text, #b93a2f); }
+.campaign-badge.is-neutral::before { background: #2563eb; border-color: #2563eb; }
 
 /* Library → Recent generations */
 .recent-gens summary { cursor: pointer; list-style: none; }
@@ -1326,8 +1395,29 @@ textarea:focus-visible,
 .review-item.is-focus { box-shadow: 0 0 0 2px #2563eb55; }
 .review-item-head { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .review-group { font-weight: 600; }
-.review-impact { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--dk-subtle, #f3f4f6); color: var(--dk-text-2, #374151); }
-.review-impact.impact-hard { background: var(--dk-bad-bg, #fef2f2); color: var(--dk-bad-text, #b91c1c); }
+/* Export-impact severity - a dot instead of a filled pill (same language as
+   the asset-status dots above). Reminder/external is a neutral decision
+   (cobalt); a hard blocker is the coral attention colour + darker text. */
+.review-impact {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0;
+  background: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dk-text-2, #374151);
+}
+.review-impact::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+.review-impact.impact-hard::before { background: #ff6b5b; }
+.review-impact.impact-hard { color: var(--dk-coral-text, #b93a2f); }
 .review-item-title { font-weight: 600; margin: 4px 0 2px; }
 .review-item-why { font-size: 13px; }
 .review-drawer { margin-top: 10px; border-left: 3px solid #2563eb; }
@@ -1469,9 +1559,12 @@ html[data-theme="dark"] {
   --dk-bad-text: #fca5a5;
   --dk-bad-bg: #3b2222;
   --dk-bad-border: #5e2e2e;
-  --dk-warn-text: #fcd34d;
-  --dk-warn-bg: #3a3019;
-  --dk-warn-border: #5e4c20;
+  /* Brand sweep: "warn" used to be amber (#fcd34d/#3a3019/#5e4c20). Coral is
+     reserved for failed/blocked only, so warnings are cobalt (7.0:1). */
+  --dk-warn-text: #8fb0ff;
+  --dk-warn-bg: #1b2640;
+  --dk-warn-border: #2f4170;
+  --dk-coral-text: #ff6b5b;
   --dk-ok-text: #6ee7b7;
   --dk-ok-bg: #173329;
   --dk-ok-border: #22513f;
@@ -1484,9 +1577,11 @@ html[data-theme="dark"] {
   --text: #f4f3ee;
   --text-muted: #aeaba2;
   --text-faint: #8f8c84;
-  --accent: #d4b49c;
-  --accent-soft: rgba(212, 180, 156, 0.12);
-  --accent-ring: rgba(212, 180, 156, 0.35);
+  /* v24 brand sweep: --accent used to be a light brown (#d4b49c) - now the
+     same cobalt the rest of the signed-in app already uses (#2563eb). */
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.12);
+  --accent-ring: rgba(37, 99, 235, 0.35);
   --sc-bg: #1f1e1d;
   --sc-surface: #2a2927;
   --sc-text: #f4f3ee;
