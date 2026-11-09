@@ -1828,12 +1828,12 @@
      floor of the grid (bottom-middle), then one after another get picked up
      and set into the 3 x 2 grid. --cx/--cy: slot offset from the pile in
      card steps; --px/--py/--r: place in the pile; --d: stagger. */
-  .lp-problem-band .lp-coordinated-item:nth-child(1) { --cx: 1; --cy: 1; --px: -40px; --py: 4px; --r: -6deg; --d: 0s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(2) { --cx: 0; --cy: 1; --px: 26px; --py: -6px; --r: 4deg; --d: 0.06s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(3) { --cx: -1; --cy: 1; --px: -14px; --py: 10px; --r: -9deg; --d: 0.12s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(4) { --cx: 1; --cy: 0; --px: 34px; --py: 2px; --r: 7deg; --d: 0.18s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(5) { --cx: 0; --cy: 0; --px: -24px; --py: -8px; --r: -3deg; --d: 0.24s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(6) { --cx: -1; --cy: 0; --px: 12px; --py: 6px; --r: 10deg; --d: 0.3s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(1) { --cx: 1; --cy: 1; --px: -260px; --py: 18px; --r: -16deg; --d: 0s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { --cx: 0; --cy: 1; --px: 150px; --py: -14px; --r: 11deg; --d: 0.06s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { --cx: -1; --cy: 1; --px: -60px; --py: 24px; --r: -22deg; --d: 0.12s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { --cx: 1; --cy: 0; --px: 300px; --py: 10px; --r: 18deg; --d: 0.18s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { --cx: 0; --cy: 0; --px: -170px; --py: -10px; --r: 7deg; --d: 0.24s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { --cx: -1; --cy: 0; --px: 70px; --py: 20px; --r: -9deg; --d: 0.3s; }
 
   /* Particles: as each card lands in its slot, a few small white and icy
      sparks drift out from its edges and fade. One element per card, the
