@@ -263,14 +263,133 @@
   top: 0;
   right: 0;
   bottom: 0;
+  left: 0;
   z-index: 1;
-  width: 49%;
   overflow: hidden;
   pointer-events: none;
   /* v26: the mockup's ribbon is fully opaque all the way to the edge it
      bleeds off - no fade. The proof strip (z-index: 2, above this layer)
      stays readable on its own tinted cards without needing the art to fade
      out behind it. */
+
+  /* Scroll parallax (HeroStripes writes --hero-p, 0→1, as the visitor
+     scrolls through .lp-sky): drifts down slightly slower than the page,
+     with a small scale-down, pivoting near the bottom-left so the rotation
+     reads as the top-right arrow lifting. Transform/opacity only - no
+     layout properties - so this never triggers layout work on scroll.
+     --hero-p defaults to 0 (identity transform) until JS attaches, and
+     stays 0 forever under prefers-reduced-motion (no parallax). */
+  transform-origin: 18% 88%;
+  transform:
+    translate3d(0, calc(var(--hero-p, 0) * 54px), 0)
+    rotate(calc(var(--hero-p, 0) * -4deg))
+    scale(calc(1 - var(--hero-p, 0) * 0.08));
+  will-change: transform;
+}
+
+/* ── Entrance: bands fade/slide in staggered on first paint ──────────────
+   navy, then cobalt, then icy, 120ms apart. The cobalt band (it carries the
+   arrow sub-paths at the top-right) gets a longer keyframe sequence with a
+   small overshoot near the end, so the arrow reads as the last thing to
+   "launch" into place once the other two bands have settled. Gated behind
+   prefers-reduced-motion: no-preference, so a reduced-motion visitor simply
+   sees the finished artwork with no animation at all - never a flash of a
+   hidden state. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-hero-art .mark-band {
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+
+  .lp-hero-art .mark-band-navy {
+    animation: hero-band-in 860ms cubic-bezier(0.16, 1, 0.3, 1) 0ms both;
+  }
+
+  .lp-hero-art .mark-band-ice {
+    animation: hero-band-in 860ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
+  }
+
+  /* Cobalt carries the arrow sub-paths at the top-right: one continuous
+     animation (not a second comma-listed one - a later animation's
+     backwards fill would permanently win the `transform` property over the
+     whole timeline and cancel the slide-in) that slides/fades in on the
+     same schedule as the others, holds, then gives the arrow a small
+     "launch" overshoot once the icy band has settled. */
+  .lp-hero-art .mark-band-cobalt {
+    animation: hero-cobalt-in 1360ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  }
+}
+
+@keyframes hero-band-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-9%, 11%, 0) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Percentages are this animation's own 1360ms made to land on the same
+   absolute moments as hero-band-in and the launch flourish: slide/fade in
+   over the first 860ms (0%-63%, matching hero-band-in's pace), hold until
+   the icy band finishes (72%), then a small up-right overshoot (94%)
+   before settling (100%). */
+@keyframes hero-cobalt-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(-9%, 11%, 0) scale(0.86);
+  }
+  63% {
+    opacity: 1;
+    transform: none;
+  }
+  72% {
+    transform: none;
+  }
+  94% {
+    transform: translate3d(0.9%, -1.6%, 0) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Sheen: a slow, soft highlight drifting down each band ───────────────
+   Independent of the entrance/parallax above - "a more dynamic display"
+   without being busy: one pass every several seconds, eased, never
+   bouncing. Transform-only (translateY), so it costs nothing on scroll/
+   layout. Resting position is off-canvas (above the clip, translateY(-90)),
+   so without the animation below - including the default state every
+   reduced-motion visitor sees - the sheen is simply invisible, never a
+   highlight frozen mid-sweep. */
+.mark-sheen {
+  transform: translateY(-1000px);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mark-sheen {
+    animation: hero-sheen-sweep 7.5s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  }
+
+  .mark-sheen-cobalt {
+    animation-delay: 1.4s;
+  }
+}
+
+@keyframes hero-sheen-sweep {
+  0% {
+    transform: translateY(-600px);
+  }
+  55% {
+    transform: translateY(1800px);
+  }
+  100% {
+    transform: translateY(1800px);
+  }
 }
 
 /* The mark, huge: its bottom-left tips sit inside the box, its top-right ends
@@ -282,12 +401,43 @@
 }
 
 .lp-hero-art svg {
+  /* The traced mark at the mockup's scale: anchored bottom-right, so the navy
+     band runs off the hero's bottom edge exactly where the blue of the next
+     section (.lp-problem-band) begins. The proof cards (z-index 2) sit on
+     top of the bands. */
   position: absolute;
-  top: 96px;
-  right: 1%;
-  width: 98%;
-  height: auto;
-  aspect-ratio: 1.3;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  /* Arrow level with the headline, as on the mockup; the navy band's lower
+     part runs behind the (glass) proof cards and off the edge. */
+  height: calc(100% - 150px);
+  aspect-ratio: 1100 / 1030;
+  /* The navy band continues left past the viewBox; .lp-hero-art clips. */
+  overflow: visible;
+}
+
+/* Narrower desktops: a little smaller so the bands stay clear of the hero
+   copy column. */
+@media (max-width: 1439px) {
+  .lp-hero-art svg {
+    height: calc(100% - 210px);
+  }
+}
+
+/* The bands pour into the next section: the last stretch of the hero fades
+   from white into the exact colour the blue band below starts with, over the
+   art (cobalt and navy dissolve into it) and under the hero copy and cards. */
+.lp-sky::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 96px;
+  background: linear-gradient(180deg, rgba(47, 108, 235, 0) 0%, rgba(47, 108, 235, 0.55) 55%, var(--sky-top) 100%);
+  pointer-events: none;
 }
 
 @media (max-width: 1023px) {
@@ -488,7 +638,8 @@
 }
 
 .lp-cta-note {
-  max-width: 560px;
+  /* Wraps before the hero bands' faded cobalt tail. */
+  max-width: 500px;
   margin: 20px 0 0;
   font-size: 13.5px;
   line-height: 1.5;
@@ -1477,12 +1628,62 @@
 /* ── Prompt 24 sections ────────────────────────────────────────────────── */
 
 .lp-problem {
-  padding: 72px 24px 40px;
+  position: relative;
+  isolation: isolate;
+  padding: 0 0 40px;
+}
+
+/* The hero's bands pour straight into this full-bleed band (the hero ends
+   in var(--sky-top), see .lp-sky::after), so the top row is exactly that
+   colour and then becomes the final-CTA gradient (.lp-final-inner) behind the
+   white intro copy. At the bottom it lightens back through the logo's own
+   colours (cobalt, icy) to the section's white: lightness only ever rises,
+   so there is no grey mid-tone and no second stripe. */
+.lp-problem-band {
+  position: relative;
+  padding: 110px 0 240px;
+  background:
+    linear-gradient(180deg, var(--sky-top) 0, rgba(47, 108, 235, 0) 150px),
+    linear-gradient(160deg, var(--sky-top), var(--blue-deep));
+}
+
+.lp-problem-band > .lp-problem-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.lp-problem-band::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 250px;
+  background: linear-gradient(
+    180deg,
+    rgba(47, 108, 235, 0) 0%,
+    var(--sky-top) 38%,
+    #99d4fe 72%,
+    var(--surface) 100%
+  );
+  pointer-events: none;
+}
+
+/* White intro copy, only inside the coloured band above - the rest of the
+   section (the coordinated-fields cards onward) is untouched. Solid white
+   throughout (never translucent) - verified against both gradient stops by
+   backend/tests/landing-contrast.test.js, same AA margin as the already
+   -shipped final-CTA band this reuses the gradient from. */
+.lp-problem-band .lp-eyebrow,
+.lp-problem-band h2,
+.lp-problem-band .lp-h2-sub {
+  color: #ffffff;
 }
 
 .lp-problem-inner {
   max-width: 980px;
   margin: 0 auto;
+  padding: 0 24px;
   text-align: center;
 }
 
@@ -1696,7 +1897,10 @@
   gap: 3px;
   padding: 14px 14px 15px;
   text-align: left;
-  background: #fff;
+  /* Frosted, so the hero's bands stay visible running behind the cards. */
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--hero-border);
   border-radius: 12px;
   box-shadow: 0 6px 18px rgba(16, 28, 69, 0.08);

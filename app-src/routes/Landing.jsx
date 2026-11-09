@@ -329,16 +329,23 @@ export default function Landing() {
 
       {/* ── 2. Problem ─────────────────────────────────────────────────── */}
       <section className="lp-problem" id="product">
+        {/* The hero's bands pour into this full-bleed blue band (the final-CTA
+            gradient) carrying the intro copy in white; it fades back to the
+            section's normal white before "What stays coordinated". */}
+        <div className="lp-problem-band">
+          <div className="lp-problem-inner">
+            <Reveal>
+              <div className="lp-eyebrow">The problem</div>
+              <h2 className="lp-h2">Your campaign should sound like one idea - not five separate AI chats.</h2>
+              <p className="lp-h2-sub">
+                When website copy, emails, social posts and ads are created separately, the offer
+                drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
+                the same approved brand facts and campaign brief.
+              </p>
+            </Reveal>
+          </div>
+        </div>
         <div className="lp-problem-inner">
-          <Reveal>
-            <div className="lp-eyebrow">The problem</div>
-            <h2 className="lp-h2">Your campaign should sound like one idea - not five separate AI chats.</h2>
-            <p className="lp-h2-sub">
-              When website copy, emails, social posts and ads are created separately, the offer
-              drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
-              the same approved brand facts and campaign brief.
-            </p>
-          </Reveal>
           <Reveal>
             <p className="lp-coordinated-label">What stays coordinated across every output</p>
             <dl className="lp-coordinated">

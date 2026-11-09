@@ -245,3 +245,33 @@ test('the wind streaks are visible on the white hero (cobalt, not white-on-white
   assert.ok(!/#fff/i.test(bg), '.lp-meteor must not be white — invisible on the white hero');
   assert.match(bg, /#2f68e8/i, '.lp-meteor should use the brand board\'s cobalt accent (#2F68E8)');
 });
+
+// ---------------------------------------------------------------------------
+// v27 — the "problem" section's full-bleed colour band (the hero's ribbon
+// running on into it): white intro copy on the same gradient already shipped
+// on the final-CTA band, checked against BOTH its stops, the same way the
+// hero text is checked against every .lp-sky stop above.
+// ---------------------------------------------------------------------------
+
+test('the problem-section colour band reuses the approved final-CTA gradient', () => {
+  const bg = declaration('.lp-problem-band', 'background-image') || declaration('.lp-problem-band', 'background');
+  assert.ok(bg, '.lp-problem-band has no background-image');
+  assert.match(bg, /var\(--sky-top\)/, '.lp-problem-band should start from --sky-top, like .lp-final-inner');
+  assert.match(bg, /var\(--blue-deep\)/, '.lp-problem-band should end at --blue-deep, like .lp-final-inner');
+});
+
+test('the problem-band intro copy is opaque white and meets AA on both gradient stops', () => {
+  const vars = cssVariables();
+  const stops = [vars['--sky-top'], vars['--blue-deep']];
+  const selectors = ['.lp-problem-band .lp-eyebrow', '.lp-problem-band h2', '.lp-problem-band .lp-h2-sub'];
+  for (const selector of selectors) {
+    const raw = declaration(selector, 'color');
+    assert.ok(raw, `${selector} has no color declaration`);
+    assert.ok(!/rgba\(/.test(raw), `${selector} uses a translucent colour (${raw}) — use an opaque hex`);
+    const fg = hexToRgb(resolveColor(selector, 'color'));
+    for (const stop of stops) {
+      const ratio = contrast(fg, hexToRgb(stop));
+      assert.ok(ratio >= AA_NORMAL, `${selector} is ${ratio.toFixed(2)}:1 against ${stop}, below AA`);
+    }
+  }
+});
