@@ -1686,8 +1686,8 @@
     top: 50%;
     left: 100%;
     width: 28px;
-    height: 2px;
-    margin-top: -1px;
+    height: 3px;
+    margin-top: -1.5px;
     transform-origin: left center;
   }
 
@@ -1695,9 +1695,9 @@
   .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before {
     top: 100%;
     left: 50%;
-    width: 2px;
+    width: 3px;
     height: 28px;
-    margin-left: -1px;
+    margin-left: -1.5px;
     transform-origin: center top;
   }
 }
@@ -1747,6 +1747,97 @@
   .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before { transition-delay: 1050ms; }
   .lp-problem-band .lp-coordinated-item:nth-child(4)::after { transition-delay: 1250ms; }
   .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 1400ms; }
+}
+
+/* The signal: once the cards are linked, a neon pulse keeps travelling the
+   connectors on a 4s loop - along the top row, down all three links, then
+   along the bottom row - and each card glows as the pulse reaches it. The
+   pulse is a bright core in an oversized background gradient slid across
+   each connector (background-position only, no layout). Wide screens only,
+   where the connectors exist; off under reduced motion. */
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  .lp-problem-band .lp-coordinated-item:not(:nth-child(3n))::after {
+    background: linear-gradient(90deg, #99d4fe 0%, #99d4fe 36%, #ffffff 46%, #ffffff 54%, #99d4fe 64%, #99d4fe 100%);
+    background-size: 300% 100%;
+    background-position: 100% 0;
+  }
+
+  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before {
+    background: linear-gradient(180deg, #99d4fe 0%, #99d4fe 36%, #ffffff 46%, #ffffff 54%, #99d4fe 64%, #99d4fe 100%);
+    background-size: 100% 300%;
+    background-position: 0 100%;
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:not(:nth-child(3n))::after {
+    animation: signal-x 4s linear infinite;
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(-n + 3)::before {
+    animation: signal-y 4s linear infinite;
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item {
+    animation: signal-card 4s ease-out infinite;
+  }
+
+  /* Start after the link-up (~1.9s), then keep the same offsets each loop. */
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(1) { animation-delay: 1.9s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(1)::after { animation-delay: 1.9s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(2) { animation-delay: 2.35s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(2)::after { animation-delay: 2.35s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(3) { animation-delay: 2.8s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(-n + 3)::before { animation-delay: 2.8s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(4) { animation-delay: 3.25s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(4)::after { animation-delay: 3.25s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(5) { animation-delay: 3.7s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(5)::after { animation-delay: 3.7s; }
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(6) { animation-delay: 4.15s; }
+}
+
+@keyframes signal-x {
+  0% {
+    background-position: 100% 0;
+    box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
+  }
+  6% {
+    box-shadow: 0 0 22px 5px rgba(207, 238, 255, 1);
+  }
+  12%,
+  100% {
+    background-position: 0% 0;
+    box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
+  }
+}
+
+@keyframes signal-y {
+  0% {
+    background-position: 0 100%;
+    box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
+  }
+  6% {
+    box-shadow: 0 0 22px 5px rgba(207, 238, 255, 1);
+  }
+  12%,
+  100% {
+    background-position: 0 0%;
+    box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
+  }
+}
+
+@keyframes signal-card {
+  0%,
+  100% {
+    box-shadow: 0 12px 30px rgba(8, 20, 60, 0.22);
+  }
+  5% {
+    box-shadow:
+      0 0 0 2px rgba(153, 212, 254, 0.95),
+      0 0 26px 4px rgba(153, 212, 254, 0.65),
+      0 12px 30px rgba(8, 20, 60, 0.22);
+  }
+  22% {
+    box-shadow: 0 12px 30px rgba(8, 20, 60, 0.22);
+  }
 }
 
 .lp-problem-inner {
