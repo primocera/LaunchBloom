@@ -311,6 +311,7 @@ export default function Landing() {
           <ol className="lp-proof-strip" aria-label="What one brief produces">
             {PROOF_STEPS.map((s, i) => (
               <li key={s.label}>
+                <span className="lp-spark" aria-hidden="true" />
                 <span className="lp-proof-n" aria-hidden="true">{i + 1}</span>
                 <span className="lp-proof-label">{s.label}</span>
                 {s.label === 'Connected assets' && (
@@ -353,6 +354,7 @@ export default function Landing() {
             <Reveal as="dl" className="lp-coordinated">
               {COORDINATED.map(([term, detail]) => (
                 <div className="lp-coordinated-item" key={term}>
+                  <span className="lp-spark" aria-hidden="true" />
                   <dt>{term}</dt>
                   <dd>{detail}</dd>
                 </div>

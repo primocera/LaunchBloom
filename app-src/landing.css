@@ -1767,11 +1767,21 @@
 
   /* Links draw once both cards they join are in: the top row left to right,
      then down, then the bottom row. */
-  .lp-problem-band .lp-coordinated-item:nth-child(1)::after { transition-delay: 450ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(2)::after { transition-delay: 550ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before { transition-delay: 680ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(4)::after { transition-delay: 800ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 900ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(1)::after { transition-delay: 2750ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2)::after { transition-delay: 2850ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before { transition-delay: 2980ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4)::after { transition-delay: 3100ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 3200ms; }
+}
+
+.lp-spark {
+  display: none;
+}
+
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  .lp-spark {
+    display: block;
+  }
 }
 
 /* The signal, played once: after the cards link up, a neon pulse runs the
@@ -1794,32 +1804,119 @@
     background-position: 0 0%;
   }
 
-  /* One pass of the pulse per link, then the shared finale at 3.6s. */
+  /* One pass of the pulse per link, then the shared finale at 5.9s. */
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:not(:nth-child(3n))::after {
     animation:
       signal-x 0.5s ease-in-out var(--sig, 0s) 1,
-      signal-finale-link 1.3s ease-in-out 3.6s 1;
+      signal-finale-link 1.3s ease-in-out 5.9s 1;
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(-n + 3)::before {
     animation:
-      signal-y 0.5s ease-in-out 1.9s 1,
-      signal-finale-link 1.3s ease-in-out 3.6s 1;
+      signal-y 0.5s ease-in-out 4.2s 1,
+      signal-finale-link 1.3s ease-in-out 5.9s 1;
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item {
     animation:
+      coord-drop 2s cubic-bezier(0.45, 0, 0.25, 1) var(--d) 1 both,
       signal-card 0.9s ease-out var(--hit, 0s) 1,
-      signal-finale-card 1.3s ease-in-out 3.6s 1;
+      signal-finale-card 1.3s ease-in-out 5.9s 1;
   }
 
+  /* The drop: all six fall in from above onto a loose, tilted pile on the
+     floor of the grid (bottom-middle), then one after another get picked up
+     and set into the 3 x 2 grid. --cx/--cy: slot offset from the pile in
+     card steps; --px/--py/--r: place in the pile; --d: stagger. */
+  .lp-problem-band .lp-coordinated-item:nth-child(1) { --cx: 1; --cy: 1; --px: -40px; --py: 4px; --r: -6deg; --d: 0s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { --cx: 0; --cy: 1; --px: 26px; --py: -6px; --r: 4deg; --d: 0.06s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { --cx: -1; --cy: 1; --px: -14px; --py: 10px; --r: -9deg; --d: 0.12s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { --cx: 1; --cy: 0; --px: 34px; --py: 2px; --r: 7deg; --d: 0.18s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { --cx: 0; --cy: 0; --px: -24px; --py: -8px; --r: -3deg; --d: 0.24s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { --cx: -1; --cy: 0; --px: 12px; --py: 6px; --r: 10deg; --d: 0.3s; }
+
+  /* Particles: as each card lands in its slot, a few small white and icy
+     sparks drift out from its edges and fade. One element per card, the
+     sparks are its box-shadows, scaled outward (transform/opacity only). */
+  .lp-spark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    margin: -2px 0 0 -2px;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow:
+      -150px -40px 1px 0 #ffffff,
+      -120px 52px 1px -1px #99d4fe,
+      -70px -56px 1px -1px #ffffff,
+      -20px 58px 1px 0 #cfe2ff,
+      30px -58px 1px -1px #99d4fe,
+      80px 56px 1px -1px #ffffff,
+      125px -50px 1px 0 #cfe2ff,
+      156px 30px 1px -1px #ffffff,
+      160px -12px 1px -1px #99d4fe,
+      -162px 8px 1px -1px #cfe2ff;
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-spark {
+    animation: coord-spark 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--d) + 1.95s) 1 both;
+  }
+}
+
+@keyframes coord-drop {
+  0% {
+    opacity: 0;
+    transform:
+      translate(calc(var(--cx) * (100% + 28px) + var(--px)), calc(var(--cy) * (100% + 28px) + var(--py) - 340px))
+      rotate(calc(var(--r) * -2));
+  }
+  10% {
+    opacity: 1;
+  }
+  27% {
+    transform: translate(calc(var(--cx) * (100% + 28px) + var(--px)), calc(var(--cy) * (100% + 28px) + var(--py) + 8px)) rotate(var(--r));
+  }
+  33%,
+  50% {
+    opacity: 1;
+    transform: translate(calc(var(--cx) * (100% + 28px) + var(--px)), calc(var(--cy) * (100% + 28px) + var(--py))) rotate(var(--r));
+  }
+  64% {
+    transform:
+      translate(calc(var(--cx) * (100% + 28px) * 0.5 + var(--px) * 0.5), calc(var(--cy) * (100% + 28px) * 0.5 - 30px))
+      rotate(calc(var(--r) * 0.4))
+      scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes coord-spark {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
   /* --hit: when the pulse reaches the card; --sig: when its own link fires. */
-  .lp-problem-band .lp-coordinated-item:nth-child(1) { --hit: 1.1s; --sig: 1.1s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(2) { --hit: 1.5s; --sig: 1.5s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(3) { --hit: 1.9s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(4) { --hit: 2.3s; --sig: 2.3s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(5) { --hit: 2.7s; --sig: 2.7s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(6) { --hit: 3.1s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(1) { --hit: 3.4s; --sig: 3.4s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { --hit: 3.8s; --sig: 3.8s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { --hit: 4.2s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { --hit: 4.6s; --sig: 4.6s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { --hit: 5s; --sig: 5s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { --hit: 5.4s; }
 }
 
 @keyframes signal-x {
@@ -2551,6 +2648,23 @@
   .lp-proof-strip li:nth-child(2) { --cx: 0.5; --px: 22px; --py: -4px; --r: 5deg; --t: 0.52s; }
   .lp-proof-strip li:nth-child(3) { --cx: -0.5; --px: -12px; --py: 10px; --r: -3deg; --t: 0.64s; }
   .lp-proof-strip li:nth-child(4) { --cx: -1.5; --px: 30px; --py: 2px; --r: 8deg; --t: 0.76s; }
+
+  /* sparks as each card lands in its place (.lp-spark, see the blue band) */
+  .lp-proof-strip li .lp-spark {
+    /* on the white hero: cobalt and icy instead of white */
+    box-shadow:
+      -150px -40px 1px 0 #2f6ceb,
+      -120px 52px 1px -1px #7cc0fb,
+      -70px -56px 1px -1px #2f6ceb,
+      -20px 58px 1px 0 #99d4fe,
+      30px -58px 1px -1px #7cc0fb,
+      80px 56px 1px -1px #2f6ceb,
+      125px -50px 1px 0 #99d4fe,
+      156px 30px 1px -1px #2f6ceb,
+      160px -12px 1px -1px #7cc0fb,
+      -162px 8px 1px -1px #2f6ceb;
+    animation: coord-spark 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--t) + 2.15s) 1 both;
+  }
 }
 
 @keyframes proof-drop {
