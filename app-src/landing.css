@@ -2535,6 +2535,61 @@
   flex: none;
 }
 
+/* Intro: all four proof cards first drop in from above and land in a loose,
+   tilted pile in the middle of the strip; then, one after another, they get
+   picked up and settle into their places in the row. Wide screens only (four
+   in a row); reduced motion shows the strip as is. --cx is how many card
+   widths the slot sits from the strip's centre; --px/--py/--r place each card
+   in the pile; --t staggers them. */
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  .lp-proof-strip li {
+    position: relative;
+    animation: proof-drop 2.2s cubic-bezier(0.45, 0, 0.25, 1) var(--t) 1 both;
+  }
+
+  .lp-proof-strip li:nth-child(1) { --cx: 1.5; --px: -34px; --py: 6px; --r: -7deg; --t: 0.4s; }
+  .lp-proof-strip li:nth-child(2) { --cx: 0.5; --px: 22px; --py: -4px; --r: 5deg; --t: 0.52s; }
+  .lp-proof-strip li:nth-child(3) { --cx: -0.5; --px: -12px; --py: 10px; --r: -3deg; --t: 0.64s; }
+  .lp-proof-strip li:nth-child(4) { --cx: -1.5; --px: 30px; --py: 2px; --r: 8deg; --t: 0.76s; }
+}
+
+@keyframes proof-drop {
+  0% {
+    opacity: 0;
+    transform:
+      translate(calc(var(--cx) * (100% + 10px) + var(--px)), calc(var(--py) - 420px))
+      rotate(calc(var(--r) * -2));
+  }
+  10% {
+    opacity: 1;
+  }
+  /* lands in the pile with a small bounce */
+  26% {
+    transform: translate(calc(var(--cx) * (100% + 10px) + var(--px)), calc(var(--py) + 8px)) rotate(var(--r));
+    box-shadow: 0 10px 24px rgba(16, 28, 69, 0.16);
+  }
+  32%,
+  52% {
+    opacity: 1;
+    transform: translate(calc(var(--cx) * (100% + 10px) + var(--px)), var(--py)) rotate(var(--r));
+    box-shadow: 0 10px 24px rgba(16, 28, 69, 0.16);
+  }
+  /* picked up... */
+  64% {
+    transform:
+      translate(calc(var(--cx) * (100% + 10px) * 0.55 + var(--px) * 0.5), -34px)
+      rotate(calc(var(--r) * 0.4))
+      scale(1.05);
+    box-shadow: 0 24px 48px rgba(16, 28, 69, 0.2);
+  }
+  /* ...and set into place */
+  100% {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 6px 18px rgba(16, 28, 69, 0.08);
+  }
+}
+
 /* Two columns on tablets, one on phones - never a horizontal scroll. */
 @media (max-width: 860px) {
   .lp-proof-strip {
