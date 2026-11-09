@@ -329,9 +329,9 @@ export default function Landing() {
 
       {/* ── 2. Problem ─────────────────────────────────────────────────── */}
       <section className="lp-problem" id="product">
-        {/* The hero's bands pour into this full-bleed blue band (the final-CTA
-            gradient) carrying the intro copy in white; it fades back to the
-            section's normal white before "What stays coordinated". */}
+        {/* The hero's bands run straight into this full-bleed blue band (the
+            final-CTA gradient): intro copy in white, then the six coordinated
+            cards; then a clean switch back to white before "Who it's for". */}
         <div className="lp-problem-band">
           <div className="lp-problem-inner">
             <Reveal>
@@ -344,19 +344,21 @@ export default function Landing() {
               </p>
             </Reveal>
           </div>
-        </div>
-        <div className="lp-problem-inner">
-          <Reveal>
-            <p className="lp-coordinated-label">What stays coordinated across every output</p>
-            <dl className="lp-coordinated">
+          <div className="lp-problem-inner">
+            <Reveal>
+              <p className="lp-coordinated-label">What stays coordinated across every output</p>
+            </Reveal>
+            {/* The six cards rise in one by one and link up (landing.css,
+                .lp-coordinated.is-in) once the grid scrolls into view. */}
+            <Reveal as="dl" className="lp-coordinated">
               {COORDINATED.map(([term, detail]) => (
                 <div className="lp-coordinated-item" key={term}>
                   <dt>{term}</dt>
                   <dd>{detail}</dd>
                 </div>
               ))}
-            </dl>
-          </Reveal>
+            </Reveal>
+          </div>
         </div>
       </section>
 

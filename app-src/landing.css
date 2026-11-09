@@ -425,21 +425,6 @@
   }
 }
 
-/* The bands pour into the next section: the last stretch of the hero fades
-   from white into the exact colour the blue band below starts with, over the
-   art (cobalt and navy dissolve into it) and under the hero copy and cards. */
-.lp-sky::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 1;
-  height: 96px;
-  background: linear-gradient(180deg, rgba(47, 108, 235, 0) 0%, rgba(47, 108, 235, 0.55) 55%, var(--sky-top) 100%);
-  pointer-events: none;
-}
-
 @media (max-width: 1023px) {
   .lp-hero-grid {
     grid-template-columns: 1fr;
@@ -1633,40 +1618,21 @@
   padding: 0 0 40px;
 }
 
-/* The hero's bands pour straight into this full-bleed band (the hero ends
-   in var(--sky-top), see .lp-sky::after), so the top row is exactly that
-   colour and then becomes the final-CTA gradient (.lp-final-inner) behind the
-   white intro copy. At the bottom it lightens back through the logo's own
-   colours (cobalt, icy) to the section's white: lightness only ever rises,
-   so there is no grey mid-tone and no second stripe. */
+/* The hero's bands run off its bottom edge straight into this full-bleed
+   band: a clean switch to the final-CTA gradient (.lp-final-inner) behind the
+   white intro copy and the coordinated cards, then a clean switch back to
+   white for the next section. */
 .lp-problem-band {
   position: relative;
-  padding: 110px 0 240px;
-  background:
-    linear-gradient(180deg, var(--sky-top) 0, rgba(47, 108, 235, 0) 150px),
-    linear-gradient(160deg, var(--sky-top), var(--blue-deep));
+  /* Overlap the hero by 1px so no sub-pixel hairline shows at the seam. */
+  margin-top: -1px;
+  padding: 110px 0 96px;
+  background: linear-gradient(160deg, var(--sky-top), var(--blue-deep));
 }
 
 .lp-problem-band > .lp-problem-inner {
   position: relative;
   z-index: 1;
-}
-
-.lp-problem-band::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 250px;
-  background: linear-gradient(
-    180deg,
-    rgba(47, 108, 235, 0) 0%,
-    var(--sky-top) 38%,
-    #99d4fe 72%,
-    var(--surface) 100%
-  );
-  pointer-events: none;
 }
 
 /* White intro copy, only inside the coloured band above - the rest of the
@@ -1678,6 +1644,109 @@
 .lp-problem-band h2,
 .lp-problem-band .lp-h2-sub {
   color: #ffffff;
+}
+
+/* The six coordinated cards sit on the blue too: white label, white cards
+   that rise in one by one and then link up with icy connectors (3 x 2 grid on
+   wide screens), reading as one connected set. */
+.lp-problem-band .lp-coordinated-label {
+  color: #ffffff;
+}
+
+.lp-problem-band .lp-coordinated-item {
+  position: relative;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 12px 30px rgba(8, 20, 60, 0.22);
+}
+
+/* The grid itself does not fade; its cards do (below). */
+.lp .lp-problem-band .lp-coordinated.reveal {
+  opacity: 1;
+  transform: none;
+}
+
+@media (min-width: 861px) {
+  .lp-problem-band .lp-coordinated {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+
+  .lp-problem-band .lp-coordinated-item:not(:nth-child(3n))::after,
+  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before {
+    content: '';
+    position: absolute;
+    background: #99d4fe;
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
+    pointer-events: none;
+  }
+
+  /* Across the gap to the next card in the row. */
+  .lp-problem-band .lp-coordinated-item:not(:nth-child(3n))::after {
+    top: 50%;
+    left: 100%;
+    width: 28px;
+    height: 2px;
+    margin-top: -1px;
+    transform-origin: left center;
+  }
+
+  /* Down the gap to the card below. */
+  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before {
+    top: 100%;
+    left: 50%;
+    width: 2px;
+    height: 28px;
+    margin-left: -1px;
+    transform-origin: center top;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-problem-band .lp-coordinated-item {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0) scale(0.98);
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { transition-delay: 110ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { transition-delay: 220ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { transition-delay: 330ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { transition-delay: 440ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { transition-delay: 550ms; }
+
+  .lp-problem-band .lp-coordinated-item::after {
+    transform: scaleX(0);
+    transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .lp-problem-band .lp-coordinated-item::before {
+    transform: scaleY(0);
+    transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item::after {
+    transform: scaleX(1);
+  }
+
+  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item::before {
+    transform: scaleY(1);
+  }
+
+  /* Links draw once both cards they join are in: the top row left to right,
+     then down, then the bottom row. */
+  .lp-problem-band .lp-coordinated-item:nth-child(1)::after { transition-delay: 700ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2)::after { transition-delay: 850ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before { transition-delay: 1050ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4)::after { transition-delay: 1250ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 1400ms; }
 }
 
 .lp-problem-inner {
