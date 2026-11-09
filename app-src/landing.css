@@ -388,9 +388,13 @@
      shrinks, pivoting low on the left. The clip (.lp-hero-art) stays put
      and the band continues below it, so the seam never shows a gap.
      Transform only; at rest under reduced motion. */
+  /* --drift-x ends the drift with the navy band centred on the page (it is
+     anchored to the right edge, so the shift depends on the page width;
+     measured: band centre sits 522px in from the right at the drift end). */
+  --drift-x: calc(522px - 50vw);
   transform-origin: 18% 72%;
   transform:
-    translate3d(calc(var(--hero-p, 0) * -180px), calc(var(--hero-p, 0) * 54px), 0)
+    translate3d(calc(var(--hero-p, 0) * var(--drift-x)), calc(var(--hero-p, 0) * 54px), 0)
     rotate(calc(var(--hero-p, 0) * -4deg))
     scale(calc(1 - var(--hero-p, 0) * 0.08));
   will-change: transform;
@@ -404,6 +408,7 @@
   .lp-hero-art svg {
     height: calc((100% - 210px) * 1230 / 1030);
     bottom: calc((100% - 210px) * -200 / 1030);
+    --drift-x: calc(478px - 50vw);
   }
 }
 
