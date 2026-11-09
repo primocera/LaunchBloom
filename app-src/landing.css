@@ -2303,6 +2303,11 @@
   color: #99d4fe;
 }
 
+/* no card dividers on the blue: the white circuit is the structure */
+.lp-example-band .lp-feature {
+  border: 0;
+}
+
 .lp-example-band .lp-h2,
 .lp-example-band .lp-feature h3 {
   color: #ffffff;
