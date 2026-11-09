@@ -424,6 +424,9 @@ export default function Landing() {
 
       {/* ── 5. Example campaign ────────────────────────────────────────── */}
       <section className="lp-example" id="example">
+        {/* The brief and its four channels sit on a full-bleed brand-blue band;
+            the product view below stays on the section's own light tint. */}
+        <div className="lp-example-band">
         <div className="lp-example-inner">
           <Reveal>
             <div className="lp-eyebrow">Example campaign</div>
@@ -467,6 +470,9 @@ export default function Landing() {
               <span className="lp-ex-wire" style={{ '--k': k }} aria-hidden="true" key={k} />
             ))}
           </Reveal>
+        </div>
+        </div>
+        <div className="lp-example-inner">
           {/* v11 SC-04: the same sequence rendered in the product's own status
               vocabulary, from the synthetic fixture the authenticated E2E
               matrix seeds. Code-native rather than a screenshot, so it cannot

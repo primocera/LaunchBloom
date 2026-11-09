@@ -2286,28 +2286,30 @@
 }
 
 .lp-example {
-  padding: 72px 24px;
-  /* The final-CTA blue, like the problem band: white copy on it. */
+  padding: 56px 24px;
+  background: var(--tint);
+}
+
+/* The brief and its four channels on the final-CTA blue, full bleed (it
+   cancels the section's own padding), white copy; the product view below
+   keeps the section's light tint. */
+.lp-example-band {
+  margin: -56px -24px 48px;
+  padding: 72px 24px 64px;
   background: linear-gradient(160deg, var(--sky-top), var(--blue-deep));
 }
 
-.lp-example .lp-eyebrow {
+.lp-example-band .lp-eyebrow {
   color: #99d4fe;
 }
 
-.lp-example .lp-feature {
-  border: 0;
-}
-
-.lp-example .lp-h2,
-.lp-example .lp-feature h3,
-.lp-example .lp-preview-caption,
-.lp-example .lp-trust-line {
+.lp-example-band .lp-h2,
+.lp-example-band .lp-feature h3 {
   color: #ffffff;
 }
 
-.lp-example .lp-h2-sub,
-.lp-example .lp-feature p.lp-ex-quote {
+.lp-example-band .lp-h2-sub,
+.lp-example-band .lp-feature p.lp-ex-quote {
   color: #dcebfb;
 }
 
