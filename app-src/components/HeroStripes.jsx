@@ -90,27 +90,10 @@ export default function HeroStripes() {
             <stop offset="62%" stopColor="#14338f" />
             <stop offset="100%" stopColor="#0f1e51" />
           </linearGradient>
-          {/* The sheen: a soft, narrow light band drifting over the cobalt and
-              navy bands, clipped to each band's own silhouette. */}
-          <linearGradient id="heroArtSheen" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#fff" stopOpacity="0" />
-            <stop offset="42%" stopColor="#fff" stopOpacity="0" />
-            <stop offset="50%" stopColor="#fff" stopOpacity="0.32" />
-            <stop offset="58%" stopColor="#fff" stopOpacity="0" />
-            <stop offset="100%" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
-          <clipPath id="heroClipNavy"><path d={HERO_PATHS[2]} /></clipPath>
-          <clipPath id="heroClipCobalt"><path d={HERO_PATHS[1]} /></clipPath>
         </defs>
         <path d={HERO_PATHS[0]} className="mark-band mark-band-ice" fill="url(#heroArtIce)" />
         <path d={HERO_PATHS[2]} className="mark-band mark-band-navy" fill="url(#heroArtNavy)" />
         <path d={HERO_PATHS[1]} className="mark-band mark-band-cobalt" fill="url(#heroArtCobalt)" />
-        <g clipPath="url(#heroClipNavy)">
-          <rect className="mark-sheen mark-sheen-navy" x="40" y="-700" width="1100" height="1000" fill="url(#heroArtSheen)" />
-        </g>
-        <g clipPath="url(#heroClipCobalt)">
-          <rect className="mark-sheen mark-sheen-cobalt" x="40" y="-700" width="1100" height="1000" fill="url(#heroArtSheen)" />
-        </g>
       </svg>
     </div>
   );

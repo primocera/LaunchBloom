@@ -359,34 +359,6 @@
   }
 }
 
-/* Sheen: a slow, soft highlight drifting down the cobalt and navy bands
-   every few seconds. Transform only. At rest it sits off the bands, so
-   reduced-motion visitors simply never see it. */
-.mark-sheen {
-  transform: translateY(-1000px);
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .mark-sheen {
-    animation: hero-sheen-sweep 7.5s cubic-bezier(0.37, 0, 0.63, 1) infinite;
-  }
-
-  .mark-sheen-cobalt {
-    animation-delay: 1.4s;
-  }
-}
-
-@keyframes hero-sheen-sweep {
-  0% {
-    transform: translateY(-600px);
-  }
-  55%,
-  100% {
-    transform: translateY(1800px);
-  }
-}
-
 /* The mark, huge: its bottom-left tips sit inside the box, its top-right ends
    run off the right edge, as on the brand board's landing. */
 @media (max-width: 1199px) {
@@ -401,7 +373,8 @@
      section (.lp-problem-band) begins. The proof cards (z-index 2) sit on
      top of the bands. */
   position: absolute;
-  right: 0;
+  /* Rests a little in from the right edge, the arrow tip inside the page. */
+  right: 48px;
   width: auto;
   /* Arrow level with the headline, as on the mockup; the navy band's lower
      part runs behind the (glass) proof cards and off the edge. */
@@ -417,7 +390,7 @@
      Transform only; at rest under reduced motion. */
   transform-origin: 18% 72%;
   transform:
-    translate3d(calc(var(--hero-p, 0) * -140px), calc(var(--hero-p, 0) * 54px), 0)
+    translate3d(calc(var(--hero-p, 0) * -320px), calc(var(--hero-p, 0) * 54px), 0)
     rotate(calc(var(--hero-p, 0) * -4deg))
     scale(calc(1 - var(--hero-p, 0) * 0.08));
   will-change: transform;
