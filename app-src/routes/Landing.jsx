@@ -393,15 +393,24 @@ export default function Landing() {
             <div className="lp-eyebrow">How it works</div>
             <h2 className="lp-h2">Approve the strategy once. Build every asset from it.</h2>
           </Reveal>
-          <div className="lp-how-grid">
-            {MECHANISM.map((s, i) => (
-              <Reveal className="lp-how-step" key={s.n} delay={i * 90}>
-                <div className="lp-how-n">{s.n}</div>
+          <Reveal className="lp-how-grid">
+            {MECHANISM.map((s) => (
+              <div className="lp-how-step" key={s.n}>
+                {/* Played in order once the grid is in view: a ring draws
+                    round the number, which turns into a check, then a line
+                    runs on to the next step (landing.css, .lp-how-grid). */}
+                <div className="lp-how-n">
+                  <span className="lp-how-num">{s.n}</span>
+                  <svg className="lp-how-mark" viewBox="0 0 40 40" aria-hidden="true">
+                    <circle className="lp-how-ring" cx="20" cy="20" r="18" />
+                    <path className="lp-how-check" d="M13.5 20.5l4.5 4.5 8.5-9.5" />
+                  </svg>
+                </div>
                 <h3>{s.title}</h3>
                 <p>{s.body}</p>
-              </Reveal>
+              </div>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 

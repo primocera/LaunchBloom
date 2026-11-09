@@ -272,19 +272,6 @@
      stays readable on its own tinted cards without needing the art to fade
      out behind it. */
 
-  /* Scroll parallax (HeroStripes writes --hero-p, 0→1, as the visitor
-     scrolls through .lp-sky): drifts down slightly slower than the page,
-     with a small scale-down, pivoting near the bottom-left so the rotation
-     reads as the top-right arrow lifting. Transform/opacity only - no
-     layout properties - so this never triggers layout work on scroll.
-     --hero-p defaults to 0 (identity transform) until JS attaches, and
-     stays 0 forever under prefers-reduced-motion (no parallax). */
-  transform-origin: 18% 88%;
-  transform:
-    translate3d(0, calc(var(--hero-p, 0) * 54px), 0)
-    rotate(calc(var(--hero-p, 0) * -4deg))
-    scale(calc(1 - var(--hero-p, 0) * 0.08));
-  will-change: transform;
 }
 
 /* ── Entrance: bands fade/slide in staggered on first paint ──────────────
@@ -354,41 +341,6 @@
   100% {
     opacity: 1;
     transform: none;
-  }
-}
-
-/* ── Sheen: a slow, soft highlight drifting down each band ───────────────
-   Independent of the entrance/parallax above - "a more dynamic display"
-   without being busy: one pass every several seconds, eased, never
-   bouncing. Transform-only (translateY), so it costs nothing on scroll/
-   layout. Resting position is off-canvas (above the clip, translateY(-90)),
-   so without the animation below - including the default state every
-   reduced-motion visitor sees - the sheen is simply invisible, never a
-   highlight frozen mid-sweep. */
-.mark-sheen {
-  transform: translateY(-1000px);
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .mark-sheen {
-    animation: hero-sheen-sweep 7.5s cubic-bezier(0.37, 0, 0.63, 1) infinite;
-  }
-
-  .mark-sheen-cobalt {
-    animation-delay: 1.4s;
-  }
-}
-
-@keyframes hero-sheen-sweep {
-  0% {
-    transform: translateY(-600px);
-  }
-  55% {
-    transform: translateY(1800px);
-  }
-  100% {
-    transform: translateY(1800px);
   }
 }
 
@@ -1207,6 +1159,19 @@
 .lp-path-card p { flex: 1; color: var(--muted); }
 .lp-path-who { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--blue, #2563eb); }
 
+/* The two path cards in the final-CTA card's style: brand gradient, white
+   text, white pill button. */
+.lp-path-card {
+  color: #ffffff;
+  background: linear-gradient(160deg, var(--sky-top), var(--blue-deep));
+  box-shadow: 0 18px 40px rgba(13, 27, 58, 0.18);
+}
+.lp-path-card h3 { color: #ffffff; }
+.lp-path-card p { color: rgba(255, 255, 255, 0.85); }
+.lp-path-card .lp-path-who { color: #99d4fe; }
+.lp-path-card .lp-price-btn { color: var(--navy); background: #ffffff; }
+.lp-path-card .lp-price-btn:hover { color: var(--navy); background: var(--tint); }
+
 .lp-price-top {
   display: flex;
   align-items: center;
@@ -1630,6 +1595,31 @@
   background: linear-gradient(160deg, var(--sky-top), var(--blue-deep));
 }
 
+/* A single shine sweeps across the blue band as soon as it scrolls into
+   view (its intro Reveal turns .is-in), then stays out of sight. */
+.lp-problem-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0) 62%);
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-problem-band:has(.is-in)::before {
+    animation: band-shine 1.8s cubic-bezier(0.45, 0, 0.55, 1) 0.25s 1 both;
+  }
+}
+
+@keyframes band-shine {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
 .lp-problem-band > .lp-problem-inner {
   position: relative;
   z-index: 1;
@@ -1749,9 +1739,10 @@
   .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 1400ms; }
 }
 
-/* The signal: once the cards are linked, a neon pulse keeps travelling the
-   connectors on a 4s loop - along the top row, down all three links, then
-   along the bottom row - and each card glows as the pulse reaches it. The
+/* The signal, played once: after the cards link up, a neon pulse runs the
+   connectors - along the top row, down all three links, along the bottom row -
+   and each card blinks as the pulse reaches it; then every card and link
+   flashes together and the animation ends on the normal, static state. The
    pulse is a bright core in an oversized background gradient slid across
    each connector (background-position only, no layout). Wide screens only,
    where the connectors exist; off under reduced motion. */
@@ -1759,39 +1750,41 @@
   .lp-problem-band .lp-coordinated-item:not(:nth-child(3n))::after {
     background: linear-gradient(90deg, #99d4fe 0%, #99d4fe 36%, #ffffff 46%, #ffffff 54%, #99d4fe 64%, #99d4fe 100%);
     background-size: 300% 100%;
-    background-position: 100% 0;
+    background-position: 0% 0;
   }
 
   .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before {
     background: linear-gradient(180deg, #99d4fe 0%, #99d4fe 36%, #ffffff 46%, #ffffff 54%, #99d4fe 64%, #99d4fe 100%);
     background-size: 100% 300%;
-    background-position: 0 100%;
+    background-position: 0 0%;
   }
 
+  /* One pass of the pulse per link, then the shared finale at 6.8s. */
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:not(:nth-child(3n))::after {
-    animation: signal-x 4s linear infinite;
+    animation:
+      signal-x 0.8s ease-in-out var(--sig, 0s) 1,
+      signal-finale-link 2s ease-in-out 6.8s 1;
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(-n + 3)::before {
-    animation: signal-y 4s linear infinite;
+    animation:
+      signal-y 0.8s ease-in-out 3.5s 1,
+      signal-finale-link 2s ease-in-out 6.8s 1;
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item {
-    animation: signal-card 4s ease-out infinite;
+    animation:
+      signal-card 1.4s ease-out var(--hit, 0s) 1,
+      signal-finale-card 2s ease-in-out 6.8s 1;
   }
 
-  /* Start after the link-up (~1.9s), then keep the same offsets each loop. */
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(1) { animation-delay: 1.9s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(1)::after { animation-delay: 1.9s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(2) { animation-delay: 2.35s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(2)::after { animation-delay: 2.35s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(3) { animation-delay: 2.8s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(-n + 3)::before { animation-delay: 2.8s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(4) { animation-delay: 3.25s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(4)::after { animation-delay: 3.25s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(5) { animation-delay: 3.7s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(5)::after { animation-delay: 3.7s; }
-  .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(6) { animation-delay: 4.15s; }
+  /* --hit: when the pulse reaches the card; --sig: when its own link fires. */
+  .lp-problem-band .lp-coordinated-item:nth-child(1) { --hit: 1.9s; --sig: 1.9s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { --hit: 2.7s; --sig: 2.7s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { --hit: 3.5s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { --hit: 4.3s; --sig: 4.3s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { --hit: 5.1s; --sig: 5.1s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { --hit: 5.9s; }
 }
 
 @keyframes signal-x {
@@ -1799,10 +1792,9 @@
     background-position: 100% 0;
     box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
   }
-  6% {
+  50% {
     box-shadow: 0 0 22px 5px rgba(207, 238, 255, 1);
   }
-  12%,
   100% {
     background-position: 0% 0;
     box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
@@ -1814,10 +1806,9 @@
     background-position: 0 100%;
     box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
   }
-  6% {
+  50% {
     box-shadow: 0 0 22px 5px rgba(207, 238, 255, 1);
   }
-  12%,
   100% {
     background-position: 0 0%;
     box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
@@ -1829,14 +1820,38 @@
   100% {
     box-shadow: 0 12px 30px rgba(8, 20, 60, 0.22);
   }
-  5% {
+  22% {
     box-shadow:
       0 0 0 2px rgba(153, 212, 254, 0.95),
       0 0 26px 4px rgba(153, 212, 254, 0.65),
       0 12px 30px rgba(8, 20, 60, 0.22);
   }
-  22% {
+}
+
+@keyframes signal-finale-card {
+  0%,
+  100% {
     box-shadow: 0 12px 30px rgba(8, 20, 60, 0.22);
+  }
+  25%,
+  45% {
+    box-shadow:
+      0 0 0 2px rgba(191, 230, 255, 1),
+      0 0 34px 8px rgba(153, 212, 254, 0.75),
+      0 12px 30px rgba(8, 20, 60, 0.22);
+  }
+}
+
+@keyframes signal-finale-link {
+  0%,
+  100% {
+    background-position: 50% 50%;
+    box-shadow: 0 0 10px rgba(153, 212, 254, 0.7);
+  }
+  25%,
+  45% {
+    background-position: 50% 50%;
+    box-shadow: 0 0 24px 6px rgba(207, 238, 255, 1);
   }
 }
 
@@ -1945,6 +1960,173 @@
   display: grid;
   place-items: center;
   margin-bottom: 10px;
+}
+
+.lp-how-n {
+  position: relative;
+}
+
+.lp-how-num {
+  display: inline-block;
+}
+
+/* The ring + check overlay sits just outside the 30px number badge. */
+.lp-how-mark {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 40px;
+  height: 40px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lp-how-ring {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 114;
+  stroke-dashoffset: 114;
+  transform: rotate(-90deg);
+  transform-origin: 20px 20px;
+}
+
+.lp-how-check {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 22;
+  stroke-dashoffset: 22;
+}
+
+/* Played once, in order, when the grid scrolls into view: the steps rise in;
+   then for each step a ring draws round its number, the number turns into a
+   check and a line runs on to the next step; finally all four light up
+   together and it stops there (checks and links stay). --s is each step's
+   start. Wide screens get the links; reduced motion shows the plain numbered
+   steps with no animation. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp .lp-how-grid.reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lp-how-step {
+    position: relative;
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .lp-how-step:nth-child(1) { --s: 0.9s; }
+  .lp-how-step:nth-child(2) { --s: 2.1s; transition-delay: 0.12s; }
+  .lp-how-step:nth-child(3) { --s: 3.3s; transition-delay: 0.24s; }
+  .lp-how-step:nth-child(4) { --s: 4.5s; transition-delay: 0.36s; }
+
+  .lp-how-grid.is-in .lp-how-step {
+    opacity: 1;
+    transform: none;
+    animation:
+      how-step-glow 1.2s ease-out var(--s) 1,
+      how-step-finale 1.8s ease-in-out 5.7s 1;
+  }
+
+  .lp-how-grid.is-in .lp-how-ring {
+    animation: how-ring 0.7s cubic-bezier(0.65, 0, 0.35, 1) var(--s) 1 both;
+  }
+
+  .lp-how-grid.is-in .lp-how-num {
+    animation: how-num-out 0.3s ease-in calc(var(--s) + 0.6s) 1 both;
+  }
+
+  .lp-how-grid.is-in .lp-how-check {
+    animation: how-check 0.45s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--s) + 0.65s) 1 both;
+  }
+}
+
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  .lp-how-grid {
+    gap: 28px;
+  }
+
+  /* The link to the next step, drawn as the signal leaves this one. */
+  .lp-how-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 34px;
+    left: 100%;
+    width: 28px;
+    height: 3px;
+    margin-top: -1.5px;
+    background: var(--blue);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
+  }
+
+  .lp-how-grid.is-in .lp-how-step:not(:last-child)::after {
+    animation: how-link 0.45s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--s) + 0.8s) 1 both;
+  }
+}
+
+@keyframes how-ring {
+  from { stroke-dashoffset: 114; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes how-num-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes how-check {
+  from { stroke-dashoffset: 22; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes how-link {
+  0% {
+    transform: scaleX(0);
+    box-shadow: 0 0 0 rgba(47, 108, 235, 0);
+  }
+  60% {
+    box-shadow: 0 0 14px 3px rgba(47, 108, 235, 0.55);
+  }
+  100% {
+    transform: scaleX(1);
+    box-shadow: 0 0 6px rgba(47, 108, 235, 0.35);
+  }
+}
+
+@keyframes how-step-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(47, 108, 235, 0);
+  }
+  30% {
+    box-shadow:
+      0 0 0 2px rgba(47, 108, 235, 0.35),
+      0 0 26px 4px rgba(47, 108, 235, 0.22);
+  }
+}
+
+@keyframes how-step-finale {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(47, 108, 235, 0);
+  }
+  30%,
+  55% {
+    box-shadow:
+      0 0 0 2px rgba(47, 108, 235, 0.45),
+      0 0 32px 6px rgba(47, 108, 235, 0.28);
+  }
 }
 
 .lp-how-step h3 {
