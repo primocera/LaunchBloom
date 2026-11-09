@@ -435,31 +435,35 @@ export default function Landing() {
               view: circuit traces branch out to each card, a signal runs
               down them and each channel icon lights up (landing.css). */}
           <Reveal className="lp-example-grid">
-            <Reveal className="lp-feature">
+            <div className="lp-feature">
               <IconTile channel="Website" className="lp-feature-icon" />
               <h3>Website</h3>
               <p className="lp-ex-quote">
                 Listing videos edited, captioned and ready to post within 24 hours - for agents who
                 need each property launch to move quickly.
               </p>
-            </Reveal>
-            <Reveal className="lp-feature" delay={90}>
+            </div>
+            <div className="lp-feature">
               <IconTile channel="Email" className="lp-feature-icon" />
               <h3>Email</h3>
               <p className="lp-ex-quote">Subject: Your next listing already has a content plan</p>
-            </Reveal>
-            <Reveal className="lp-feature" delay={180}>
+            </div>
+            <div className="lp-feature">
               <IconTile channel="Social" className="lp-feature-icon" />
               <h3>Social</h3>
               <p className="lp-ex-quote">Hook: One listing should give you more than one post.</p>
-            </Reveal>
-            <Reveal className="lp-feature" delay={270}>
+            </div>
+            <div className="lp-feature">
               <IconTile channel="Ad" className="lp-feature-icon" />
               <h3>Ad</h3>
               <p className="lp-ex-quote">
                 Angle: Turnaround speed, backed only by the delivery time entered in Brand Profile.
               </p>
-            </Reveal>
+            </div>
+            {/* The circuit's drops into each card, drawn before the cards rise. */}
+            {[0, 1, 2, 3].map((k) => (
+              <span className="lp-ex-wire" style={{ '--k': k }} aria-hidden="true" key={k} />
+            ))}
           </Reveal>
           {/* v11 SC-04: the same sequence rendered in the product's own status
               vocabulary, from the synthetic fixture the authenticated E2E

@@ -64,6 +64,21 @@
   transform: none;
 }
 
+/* Cards rise up from lower with a small overshoot, so they arrive
+   one after another rather than just fading in. */
+.lp .lp-path-card.reveal,
+.lp .lp-price-grid > .reveal {
+  transform: translateY(48px) scale(0.95);
+  transition:
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.65s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.lp .lp-path-card.reveal.is-in,
+.lp .lp-price-grid > .reveal.is-in {
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lp .reveal {
     opacity: 1;
@@ -267,12 +282,6 @@
   z-index: 1;
   overflow: hidden;
   pointer-events: none;
-  /* Scroll drift (HeroStripes writes --hero-p): a gentle scale-up anchored
-     on the bottom edge, so the arrow rises while the bands stay on the seam
-     with the blue band. Transform only; stays at rest under reduced motion. */
-  transform-origin: 70% 100%;
-  transform: scale(calc(1 + var(--hero-p, 0) * 0.08));
-  will-change: transform;
   /* v26: the mockup's ribbon is fully opaque all the way to the edge it
      bleeds off - no fade. The proof strip (z-index: 2, above this layer)
      stays readable on its own tinted cards without needing the art to fade
@@ -365,12 +374,25 @@
      top of the bands. */
   position: absolute;
   right: 0;
-  bottom: 0;
   width: auto;
   /* Arrow level with the headline, as on the mockup; the navy band's lower
      part runs behind the (glass) proof cards and off the edge. */
-  height: calc(100% - 150px);
-  aspect-ratio: 1100 / 1030;
+  /* (100% - 150px) shows the mark (1030 units); the svg is 1230 units tall
+     so 200 more units of navy sit below the hero edge, clipped. */
+  height: calc((100% - 150px) * 1230 / 1030);
+  bottom: calc((100% - 150px) * -200 / 1030);
+  aspect-ratio: 1100 / 1230;
+  /* Scroll drift (HeroStripes writes --hero-p, 0 -> 1 through the hero):
+     drifts down, turns a little and shrinks, pivoting low on the left, so
+     the arrow lifts toward the centre. The clip (.lp-hero-art) stays put
+     and the band continues below it, so the seam never shows a gap.
+     Transform only; at rest under reduced motion. */
+  transform-origin: 18% 72%;
+  transform:
+    translate3d(0, calc(var(--hero-p, 0) * 54px), 0)
+    rotate(calc(var(--hero-p, 0) * -4deg))
+    scale(calc(1 - var(--hero-p, 0) * 0.08));
+  will-change: transform;
   /* The navy band continues left past the viewBox; .lp-hero-art clips. */
   overflow: visible;
 }
@@ -379,7 +401,8 @@
    copy column. */
 @media (max-width: 1439px) {
   .lp-hero-art svg {
-    height: calc(100% - 210px);
+    height: calc((100% - 210px) * 1230 / 1030);
+    bottom: calc((100% - 210px) * -200 / 1030);
   }
 }
 
@@ -1701,10 +1724,10 @@
 @media (prefers-reduced-motion: no-preference) {
   .lp-problem-band .lp-coordinated-item {
     opacity: 0;
-    transform: translate3d(0, 24px, 0) scale(0.98);
+    transform: translate3d(0, 48px, 0) scale(0.95);
     transition:
-      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1);
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item {
@@ -1712,11 +1735,11 @@
     transform: none;
   }
 
-  .lp-problem-band .lp-coordinated-item:nth-child(2) { transition-delay: 110ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(3) { transition-delay: 220ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(4) { transition-delay: 330ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(5) { transition-delay: 440ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(6) { transition-delay: 550ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { transition-delay: 70ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { transition-delay: 140ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { transition-delay: 210ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { transition-delay: 280ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { transition-delay: 350ms; }
 
   .lp-problem-band .lp-coordinated-item::after {
     transform: scaleX(0);
@@ -1738,11 +1761,11 @@
 
   /* Links draw once both cards they join are in: the top row left to right,
      then down, then the bottom row. */
-  .lp-problem-band .lp-coordinated-item:nth-child(1)::after { transition-delay: 700ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(2)::after { transition-delay: 850ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before { transition-delay: 1050ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(4)::after { transition-delay: 1250ms; }
-  .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 1400ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(1)::after { transition-delay: 450ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2)::after { transition-delay: 550ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(-n + 3)::before { transition-delay: 680ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4)::after { transition-delay: 800ms; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5)::after { transition-delay: 900ms; }
 }
 
 /* The signal, played once: after the cards link up, a neon pulse runs the
@@ -1765,32 +1788,32 @@
     background-position: 0 0%;
   }
 
-  /* One pass of the pulse per link, then the shared finale at 6.8s. */
+  /* One pass of the pulse per link, then the shared finale at 3.6s. */
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:not(:nth-child(3n))::after {
     animation:
-      signal-x 0.8s ease-in-out var(--sig, 0s) 1,
-      signal-finale-link 2s ease-in-out 6.8s 1;
+      signal-x 0.5s ease-in-out var(--sig, 0s) 1,
+      signal-finale-link 1.3s ease-in-out 3.6s 1;
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item:nth-child(-n + 3)::before {
     animation:
-      signal-y 0.8s ease-in-out 3.5s 1,
-      signal-finale-link 2s ease-in-out 6.8s 1;
+      signal-y 0.5s ease-in-out 1.9s 1,
+      signal-finale-link 1.3s ease-in-out 3.6s 1;
   }
 
   .lp-problem-band .lp-coordinated.is-in .lp-coordinated-item {
     animation:
-      signal-card 1.4s ease-out var(--hit, 0s) 1,
-      signal-finale-card 2s ease-in-out 6.8s 1;
+      signal-card 0.9s ease-out var(--hit, 0s) 1,
+      signal-finale-card 1.3s ease-in-out 3.6s 1;
   }
 
   /* --hit: when the pulse reaches the card; --sig: when its own link fires. */
-  .lp-problem-band .lp-coordinated-item:nth-child(1) { --hit: 1.9s; --sig: 1.9s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(2) { --hit: 2.7s; --sig: 2.7s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(3) { --hit: 3.5s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(4) { --hit: 4.3s; --sig: 4.3s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(5) { --hit: 5.1s; --sig: 5.1s; }
-  .lp-problem-band .lp-coordinated-item:nth-child(6) { --hit: 5.9s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(1) { --hit: 1.1s; --sig: 1.1s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(2) { --hit: 1.5s; --sig: 1.5s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(3) { --hit: 1.9s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(4) { --hit: 2.3s; --sig: 2.3s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(5) { --hit: 2.7s; --sig: 2.7s; }
+  .lp-problem-band .lp-coordinated-item:nth-child(6) { --hit: 3.1s; }
 }
 
 @keyframes signal-x {
@@ -2024,43 +2047,43 @@
   .lp-how-step {
     position: relative;
     opacity: 0;
-    transform: translate3d(0, 22px, 0);
+    transform: translate3d(0, 48px, 0) scale(0.95);
     transition:
-      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1);
   }
 
-  .lp-how-step:nth-child(1) { --s: 0.9s; }
-  .lp-how-step:nth-child(2) { --s: 2.1s; transition-delay: 0.12s; }
-  .lp-how-step:nth-child(3) { --s: 3.3s; transition-delay: 0.24s; }
-  .lp-how-step:nth-child(4) { --s: 4.5s; transition-delay: 0.36s; }
+  .lp-how-step:nth-child(1) { --s: 0.6s; }
+  .lp-how-step:nth-child(2) { --s: 1.3s; transition-delay: 0.08s; }
+  .lp-how-step:nth-child(3) { --s: 2s; transition-delay: 0.16s; }
+  .lp-how-step:nth-child(4) { --s: 2.7s; transition-delay: 0.24s; }
 
   .lp-how-grid.is-in .lp-how-step {
     opacity: 1;
     transform: none;
     animation:
-      how-step-glow 1.2s ease-out var(--s) 1,
-      how-step-finale 1.8s ease-in-out 5.7s 1;
+      how-step-glow 0.8s ease-out var(--s) 1,
+      how-step-finale 1.2s ease-in-out 3.4s 1;
   }
 
   /* ...and after the finale the checks and rings give way to the numbers
      again, so the section rests on its normal numbered steps. */
   .lp-how-grid.is-in .lp-how-ring {
     animation:
-      how-ring 0.7s cubic-bezier(0.65, 0, 0.35, 1) var(--s) 1 both,
-      how-fade-out 0.5s ease-in 7.6s 1 forwards;
+      how-ring 0.45s cubic-bezier(0.65, 0, 0.35, 1) var(--s) 1 both,
+      how-fade-out 0.4s ease-in 4.7s 1 forwards;
   }
 
   .lp-how-grid.is-in .lp-how-num {
     animation:
-      how-num-out 0.3s ease-in calc(var(--s) + 0.6s) 1 both,
-      how-num-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 7.9s 1 forwards;
+      how-num-out 0.2s ease-in calc(var(--s) + 0.38s) 1 both,
+      how-num-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 4.95s 1 forwards;
   }
 
   .lp-how-grid.is-in .lp-how-check {
     animation:
-      how-check 0.45s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--s) + 0.65s) 1 both,
-      how-fade-out 0.35s ease-in 7.6s 1 forwards;
+      how-check 0.3s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--s) + 0.42s) 1 both,
+      how-fade-out 0.3s ease-in 4.7s 1 forwards;
   }
 }
 
@@ -2087,7 +2110,7 @@
   }
 
   .lp-how-grid.is-in .lp-how-step:not(:last-child)::after {
-    animation: how-link 0.45s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--s) + 0.8s) 1 both;
+    animation: how-link 0.3s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--s) + 0.5s) 1 both;
   }
 }
 
@@ -2134,9 +2157,7 @@
     box-shadow: 0 0 0 rgba(47, 108, 235, 0);
   }
   30% {
-    box-shadow:
-      0 0 0 2px rgba(255, 255, 255, 1),
-      0 0 22px 6px rgba(170, 205, 255, 0.55);
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px rgba(150, 195, 255, 0.6);
   }
 }
 
@@ -2147,9 +2168,7 @@
   }
   30%,
   55% {
-    box-shadow:
-      0 0 0 2px rgba(255, 255, 255, 1),
-      0 0 30px 8px rgba(170, 205, 255, 0.6);
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px rgba(150, 195, 255, 0.7);
   }
 }
 
@@ -2182,17 +2201,53 @@
   text-align: left;
 }
 
+.lp-ex-wire {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .lp-ex-wire {
+    display: block;
+  }
+}
+
+/* The four channel cards rise in one after another when the grid scrolls
+   into view - on wide screens only once the wiring below has drawn. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-example-grid > .lp-feature {
+    opacity: 0;
+    transform: translate3d(0, 48px, 0) scale(0.95);
+    transition:
+      opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+
+  .lp-example-grid.is-in > .lp-feature {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lp-example-grid > .lp-feature:nth-of-type(2) { transition-delay: 70ms; }
+  .lp-example-grid > .lp-feature:nth-of-type(3) { transition-delay: 140ms; }
+  .lp-example-grid > .lp-feature:nth-of-type(4) { transition-delay: 210ms; }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .lp-example-grid > .lp-feature:nth-of-type(1) { transition-delay: 1.15s; }
+  .lp-example-grid > .lp-feature:nth-of-type(2) { transition-delay: 1.25s; }
+  .lp-example-grid > .lp-feature:nth-of-type(3) { transition-delay: 1.35s; }
+  .lp-example-grid > .lp-feature:nth-of-type(4) { transition-delay: 1.45s; }
+}
+
 /* "Everything connects": on wide screens the brief above the grid wires
    itself to the four channel cards like a circuit - a trunk drops from the
    brief, a bus splits left and right, a trace drops into each card's icon,
    with a node at every junction. A signal then runs the traces once and each
    icon lights up as it is reached. Played once when the grid scrolls into
-   view; reduced motion shows the finished wiring with no animation. The
-   cards' icons sit 32px + 26px in from each card's left edge. */
+   view; reduced motion shows the finished wiring with no animation. */
 @media (min-width: 1024px) {
   .lp-example-grid {
     --ex-gap: 14px;
-    --ex-icon-x: 58px;
     --ex-bus: -38px;
     position: relative;
     grid-template-columns: repeat(4, 1fr);
@@ -2206,6 +2261,12 @@
 
   .lp-example-grid > .lp-feature {
     position: relative;
+    text-align: center;
+  }
+
+  .lp .lp-example-grid .lp-feature-icon.icon-tile {
+    margin-right: auto;
+    margin-left: auto;
   }
 
   /* trunk, from under the brief line down to the bus */
@@ -2217,7 +2278,8 @@
     width: 2px;
     height: calc(70px + var(--ex-bus));
     margin-left: -1px;
-    background: var(--blue);
+    background: #ffffff;
+    box-shadow: 0 0 3px 1px #ffffff, 0 0 8px 2px rgba(150, 195, 255, 0.85);
     border-radius: 2px;
     transform-origin: center top;
   }
@@ -2227,42 +2289,46 @@
     content: '';
     position: absolute;
     top: var(--ex-bus);
-    left: var(--ex-icon-x);
-    right: calc((100% - 3 * var(--ex-gap)) / 4 - var(--ex-icon-x));
+    left: calc((100% - 3 * var(--ex-gap)) / 8);
+    right: calc((100% - 3 * var(--ex-gap)) / 8);
     height: 2px;
     margin-top: -1px;
-    background: var(--blue);
+    background: #ffffff;
+    box-shadow: 0 0 3px 1px #ffffff, 0 0 8px 2px rgba(150, 195, 255, 0.85);
     border-radius: 2px;
     transform-origin: center center;
   }
 
-  /* each card's drop into its icon */
-  .lp-example-grid > .lp-feature::before {
-    content: '';
+  /* each card's drop into its icon, with a node on the bus (.lp-ex-wire,
+     one per column, --k = column index) */
+  .lp-ex-wire {
     position: absolute;
     top: var(--ex-bus);
-    left: var(--ex-icon-x);
+    left: calc((100% - 3 * var(--ex-gap)) / 8 + var(--k) * ((100% - 3 * var(--ex-gap)) / 4 + var(--ex-gap)));
+    z-index: 2;
     width: 2px;
     height: calc(34px - var(--ex-bus));
     margin-left: -1px;
-    background: var(--blue);
+    background: #ffffff;
     border-radius: 2px;
+    box-shadow: 0 0 3px 1px #ffffff, 0 0 8px 2px rgba(150, 195, 255, 0.85);
     transform-origin: center top;
+    pointer-events: none;
   }
 
-  /* junction node on the bus */
-  .lp-example-grid > .lp-feature::after {
+  .lp-ex-wire::after {
     content: '';
     position: absolute;
-    top: var(--ex-bus);
-    left: var(--ex-icon-x);
+    top: 0;
+    left: 50%;
     width: 9px;
     height: 9px;
     margin: -4.5px 0 0 -4.5px;
     background: #ffffff;
-    border: 2px solid var(--blue);
+    border: 2px solid #cfe2ff;
     border-radius: 50%;
     box-sizing: border-box;
+    box-shadow: 0 0 8px 2px rgba(150, 195, 255, 0.9);
   }
 
   .lp .lp-example-grid .lp-feature-icon.icon-tile {
@@ -2275,33 +2341,33 @@
   /* the wiring, before it plays */
   .lp-example-grid::before { transform: scaleY(0); }
   .lp-example-grid::after { transform: scaleX(0); }
-  .lp-example-grid > .lp-feature::before { transform: scaleY(0); }
-  .lp-example-grid > .lp-feature::after { transform: scale(0); }
+  .lp-ex-wire { transform: scaleY(0); }
+  .lp-ex-wire::after { transform: scale(0); }
 
   .lp-example-grid.is-in::before {
     animation:
-      ex-draw-y 0.45s cubic-bezier(0.65, 0, 0.35, 1) 0.3s 1 both,
-      ex-pulse 0.9s ease-in-out 1.8s 1;
+      ex-draw-y 0.3s cubic-bezier(0.65, 0, 0.35, 1) 0.2s 1 both,
+      ex-pulse 0.6s ease-in-out 2s 1;
   }
 
   .lp-example-grid.is-in::after {
     animation:
-      ex-draw-x 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.75s 1 both,
-      ex-pulse 0.9s ease-in-out 2.2s 1;
+      ex-draw-x 0.4s cubic-bezier(0.65, 0, 0.35, 1) 0.5s 1 both,
+      ex-pulse 0.6s ease-in-out 2.25s 1;
   }
 
-  .lp-example-grid.is-in > .lp-feature::after {
-    animation: ex-node 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 1.25s 1 both;
+  .lp-example-grid.is-in .lp-ex-wire::after {
+    animation: ex-node 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) 0.85s 1 both;
   }
 
-  .lp-example-grid.is-in > .lp-feature::before {
+  .lp-example-grid.is-in .lp-ex-wire {
     animation:
-      ex-draw-y 0.45s cubic-bezier(0.65, 0, 0.35, 1) 1.35s 1 both,
-      ex-pulse 0.9s ease-in-out 2.6s 1;
+      ex-draw-y 0.3s cubic-bezier(0.65, 0, 0.35, 1) 0.9s 1 both,
+      ex-pulse 0.6s ease-in-out 2.5s 1;
   }
 
   .lp-example-grid.is-in .lp-feature-icon.icon-tile {
-    animation: ex-icon-on 1.4s ease-out 3s 1;
+    animation: ex-icon-on 0.9s ease-out 2.75s 1;
   }
 }
 
@@ -2324,12 +2390,10 @@
 @keyframes ex-pulse {
   0%,
   100% {
-    background-color: var(--blue);
-    box-shadow: 0 0 0 rgba(47, 108, 235, 0);
+    box-shadow: 0 0 3px 1px #ffffff, 0 0 8px 2px rgba(150, 195, 255, 0.85);
   }
   40% {
-    background-color: #9fc4ff;
-    box-shadow: 0 0 14px 3px rgba(47, 108, 235, 0.65);
+    box-shadow: 0 0 6px 2px #ffffff, 0 0 18px 5px rgba(150, 195, 255, 1);
   }
 }
 
@@ -2339,9 +2403,7 @@
     box-shadow: 0 2px 6px rgba(16, 28, 69, 0.08);
   }
   30% {
-    box-shadow:
-      0 0 0 3px rgba(47, 108, 235, 0.55),
-      0 0 26px 6px rgba(47, 108, 235, 0.35);
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(150, 195, 255, 0.8);
   }
 }
 
