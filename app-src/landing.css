@@ -359,6 +359,34 @@
   }
 }
 
+/* Sheen: a slow, soft highlight drifting down the cobalt and navy bands
+   every few seconds. Transform only. At rest it sits off the bands, so
+   reduced-motion visitors simply never see it. */
+.mark-sheen {
+  transform: translateY(-1000px);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mark-sheen {
+    animation: hero-sheen-sweep 7.5s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  }
+
+  .mark-sheen-cobalt {
+    animation-delay: 1.4s;
+  }
+}
+
+@keyframes hero-sheen-sweep {
+  0% {
+    transform: translateY(-600px);
+  }
+  55%,
+  100% {
+    transform: translateY(1800px);
+  }
+}
+
 /* The mark, huge: its bottom-left tips sit inside the box, its top-right ends
    run off the right edge, as on the brand board's landing. */
 @media (max-width: 1199px) {
