@@ -267,6 +267,12 @@
   z-index: 1;
   overflow: hidden;
   pointer-events: none;
+  /* Scroll drift (HeroStripes writes --hero-p): a gentle scale-up anchored
+     on the bottom edge, so the arrow rises while the bands stay on the seam
+     with the blue band. Transform only; stays at rest under reduced motion. */
+  transform-origin: 70% 100%;
+  transform: scale(calc(1 + var(--hero-p, 0) * 0.08));
+  will-change: transform;
   /* v26: the mockup's ribbon is fully opaque all the way to the edge it
      bleeds off - no fade. The proof strip (z-index: 2, above this layer)
      stays readable on its own tinted cards without needing the art to fade
@@ -2156,6 +2162,169 @@
   gap: 14px;
   margin-top: 28px;
   text-align: left;
+}
+
+/* "Everything connects": on wide screens the brief above the grid wires
+   itself to the four channel cards like a circuit - a trunk drops from the
+   brief, a bus splits left and right, a trace drops into each card's icon,
+   with a node at every junction. A signal then runs the traces once and each
+   icon lights up as it is reached. Played once when the grid scrolls into
+   view; reduced motion shows the finished wiring with no animation. The
+   cards' icons sit 32px + 26px in from each card's left edge. */
+@media (min-width: 1024px) {
+  .lp-example-grid {
+    --ex-gap: 14px;
+    --ex-icon-x: 58px;
+    --ex-bus: -38px;
+    position: relative;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: 84px;
+  }
+
+  .lp .lp-example-grid.reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lp-example-grid > .lp-feature {
+    position: relative;
+  }
+
+  /* trunk, from under the brief line down to the bus */
+  .lp-example-grid::before {
+    content: '';
+    position: absolute;
+    top: -70px;
+    left: 50%;
+    width: 2px;
+    height: calc(70px + var(--ex-bus));
+    margin-left: -1px;
+    background: var(--blue);
+    border-radius: 2px;
+    transform-origin: center top;
+  }
+
+  /* bus, from the first card's icon to the last card's icon */
+  .lp-example-grid::after {
+    content: '';
+    position: absolute;
+    top: var(--ex-bus);
+    left: var(--ex-icon-x);
+    right: calc((100% - 3 * var(--ex-gap)) / 4 - var(--ex-icon-x));
+    height: 2px;
+    margin-top: -1px;
+    background: var(--blue);
+    border-radius: 2px;
+    transform-origin: center center;
+  }
+
+  /* each card's drop into its icon */
+  .lp-example-grid > .lp-feature::before {
+    content: '';
+    position: absolute;
+    top: var(--ex-bus);
+    left: var(--ex-icon-x);
+    width: 2px;
+    height: calc(34px - var(--ex-bus));
+    margin-left: -1px;
+    background: var(--blue);
+    border-radius: 2px;
+    transform-origin: center top;
+  }
+
+  /* junction node on the bus */
+  .lp-example-grid > .lp-feature::after {
+    content: '';
+    position: absolute;
+    top: var(--ex-bus);
+    left: var(--ex-icon-x);
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    background: #ffffff;
+    border: 2px solid var(--blue);
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+
+  .lp .lp-example-grid .lp-feature-icon.icon-tile {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  /* the wiring, before it plays */
+  .lp-example-grid::before { transform: scaleY(0); }
+  .lp-example-grid::after { transform: scaleX(0); }
+  .lp-example-grid > .lp-feature::before { transform: scaleY(0); }
+  .lp-example-grid > .lp-feature::after { transform: scale(0); }
+
+  .lp-example-grid.is-in::before {
+    animation:
+      ex-draw-y 0.45s cubic-bezier(0.65, 0, 0.35, 1) 0.3s 1 both,
+      ex-pulse 0.9s ease-in-out 1.8s 1;
+  }
+
+  .lp-example-grid.is-in::after {
+    animation:
+      ex-draw-x 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.75s 1 both,
+      ex-pulse 0.9s ease-in-out 2.2s 1;
+  }
+
+  .lp-example-grid.is-in > .lp-feature::after {
+    animation: ex-node 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 1.25s 1 both;
+  }
+
+  .lp-example-grid.is-in > .lp-feature::before {
+    animation:
+      ex-draw-y 0.45s cubic-bezier(0.65, 0, 0.35, 1) 1.35s 1 both,
+      ex-pulse 0.9s ease-in-out 2.6s 1;
+  }
+
+  .lp-example-grid.is-in .lp-feature-icon.icon-tile {
+    animation: ex-icon-on 1.4s ease-out 3s 1;
+  }
+}
+
+@keyframes ex-draw-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes ex-draw-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes ex-node {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* the signal: the trace flashes neon as it carries it */
+@keyframes ex-pulse {
+  0%,
+  100% {
+    background-color: var(--blue);
+    box-shadow: 0 0 0 rgba(47, 108, 235, 0);
+  }
+  40% {
+    background-color: #9fc4ff;
+    box-shadow: 0 0 14px 3px rgba(47, 108, 235, 0.65);
+  }
+}
+
+@keyframes ex-icon-on {
+  0%,
+  100% {
+    box-shadow: 0 2px 6px rgba(16, 28, 69, 0.08);
+  }
+  30% {
+    box-shadow:
+      0 0 0 3px rgba(47, 108, 235, 0.55),
+      0 0 26px 6px rgba(47, 108, 235, 0.35);
+  }
 }
 
 .lp-ex-quote {

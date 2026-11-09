@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 // The hero's own, larger rendering of the mark, traced from the approved
 // brand-board laptop mockup ("01 / CONNECTED"): wide icy/cobalt/navy bands,
 // the cobalt one ending in the arrow at the top-right, the cobalt tail fading
@@ -25,8 +26,48 @@ const HERO_PATHS = [
 const HERO_VIEW_BOX = '40 120 1100 1030';
 
 export default function HeroStripes() {
+  const rootRef = useRef(null);
+
+  // Scroll drift: one passive listener + rAF writes --hero-p (0 -> 1 across
+  // the hero); landing.css scales the art up from its bottom edge with it, so
+  // the arrow rises while the bands stay on the seam (no gap can open).
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    const sky = root.closest('.lp-sky');
+    let skyHeight = sky ? sky.offsetHeight : window.innerHeight;
+    let ticking = false;
+
+    function measure() {
+      skyHeight = sky ? sky.offsetHeight : window.innerHeight;
+    }
+
+    function apply() {
+      ticking = false;
+      const p = skyHeight > 0 ? Math.min(1, Math.max(0, window.scrollY / skyHeight)) : 0;
+      root.style.setProperty('--hero-p', p.toFixed(4));
+    }
+
+    function onScroll() {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(apply);
+      }
+    }
+
+    apply();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', measure, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
   return (
-    <div className="lp-hero-art" aria-hidden="true">
+    <div className="lp-hero-art" aria-hidden="true" ref={rootRef}>
       <svg viewBox={HERO_VIEW_BOX} fill="none" preserveAspectRatio="xMaxYMax meet">
         <defs>
           <linearGradient id="heroArtIce" gradientUnits="userSpaceOnUse" x1="420" y1="500" x2="1050" y2="170">

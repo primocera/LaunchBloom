@@ -431,7 +431,10 @@ export default function Landing() {
               Goal: booked discovery calls · CTA: Book a 15-minute fit call
             </p>
           </Reveal>
-          <div className="lp-example-grid">
+          {/* The brief wires itself to the four channels once the grid is in
+              view: circuit traces branch out to each card, a signal runs
+              down them and each channel icon lights up (landing.css). */}
+          <Reveal className="lp-example-grid">
             <Reveal className="lp-feature">
               <IconTile channel="Website" className="lp-feature-icon" />
               <h3>Website</h3>
@@ -457,7 +460,7 @@ export default function Landing() {
                 Angle: Turnaround speed, backed only by the delivery time entered in Brand Profile.
               </p>
             </Reveal>
-          </div>
+          </Reveal>
           {/* v11 SC-04: the same sequence rendered in the product's own status
               vocabulary, from the synthetic fixture the authenticated E2E
               matrix seeds. Code-native rather than a screenshot, so it cannot
