@@ -28,12 +28,14 @@ const HERO_PATHS = [
 // scroll drift can never lift it off the seam.
 const HERO_VIEW_BOX = '40 120 1100 1230';
 
+const DRIFT_SPAN = 560; // px of scroll over which the logo drift completes
+
 export default function HeroStripes() {
   const rootRef = useRef(null);
 
-  // Scroll drift: one passive listener + rAF writes --hero-p (0 -> 1 across
-  // the hero); landing.css drifts, turns and shrinks the mark with it. The
-  // navy band runs on below the clip, so no gap can open at the seam.
+  // Scroll drift: one passive listener + rAF writes --hero-p (0 -> 1 over the
+  // first DRIFT_SPAN px of scroll); landing.css drifts, turns and shrinks the
+  // mark with it. The navy band runs on below the clip, so no gap can open.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return undefined;
@@ -49,7 +51,9 @@ export default function HeroStripes() {
 
     function apply() {
       ticking = false;
-      const p = skyHeight > 0 ? Math.min(1, Math.max(0, window.scrollY / skyHeight)) : 0;
+      // The drift completes over ~5-6 wheel steps, then holds.
+      const span = Math.min(DRIFT_SPAN, skyHeight || DRIFT_SPAN);
+      const p = Math.min(1, Math.max(0, window.scrollY / span));
       root.style.setProperty('--hero-p', p.toFixed(4));
     }
 

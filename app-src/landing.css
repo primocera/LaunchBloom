@@ -383,14 +383,14 @@
   height: calc((100% - 150px) * 1230 / 1030);
   bottom: calc((100% - 150px) * -200 / 1030);
   aspect-ratio: 1100 / 1230;
-  /* Scroll drift (HeroStripes writes --hero-p, 0 -> 1 through the hero):
+  /* Scroll drift (HeroStripes writes --hero-p, 0 -> 1 over the first ~560px of scroll):
      drifts sideways toward the centre and down, turns a little and
      shrinks, pivoting low on the left. The clip (.lp-hero-art) stays put
      and the band continues below it, so the seam never shows a gap.
      Transform only; at rest under reduced motion. */
   transform-origin: 18% 72%;
   transform:
-    translate3d(calc(var(--hero-p, 0) * -320px), calc(var(--hero-p, 0) * 54px), 0)
+    translate3d(calc(var(--hero-p, 0) * -180px), calc(var(--hero-p, 0) * 54px), 0)
     rotate(calc(var(--hero-p, 0) * -4deg))
     scale(calc(1 - var(--hero-p, 0) * 0.08));
   will-change: transform;
