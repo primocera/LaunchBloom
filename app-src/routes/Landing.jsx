@@ -311,7 +311,6 @@ export default function Landing() {
           <ol className="lp-proof-strip" aria-label="What one brief produces">
             {PROOF_STEPS.map((s, i) => (
               <li key={s.label}>
-                <span className="lp-spark" aria-hidden="true" />
                 <span className="lp-proof-n" aria-hidden="true">{i + 1}</span>
                 <span className="lp-proof-label">{s.label}</span>
                 {s.label === 'Connected assets' && (
@@ -330,37 +329,27 @@ export default function Landing() {
 
       {/* ── 2. Problem ─────────────────────────────────────────────────── */}
       <section className="lp-problem" id="product">
-        {/* The hero's bands run straight into this full-bleed blue band (the
-            final-CTA gradient): intro copy in white, then the six coordinated
-            cards; then a clean switch back to white before "Who it's for". */}
-        <div className="lp-problem-band">
-          <div className="lp-problem-inner">
-            <Reveal>
-              <div className="lp-eyebrow">The problem</div>
-              <h2 className="lp-h2">Your campaign should sound like one idea - not five separate AI chats.</h2>
-              <p className="lp-h2-sub">
-                When website copy, emails, social posts and ads are created separately, the offer
-                drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
-                the same approved brand facts and campaign brief.
-              </p>
-            </Reveal>
-          </div>
-          <div className="lp-problem-inner">
-            <Reveal>
-              <p className="lp-coordinated-label">What stays coordinated across every output</p>
-            </Reveal>
-            {/* The six cards rise in one by one and link up (landing.css,
-                .lp-coordinated.is-in) once the grid scrolls into view. */}
-            <Reveal as="dl" className="lp-coordinated">
+        <div className="lp-problem-inner">
+          <Reveal>
+            <div className="lp-eyebrow">The problem</div>
+            <h2 className="lp-h2">Your campaign should sound like one idea - not five separate AI chats.</h2>
+            <p className="lp-h2-sub">
+              When website copy, emails, social posts and ads are created separately, the offer
+              drifts. Claims change. Calls to action compete. {BRAND.name} keeps every asset tied to
+              the same approved brand facts and campaign brief.
+            </p>
+          </Reveal>
+          <Reveal>
+            <p className="lp-coordinated-label">What stays coordinated across every output</p>
+            <dl className="lp-coordinated">
               {COORDINATED.map(([term, detail]) => (
                 <div className="lp-coordinated-item" key={term}>
-                  <span className="lp-spark" aria-hidden="true" />
                   <dt>{term}</dt>
                   <dd>{detail}</dd>
                 </div>
               ))}
-            </Reveal>
-          </div>
+            </dl>
+          </Reveal>
         </div>
       </section>
 
@@ -395,24 +384,15 @@ export default function Landing() {
             <div className="lp-eyebrow">How it works</div>
             <h2 className="lp-h2">Approve the strategy once. Build every asset from it.</h2>
           </Reveal>
-          <Reveal className="lp-how-grid">
-            {MECHANISM.map((s) => (
-              <div className="lp-how-step" key={s.n}>
-                {/* Played in order once the grid is in view: a ring draws
-                    round the number, which turns into a check, then a line
-                    runs on to the next step (landing.css, .lp-how-grid). */}
-                <div className="lp-how-n">
-                  <span className="lp-how-num">{s.n}</span>
-                  <svg className="lp-how-mark" viewBox="0 0 40 40" aria-hidden="true">
-                    <circle className="lp-how-ring" cx="20" cy="20" r="18" />
-                    <path className="lp-how-check" d="M13.5 20.5l4.5 4.5 8.5-9.5" />
-                  </svg>
-                </div>
+          <div className="lp-how-grid">
+            {MECHANISM.map((s, i) => (
+              <Reveal className="lp-how-step" key={s.n} delay={i * 90}>
+                <div className="lp-how-n">{s.n}</div>
                 <h3>{s.title}</h3>
                 <p>{s.body}</p>
-              </div>
+              </Reveal>
             ))}
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -424,9 +404,6 @@ export default function Landing() {
 
       {/* ── 5. Example campaign ────────────────────────────────────────── */}
       <section className="lp-example" id="example">
-        {/* The brief and its four channels sit on a full-bleed brand-blue band;
-            the product view below stays on the section's own light tint. */}
-        <div className="lp-example-band">
         <div className="lp-example-inner">
           <Reveal>
             <div className="lp-eyebrow">Example campaign</div>
@@ -436,43 +413,33 @@ export default function Landing() {
               Goal: booked discovery calls · CTA: Book a 15-minute fit call
             </p>
           </Reveal>
-          {/* The brief wires itself to the four channels once the grid is in
-              view: circuit traces branch out to each card, a signal runs
-              down them and each channel icon lights up (landing.css). */}
-          <Reveal className="lp-example-grid">
-            <div className="lp-feature">
+          <div className="lp-example-grid">
+            <Reveal className="lp-feature">
               <IconTile channel="Website" className="lp-feature-icon" />
               <h3>Website</h3>
               <p className="lp-ex-quote">
                 Listing videos edited, captioned and ready to post within 24 hours - for agents who
                 need each property launch to move quickly.
               </p>
-            </div>
-            <div className="lp-feature">
+            </Reveal>
+            <Reveal className="lp-feature" delay={90}>
               <IconTile channel="Email" className="lp-feature-icon" />
               <h3>Email</h3>
               <p className="lp-ex-quote">Subject: Your next listing already has a content plan</p>
-            </div>
-            <div className="lp-feature">
+            </Reveal>
+            <Reveal className="lp-feature" delay={180}>
               <IconTile channel="Social" className="lp-feature-icon" />
               <h3>Social</h3>
               <p className="lp-ex-quote">Hook: One listing should give you more than one post.</p>
-            </div>
-            <div className="lp-feature">
+            </Reveal>
+            <Reveal className="lp-feature" delay={270}>
               <IconTile channel="Ad" className="lp-feature-icon" />
               <h3>Ad</h3>
               <p className="lp-ex-quote">
                 Angle: Turnaround speed, backed only by the delivery time entered in Brand Profile.
               </p>
-            </div>
-            {/* The circuit's drops into each card, drawn before the cards rise. */}
-            {[0, 1, 2, 3].map((k) => (
-              <span className="lp-ex-wire" style={{ '--k': k }} aria-hidden="true" key={k} />
-            ))}
-          </Reveal>
-        </div>
-        </div>
-        <div className="lp-example-inner">
+            </Reveal>
+          </div>
           {/* v11 SC-04: the same sequence rendered in the product's own status
               vocabulary, from the synthetic fixture the authenticated E2E
               matrix seeds. Code-native rather than a screenshot, so it cannot
