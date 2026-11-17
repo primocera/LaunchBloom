@@ -99,7 +99,10 @@ function limitsFor(plan) {
  * Counted from the usage_events ledger within the plan's billing window.
  */
 async function usageFor(workspaceId, plan, email, userId) {
-  const since = await usage.windowStart(email, plan);
+  // Display only: an unreadable window falls back to the calendar month here,
+  // like the counts below fall back to 0. The gate never does.
+  const since = await usage.windowStart({ userId, email }, plan)
+    .catch(() => (plan === 'trial' || plan === 'free' || !plan ? null : usage.monthStart()));
   // Account-wide pool when we have a user id; else fall back to the workspace.
   // Display only: an unreadable ledger shows 0 here so sign-in and the account
   // page still load. The gate (planGate) is what refuses to run unmetered.
@@ -174,7 +177,7 @@ function planGate(feature) {
 
         if (!feature) return next();
 
-        const since = await usage.windowStart(req.userEmail, plan);
+        const since = await usage.windowStart({ userId: req.userId, email: req.userEmail }, plan);
 
         // Launch-kit sub-cap - account-wide (counts reserved + succeeded).
         if (feature === 'launch_kits') {

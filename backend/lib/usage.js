@@ -103,29 +103,37 @@ function windowResetsAt(since) {
  * - paid plans: the current monthly cycle inside the subscription period
  *   (rolling from the billing date), else the calendar month.
  * - trial/free: null → lifetime totals.
+ *
+ * `identity` is `{ userId, email }` (a bare email string still works). The
+ * customer is resolved by the SAME canonical lookup as entitlement
+ * (findCustomerRow: app_user_id under enforcement), so a changed email cannot
+ * move the window from the billing anniversary to the calendar month. A read
+ * error is "unavailable" (USAGE_UNAVAILABLE), never "calendar month".
  */
-async function windowStart(email, plan) {
+async function windowStart(identity, plan) {
   if (plan === 'trial' || plan === 'free' || !plan) return null;
+  const who = typeof identity === 'string' ? { email: identity } : (identity || {});
+  let customer;
   try {
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('email', (email || '').toLowerCase())
-      .single();
-    if (customer) return await customerWindowStart(customer.id);
-  } catch {
-    /* fall through to calendar month */
+    // Lazy: routes/customers pulls in the auth stack.
+    const { findCustomerRow } = require('../routes/customers');
+    customer = await findCustomerRow({ userId: who.userId || null, email: who.email || '' }, 'id');
+  } catch (err) {
+    throw ledgerUnavailable(err);
   }
+  if (customer) return customerWindowStart(customer.id, new Date(), { strict: true });
   return monthStart();
 }
 
 /**
  * The paid monthly window for a known customers.id, as of `at` (default now).
  * Falls back to the calendar month. Used to date a top-up pack's expiry.
+ * `strict` (the metering gate): an unreadable subscription throws
+ * USAGE_UNAVAILABLE instead of falling back.
  */
-async function customerWindowStart(customerId, at = new Date()) {
+async function customerWindowStart(customerId, at = new Date(), { strict = false } = {}) {
   try {
-    const { data: sub } = await supabase
+    const { data: sub, error } = await supabase
       .from('subscriptions')
       .select('current_period_start')
       .eq('customer_id', customerId)
@@ -133,8 +141,10 @@ async function customerWindowStart(customerId, at = new Date()) {
       .order('current_period_start', { ascending: false })
       .limit(1)
       .single();
+    if (strict && error && error.code !== 'PGRST116') throw ledgerUnavailable(error);
     if (sub && sub.current_period_start) return monthlyWindowStart(sub.current_period_start, at);
-  } catch {
+  } catch (err) {
+    if (strict) throw err && err.code === 'USAGE_UNAVAILABLE' ? err : ledgerUnavailable(err);
     /* fall through to calendar month */
   }
   return monthStart(at);
@@ -253,6 +263,7 @@ async function releaseAction(id, failed = false) {
 
 module.exports = {
   windowStart,
+  monthStart,
   customerWindowStart,
   customerWindowEnd,
   monthlyWindowEnd,

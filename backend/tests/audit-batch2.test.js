@@ -6,6 +6,8 @@
 //       delivered twice at once is processed once
 //   B6  an invoice email is not dropped because a subscription event was
 //       handled first
+//   M3  the metering window is resolved by user id, so an email change does
+//       not move it; an unreadable customer is "unavailable", not a new month
 // ---------------------------------------------------------------------------
 
 const test = require('node:test');
@@ -25,12 +27,14 @@ const db = {
   subs: new Map(), // stripe_subscription_id -> row
   customers: new Map(), // stripe_customer_id -> row
   log: [],
+  fail: {},
 };
 function resetDb() {
   db.events.clear();
   db.subs.clear();
   db.customers.clear();
   db.log = [];
+  db.fail = {};
 }
 
 const NO_ROW = { data: null, error: { code: 'PGRST116', message: 'no rows' } };
@@ -85,7 +89,10 @@ function run(st, single) {
       db.subs.set(key, { ...(db.subs.get(key) || {}), ...st.payload });
       return { error: null };
     }
-    const row = db.subs.get(st.filters.stripe_subscription_id) || null;
+    if (db.fail.subscriptions) return { data: null, error: { code: '08006', message: 'connection failure' } };
+    const row = st.filters.customer_id
+      ? [...db.subs.values()].find((r) => r.customer_id === st.filters.customer_id) || null
+      : db.subs.get(st.filters.stripe_subscription_id) || null;
     if (st.op === 'update') {
       if (row) Object.assign(row, st.payload);
       return { error: null };
@@ -95,7 +102,10 @@ function run(st, single) {
   }
 
   if (st.table === 'customers') {
-    const row = db.customers.get(st.filters.stripe_customer_id) || null;
+    if (db.fail.customers) return { data: null, error: { code: '08006', message: 'connection failure' } };
+    const row = st.filters.stripe_customer_id
+      ? db.customers.get(st.filters.stripe_customer_id) || null
+      : [...db.customers.values()].find((r) => Object.entries(st.filters).every(([k, v]) => r[k] === v)) || null;
     if (single) return row ? { data: row, error: null } : NO_ROW;
     return { data: row ? [row] : [], error: null };
   }
@@ -120,6 +130,7 @@ const stripeSdk = Stripe(process.env.STRIPE_SECRET_KEY);
 const express = require('express');
 const request = require('supertest');
 const webhooksRouter = require('../routes/webhooks');
+const usage = require('../lib/usage');
 
 // What Stripe "holds now" for a subscription id. Unset = the object is gone.
 const stripeNow = new Map();
@@ -294,4 +305,45 @@ test('B6: invoice.paid after a newer subscription.updated still sends the recove
   const res = await post(invoiceEvent('evt_paid', 'invoice.paid', T, { total: 2499, currency: 'usd', lines: { data: [] } }));
   assert.equal(res.status, 200);
   assert.deepEqual(sent.filter((m) => m.type === 'payment_recovered').map((m) => m.key), ['in_1']);
+});
+
+// ── M3 ──────────────────────────────────────────────────────────────────────
+
+function seedPaidCustomer() {
+  reset();
+  // Billing anchored on the 9th; the customers row still carries the OLD email.
+  db.customers.set('cus_1', { id: 'cust-row-1', app_user_id: 'user-1', email: 'old@example.com' });
+  const anchor = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  db.subs.set('sub_1', { stripe_subscription_id: 'sub_1', customer_id: 'cust-row-1', status: 'active', current_period_start: anchor });
+  return anchor;
+}
+
+test('M3: the window start is the same before and after an email change', async () => {
+  const anchor = seedPaidCustomer();
+  process.env.STRIPE_OWNERSHIP_ENFORCED = '1';
+  try {
+    const before = await usage.windowStart({ userId: 'user-1', email: 'old@example.com' }, 'pro');
+    const after = await usage.windowStart({ userId: 'user-1', email: 'new@example.com' }, 'pro');
+    assert.equal(before, anchor, 'the window is the billing anniversary');
+    assert.equal(after, before, 'a new login email does not move the window');
+  } finally {
+    delete process.env.STRIPE_OWNERSHIP_ENFORCED;
+  }
+});
+
+test('M3: an unreadable customer or subscription is unavailable, not a calendar month', async () => {
+  seedPaidCustomer();
+  db.fail.customers = true;
+  await assert.rejects(usage.windowStart({ userId: 'user-1', email: 'old@example.com' }, 'pro'), { code: 'USAGE_UNAVAILABLE' });
+  db.fail.customers = false;
+  db.fail.subscriptions = true;
+  await assert.rejects(usage.windowStart({ userId: 'user-1', email: 'old@example.com' }, 'pro'), { code: 'USAGE_UNAVAILABLE' });
+});
+
+test('M3: trial and free stay lifetime; a bare email still resolves', async () => {
+  seedPaidCustomer();
+  assert.equal(await usage.windowStart({ userId: 'user-1', email: 'old@example.com' }, 'trial'), null);
+  assert.equal(await usage.windowStart({ userId: 'user-1', email: 'old@example.com' }, 'free'), null);
+  const viaEmail = await usage.windowStart('old@example.com', 'pro');
+  assert.equal(viaEmail, db.subs.get('sub_1').current_period_start);
 });
