@@ -27,13 +27,33 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // Local E2E fires hundreds of requests from one IP — don't throttle tests.
 const isTestEnv = process.env.NODE_ENV === 'test';
 
-// General API rate limit — 100 req / 15 min per IP
+// Audit S1: the general limit is keyed by the signed-in user an office shares
+// an IP with, not by the IP (see claimedUserId in lib/rate-limit-store.js).
+const { claimedUserId } = require('./lib/rate-limit-store');
+
+// General API rate limit — 100 req / 15 min per signed-in user (per IP when
+// signed out), the same number as before but no longer shared by an office.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isTestEnv ? 100000 : 100,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const userId = claimedUserId(req);
+    return userId ? `u:${userId}` : `ip:${req.ip}`;
+  },
   message: { error: 'Too many requests, please try again later.' },
+});
+
+// Per-IP backstop for the whole API, wide enough for a small office of
+// signed-in users, so rotating claimed user ids cannot flood from one address.
+// Mounted once on /api (after the Stripe webhook), so it counts each request once.
+const ipBackstopLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isTestEnv ? 100000 : 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'This network is sending too many requests, please try again in a few minutes.' },
 });
 
 // Tighter limit for payment creation endpoints
@@ -110,6 +130,9 @@ app.use(
 // ---------------------------------------------------------------------------
 const webhookRouter = require('./routes/webhooks');
 app.use('/api/webhooks', webhookRouter);
+
+// Audit S1: per-IP backstop for everything under /api except the webhook.
+app.use('/api', ipBackstopLimiter);
 
 // Routers that bring their own body parsers
 const authRouter = require('./routes/auth');

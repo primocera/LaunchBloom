@@ -36,7 +36,12 @@ const router = express.Router();
 // Local E2E signs in many seeded users from one IP - don't throttle tests
 // (matches the general/payment/AI limiters in server.js). Production stays at 20.
 const isTestEnv = process.env.NODE_ENV === 'test';
+// Audit S1: counters shared by every serverless instance (migration 043), so
+// these limits hold across Vercel instances and cold starts. Falls back to the
+// per-instance memory store until 043 is applied.
+const { PostgresStore } = require('../lib/rate-limit-store');
 const loginLimiter = rateLimit({
+  store: new PostgresStore('auth_login'),
   windowMs: 15 * 60 * 1000,
   max: isTestEnv ? 100000 : 20,
   standardHeaders: true,
@@ -50,6 +55,7 @@ const loginLimiter = rateLimit({
 // for one address or flood someone's inbox with reset / verification mail.
 // express-rate-limit answers 429 with Retry-After + RateLimit-* headers.
 const signupIpLimiter = rateLimit({
+  store: new PostgresStore('auth_signup_ip'),
   windowMs: 60 * 60 * 1000,
   max: isTestEnv ? 100000 : 5,
   standardHeaders: true,
@@ -61,6 +67,7 @@ const emailKey = (req) => {
   return email ? `e:${email}` : `ip:${req.ip}`;
 };
 const signupEmailLimiter = rateLimit({
+  store: new PostgresStore('auth_signup_email'),
   windowMs: 24 * 60 * 60 * 1000,
   max: isTestEnv ? 100000 : 3,
   standardHeaders: true,
@@ -69,6 +76,7 @@ const signupEmailLimiter = rateLimit({
   message: { error: 'Too many sign-up attempts for this email - check your inbox or try again tomorrow.' },
 });
 const emailSendLimiter = rateLimit({
+  store: new PostgresStore('auth_email_send'),
   windowMs: 60 * 60 * 1000,
   max: isTestEnv ? 100000 : 3,
   standardHeaders: true,
