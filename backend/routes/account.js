@@ -21,6 +21,7 @@ const { track } = require('../lib/analytics');
 const { configuredAppUrl } = require('../lib/launch-config');
 const { isOwnedScalvyaCustomer } = require('./payments');
 const { opsSignal } = require('../lib/ops-signal');
+const { must } = require('../lib/must');
 const rateLimit = require('express-rate-limit');
 const { PostgresStore } = require('../lib/rate-limit-store');
 
@@ -251,10 +252,12 @@ router.post('/api/account/billing-portal', requireAuth, async (req, res, next) =
 // tell what they're reading.
 router.get('/api/account/export', requireAuth, async (req, res, next) => {
   try {
-    const { data: owned } = await supabase
+    // Audit D3: an unreadable workspace list fails the export (503, retry)
+    // instead of silently exporting a single workspace.
+    const owned = must(await supabase
       .from('workspaces')
       .select('*')
-      .eq('user_id', req.userId);
+      .eq('user_id', req.userId), 'workspace list');
     const ownedList = Array.isArray(owned) ? owned : [];
     const workspaces = ownedList.length
       ? ownedList

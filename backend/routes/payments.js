@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
+const { must } = require('../lib/must');
 const { resolveEntitlement, readFailed, redactEmail, findCustomerRow } = require('./customers');
 const {
   planUnavailableBody,
@@ -293,27 +294,28 @@ async function ensureStripeCustomer(email, userId) {
 async function ownsSubscription(subscriptionId, identity) {
   const userId = identity && identity.userId;
   const userEmail = (identity && identity.userEmail) || '';
-  const { data: sub } = await supabase
+  // Audit D3: an unreadable row throws (503), never answers "not yours".
+  const sub = must(await supabase
     .from('subscriptions')
     .select('customer_id')
     .eq('stripe_subscription_id', subscriptionId)
-    .single();
+    .single(), 'subscription');
   if (!sub?.customer_id) return false;
 
   if (ownership.ownershipEnforced() && userId) {
-    const { data: customer } = await supabase
+    const customer = must(await supabase
       .from('customers')
       .select('app_user_id')
       .eq('id', sub.customer_id)
-      .single();
+      .single(), 'customer');
     return !!customer && customer.app_user_id === userId;
   }
 
-  const { data: customer } = await supabase
+  const customer = must(await supabase
     .from('customers')
     .select('email')
     .eq('id', sub.customer_id)
-    .single();
+    .single(), 'customer');
   return !!customer?.email && !!userEmail && customer.email.toLowerCase() === userEmail.toLowerCase();
 }
 

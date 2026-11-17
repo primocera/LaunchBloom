@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../lib/stripe');
 const supabase = require('../lib/supabase');
+const { must } = require('../lib/must');
 const { track } = require('../lib/analytics');
 // v5 Prompt 14: idempotent lifecycle emails (no-ops without RESEND_API_KEY).
 const { sendLifecycleEmail } = require('../lib/lifecycle-email');
@@ -244,11 +245,13 @@ async function classifyInvoiceOwnership(invoice, options = {}) {
 /** Customer email for a Stripe customer id (null when unknown). */
 async function emailForStripeCustomer(stripeCustomerId) {
   if (!stripeCustomerId) return null;
-  const { data } = await supabase
+  // Audit D3: an unreadable customer throws, so the webhook is retried and the
+  // (deduped) lifecycle email still goes out, instead of "no email".
+  const data = must(await supabase
     .from('customers')
     .select('email')
     .eq('stripe_customer_id', stripeCustomerId)
-    .single();
+    .single(), 'customer email');
   const email = data?.email || null;
   // A deleted account's billing row carries a placeholder address
   // (routes/account.js); nothing is ever sent to it.
@@ -530,11 +533,13 @@ async function isOurCharge(object) {
   if (byMeta === ownership.OWNERSHIP.FOREIGN || byMeta === ownership.OWNERSHIP.AMBIGUOUS) return false;
   const stripeCustomerId = object?.customer;
   if (stripeCustomerId) {
-    const { data } = await supabase
+    // Audit D3: an outage is retried (5xx), never read as "not ours", which
+    // would drop a refund or dispute signal for our own customer.
+    const data = must(await supabase
       .from('customers')
       .select('id')
       .eq('stripe_customer_id', stripeCustomerId)
-      .single();
+      .single(), 'charge customer');
     if (data) return true;
   }
   return false;
@@ -892,9 +897,11 @@ async function onInvoicePaid(invoice) {
   // needed" must be told the problem is resolved. subscription.updated may have
   // already flipped the mirror back to active, so an invoice that needed more
   // than one attempt also counts as a recovery.
-  const { data: priorRow } = await supabase
+  // Audit D3: unreadable = retry, so the recovery email is not mistaken for a
+  // routine receipt during an outage.
+  const priorRow = must(await supabase
     .from('subscriptions').select('status')
-    .eq('stripe_subscription_id', subscriptionId).single();
+    .eq('stripe_subscription_id', subscriptionId).single(), 'subscription status');
   const wasPastDue = (priorRow && priorRow.status === 'past_due') || (invoice.attempt_count || 0) > 1;
 
   // v10 SC-07: a renewal is a recurring cycle invoice, not the first one.

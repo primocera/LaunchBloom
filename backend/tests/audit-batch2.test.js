@@ -368,3 +368,29 @@ test('A1: an unawaited track() is handed to the platform so the write can finish
   // Off the platform it is a plain call that still never throws.
   await track('generation_success', { userId: 'user-1' });
 });
+
+// ── D3 (webhook half) ───────────────────────────────────────────────────────
+
+test('D3: an unreadable subscription during invoice.paid is retried, not sent as a routine receipt', async () => {
+  reset();
+  db.fail.subscriptions = true;
+  const res = await post(invoiceEvent('evt_paid_down', 'invoice.paid', 1790000000, { total: 2499, currency: 'usd', lines: { data: [] } }));
+  assert.equal(res.status, 500);
+  assert.equal(sent.length, 0);
+});
+
+test('D3: an unreadable customer email is retried, not dropped', async () => {
+  reset();
+  // Our subscription is mirrored, so the invoice is ours.
+  db.subs.set('sub_1', { stripe_subscription_id: 'sub_1', customer_id: 'cust-row-1', status: 'past_due', metadata: { source: 'launchbloom' } });
+  db.fail.customers = true;
+  const ev = invoiceEvent('evt_fail_down', 'invoice.payment_failed', 1790000000);
+  delete ev.data.object.customer_email;
+  invoiceNow.set('in_1', { id: 'in_1', status: 'open' });
+  const res = await post(ev);
+  assert.equal(res.status, 500);
+  db.fail.customers = false;
+  const retry = await post(ev);
+  assert.equal(retry.status, 200);
+  assert.deepEqual(sent.map((m) => m.type), ['payment_failed']);
+});
