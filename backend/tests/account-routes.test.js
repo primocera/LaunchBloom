@@ -10,7 +10,7 @@ const fakeSupabase = makeFakeSupabase({
   customers: { data: null, error: null },
 });
 fakeSupabase.authClient = () => ({
-  auth: {
+  auth: { signInWithPassword: async ({ password }) => (password === 'correct-password' ? { data: { session: {}, user: null }, error: null } : { data: null, error: { status: 400, message: 'Invalid login credentials' } }),
     getUser: async () => (state.user ? { data: { user: state.user }, error: null } : { data: { user: null }, error: { message: 'no' } }),
     refreshSession: async () => ({ data: { session: null, user: null }, error: { message: 'no' } }),
   },
@@ -55,7 +55,7 @@ test('export returns a JSON attachment of the workspace data', async () => {
 
 test('delete cancels billing, wipes data and deletes the auth user', async () => {
   deletedUser = null;
-  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'correct-password' });
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
   assert.equal(r.body.receipt.completed, true);
@@ -88,4 +88,22 @@ test('billing requires auth', async () => {
   const r = await request(app).get('/api/account/billing');
   assert.equal(r.status, 401);
   state.user = { id: 'user-1', email: 'me@app.com' };
+});
+
+// ── audit S4: the password is confirmed before anything is deleted ──────────
+
+test('S4: deletion without a password deletes nothing', async () => {
+  deletedUser = null;
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  assert.equal(r.status, 400);
+  assert.equal(r.body.code, 'PASSWORD_REQUIRED');
+  assert.equal(deletedUser, null);
+});
+
+test('S4: deletion with a wrong password deletes nothing', async () => {
+  deletedUser = null;
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'guess' });
+  assert.equal(r.status, 401);
+  assert.equal(r.body.code, 'PASSWORD_INCORRECT');
+  assert.equal(deletedUser, null);
 });

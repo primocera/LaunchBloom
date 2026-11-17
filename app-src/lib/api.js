@@ -80,7 +80,8 @@ export const api = {
   // Account & billing (Prompts 8 + 14)
   billing: () => request('/api/account/billing'),
   billingPortal: () => request('/api/account/billing-portal', { method: 'POST' }),
-  deleteAccount: () => request('/api/account/delete', { method: 'POST' }),
+  // Audit S4: deletion is confirmed with the current password.
+  deleteAccount: (password) => request('/api/account/delete', { method: 'POST', body: { password } }),
   exportData: async () => {
     const res = await fetch('/api/account/export', { credentials: 'include' });
     if (!res.ok) throw new Error('Could not export your data. Please try again.');

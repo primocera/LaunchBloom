@@ -21,7 +21,7 @@ const fakeSupabase = makeFakeSupabase({
   subscriptions: { data: [], error: null },
 });
 fakeSupabase.authClient = () => ({
-  auth: {
+  auth: { signInWithPassword: async ({ password }) => (password === 'correct-password' ? { data: { session: {}, user: null }, error: null } : { data: null, error: { status: 400, message: 'Invalid login credentials' } }),
     getUser: async () => (state.user ? { data: { user: state.user }, error: null } : { data: { user: null }, error: { message: 'no' } }),
     refreshSession: async () => ({ data: { session: null, user: null }, error: { message: 'no' } }),
   },
@@ -70,7 +70,7 @@ test('account deletion never cancels a FOREIGN customer\'s subscriptions', async
   calls.subsListed = 0;
   calls.subsCanceled = 0;
   deletedWorkspaces.length = 0;
-  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'correct-password' });
   // Local data is still deleted; the Stripe cancellation is SKIPPED, not run.
   assert.equal(calls.subsCanceled, 0, 'a foreign product\'s live subscriptions must never be cancelled');
   const cancelStep = ((r.body.receipt && r.body.receipt.steps) || []).find((s) => s.name === 'stripe_cancellation');

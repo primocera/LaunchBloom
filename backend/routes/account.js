@@ -21,6 +21,47 @@ const { track } = require('../lib/analytics');
 const { configuredAppUrl } = require('../lib/launch-config');
 const { isOwnedScalvyaCustomer } = require('./payments');
 const { opsSignal } = require('../lib/ops-signal');
+const rateLimit = require('express-rate-limit');
+const { PostgresStore } = require('../lib/rate-limit-store');
+
+// Audit S4: deleting the account needs the current password, so a stolen
+// session cookie alone cannot erase the account. Guessing that password
+// through this route is limited like sign-in (shared across instances).
+const deletePasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 100000 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new PostgresStore('account_delete_password'),
+  keyGenerator: (req) => (req.userId ? `u:${req.userId}` : `ip:${req.ip}`),
+  message: { error: 'Too many attempts - try again in a few minutes.', code: 'TOO_MANY_ATTEMPTS' },
+});
+
+/**
+ * Re-check the signed-in user's password. Returns 'ok', 'wrong' or
+ * 'unavailable'. Never reveals more than "incorrect".
+ */
+async function confirmPassword(req, password) {
+  try {
+    const { data, error } = await supabase.authClient().auth.signInWithPassword({
+      email: req.userEmail,
+      password,
+    });
+    if (error) {
+      // A credentials answer (4xx) is "wrong"; a network or server error is
+      // "unavailable", so a Supabase outage is never reported as a bad password.
+      const status = Number(error.status) || 0;
+      if (status >= 400 && status < 500) return 'wrong';
+      if (/invalid login|invalid_credentials|credentials/i.test(error.message || '')) return 'wrong';
+      return 'unavailable';
+    }
+    const confirmedId = data && data.user && data.user.id;
+    if (confirmedId && req.userId && confirmedId !== req.userId) return 'wrong';
+    return 'ok';
+  } catch {
+    return 'unavailable';
+  }
+}
 
 // Placeholder domain written over the email of a deleted account's billing
 // row. .invalid can never receive mail (RFC 2606).
@@ -260,8 +301,21 @@ router.get('/api/account/export', requireAuth, async (req, res, next) => {
 // v6, Prompt 8). Each external side effect records ok/failed instead of being
 // swallowed; the response is an honest receipt the user (and support) can act
 // on. Idempotent: re-running skips already-deleted resources.
-router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), async (req, res, next) => {
+router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), deletePasswordLimiter, async (req, res, next) => {
   try {
+    // Audit S4: confirm the password before any destructive step.
+    const password = req.body && typeof req.body.password === 'string' ? req.body.password : '';
+    if (!password) {
+      return res.status(400).json({ error: 'Enter your password to delete your account.', code: 'PASSWORD_REQUIRED' });
+    }
+    const confirmed = await confirmPassword(req, password);
+    if (confirmed === 'unavailable') {
+      return res.status(503).json({ error: 'We could not check your password right now, so nothing was deleted. Please try again in a moment.', code: 'PASSWORD_CHECK_UNAVAILABLE', retryable: true });
+    }
+    if (confirmed !== 'ok') {
+      return res.status(401).json({ error: 'That password is not correct. Nothing was deleted.', code: 'PASSWORD_INCORRECT' });
+    }
+
     const email = req.userEmail;
     const userId = req.userId;
     const steps = [];

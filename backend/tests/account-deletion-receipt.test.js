@@ -28,7 +28,7 @@ function builder(table) {
 const fakeSupabase = {
   from: (t) => builder(t),
   authClient: () => ({
-    auth: {
+    auth: { signInWithPassword: async ({ password }) => (password === 'correct-password' ? { data: { session: {}, user: null }, error: null } : { data: null, error: { status: 400, message: 'Invalid login credentials' } }),
       getUser: async () => ({ data: { user: state.user }, error: null }),
       refreshSession: async () => ({ data: { session: null, user: null }, error: { message: 'no' } }),
     },
@@ -74,7 +74,7 @@ test('export includes every owned workspace', async () => {
 });
 
 test('a failed Stripe cancellation stops deletion before anything is erased', async () => {
-  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'correct-password' });
   // Deleting the sign-in while the subscription may still renew would leave a
   // live charge on an account nobody can open (audit B3).
   assert.equal(r.status, 503);

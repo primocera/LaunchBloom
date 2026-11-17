@@ -26,6 +26,7 @@ export default function Account() {
   const [billing, setBilling] = useState(null);
   const [planUnavailable, setPlanUnavailable] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [exportErr, setExportErr] = useState(null); // v13 SC-P1-10: typed export state
@@ -129,7 +130,8 @@ export default function Account() {
     try {
       // Prompt 27: the backend returns a step-by-step deletion receipt. Show it
       // (with any failed steps) instead of promising a clean {ok:true}.
-      const r = await api.deleteAccount();
+      const r = await api.deleteAccount(deletePassword);
+      setDeletePassword('');
       // LB-V17-03: purge any device-only drafts on successful deletion too.
       clearAllDrafts();
       setReceipt(r || { ok: true });
@@ -341,10 +343,19 @@ export default function Account() {
         ) : (
           <div className="confirm-row">
             <span>Are you sure?</span>
-            <button className="btn-danger" onClick={deleteAccount} disabled={busy}>
+            <input
+              type="password"
+              autoComplete="current-password"
+              aria-label="Your password"
+              placeholder="Your password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              disabled={busy}
+            />
+            <button className="btn-danger" onClick={deleteAccount} disabled={busy || !deletePassword}>
               {busy ? 'Deleting…' : 'Yes, delete everything'}
             </button>
-            <button className="btn-secondary" onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
+            <button className="btn-secondary" onClick={() => { setConfirming(false); setDeletePassword(''); }} disabled={busy}>Cancel</button>
           </div>
         )}
       </section>

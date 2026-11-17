@@ -34,7 +34,7 @@ function builder(table) {
 }
 stubModule('lib/supabase.js', {
   from: (t) => builder(t),
-  authClient: () => ({ auth: {
+  authClient: () => ({ auth: { signInWithPassword: async ({ password }) => (password === 'correct-password' ? { data: { session: {}, user: null }, error: null } : { data: null, error: { status: 400, message: 'Invalid login credentials' } }),
     getUser: async () => ({ data: { user }, error: null }),
     refreshSession: async () => ({ data: { session: null, user: null }, error: { message: 'no' } }),
   } }),
@@ -76,7 +76,7 @@ test('S1: export still works before migration 041 is applied', async () => {
 
 test('S1 + S2: delete removes the packs and cancels queued emails for that address only', async () => {
   reset();
-  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'correct-password' });
   assert.equal(r.status, 200);
   assert.equal(stepOf(r, 'topup_packs').status, 'ok');
   assert.equal(stepOf(r, 'queued_emails').status, 'ok');
@@ -92,7 +92,7 @@ test('S1 + S2: delete removes the packs and cancels queued emails for that addre
 test('S1: a missing 041 table is not a failed deletion step', async () => {
   reset();
   missingTables.add('action_topups');
-  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'correct-password' });
   assert.equal(stepOf(r, 'topup_packs').status, 'ok');
 });
 
@@ -100,7 +100,7 @@ test('S1 + S2: DB errors surface in the receipt instead of a blanket success', a
   reset();
   failTables.add('action_topups');
   failTables.add('email_events');
-  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
+  const r = await request(app).post('/api/account/delete').set(...AUTHED).send({ password: 'correct-password' });
   assert.equal(stepOf(r, 'topup_packs').status, 'failed');
   assert.equal(stepOf(r, 'queued_emails').status, 'failed');
   assert.equal(r.body.receipt.completed, false);
