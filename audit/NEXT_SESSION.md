@@ -65,6 +65,7 @@ Skipped on purpose (owner decisions): P2 retire or connect the old flow, P5 app 
 - `backend/tests/topup-gate.test.js` failed once under the full parallel run and passed on rerun and alone: a flaky test, cause not investigated.
 - Frontend: the new codes `USER_DAILY_LIMIT`, `PASSWORD_*`, `USAGE_UNAVAILABLE`, `WORKSPACE_LOOKUP_FAILED` and `DELETE_BILLING_UNCONFIRMED` show the backend message through the generic error display; there is no special UI for them.
 - `CHECK_APPLIED.sql` has no rows for 038 to 043.
+- **041 (top-up packs) was never applied in production** until 2026-11-17, so packs could not be granted (the gate counted 0 extra actions, nothing broke). The owner applied it that day (`action_topups` exists = true); no pack had ever been bought (0 users). The CI throwaway project may still lack 041.
 - **2026-11-17 migrations, per owner:** **042 and 043 are applied in both projects, production and the CI throwaway** (owner's statement, recorded in `docs/launch/launch-state.json`; no production query result was seen in this session). Before that, the throwaway had `admin_audit` without RLS and no `rate_limit_hits`. To verify any project: `select relname, relrowsecurity from pg_class where relname = 'admin_audit';` (true = 042) and `select to_regclass('public.rate_limit_hits') is not null;` (true = 043).
 
 ## Live checks to run before coding (owner, about 10 minutes)
