@@ -96,6 +96,12 @@ const stripeSdk = Stripe(process.env.STRIPE_SECRET_KEY);
 const express = require('express');
 const request = require('supertest');
 const webhooksRouter = require('../routes/webhooks');
+// Audit B6: invoice.payment_failed asks Stripe whether the invoice is paid by
+// now. No Stripe here: unreadable means "not known to be paid", without a
+// real network call.
+require('../lib/stripe').invoices.retrieve = async () => {
+  throw Object.assign(new Error('stripe unreachable in tests'), { type: 'StripeConnectionError' });
+};
 // Audit B4: the subscription handler refetches the subscription from Stripe.
 // These tests have no Stripe to reach, so the refetch is unavailable and the
 // handler mirrors the event payload - without a real network call.

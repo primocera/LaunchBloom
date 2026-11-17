@@ -130,6 +130,13 @@ require('../lib/stripe').subscriptions.retrieve = async (id) => {
   return stripeNow.get(id);
 };
 
+// What Stripe "holds now" for an invoice id. Unset = unreadable.
+const invoiceNow = new Map();
+require('../lib/stripe').invoices.retrieve = async (id) => {
+  if (!invoiceNow.has(id)) throw Object.assign(new Error('connection error'), { type: 'StripeConnectionError' });
+  return invoiceNow.get(id);
+};
+
 const app = express();
 app.use('/api/webhooks', webhooksRouter);
 
@@ -154,6 +161,7 @@ function reset() {
   resetDb();
   sent.length = 0;
   stripeNow.clear();
+  invoiceNow.clear();
   stripeDown = false;
   db.customers.set('cus_1', { id: 'cust-row-1', email: 'a@example.com' });
 }
@@ -237,4 +245,53 @@ test('B4: an already processed event is acknowledged without work', async () => 
   assert.equal(res.status, 200);
   assert.equal(res.body.duplicate, true);
   assert.equal(subscriptionWrites().length, 0);
+});
+
+// ── B6 ──────────────────────────────────────────────────────────────────────
+
+const invoiceEvent = (id, type, created, extra = {}) => ({
+  id,
+  type,
+  created,
+  data: { object: { id: 'in_1', subscription: 'sub_1', customer: 'cus_1', customer_email: 'a@example.com', ...extra } },
+});
+
+test('B6: invoice.payment_failed after a newer subscription.updated still queues the email', async () => {
+  reset();
+  const T = 1790000000;
+  // subscription.updated (past_due) is handled first and stamps a NEWER clock.
+  await post(subEvent('evt_pd', 'customer.subscription.updated', 'past_due', T + 5));
+  invoiceNow.set('in_1', { id: 'in_1', status: 'open' });
+
+  const res = await post(invoiceEvent('evt_fail', 'invoice.payment_failed', T));
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(sent.filter((m) => m.type === 'payment_failed').map((m) => m.key), ['in_1']);
+  assert.equal(db.subs.get('sub_1').status, 'past_due', 'an invoice event never writes the mirror');
+});
+
+test('B6: payment_failed is sent when the invoice cannot be read', async () => {
+  reset();
+  await post(subEvent('evt_pd', 'customer.subscription.updated', 'past_due', 1790000005));
+  const res = await post(invoiceEvent('evt_fail', 'invoice.payment_failed', 1790000000));
+  assert.equal(res.status, 200);
+  assert.equal(sent.filter((m) => m.type === 'payment_failed').length, 1);
+});
+
+test('B6: a late payment_failed for an invoice Stripe shows as paid sends nothing', async () => {
+  reset();
+  await post(subEvent('evt_ok', 'customer.subscription.updated', 'active', 1790000005));
+  invoiceNow.set('in_1', { id: 'in_1', status: 'paid' });
+  const res = await post(invoiceEvent('evt_fail', 'invoice.payment_failed', 1790000000));
+  assert.equal(res.status, 200);
+  assert.equal(sent.filter((m) => m.type === 'payment_failed').length, 0);
+});
+
+test('B6: invoice.paid after a newer subscription.updated still sends the recovery email', async () => {
+  reset();
+  const T = 1790000000;
+  await post(subEvent('evt_pd', 'customer.subscription.updated', 'past_due', T + 5));
+  const res = await post(invoiceEvent('evt_paid', 'invoice.paid', T, { total: 2499, currency: 'usd', lines: { data: [] } }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(sent.filter((m) => m.type === 'payment_recovered').map((m) => m.key), ['in_1']);
 });

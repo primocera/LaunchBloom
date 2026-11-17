@@ -468,11 +468,11 @@ async function handleEvent(event) {
       break;
     case 'invoice.paid':
       if (!(await ownInvoiceOrDrop())) return;
-      await onInvoicePaid(data, eventAt);
+      await onInvoicePaid(data);
       break;
     case 'invoice.payment_failed':
       if (!(await ownInvoiceOrDrop())) return;
-      await onInvoicePaymentFailed(data, eventAt);
+      await onInvoicePaymentFailed(data);
       break;
     // A refund or a dispute does NOT itself change the subscription status, so
     // it must not change entitlement here - the status transition Stripe sends
@@ -879,17 +879,14 @@ function invoiceLine(invoice) {
   return { priceId: typeof priceId === 'string' ? priceId : null, periodEnd };
 }
 
-async function onInvoicePaid(invoice, eventAt) {
+async function onInvoicePaid(invoice) {
   const subscriptionId = invoiceSubscriptionId(invoice);
   if (!subscriptionId) return;
 
-  if (await isStaleSubscriptionEvent(subscriptionId, eventAt)) {
-    opsSignal('reconciliation_correction', {
-      event_type: 'invoice.paid', subscription_id: subscriptionId, invoice_id: invoice.id,
-      reason: 'stale_out_of_order_skipped', severity: 'info',
-    });
-    return;
-  }
+  // No staleness check against the subscription row here (audit B6): its
+  // stripe_event_at is written by subscription events Stripe emits around the
+  // same moment, so comparing against it dropped receipts and recovery emails.
+  // The emails below are deduped on the invoice id instead.
 
   // v10 SC-06: was this payment a RECOVERY? A customer who was told "action
   // needed" must be told the problem is resolved. subscription.updated may have
@@ -945,14 +942,30 @@ async function onInvoicePaid(invoice, eventAt) {
   }
 }
 
-async function onInvoicePaymentFailed(invoice, eventAt) {
+/** True only when Stripe confirms the invoice is paid now. Unreadable = false. */
+async function invoiceAlreadyPaid(invoiceId) {
+  if (!invoiceId) return false;
+  try {
+    const current = await stripe.invoices.retrieve(invoiceId);
+    return !!(current && current.id === invoiceId && current.status === 'paid');
+  } catch {
+    return false;
+  }
+}
+
+async function onInvoicePaymentFailed(invoice) {
   const subscriptionId = invoiceSubscriptionId(invoice);
   if (!subscriptionId) return;
 
   // SC-V10-00 out-of-order guard: a late payment_failed delivered AFTER the
   // recovery must not send an "action needed" email for a resolved payment.
-  // (Status itself comes from customer.subscription.updated - see above.)
-  if (await isStaleSubscriptionEvent(subscriptionId, eventAt)) {
+  // The guard is the INVOICE's own current state (audit B6), never the
+  // subscription row's event clock: a subscription.updated (past_due) handled
+  // first used to make this event look stale and drop the email. If the invoice
+  // cannot be read the email is sent - a dunning email that never arrives costs
+  // more than one that is late. (Status itself comes from
+  // customer.subscription.updated - see above.)
+  if (await invoiceAlreadyPaid(invoice.id)) {
     opsSignal('reconciliation_correction', {
       event_type: 'invoice.payment_failed', subscription_id: subscriptionId, invoice_id: invoice.id,
       reason: 'stale_out_of_order_skipped', severity: 'warn',
