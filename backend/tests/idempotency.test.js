@@ -7,12 +7,15 @@ const assert = require('node:assert/strict');
 
 const { stubModule } = require('./helpers');
 
+process.env.IDEMPOTENCY_STORE_TIMEOUT_MS = '150';
+
 stubModule('lib/auth.js', {
   requireAuth: (req, _res, next) => { req.userId = 'u1'; req.userEmail = 'a@b.com'; next(); },
 });
 
 // In-memory generation_jobs with a real unique constraint.
 const jobs = new Map(); // `${user}:${key}` -> row
+let storeMode = 'fast'; // 'fast' | 'slow' | 'hang' - how the result write behaves
 function fakeSupabase() {
   return {
     from: (table) => {
@@ -39,6 +42,15 @@ function fakeSupabase() {
             const hit = row && Object.entries(filters).every(([c, v]) => row[c] === v);
             if (hit) Object.assign(row, payload);
             if (returning) result = { data: hit ? [{ idempotency_key: row.idempotency_key }] : [], error: null };
+          }
+          // Audit A1: a result write can be slow, or never answer.
+          if (op === 'update' && payload && payload.http_status && storeMode === 'hang') return new Promise(() => {}).then(ok, err);
+          if (op === 'update' && payload && payload.http_status && storeMode === 'slow') {
+            const row = jobs.get(k);
+            const before = { ...row, status: 'in_flight', http_status: null, result: null };
+            const after = { ...row };
+            Object.assign(row, before);
+            return new Promise((resolve) => setTimeout(() => { Object.assign(row, after); resolve(result); }, 60)).then(ok, err);
           }
           return Promise.resolve(result).then(ok, err);
         },
@@ -133,4 +145,27 @@ test('an orphaned in-flight row (old timestamp) is taken over', async () => {
   const r = await request(app).post('/gen').set('Idempotency-Key', 'k4');
   assert.equal(r.status, 200);
   assert.equal(handlerRuns, 1);
+});
+
+// ── audit A1 ────────────────────────────────────────────────────────────────
+
+test('A1: the result is stored before the response is sent', async () => {
+  jobs.clear(); handlerRuns = 0; handlerBehavior = 'ok'; storeMode = 'slow';
+  try {
+    const res = await request(app).post('/gen').set('Idempotency-Key', 'a1-slow');
+    assert.equal(res.status, 200);
+    // The client already has its answer; the row must already be final.
+    assert.equal(jobs.get('u1:a1-slow').status, 'succeeded');
+    assert.deepEqual(jobs.get('u1:a1-slow').result, res.body);
+  } finally { storeMode = 'fast'; }
+});
+
+test('A1: a result write that never answers does not hold the response', async () => {
+  jobs.clear(); handlerRuns = 0; handlerBehavior = 'ok'; storeMode = 'hang';
+  try {
+    const started = Date.now();
+    const res = await request(app).post('/gen').set('Idempotency-Key', 'a1-hang');
+    assert.equal(res.status, 200);
+    assert.ok(Date.now() - started < 2000, 'the response is released by the store timeout');
+  } finally { storeMode = 'fast'; }
 });

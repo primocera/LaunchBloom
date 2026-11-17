@@ -6,6 +6,7 @@
 //       delivered twice at once is processed once
 //   B6  an invoice email is not dropped because a subscription event was
 //       handled first
+//   A1  unawaited analytics writes are kept alive on the platform
 //   M3  the metering window is resolved by user id, so an email change does
 //       not move it; an unreadable customer is "unavailable", not a new month
 // ---------------------------------------------------------------------------
@@ -346,4 +347,24 @@ test('M3: trial and free stay lifetime; a bare email still resolves', async () =
   assert.equal(await usage.windowStart({ userId: 'user-1', email: 'old@example.com' }, 'free'), null);
   const viaEmail = await usage.windowStart('old@example.com', 'pro');
   assert.equal(viaEmail, db.subs.get('sub_1').current_period_start);
+});
+
+// ── A1 (analytics half; the idempotency half is in idempotency.test.js) ─────
+
+test('A1: an unawaited track() is handed to the platform so the write can finish', async () => {
+  reset();
+  const { track } = require('../lib/analytics');
+  const key = Symbol.for('@vercel/request-context');
+  const held = [];
+  globalThis[key] = { get: () => ({ waitUntil: (p) => held.push(p) }) };
+  try {
+    track('generation_success', { userId: 'user-1' }); // not awaited, like the routes
+    assert.equal(held.length, 1);
+    await held[0];
+    assert.equal(db.log.filter((l) => l.table === 'analytics_events').length, 1);
+  } finally {
+    delete globalThis[key];
+  }
+  // Off the platform it is a plain call that still never throws.
+  await track('generation_success', { userId: 'user-1' });
 });

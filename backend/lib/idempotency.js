@@ -22,6 +22,8 @@ const supabase = require('./supabase');
 const { requireAuth } = require('./auth');
 
 const ORPHAN_MS = Number(process.env.IDEMPOTENCY_ORPHAN_MS || 10 * 60 * 1000);
+// Longest the response waits for the result row to be stored.
+const STORE_TIMEOUT_MS = Number(process.env.IDEMPOTENCY_STORE_TIMEOUT_MS || 3000);
 
 function isMissingTable(error) {
   const msg = String((error && error.message) || '');
@@ -94,22 +96,37 @@ function idempotent(route) {
           }
         }
 
-        // Capture the JSON response so replays can return it verbatim.
+        // Capture the JSON response so replays can return it verbatim. The
+        // result is stored BEFORE the response goes out (audit A1): on Vercel
+        // the function can be frozen once the response is sent, and a lost
+        // write left the key in_flight - 409 for ten minutes, then a second
+        // generation and a second charge. A slow or failing write never holds
+        // the response for longer than STORE_TIMEOUT_MS.
         const origJson = res.json.bind(res);
+        let captured = false;
         res.json = (body) => {
+          if (captured) return origJson(body);
+          captured = true;
           const ok = res.statusCode >= 200 && res.statusCode < 300;
-          supabase
-            .from('generation_jobs')
-            .update({
-              status: ok ? 'succeeded' : 'failed',
-              http_status: res.statusCode,
-              result: ok ? body : null, // never store error bodies for replay
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', req.userId)
-            .eq('idempotency_key', key)
-            .then(() => {}, () => {});
-          return origJson(body);
+          const stored = Promise.resolve(
+            supabase
+              .from('generation_jobs')
+              .update({
+                status: ok ? 'succeeded' : 'failed',
+                http_status: res.statusCode,
+                result: ok ? body : null, // never store error bodies for replay
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', req.userId)
+              .eq('idempotency_key', key)
+          ).then(() => {}, () => {});
+          let timer;
+          const deadline = new Promise((resolve) => { timer = setTimeout(resolve, STORE_TIMEOUT_MS); });
+          Promise.race([stored, deadline]).then(() => {
+            clearTimeout(timer);
+            origJson(body);
+          });
+          return res;
         };
 
         next();

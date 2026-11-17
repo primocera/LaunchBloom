@@ -205,7 +205,30 @@ function sanitizeProperties(props) {
  * second write is a silent no-op rather than a double count. Volume/diagnostic
  * events omit dedupeKey and are unconstrained.
  */
-async function track(event, { userId = null, workspaceId = null, properties = {}, dedupeKey = null } = {}) {
+function track(event, options) {
+  const pending = record(event, options);
+  keepAlive(pending);
+  return pending;
+}
+
+/**
+ * Most callers do not await track(). On Vercel the function can be frozen as
+ * soon as the response is sent, which dropped those writes (audit A1). When the
+ * platform's request context is present, hand it the promise so the write is
+ * allowed to finish; anywhere else this is a no-op. Same mechanism as
+ * `waitUntil` from @vercel/functions, without the dependency.
+ */
+function keepAlive(promise) {
+  try {
+    const store = globalThis[Symbol.for('@vercel/request-context')];
+    const ctx = store && typeof store.get === 'function' ? store.get() : null;
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(promise);
+  } catch {
+    /* never let bookkeeping break the product */
+  }
+}
+
+async function record(event, { userId = null, workspaceId = null, properties = {}, dedupeKey = null } = {}) {
   try {
     const row = {
       event: String(event).slice(0, 100),
