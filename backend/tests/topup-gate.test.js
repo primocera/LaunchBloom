@@ -43,6 +43,7 @@ function builder(table) {
       let out = { data: null, error: null };
       if (table === 'usage_events') {
         const match = (e) => (!st.filters.id || e.id === st.filters.id)
+          && (!st.filters.status || e.status === st.filters.status)
           && (!st.filters.feature || e.feature === st.filters.feature)
           && (!st.filters.__in_status || st.filters.__in_status.includes(e.status));
         if (st.op === 'update') { for (const e of events) if (match(e)) Object.assign(e, st.payload); }

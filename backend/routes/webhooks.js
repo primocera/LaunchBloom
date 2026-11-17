@@ -249,7 +249,11 @@ async function emailForStripeCustomer(stripeCustomerId) {
     .select('email')
     .eq('stripe_customer_id', stripeCustomerId)
     .single();
-  return data?.email || null;
+  const email = data?.email || null;
+  // A deleted account's billing row carries a placeholder address
+  // (routes/account.js); nothing is ever sent to it.
+  if (email && /@deleted\.invalid$/i.test(email)) return null;
+  return email;
 }
 
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -705,14 +709,24 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     return;
   }
 
-  const { data: customer } = await supabase
+  const { data: customer, error: customerErr } = await supabase
     .from('customers')
     .select('id')
     .eq('stripe_customer_id', subscription.customer)
     .single();
+  // An unreadable customer is not "no customer": throw so Stripe redelivers
+  // instead of mirroring the subscription unlinked.
+  if (customerErr && customerErr.code !== 'PGRST116') {
+    throw new Error(`customer lookup unavailable for subscription ${subscription.id}: ${customerErr.message}`);
+  }
+
+  const mirrorRow = subscriptionMirrorRow(subscription, customer?.id ?? null, eventAt);
+  // No customer row found: leave customer_id out, so an upsert never replaces
+  // an existing link with null (entitlement resolves through customer_id).
+  if (!customer) delete mirrorRow.customer_id;
 
   const { error } = await supabase.from('subscriptions').upsert(
-    subscriptionMirrorRow(subscription, customer?.id ?? null, eventAt),
+    mirrorRow,
     { onConflict: 'stripe_subscription_id' }
   );
 
@@ -909,6 +923,12 @@ async function onCustomerUpdated(stripeCustomer) {
     .update({ email: stripeCustomer.email })
     .eq('stripe_customer_id', stripeCustomer.id);
 
+  // Another row already holds this email. It is display data here, so a
+  // conflict is skipped with a signal, never retried by Stripe for days.
+  if (error && error.code === '23505') {
+    opsSignal('reconciliation_correction', { reason: 'customer_email_sync_conflict', severity: 'info' });
+    return;
+  }
   if (error) {
     throw new Error(`Supabase update failed for customer sync: ${error.message}`);
   }

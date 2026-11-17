@@ -98,7 +98,7 @@ app.use(
       if (allowedOrigins.includes(origin) || previewOrigins.includes(origin)) {
         return callback(null, true);
       }
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+      callback(Object.assign(new Error('Origin not allowed'), { status: 403 }));
     },
     credentials: true,
   })
@@ -264,6 +264,12 @@ app.use((err, req, res, _next) => {
   // can drop its stale workspace pin (routes/workspaces.js resolveWorkspace).
   if (workspacesRouter.isWorkspaceUnavailable(err)) {
     return res.status(409).json({ error: err.message, code: err.code, req_id: req.id });
+  }
+  // The workspace list could not be read. Retryable, with a message the UI can
+  // show - never answered by creating a blank workspace (routes/workspaces.js).
+  if (err && err.code === 'WORKSPACE_LOOKUP_FAILED') {
+    logError('workspace_lookup_failed', { req_id: req.id, path: req.path, message: (err.cause && err.cause.message) || err.message });
+    return res.status(503).json({ error: err.message, code: err.code, retryable: true, req_id: req.id });
   }
   logError('unhandled_error', { req_id: req.id, path: req.path, message: err.message, stack: err.stack });
   const status = err.status || err.statusCode || 500;

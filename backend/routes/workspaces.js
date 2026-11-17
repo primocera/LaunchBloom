@@ -21,24 +21,20 @@ const router = express.Router();
 async function ensureWorkspace(email, userId, name) {
   // Prefer the stable id.
   if (userId) {
-    const { data: byId } = await supabase
-      .from('workspaces')
-      .select('*')
-      .eq('user_id', userId)
-      .limit(1)
-      .single();
-    if (byId) return byId;
+    const existing = await oldestWorkspace(userId);
+    if (existing) return existing;
   }
 
   // Legacy row created before user_id existed: adopt it and stamp the id.
   if (email) {
-    const { data: byEmail } = await supabase
+    const { data: byEmail, error: byEmailErr } = await supabase
       .from('workspaces')
       .select('*')
       .is('user_id', null)
       .eq('user_email', email)
       .limit(1)
       .single();
+    if (readFailed(byEmailErr)) throw workspaceLookupFailed(byEmailErr);
     if (byEmail) {
       if (userId) {
         const { data: adopted } = await supabase
@@ -59,7 +55,49 @@ async function ensureWorkspace(email, userId, name) {
     .select()
     .single();
   if (error) throw new Error('Failed to create workspace: ' + error.message);
+
+  // First sign-in fires several requests at once and each can reach the insert.
+  // All of them converge on the oldest row; a later duplicate (just created,
+  // still empty) is removed so the account starts with exactly one workspace.
+  if (userId && created) {
+    const oldest = await oldestWorkspace(userId).catch(() => null);
+    if (oldest && oldest.id !== created.id) {
+      await supabase.from('workspaces').delete().eq('id', created.id);
+      return oldest;
+    }
+  }
   return created;
+}
+
+// PostgREST's "no row matched .single()" - a verified absence, not a failure.
+function readFailed(error) {
+  return !!error && error.code !== 'PGRST116';
+}
+
+/**
+ * The workspace list could not be READ. This is never treated as "the user has
+ * no workspace": answering with a retryable 503 is better than creating a blank
+ * workspace beside the real one.
+ */
+function workspaceLookupFailed(error) {
+  return Object.assign(new Error('Your workspace could not be loaded right now. Please try again.'), {
+    status: 503,
+    code: 'WORKSPACE_LOOKUP_FAILED',
+    cause: error,
+  });
+}
+
+/** The caller's oldest workspace, preferring one that is not archived. */
+async function oldestWorkspace(userId) {
+  const { data, error } = await supabase
+    .from('workspaces')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+  if (readFailed(error)) throw workspaceLookupFailed(error);
+  const rows = Array.isArray(data) ? data : (data ? [data] : []);
+  return rows.find((w) => !w.archived) || rows[0] || null;
 }
 
 /**
@@ -93,7 +131,8 @@ async function ownedWorkspace(workspaceId, email, userId) {
 async function listWorkspaces(userId, { includeArchived = false } = {}) {
   let q = supabase.from('workspaces').select('*').eq('user_id', userId);
   if (!includeArchived) q = q.eq('archived', false);
-  const { data } = await q.order('created_at', { ascending: true });
+  const { data, error } = await q.order('created_at', { ascending: true });
+  if (readFailed(error)) throw workspaceLookupFailed(error);
   return data || [];
 }
 

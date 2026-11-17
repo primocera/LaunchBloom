@@ -22,6 +22,10 @@ const { configuredAppUrl } = require('../lib/launch-config');
 const { isOwnedScalvyaCustomer } = require('./payments');
 const { opsSignal } = require('../lib/ops-signal');
 
+// Placeholder domain written over the email of a deleted account's billing
+// row. .invalid can never receive mail (RFC 2606).
+const DELETED_EMAIL_DOMAIN = 'deleted.invalid';
+
 // A table from a not-yet-applied migration (e.g. 041 action_topups).
 function isMissingTable(error) {
   const msg = String((error && error.message) || '');
@@ -264,9 +268,11 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
     const step = (name, status, detail) => steps.push({ name, status, ...(detail ? { detail } : {}) });
 
     // 1. Cancel any active Stripe subscriptions.
+    let billingCustomerId = null;
     try {
       // SV-21-01: resolve the billing row by canonical identity.
       const customer = await findCustomerRow({ userId, email }, 'id, stripe_customer_id');
+      billingCustomerId = customer ? customer.id : null;
       if (customer && customer.stripe_customer_id) {
         // XAPP-95-01: never LIST or CANCEL subscriptions on a customer we cannot
         // prove is ours - cancelling a foreign product's live subscriptions would
@@ -275,8 +281,12 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
         const ownership = await ownedStripeCustomerStatus(customer.stripe_customer_id, userId);
         if (ownership !== 'owned') {
           if (ownership === 'foreign') opsSignal('ownership_mismatch', { reason: 'account_delete_foreign_customer', severity: 'high' });
-          step('stripe_cancellation', ownership === 'missing' ? 'ok' : 'skipped',
-            ownership === 'missing' ? 'no live billing account' : 'billing account not verified as owned - not cancelled here');
+          // unreadable = Stripe did not answer: transient, so deletion stops
+          // below and can be retried. foreign = the link is provably not ours,
+          // so there is nothing of ours to cancel and erasure must not be blocked.
+          if (ownership === 'missing') step('stripe_cancellation', 'ok', 'no live billing account');
+          else if (ownership === 'unreadable') step('stripe_cancellation', 'failed', 'billing could not be reached - cancellation not confirmed');
+          else step('stripe_cancellation', 'skipped', 'billing account not verified as owned - not cancelled here');
         } else {
           const subs = await stripe.subscriptions.list({ customer: customer.stripe_customer_id, status: 'all', limit: 100 });
           let canceled = 0;
@@ -299,6 +309,20 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       }
     } catch {
       step('stripe_cancellation', 'failed', 'billing lookup failed - cancellation not confirmed');
+    }
+
+    // Stop before anything is deleted unless billing is confirmed stopped.
+    // Deleting the sign-in while a subscription may still renew would leave a
+    // live charge on an account nobody can open.
+    const billing = steps[0];
+    if (!billing || billing.status === 'failed') {
+      return res.status(503).json({
+        ok: false,
+        code: 'DELETE_BILLING_UNCONFIRMED',
+        error: 'We could not confirm your subscription was cancelled, so nothing was deleted. Please try again in a few minutes, or contact support.',
+        receipt: { completed: false, requested_at: new Date().toISOString(), steps },
+        req_id: req.id,
+      });
     }
 
     // 2. Delete every workspace the user owns and all of its data.
@@ -363,6 +387,23 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
       }
     }
 
+    // 2e. The local billing row is kept (it links trailing Stripe events to an
+    // internal id), but the email on it is replaced. customers.email is UNIQUE,
+    // so leaving the address there would block this person from ever
+    // subscribing again with the same email on a new account.
+    if (billingCustomerId) {
+      try {
+        const { error } = await supabase
+          .from('customers')
+          .update({ email: `deleted-${billingCustomerId}@${DELETED_EMAIL_DOMAIN}`, name: null })
+          .eq('id', billingCustomerId);
+        if (error) throw error;
+        step('billing_contact', 'ok');
+      } catch {
+        step('billing_contact', 'failed', 'the email on the billing record could not be removed - contact support');
+      }
+    }
+
     // 3. Delete the Supabase Auth user (revokes all sessions).
     try {
       const { error } = await supabase.adminClient().auth.admin.deleteUser(userId);
@@ -401,3 +442,4 @@ router.post('/api/account/delete', requireAuth, express.json({ limit: '1kb' }), 
 });
 
 module.exports = router;
+module.exports.DELETED_EMAIL_DOMAIN = DELETED_EMAIL_DOMAIN;

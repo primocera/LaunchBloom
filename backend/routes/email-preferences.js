@@ -17,6 +17,9 @@ const router = express.Router();
 const { verifyUnsubscribeToken, suppress, unsuppress } = require('../lib/email-consent');
 const { BRAND } = require('../lib/brand');
 
+// The address comes from a signed token, but it is still written into HTML.
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 function page(title, body) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -51,7 +54,7 @@ router.get('/api/email/unsubscribe', async (req, res) => {
   // inbox they are reading this in - and seeing it confirms the right one was
   // unsubscribed when several addresses forward to one mailbox.
   return res.type('html').send(page('You have been unsubscribed', `
-    <p><strong>${email}</strong> will no longer receive optional email from ${BRAND.name}.</p>
+    <p><strong>${esc(email)}</strong> will no longer receive optional email from ${BRAND.name}.</p>
     <p>You will still receive billing and account messages about your subscription - receipts,
     charge notices and cancellation records. Those are not optional and cannot be turned off
     while you have an active account.</p>
@@ -79,7 +82,7 @@ router.get('/api/email/resubscribe', async (req, res) => {
   }
   await unsuppress(email);
   return res.type('html').send(page('You are subscribed again', `
-    <p><strong>${email}</strong> will receive optional ${BRAND.name} email again.</p>
+    <p><strong>${esc(email)}</strong> will receive optional ${BRAND.name} email again.</p>
     <p>You can unsubscribe at any time from the footer of any optional message.</p>`));
 });
 

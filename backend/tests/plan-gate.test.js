@@ -37,6 +37,7 @@ function makeLedgerSupabase() {
     if (st.filters.workspace_id && e.workspace_id !== st.filters.workspace_id) return false;
     if (st.filters.feature && e.feature !== st.filters.feature) return false;
     if (st.filters.id && e.id !== st.filters.id) return false;
+    if (st.filters.status && e.status !== st.filters.status) return false;
     const statuses = st.filters.__in_status;
     if (statuses && !statuses.includes(e.status)) return false;
     return true;

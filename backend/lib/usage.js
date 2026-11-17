@@ -15,6 +15,51 @@ const supabase = require('./supabase');
 
 const COUNTED_STATUSES = ['reserved', 'succeeded'];
 
+// A reservation whose request died (platform timeout, crash) is never settled.
+// It stops counting after this long, well past the longest generation.
+const RESERVATION_TTL_MS = 10 * 60 * 1000;
+
+/** The ledger could not be read or written: the gate answers 503, never "0 used". */
+function ledgerUnavailable(error) {
+  return Object.assign(new Error('usage ledger unavailable'), {
+    status: 503,
+    code: 'USAGE_UNAVAILABLE',
+    cause: error,
+  });
+}
+
+/** ISO time before which a reservation is treated as abandoned. */
+function reservationCutoff(now = new Date()) {
+  return new Date(now.getTime() - RESERVATION_TTL_MS).toISOString();
+}
+
+/**
+ * Count what is metered for one owner filter: every succeeded row in the
+ * window, plus reservations still young enough to be in flight. Two plain
+ * counts rather than one combined filter, so nothing depends on filter syntax.
+ */
+async function countMetered(ownerColumn, ownerId, since, feature) {
+  const base = (status) => {
+    let q = supabase
+      .from('usage_events')
+      .select('id', { count: 'exact', head: true })
+      .eq(ownerColumn, ownerId)
+      .eq('status', status);
+    if (feature) q = q.eq('feature', feature);
+    return q;
+  };
+  const cutoff = reservationCutoff();
+  const reservedSince = since && since > cutoff ? since : cutoff;
+  const succeededQuery = since ? base('succeeded').gte('created_at', since) : base('succeeded');
+  const [succeeded, reserved] = await Promise.all([
+    succeededQuery,
+    base('reserved').gte('created_at', reservedSince),
+  ]);
+  if (succeeded.error) throw ledgerUnavailable(succeeded.error);
+  if (reserved.error) throw ledgerUnavailable(reserved.error);
+  return (succeeded.count || 0) + (reserved.count || 0);
+}
+
 /** UTC start of the current calendar month (fallback window for paid plans). */
 function monthStart(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
@@ -150,16 +195,7 @@ async function activeTopupActions(userId) {
 
 /** Count metered actions for a workspace since `since` (null = lifetime). */
 async function countActions(workspaceId, since, feature) {
-  let q = supabase
-    .from('usage_events')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-    .in('status', COUNTED_STATUSES);
-  if (feature) q = q.eq('feature', feature);
-  if (since) q = q.gte('created_at', since);
-  const { count, error } = await q;
-  if (error) return 0; // missing table (migration not applied) fails open to 0
-  return count || 0;
+  return countMetered('workspace_id', workspaceId, since, feature);
 }
 
 /**
@@ -168,19 +204,10 @@ async function countActions(workspaceId, since, feature) {
  * their 3 workspaces, not 120 each), so limits count by user_id.
  */
 async function countUserActions(userId, since, feature) {
-  let q = supabase
-    .from('usage_events')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .in('status', COUNTED_STATUSES);
-  if (feature) q = q.eq('feature', feature);
-  if (since) q = q.gte('created_at', since);
-  const { count, error } = await q;
-  if (error) return 0;
-  return count || 0;
+  return countMetered('user_id', userId, since, feature);
 }
 
-/** Insert a reserved action; returns its id (or null if the ledger is missing). */
+/** Insert a reserved action; returns its id. Throws when the ledger cannot be written. */
 async function reserveAction({ userId, workspaceId, feature, model, action }) {
   const { data, error } = await supabase
     .from('usage_events')
@@ -196,7 +223,7 @@ async function reserveAction({ userId, workspaceId, feature, model, action }) {
     })
     .select('id')
     .single();
-  if (error) return null;
+  if (error || !data) throw ledgerUnavailable(error);
   return data.id;
 }
 
@@ -235,6 +262,9 @@ module.exports = {
   countActions,
   countUserActions,
   reserveAction,
+  reservationCutoff,
+  COUNTED_STATUSES,
+  RESERVATION_TTL_MS,
   finalizeAction,
   releaseAction,
 };

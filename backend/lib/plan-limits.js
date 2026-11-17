@@ -101,15 +101,21 @@ function limitsFor(plan) {
 async function usageFor(workspaceId, plan, email, userId) {
   const since = await usage.windowStart(email, plan);
   // Account-wide pool when we have a user id; else fall back to the workspace.
-  const [actions, kits] = userId
-    ? await Promise.all([
+  // Display only: an unreadable ledger shows 0 here so sign-in and the account
+  // page still load. The gate (planGate) is what refuses to run unmetered.
+  const [actions, kits] = await (userId
+    ? Promise.all([
         usage.countUserActions(userId, since, null),
         usage.countUserActions(userId, since, 'launch_kits'),
       ])
-    : await Promise.all([
+    : Promise.all([
         usage.countActions(workspaceId, since, null),
         usage.countActions(workspaceId, since, 'launch_kits'),
-      ]);
+      ])
+  ).catch((err) => {
+    if (err && err.code === 'USAGE_UNAVAILABLE') return [0, 0];
+    throw err;
+  });
   // resets_at: when this monthly window rolls over (null for lifetime plans).
   // A yearly plan's subscription period ends in a year; its allowance does not.
   // ai_actions_extra: valid top-up actions on top of the plan allowance.
@@ -236,6 +242,16 @@ function planGate(feature) {
 
         next();
       } catch (err) {
+        // The usage ledger could not be read or written. Refuse this one
+        // generation with a retryable answer; never run it unmetered.
+        if (err && err.code === 'USAGE_UNAVAILABLE') {
+          console.error('[plan-gate] usage ledger unavailable:', (err.cause && err.cause.message) || err.message);
+          return res.status(503).json({
+            error: 'Generation is temporarily unavailable. Please try again in a moment.',
+            code: 'USAGE_UNAVAILABLE',
+            retryable: true,
+          });
+        }
         next(err);
       }
     });

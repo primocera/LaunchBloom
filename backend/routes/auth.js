@@ -194,7 +194,7 @@ router.post('/api/auth/signup', loginLimiter, signupIpLimiter, json, signupEmail
           terms_version: LEGAL_VERSION,
           marketing_opt_in: marketingOptIn,
           marketing_version: marketingOptIn ? LEGAL_VERSION : null,
-          ip: (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || null,
+          ip: req.ip || null,
         })
         .then(() => {}, () => {});
     }

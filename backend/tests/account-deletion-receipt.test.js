@@ -73,20 +73,17 @@ test('export includes every owned workspace', async () => {
   assert.deepEqual(body.workspaces.map((w) => w.workspace.id).sort(), ['ws1', 'ws2']);
 });
 
-test('deletion receipt surfaces a failed Stripe cancellation instead of returning blanket success', async () => {
+test('a failed Stripe cancellation stops deletion before anything is erased', async () => {
   const r = await request(app).post('/api/account/delete').set(...AUTHED).send({});
-  assert.equal(r.status, 200);
-  assert.equal(r.body.ok, false, 'must not claim success when a step failed');
+  // Deleting the sign-in while the subscription may still renew would leave a
+  // live charge on an account nobody can open (audit B3).
+  assert.equal(r.status, 503);
+  assert.equal(r.body.ok, false, 'must not claim success when billing is unconfirmed');
+  assert.equal(r.body.code, 'DELETE_BILLING_UNCONFIRMED');
   assert.equal(r.body.receipt.completed, false);
-  const stripeStep = r.body.receipt.steps.find((s) => s.name === 'stripe_cancellation');
-  assert.equal(stripeStep.status, 'failed');
-  assert.ok(r.body.receipt.support_note);
-  // Data deletion still ran for both workspaces (idempotent, resumable).
-  const wsStep = r.body.receipt.steps.find((s) => s.name === 'workspace_data');
-  assert.equal(wsStep.status, 'ok');
-  // Stored generation results (migration 026, keyed by user_id) are erased too.
-  const jobsStep = r.body.receipt.steps.find((s) => s.name === 'generation_results');
-  assert.equal(jobsStep && jobsStep.status, 'ok');
+  const names = r.body.receipt.steps.map((s) => s.name);
+  assert.deepEqual(names, ['stripe_cancellation'], 'no destructive step may have run');
+  assert.equal(r.body.receipt.steps[0].status, 'failed');
 });
 
 test('export includes the stored generation results keyed by user', async () => {
