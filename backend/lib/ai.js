@@ -44,6 +44,13 @@ const AI_PROMPT_VERSION = activePromptVersion();
 // Orchestration limits.
 const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 90000);
 const AI_MAX_ATTEMPTS = 3;
+// One overall budget for a generation call, shared by every attempt (audit A4).
+// Three attempts at AI_TIMEOUT_MS plus backoff is about 271 s, which with the
+// gate's own reads ran into the platform's 300 s kill and left a stuck usage
+// reservation behind. Each attempt now gets only the time that is left, and a
+// retry that would start with less than AI_MIN_ATTEMPT_MS is not started.
+const AI_DEADLINE_MS = Number(process.env.AI_DEADLINE_MS || 240000);
+const AI_MIN_ATTEMPT_MS = Number(process.env.AI_MIN_ATTEMPT_MS || 15000);
 
 // Rough $/million-token rates for cost logging (input, output).
 const COST_PER_MTOK = {
@@ -335,15 +342,26 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
     : '';
 
   const started = Date.now();
+  const deadline = started + AI_DEADLINE_MS;
   let lastErr = null;
   let repairNote = '';
+  let outputLimit = withHeadroom(maxTokens);
+  let truncatedOnce = false;
+  let attempts = 0;
+  // Tokens of every attempt that got a response, failed ones included (A5).
+  let spentIn = 0;
+  let spentOut = 0;
 
   for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
+    // A retry that cannot finish in the time left is not started.
+    const remaining = deadline - Date.now();
+    if (attempt > 1 && remaining < AI_MIN_ATTEMPT_MS) break;
+    attempts = attempt;
     try {
       const response = await client.messages.create(
         {
           model: useModel,
-          max_tokens: withHeadroom(maxTokens),
+          max_tokens: outputLimit,
           system: BASE_SYSTEM + (system ? '\n\n' + system : '') + lengthRules + repairNote,
           messages: [{ role: 'user', content: prompt }],
           output_config: {
@@ -351,11 +369,18 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
             ...(EFFORT_MODELS.has(useModel) ? { effort: AI_EFFORT } : {}),
           },
         },
-        { timeout: AI_TIMEOUT_MS, maxRetries: 0 }
+        { timeout: Math.max(1, Math.min(AI_TIMEOUT_MS, remaining)), maxRetries: 0 }
       );
+      spentIn += (response.usage && response.usage.input_tokens) || 0;
+      spentOut += (response.usage && response.usage.output_tokens) || 0;
 
       if (response.stop_reason === 'refusal') {
         throw aiError('The AI declined to generate this content.', 'AI_REFUSAL', 422);
+      }
+      // The output hit max_tokens: the JSON is cut off, so parsing it can only
+      // fail (audit A5). Named for what it is instead of AI_INVALID_JSON.
+      if (response.stop_reason === 'max_tokens') {
+        throw aiError('The AI response was cut off before it finished. Please try again.', 'AI_TRUNCATED', 502);
       }
       const textBlock = response.content.find((b) => b.type === 'text');
       if (!textBlock) throw aiError('Empty AI response.', 'AI_EMPTY', 502);
@@ -374,13 +399,15 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
         throw aiError('AI output failed schema validation.', 'AI_INVALID_OUTPUT', 502);
       }
 
-      const usage = response.usage || {};
+      // Cost covers every paid attempt of this generation, not only the last.
+      const inTok = spentIn || null;
+      const outTok = spentOut || null;
       logGeneration({
         model: useModel,
         promptVersion,
         attempt,
-        inTok: usage.input_tokens,
-        outTok: usage.output_tokens,
+        inTok,
+        outTok,
         ms: Date.now() - started,
         status: 'ok',
       });
@@ -389,27 +416,34 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
         value: {
           model: useModel,
           prompt_version: promptVersion,
-          input_tokens: usage.input_tokens || null,
-          output_tokens: usage.output_tokens || null,
-          estimated_cost: estimateCost(useModel, usage.input_tokens, usage.output_tokens),
+          input_tokens: inTok,
+          output_tokens: outTok,
+          estimated_cost: estimateCost(useModel, inTok, outTok),
         },
         enumerable: false,
       });
       await finalizeAiCall(reservation.day, {
-        inputTokens: usage.input_tokens,
-        outputTokens: usage.output_tokens,
+        inputTokens: inTok,
+        outputTokens: outTok,
         estimatedCost: parsed.__meta.estimated_cost,
       });
       return parsed;
     } catch (err) {
       lastErr = err;
-      const retryable = err.code === 'AI_INVALID_OUTPUT' || err.code === 'AI_INVALID_JSON' || isTransient(err);
+      // Truncation gets ONE retry, with a higher output limit where there is
+      // room - not two more paid attempts at the limit that just failed.
+      if (err.code === 'AI_TRUNCATED') {
+        if (truncatedOnce) break;
+        truncatedOnce = true;
+        outputLimit = Math.min(Math.ceil(outputLimit * 1.5), NON_STREAMING_MAX_TOKENS);
+      }
+      const retryable = err.code === 'AI_TRUNCATED' || err.code === 'AI_INVALID_OUTPUT' || err.code === 'AI_INVALID_JSON' || isTransient(err);
       if (!retryable || attempt === AI_MAX_ATTEMPTS) break;
-      await sleep(300 * attempt); // small backoff
+      await sleep(Math.max(0, Math.min(300 * attempt, deadline - Date.now()))); // small backoff
     }
   }
 
-  logGeneration({ model: useModel, promptVersion, attempt: AI_MAX_ATTEMPTS, ms: Date.now() - started, status: 'error', code: lastErr && lastErr.code });
+  logGeneration({ model: useModel, promptVersion, attempt: attempts, inTok: spentIn || null, outTok: spentOut || null, ms: Date.now() - started, status: 'error', code: lastErr && lastErr.code });
 
   // The provider call failed - give the reservation back to today's budget.
   await releaseAiCall(reservation.day);
@@ -422,7 +456,8 @@ async function generateJson({ system, prompt, schema, maxTokens = 8000, model, p
 
 /** Sanitized structured log - never includes prompt or generated content. */
 function logGeneration(meta) {
-  const cost = meta.status === 'ok' ? estimateCost(meta.model, meta.inTok, meta.outTok) : null;
+  // A failed generation that still got responses has a real cost too (A5).
+  const cost = meta.inTok || meta.outTok ? estimateCost(meta.model, meta.inTok, meta.outTok) : null;
   console.log('[ai]', JSON.stringify({
     model: meta.model,
     prompt_version: meta.promptVersion,
