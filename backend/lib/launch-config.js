@@ -168,6 +168,14 @@ function launchConfigProblems() {
   const missingPrices = missingStripeEnv();
   if (stripeKey.startsWith('sk_live')) {
     for (const v of missingPrices) problems.push(`stripe: ${v} not set`);
+    // Audit B5: live billing must run with Stripe ownership enforcement. Unset
+    // already enforces in live production (lib/stripe-ownership.js); any
+    // other value is a misconfiguration that would revert to email-keyed
+    // customers and the price-only fallback.
+    const enforcedRaw = String(process.env.STRIPE_OWNERSHIP_ENFORCED || '').trim();
+    if (process.env.NODE_ENV === 'production' && enforcedRaw !== '' && enforcedRaw !== '1') {
+      problems.push('stripe: STRIPE_OWNERSHIP_ENFORCED must be 1 (or unset) with a live key');
+    }
   }
 
   // Enabled currency catalogs must be COMPLETE. A currency that is switched on

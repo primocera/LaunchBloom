@@ -56,8 +56,23 @@ const OWNING_STATES = Object.freeze([
 // owner-verified legacy mapping proves ownership. Default OFF preserves the
 // capped-beta behaviour byte-for-byte, so this flip cannot silently change a
 // running beta and is fully reversible (unset the env var).
+//
+// Audit B5 (2026-11-15): in LIVE production (NODE_ENV=production and an sk_live
+// key) enforcement is the default - an UNSET variable after an env edit or in a
+// new environment no longer silently reverts to email-keyed customers and the
+// price-only fallback. Any other explicit value there is reported as a blocking
+// launch-config problem (lib/launch-config.js). Outside live production the
+// behaviour is unchanged: only '1' enforces.
 function ownershipEnforced() {
-  return String(process.env.STRIPE_OWNERSHIP_ENFORCED || '').trim() === '1';
+  const raw = String(process.env.STRIPE_OWNERSHIP_ENFORCED || '').trim();
+  if (raw === '1') return true;
+  if (raw === '' && liveProduction()) return true;
+  return false;
+}
+
+function liveProduction() {
+  return process.env.NODE_ENV === 'production'
+    && String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live');
 }
 
 /** Our exact, self-identifying stamp. No email or price is ever consulted. */
