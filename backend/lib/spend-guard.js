@@ -15,12 +15,27 @@
 // ---------------------------------------------------------------------------
 
 const supabase = require('./supabase');
+const { opsSignal } = require('./ops-signal');
 
 const BUCKET = 'offerflow-data';
 const KEY = 'daily-usage.json';
 
 // ~1 AI call ≈ $0.01 on Haiku, so 300/day ≈ ~$3/day worst case (~40 kits).
 const MAX_AI_CALLS_PER_DAY = Number(process.env.MAX_AI_CALLS_PER_DAY || 300);
+
+// One account's share of the daily budget (audit A3). Without it a single busy
+// account could use the whole day's cap, after which every customer got
+// DAILY_CAP until midnight UTC. Counted in AI ACTIONS from the usage ledger
+// (one gated request = one action, which makes one or more AI calls), so the
+// share is a ceiling on one account, not an exact split of calls. 1 or more
+// turns the share off.
+const AI_USER_DAILY_SHARE = Number(process.env.AI_USER_DAILY_SHARE || 0.25);
+
+/** Most AI actions one account may start per UTC day (Infinity = no share). */
+function userDailyLimit() {
+  if (!(AI_USER_DAILY_SHARE > 0) || AI_USER_DAILY_SHARE >= 1) return Infinity;
+  return Math.max(1, Math.floor(MAX_AI_CALLS_PER_DAY * AI_USER_DAILY_SHARE));
+}
 
 // Warn-level thresholds for operators (60/80/100% of daily budget).
 const ALERT_THRESHOLDS = [0.6, 0.8, 1];
@@ -70,6 +85,8 @@ function maybeAlert(day, used) {
         limit: MAX_AI_CALLS_PER_DAY,
         threshold_pct: Math.round(t * 100),
       }));
+      // From 80% the operator gets a structured signal, not only a log line.
+      if (t >= 0.8) opsSignal('daily_budget_threshold', { reason: `ai_daily_budget_${Math.round(t * 100)}pct`, severity: t >= 1 ? 'high' : 'warn' });
     }
   }
 }
@@ -171,4 +188,4 @@ async function releaseAiCall(day) {
   }
 }
 
-module.exports = { reserveAiCall, finalizeAiCall, releaseAiCall, MAX_AI_CALLS_PER_DAY, generationPaused };
+module.exports = { reserveAiCall, finalizeAiCall, releaseAiCall, MAX_AI_CALLS_PER_DAY, generationPaused, userDailyLimit };

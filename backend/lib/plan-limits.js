@@ -14,6 +14,12 @@ const { planFor } = require('../routes/customers');
 const { requireAuth } = require('./auth');
 const usage = require('./usage');
 const { track } = require('./analytics');
+const { userDailyLimit } = require('./spend-guard');
+
+/** ISO start of the current UTC day. */
+function utcDayStart(d = new Date()) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString();
+}
 
 const PLAN_LIMITS = {
   // Very limited demo. Full generation is gated behind starting the trial.
@@ -197,6 +203,23 @@ function planGate(feature) {
           if (used >= poolLimit) {
             track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature } });
             return res.status(402).json(gateBody(plan, feature, used, poolLimit));
+          }
+        }
+
+        // One account's share of the app-wide daily AI budget (audit A3), so a
+        // single busy account cannot spend the day's cap for every customer.
+        const dailyLimit = userDailyLimit();
+        if (dailyLimit !== Infinity) {
+          const today = utcDayStart();
+          const usedToday = await usage.countUserActions(req.userId, today, null);
+          if (usedToday >= dailyLimit) {
+            track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature, scope: 'daily_share' } });
+            return res.status(429).json({
+              error: "You've reached today's generation limit for one account. It resets at midnight UTC.",
+              code: 'USER_DAILY_LIMIT',
+              retryable: false,
+              resets_at: new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+            });
           }
         }
 
