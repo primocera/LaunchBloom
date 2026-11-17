@@ -183,44 +183,45 @@ function planGate(feature) {
 
         if (!feature) return next();
 
-        const since = await usage.windowStart({ userId: req.userId, email: req.userEmail }, plan);
+        // Audit A6: the reads below are independent, so they run together
+        // (they used to be up to five sequential round trips). The checks
+        // still answer in the same order: kit sub-cap, plan pool, daily share.
+        const dailyLimit = userDailyLimit();
+        const today = utcDayStart();
+        const [since, extra] = await Promise.all([
+          usage.windowStart({ userId: req.userId, email: req.userEmail }, plan),
+          // Valid top-up packs extend a paid plan's limit for this month only.
+          topupPlan(plan) ? usage.activeTopupActions(req.userId) : 0,
+        ]);
+        const poolLimit = limits.ai_actions + extra;
+        const [kitsUsed, used, usedToday] = await Promise.all([
+          feature === 'launch_kits' ? usage.countUserActions(req.userId, since, 'launch_kits') : 0,
+          poolLimit !== Infinity ? usage.countUserActions(req.userId, since, null) : 0,
+          dailyLimit !== Infinity ? usage.countUserActions(req.userId, today, null) : 0,
+        ]);
 
         // Launch-kit sub-cap - account-wide (counts reserved + succeeded).
-        if (feature === 'launch_kits') {
-          const kitsUsed = await usage.countUserActions(req.userId, since, 'launch_kits');
-          if (kitsUsed >= limits.launch_kits) {
-            track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature: 'launch_kits' } });
-            return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits, { pool: false }));
-          }
+        if (feature === 'launch_kits' && kitsUsed >= limits.launch_kits) {
+          track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature: 'launch_kits' } });
+          return res.status(402).json(gateBody(plan, 'launch_kits', kitsUsed, limits.launch_kits, { pool: false }));
         }
 
         // AI-action pool - account-wide across the user's workspaces.
-        // Valid top-up packs extend a paid plan's limit for this month only.
-        const extra = topupPlan(plan) ? await usage.activeTopupActions(req.userId) : 0;
-        const poolLimit = limits.ai_actions + extra;
-        if (poolLimit !== Infinity) {
-          const used = await usage.countUserActions(req.userId, since, null);
-          if (used >= poolLimit) {
-            track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature } });
-            return res.status(402).json(gateBody(plan, feature, used, poolLimit));
-          }
+        if (poolLimit !== Infinity && used >= poolLimit) {
+          track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature } });
+          return res.status(402).json(gateBody(plan, feature, used, poolLimit));
         }
 
         // One account's share of the app-wide daily AI budget (audit A3), so a
         // single busy account cannot spend the day's cap for every customer.
-        const dailyLimit = userDailyLimit();
-        if (dailyLimit !== Infinity) {
-          const today = utcDayStart();
-          const usedToday = await usage.countUserActions(req.userId, today, null);
-          if (usedToday >= dailyLimit) {
-            track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature, scope: 'daily_share' } });
-            return res.status(429).json({
-              error: "You've reached today's generation limit for one account. It resets at midnight UTC.",
-              code: 'USER_DAILY_LIMIT',
-              retryable: false,
-              resets_at: new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString(),
-            });
-          }
+        if (dailyLimit !== Infinity && usedToday >= dailyLimit) {
+          track('limit_reached', { userId: req.userId, workspaceId: ws.id, properties: { plan, feature, scope: 'daily_share' } });
+          return res.status(429).json({
+            error: "You've reached today's generation limit for one account. It resets at midnight UTC.",
+            code: 'USER_DAILY_LIMIT',
+            retryable: false,
+            resets_at: new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          });
         }
 
         // Reserve, then re-verify (concurrency: err toward rejecting, not over-allowing).

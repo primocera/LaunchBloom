@@ -14,6 +14,7 @@ const { stubModule, mockRes } = require('./helpers');
 
 // usage_events ledger with real status / created_at filtering.
 const events = [];
+const slow = { on: false, inFlight: 0, max: 0 };
 function builder(table) {
   const st = { filters: {}, gte: null, head: false, op: 'select', payload: null };
   const api = {
@@ -23,9 +24,17 @@ function builder(table) {
     eq(k, v) { st.filters[k] = v; return api; },
     gte(k, v) { st.gte = { k, v }; return api; },
     in() { return api; }, order() { return api; }, limit() { return api; }, lt() { return api; }, gt() { return api; },
-    single() { return Promise.resolve(run()); },
-    then(ok, err) { return Promise.resolve(run()).then(ok, err); },
+    single() { return settle(); },
+    then(ok, err) { return settle().then(ok, err); },
   };
+  // Audit A6: optionally answer after a delay and record how many queries
+  // were in flight at once.
+  function settle() {
+    if (!slow.on) return Promise.resolve(run());
+    slow.inFlight++;
+    slow.max = Math.max(slow.max, slow.inFlight);
+    return new Promise((r) => setTimeout(() => { slow.inFlight--; r(run()); }, 20));
+  }
   function run() {
     if (table !== 'usage_events') return { data: null, error: null };
     if (st.op === 'insert') {
@@ -98,4 +107,15 @@ test('A3: actions from earlier days do not count toward today', async () => {
   const r = await runGate('busy');
   assert.equal(r.err, undefined);
   assert.equal(r.ran, true);
+});
+
+test('A6: the gate reads its counts in parallel, not one after another', async () => {
+  events.length = 0;
+  slow.on = true; slow.inFlight = 0; slow.max = 0;
+  try {
+    const r = await runGate('quiet');
+    assert.equal(r.err, undefined);
+    assert.equal(r.ran, true);
+    assert.ok(slow.max >= 2, `max ${slow.max} ledger queries in flight`);
+  } finally { slow.on = false; }
 });
