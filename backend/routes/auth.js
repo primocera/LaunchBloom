@@ -97,6 +97,22 @@ const isHoneypotHit = (req) => String((req.body || {}).website || '').trim() !==
 function appUrl() {
   return (process.env.PUBLIC_URL || BRAND.siteUrl || '').replace(/\/$/, '');
 }
+/**
+ * The authentication methods (amr claim) of a session Supabase just issued,
+ * or null when the access token carries no readable amr claim.
+ */
+function sessionAuthMethods(session) {
+  try {
+    const part = String((session && session.access_token) || '').split('.')[1];
+    if (!part) return null;
+    const amr = JSON.parse(Buffer.from(part, 'base64url').toString('utf8')).amr;
+    if (!Array.isArray(amr)) return null;
+    return amr.map((a) => (a && typeof a === 'object' ? a.method : a)).filter((m) => typeof m === 'string');
+  } catch {
+    return null;
+  }
+}
+
 function callbackUrl() {
   return `${appUrl()}/api/auth/callback`;
 }
@@ -373,7 +389,21 @@ router.get('/api/auth/callback', async (req, res) => {
     if (!session) return res.redirect(loginErr);
     setSessionCookies(res, session);
 
-    const isRecovery = flow === 'recovery' || type === 'recovery';
+    // Audit S3: the password-reset marker comes from what Supabase VERIFIED,
+    // never from the caller-controlled `flow` parameter alone (adding
+    // flow=recovery to a signup confirmation link used to set it).
+    //   - token_hash form: the verified `type`
+    //   - code form: the session's amr claim ("recovery" for a recovery
+    //     sign-in). The token was just issued to us by Supabase, so reading it
+    //     needs no signature check. Only a token with no amr claim at all keeps
+    //     the old `flow` behaviour, so a reset link can never stop working.
+    let isRecovery;
+    if (type) {
+      isRecovery = type === 'recovery';
+    } else {
+      const methods = sessionAuthMethods(session);
+      isRecovery = methods ? methods.includes('recovery') : flow === 'recovery';
+    }
     // Marks this session as one that may set a new password (15 min).
     if (isRecovery) setRecoveryCookie(res, session.user && session.user.id);
 

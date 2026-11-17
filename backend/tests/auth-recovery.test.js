@@ -23,7 +23,8 @@ fakeSupabase.authClient = () => ({
   auth: {
     getUser: async () => (state.accessValid ? { data: { user: USER }, error: null } : { data: null, error: { message: 'expired' } }),
     refreshSession: async () => ({ data: { session: { access_token: 'FRESH', refresh_token: 'R2' }, user: USER }, error: null }),
-    exchangeCodeForSession: async () => ({ data: { session: { access_token: 'AAA', refresh_token: 'RRR', user: USER } }, error: null }),
+    exchangeCodeForSession: async () => ({ data: { session: { access_token: state.codeToken || 'AAA', refresh_token: 'RRR', user: USER } }, error: null }),
+    verifyOtp: async () => ({ data: { session: { access_token: 'AAA', refresh_token: 'RRR', user: USER } }, error: null }),
   },
 });
 fakeSupabase.adminClient = () => ({
@@ -90,4 +91,39 @@ test('logout with an expired access token still revokes via the refresh token', 
   assert.equal(r.status, 200);
   assert.deepEqual(calls.signOut.map((c) => c.token), ['EXPIRED', 'FRESH']);
   assert.equal(calls.signOut.at(-1).scope, 'global');
+});
+
+// ── audit S3: the marker comes from the verified token, not from `flow` ──────
+
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const jwtWith = (payload) => `${b64({ alg: 'HS256' })}.${b64(payload)}.sig`;
+
+test('S3: flow=recovery on a verified signup link does not set the reset marker', async () => {
+  const cb = await request(app).get('/api/auth/callback?token_hash=th&type=signup&flow=recovery');
+  assert.equal(cb.status, 302);
+  assert.equal(cookieValue(cb, 'sb_recovery'), null);
+  assert.ok(!/reset-password/.test(cb.headers.location));
+});
+
+test('S3: a verified recovery token_hash link sets the marker', async () => {
+  const cb = await request(app).get('/api/auth/callback?token_hash=th&type=recovery');
+  assert.ok(cookieValue(cb, 'sb_recovery'));
+  assert.match(cb.headers.location, /\/app\/reset-password$/);
+});
+
+test('S3: a code link whose session is not a recovery sign-in ignores flow=recovery', async () => {
+  state.codeToken = jwtWith({ sub: USER.id, amr: [{ method: 'otp', timestamp: 1 }] });
+  try {
+    const cb = await request(app).get('/api/auth/callback?code=abc&flow=recovery');
+    assert.equal(cookieValue(cb, 'sb_recovery'), null);
+  } finally { state.codeToken = null; }
+});
+
+test('S3: a code link whose session is a recovery sign-in sets the marker', async () => {
+  state.codeToken = jwtWith({ sub: USER.id, amr: [{ method: 'recovery', timestamp: 1 }] });
+  try {
+    const cb = await request(app).get('/api/auth/callback?code=abc');
+    assert.ok(cookieValue(cb, 'sb_recovery'));
+    assert.match(cb.headers.location, /\/app\/reset-password$/);
+  } finally { state.codeToken = null; }
 });
