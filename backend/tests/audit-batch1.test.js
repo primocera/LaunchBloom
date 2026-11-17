@@ -145,6 +145,12 @@ const stripeSdk = Stripe(process.env.STRIPE_SECRET_KEY);
 const express = require('express');
 const request = require('supertest');
 const webhooksRouter = require('../routes/webhooks');
+// Audit B4: the subscription handler refetches the subscription from Stripe.
+// These tests have no Stripe to reach, so the refetch is unavailable and the
+// handler mirrors the event payload - without a real network call.
+require('../lib/stripe').subscriptions.retrieve = async () => {
+  throw Object.assign(new Error('stripe unreachable in tests'), { type: 'StripeConnectionError' });
+};
 const usage = require('../lib/usage');
 const { planGate } = require('../lib/plan-limits');
 const { ensureWorkspace } = require('../routes/workspaces');

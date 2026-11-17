@@ -288,6 +288,11 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
   if (claim.alreadyProcessed) {
     return res.json({ received: true, duplicate: true });
   }
+  if (claim.inFlight) {
+    // Another delivery of this same event is being processed right now. Not a
+    // 2xx: if that delivery fails, Stripe must still retry this one.
+    return res.status(409).json({ error: 'Event is already being processed, please retry' });
+  }
 
   try {
     await handleEvent(event);
@@ -307,46 +312,61 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
 // ── idempotency ledger ──────────────────────────────────────────────────────
 
+// How long a 'processing' claim is treated as a delivery still in flight. After
+// that the first delivery is assumed dead (timeout, crash) and a redelivery may
+// take the event over. Measured from the row's created_at.
+const CLAIM_LEASE_MS = 2 * 60 * 1000;
+
 /**
- * Reserve an event for processing. Returns { alreadyProcessed }.
+ * Reserve an event for processing. Returns { alreadyProcessed, inFlight }.
+ * The claim is atomic: the INSERT is the claim for an unseen event (the primary
+ * key lets exactly one delivery win), and a seen event is taken over with a
+ * conditional UPDATE that only one competing delivery can match.
  * - unseen event → inserts a 'processing' row.
  * - seen + 'processed' → alreadyProcessed:true (ack, skip).
- * - seen + 'processing'/'failed' → bumps attempts and reprocesses.
- * Throws only on unexpected DB errors so the caller returns 5xx.
+ * - seen + 'processing' inside the lease → inFlight:true (another delivery is
+ *   running it; the caller answers non-2xx so Stripe retries later).
+ * - seen + 'failed', or 'processing' past the lease → bumps attempts and
+ *   reprocesses, unless a competing delivery took it first (inFlight:true).
+ * Throws on unexpected DB errors so the caller returns 5xx.
  */
 async function claimEvent(event) {
-  const { data: existing, error: selErr } = await supabase
-    .from('stripe_events')
-    .select('status, attempts')
-    .eq('event_id', event.id)
-    .single();
-
-  // A genuine "no rows" is not an error we should retry on; other errors are.
-  if (selErr && selErr.code && selErr.code !== 'PGRST116') {
-    throw new Error(`stripe_events lookup failed: ${selErr.message}`);
-  }
-
-  if (existing) {
-    if (existing.status === 'processed') return { alreadyProcessed: true };
-    await supabase
-      .from('stripe_events')
-      .update({ status: 'processing', attempts: (existing.attempts || 1) + 1 })
-      .eq('event_id', event.id);
-    return { alreadyProcessed: false };
-  }
-
   const { error: insErr } = await supabase
     .from('stripe_events')
     .insert({ event_id: event.id, type: event.type, status: 'processing' });
-  if (insErr) {
-    // Likely a concurrent delivery inserted first - re-check its status.
-    const { data: row } = await supabase
-      .from('stripe_events')
-      .select('status')
-      .eq('event_id', event.id)
-      .single();
-    if (row && row.status === 'processed') return { alreadyProcessed: true };
+  if (!insErr) return { alreadyProcessed: false };
+  if (insErr.code !== '23505') {
+    throw new Error(`stripe_events claim failed: ${insErr.message}`);
   }
+
+  // The event was seen before (or a concurrent delivery inserted first).
+  const { data: existing, error: selErr } = await supabase
+    .from('stripe_events')
+    .select('status, attempts, created_at')
+    .eq('event_id', event.id)
+    .single();
+  if (selErr || !existing) {
+    throw new Error(`stripe_events lookup failed: ${selErr ? selErr.message : 'row missing'}`);
+  }
+
+  if (existing.status === 'processed') return { alreadyProcessed: true };
+  if (existing.status === 'processing' && existing.created_at
+    && Date.now() - new Date(existing.created_at).getTime() < CLAIM_LEASE_MS) {
+    return { alreadyProcessed: false, inFlight: true };
+  }
+
+  // Take over, conditional on the row still being exactly as read: of several
+  // competing deliveries only one update matches.
+  const attempts = existing.attempts || 1;
+  const { data: claimed, error: updErr } = await supabase
+    .from('stripe_events')
+    .update({ status: 'processing', attempts: attempts + 1 })
+    .eq('event_id', event.id)
+    .eq('status', existing.status)
+    .eq('attempts', attempts)
+    .select('event_id');
+  if (updErr) throw new Error(`stripe_events claim failed: ${updErr.message}`);
+  if (!claimed || claimed.length === 0) return { alreadyProcessed: false, inFlight: true };
   return { alreadyProcessed: false };
 }
 
@@ -699,6 +719,27 @@ async function revokeTopupByPaymentIntent(paymentIntentId, chargeId) {
   if (error) opsSignal('reconciliation_correction', { reason: 'topup_pack_revoke_failed', charge_id: chargeId, severity: 'high' });
 }
 
+/**
+ * The subscription as Stripe holds it now. Falls back to the event payload when
+ * Stripe cannot be read (or answers with a different object), so a Stripe API
+ * problem never blocks the mirror - it only loses the ordering protection for
+ * that one event, which the reconciler covers.
+ */
+async function currentSubscription(subscription, eventType) {
+  try {
+    const fresh = await stripe.subscriptions.retrieve(subscription.id);
+    if (fresh && fresh.id === subscription.id && fresh.status) return fresh;
+  } catch (err) {
+    if (!(err && err.code === 'resource_missing')) {
+      opsSignal('reconciliation_correction', {
+        event_type: eventType, subscription_id: subscription.id,
+        reason: 'subscription_refetch_unavailable', severity: 'warn',
+      });
+    }
+  }
+  return subscription;
+}
+
 async function onSubscriptionUpdated(subscription, eventAt, eventType, previous = {}) {
   // Out-of-order guard: a newer event already wrote this row.
   if (await isStaleSubscriptionEvent(subscription.id, eventAt)) {
@@ -720,7 +761,13 @@ async function onSubscriptionUpdated(subscription, eventAt, eventType, previous 
     throw new Error(`customer lookup unavailable for subscription ${subscription.id}: ${customerErr.message}`);
   }
 
-  const mirrorRow = subscriptionMirrorRow(subscription, customer?.id ?? null, eventAt);
+  // Mirror Stripe's CURRENT state, not the event payload. event.created has
+  // one-second resolution, so `created` (incomplete) and `updated` (active) of
+  // one checkout can tie and arrive in either order; the refetched object is
+  // the same whichever event is handled last. If the refetch is unavailable
+  // the payload is mirrored, as before, with a signal.
+  const current = await currentSubscription(subscription, eventType);
+  const mirrorRow = subscriptionMirrorRow(current, customer?.id ?? null, eventAt);
   // No customer row found: leave customer_id out, so an upsert never replaces
   // an existing link with null (entitlement resolves through customer_id).
   if (!customer) delete mirrorRow.customer_id;

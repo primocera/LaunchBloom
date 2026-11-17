@@ -37,6 +37,8 @@ function makeStatefulSupabase() {
         return { data: row ? [row] : [], error: null };
       }
       if (st.op === 'insert') {
+        // The claim's first statement is the insert, so a ledger outage fails it too.
+        if (flags.failSelect) return { error: { code: 'XXNET', message: 'db down' } };
         const p = st.payload;
         if (events.has(p.event_id)) return { error: { code: '23505', message: 'duplicate' } };
         events.set(p.event_id, { attempts: 1, ...p });
@@ -70,6 +72,12 @@ const stripeSdk = Stripe(process.env.STRIPE_SECRET_KEY);
 const express = require('express');
 const request = require('supertest');
 const webhooksRouter = require('../routes/webhooks');
+// Audit B4: the subscription handler refetches the subscription from Stripe.
+// These tests have no Stripe to reach, so the refetch is unavailable and the
+// handler mirrors the event payload - without a real network call.
+require('../lib/stripe').subscriptions.retrieve = async () => {
+  throw Object.assign(new Error('stripe unreachable in tests'), { type: 'StripeConnectionError' });
+};
 
 const app = express();
 app.use('/api/webhooks', webhooksRouter);
